@@ -47,10 +47,10 @@ export class SysLog extends BaseEntity {
   durationMs!: number | null;
 
   @Index()
-  @Column({ name: 'user_id', length: 64, nullable: true })
+  @Column({ name: 'user_id', type: 'varchar', length: 64, nullable: true })
   userId!: string | null;
 
-  @Column({ length: 64, nullable: true })
+  @Column({ type: 'varchar', length: 64, nullable: true })
   username!: string | null;
 
   @Column({ length: 64, default: '' })
