@@ -13,8 +13,8 @@ const props = defineProps<{
   modelValue: boolean;
   /** 当前编辑的权限节点，null 表示新增 */
   permission: PermissionNode | null;
-  /** 新增时的父节点，null 表示新增根权限；编辑时忽略 */
-  parent: PermissionNode | null;
+  /** 新增时预填的权限码前缀（如 rbac:user:），空串表示无；编辑时忽略 */
+  codePrefix: string;
 }>();
 
 const emit = defineEmits<{
@@ -36,7 +36,7 @@ function emptyForm(): CreatePermissionBody {
     parentId: null,
     code: '',
     name: '',
-    type: PermissionType.Menu,
+    type: PermissionType.Api,
     path: '',
     component: '',
     apiMethod: '',
@@ -57,7 +57,7 @@ const title = computed(() => {
   if (isEdit.value) {
     return '编辑权限';
   }
-  return props.parent ? `新增子权限 · ${props.parent.name}` : '新增根权限';
+  return props.codePrefix ? `新增权限 · ${props.codePrefix}` : '新增权限';
 });
 
 /** 打开弹窗时按模式回填表单 */
@@ -78,7 +78,8 @@ function reset(): void {
       sort: p.sort,
     });
   } else {
-    form.parentId = props.parent?.id ?? null;
+    form.parentId = null;
+    form.code = props.codePrefix;
   }
 }
 
