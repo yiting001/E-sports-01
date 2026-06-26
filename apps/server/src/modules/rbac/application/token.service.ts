@@ -42,4 +42,8 @@ export class TokenService {
   verifyRefresh(token: string): Promise<TokenPayload> {
     return this.jwt.verifyAsync<TokenPayload>(token, { secret: this.env.jwt.refreshSecret });
   }
+
+  verifyAccess(token: string): Promise<TokenPayload> {
+    return this.jwt.verifyAsync<TokenPayload>(token, { secret: this.env.jwt.accessSecret });
+  }
 }

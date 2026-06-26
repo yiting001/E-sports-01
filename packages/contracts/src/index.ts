@@ -1,6 +1,7 @@
 export * from './common/api-response';
 export * from './common/pagination';
 export * from './rbac/permission';
+export * from './rbac/permission-codes';
 export * from './rbac/auth';
 export * from './rbac/user';
 export * from './rbac/role';

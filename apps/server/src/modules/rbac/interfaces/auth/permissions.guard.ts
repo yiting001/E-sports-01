@@ -22,6 +22,10 @@ export class PermissionsGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // 仅守卫 HTTP 路由；WebSocket 在网关握手阶段自行鉴权
+    if (context.getType() !== 'http') {
+      return true;
+    }
     const required = this.reflector.getAllAndOverride<string[]>(AUTH_METADATA.permissions, [
       context.getHandler(),
       context.getClass(),

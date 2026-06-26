@@ -36,6 +36,7 @@ export interface ChatMessage {
 
 /** WebSocket 事件名常量，前后端共享避免硬编码字符串 */
 export const IM_EVENTS = {
+  join: 'im:join',
   send: 'im:send',
   receive: 'im:receive',
   error: 'im:error',

@@ -16,3 +16,13 @@ export interface UploadedFile {
   size: number;
   mimeType: string;
 }
+
+/** 文件记录对外结构（用于列表/详情，含持久化元数据） */
+export interface UploadedFileView extends UploadedFile {
+  id: string;
+  /** 实际使用的存储驱动 */
+  driver: StorageDriver;
+  /** 上传者用户 ID */
+  uploaderId: string;
+  createdAt: string;
+}

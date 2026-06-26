@@ -27,4 +27,6 @@ export interface AuthProfile {
   roles: string[];
   /** 扁平化权限码集合，前端按钮级鉴权使用 */
   permissions: string[];
+  /** 是否超级管理员：为真时拥有全部权限，前端鉴权直接放行 */
+  isSuper: boolean;
 }

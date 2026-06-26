@@ -26,6 +26,7 @@ export class GetProfileUseCase {
       nickname: user.nickname,
       roles: auth.roles,
       permissions: auth.permissions,
+      isSuper: auth.isSuper,
     };
   }
 }

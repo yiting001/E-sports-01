@@ -14,6 +14,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   canActivate(context: ExecutionContext) {
+    // 仅守卫 HTTP 路由；WebSocket 在网关握手阶段自行鉴权
+    if (context.getType() !== 'http') {
+      return true;
+    }
     const isPublic = this.reflector.getAllAndOverride<boolean>(AUTH_METADATA.isPublic, [
       context.getHandler(),
       context.getClass(),

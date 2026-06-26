@@ -27,6 +27,10 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.permission.create]: '权限-创建',
   [PERMS.permission.update]: '权限-更新',
   [PERMS.permission.remove]: '权限-删除',
+  [PERMS.file.upload]: '文件-上传',
+  [PERMS.file.list]: '文件-查询',
+  [PERMS.file.remove]: '文件-删除',
+  [PERMS.im.history]: '消息-历史',
 };
 
 /**
