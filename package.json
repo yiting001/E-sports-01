@@ -1,0 +1,20 @@
+{
+  "name": "infra-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DDD 基础设施平台：配置中心 / 文件上传 / RBAC / WebSocket IM",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev:server": "pnpm --filter @app/server start:dev",
+    "dev:web": "pnpm --filter @app/web dev",
+    "build": "pnpm -r build",
+    "build:server": "pnpm --filter @app/server build",
+    "build:web": "pnpm --filter @app/web build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@9.15.1"
+}

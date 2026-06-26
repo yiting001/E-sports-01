@@ -1,0 +1,14 @@
+import { Module } from '@nestjs/common';
+import { DatabaseModule } from './shared/database/database.module';
+import { RedisModule } from './shared/redis/redis.module';
+import { ConfigModule } from './modules/config/config.module';
+import { RbacModule } from './modules/rbac/rbac.module';
+
+/**
+ * 应用根模块。
+ * 仅负责装配基础设施模块与各业务模块，不承载业务逻辑。
+ */
+@Module({
+  imports: [DatabaseModule, RedisModule, ConfigModule, RbacModule],
+})
+export class AppModule {}
