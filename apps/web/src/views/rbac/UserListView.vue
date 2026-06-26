@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { UserView } from '@app/contracts';
-import { PERMS } from '@app/contracts';
+import type { RoleView, UserView } from '@app/contracts';
+import { PERMS, UserStatusEnum } from '@app/contracts';
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { userApi, type CreateUserBody } from '@/api/user.api';
+import { roleApi } from '@/api/role.api';
 
 const list = ref<UserView[]>([]);
 const total = ref(0);
@@ -14,6 +15,21 @@ const loading = ref(false);
 const dialogVisible = ref(false);
 const form = reactive<CreateUserBody>({ username: '', password: '', nickname: '' });
 
+const roles = ref<RoleView[]>([]);
+const editVisible = ref(false);
+const editForm = reactive<{
+  id: string;
+  nickname: string;
+  status: UserStatusEnum;
+  roleId: string;
+}>({ id: '', nickname: '', status: UserStatusEnum.Enabled, roleId: '' });
+let originalRoleId = '';
+
+const statusOptions = [
+  { label: '启用', value: UserStatusEnum.Enabled },
+  { label: '停用', value: UserStatusEnum.Disabled },
+];
+
 async function load(): Promise<void> {
   loading.value = true;
   try {
@@ -22,6 +38,12 @@ async function load(): Promise<void> {
     total.value = res.total;
   } finally {
     loading.value = false;
+  }
+}
+
+async function ensureRoles(): Promise<void> {
+  if (roles.value.length === 0) {
+    roles.value = (await roleApi.list(1, 100)).list;
   }
 }
 
@@ -40,6 +62,32 @@ async function create(): Promise<void> {
   await userApi.create({ ...form });
   ElMessage.success('创建成功');
   dialogVisible.value = false;
+  await load();
+}
+
+async function openEdit(row: UserView): Promise<void> {
+  await ensureRoles();
+  editForm.id = row.id;
+  editForm.nickname = row.nickname;
+  editForm.status = row.status;
+  editForm.roleId = row.roles[0]?.id ?? '';
+  originalRoleId = editForm.roleId;
+  editVisible.value = true;
+}
+
+async function saveEdit(): Promise<void> {
+  await userApi.update(editForm.id, {
+    nickname: editForm.nickname,
+    status: editForm.status,
+  });
+  if (editForm.roleId !== originalRoleId) {
+    await userApi.assignRoles(
+      editForm.id,
+      editForm.roleId ? [editForm.roleId] : [],
+    );
+  }
+  ElMessage.success('已保存');
+  editVisible.value = false;
   await load();
 }
 
@@ -100,9 +148,17 @@ onMounted(load);
       />
       <el-table-column
         label="操作"
-        width="120"
+        width="160"
       >
         <template #default="{ row }">
+          <el-button
+            v-permission="PERMS.user.update"
+            type="primary"
+            link
+            @click="openEdit(row)"
+          >
+            编辑
+          </el-button>
           <el-button
             v-permission="PERMS.user.remove"
             type="danger"
@@ -155,6 +211,54 @@ onMounted(load);
         </el-button>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="editVisible"
+      title="编辑用户"
+      width="420px"
+    >
+      <el-form label-width="72px">
+        <el-form-item label="昵称">
+          <el-input v-model="editForm.nickname" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="editForm.status">
+            <el-option
+              v-for="s in statusOptions"
+              :key="s.value"
+              :label="s.label"
+              :value="s.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="角色">
+          <el-select
+            v-model="editForm.roleId"
+            clearable
+            placeholder="单选一个角色（可清空）"
+            class="full"
+          >
+            <el-option
+              v-for="r in roles"
+              :key="r.id"
+              :label="r.name"
+              :value="r.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editVisible = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          @click="saveEdit"
+        >
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -167,5 +271,8 @@ onMounted(load);
 }
 .tag {
   margin-right: 4px;
+}
+.full {
+  width: 100%;
 }
 </style>
