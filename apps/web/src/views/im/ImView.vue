@@ -119,7 +119,7 @@ function isSystem(message: ChatMessage): boolean {
 
 async function openGroupDialog(): Promise<void> {
   if (users.value.length === 0) {
-    users.value = (await userApi.list(1, 200)).list;
+    users.value = await userApi.listAll();
   }
   groupTitle.value = '';
   groupMembers.value = [];
@@ -152,7 +152,7 @@ async function openMemberDialog(): Promise<void> {
     return;
   }
   if (users.value.length === 0) {
-    users.value = (await userApi.list(1, 200)).list;
+    users.value = await userApi.listAll();
   }
   detail.value = await imApi.conversationDetail(activeId.value);
   addPicks.value = [];
