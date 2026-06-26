@@ -8,6 +8,7 @@ import { configApi, type UpsertConfigBody } from '@/api/config.api';
 const list = ref<ConfigItemView[]>([]);
 const loading = ref(false);
 const dialogVisible = ref(false);
+const isEdit = ref(false);
 
 const groups = Object.values(ConfigGroup);
 const valueTypes = Object.values(ConfigValueType);
@@ -18,6 +19,7 @@ const form = reactive<UpsertConfigBody>({
   type: ConfigValueType.String,
   group: ConfigGroup.System,
   remark: '',
+  secret: false,
 });
 
 async function load(): Promise<void> {
@@ -30,11 +32,24 @@ async function load(): Promise<void> {
 }
 
 function openCreate(): void {
+  isEdit.value = false;
   form.key = '';
   form.value = '';
   form.type = ConfigValueType.String;
   form.group = ConfigGroup.System;
   form.remark = '';
+  form.secret = false;
+  dialogVisible.value = true;
+}
+
+function openEdit(row: ConfigItemView): void {
+  isEdit.value = true;
+  form.key = row.key;
+  form.value = row.secret ? '' : row.value;
+  form.type = row.type;
+  form.group = row.group;
+  form.remark = row.remark;
+  form.secret = row.secret;
   dialogVisible.value = true;
 }
 
@@ -67,7 +82,7 @@ onMounted(load);
         type="primary"
         @click="openCreate"
       >
-        新增/更新配置
+        新增配置
       </el-button>
     </div>
     <el-table
@@ -100,9 +115,17 @@ onMounted(load);
       />
       <el-table-column
         label="操作"
-        width="120"
+        width="160"
       >
         <template #default="{ row }">
+          <el-button
+            v-permission="PERMS.config.save"
+            type="primary"
+            link
+            @click="openEdit(row)"
+          >
+            编辑
+          </el-button>
           <el-button
             v-permission="PERMS.config.remove"
             type="danger"
@@ -117,15 +140,21 @@ onMounted(load);
 
     <el-dialog
       v-model="dialogVisible"
-      title="新增/更新配置"
+      :title="isEdit ? '编辑配置' : '新增配置'"
       width="480px"
     >
       <el-form label-width="72px">
         <el-form-item label="键">
-          <el-input v-model="form.key" />
+          <el-input
+            v-model="form.key"
+            :disabled="isEdit"
+          />
         </el-form-item>
         <el-form-item label="值">
-          <el-input v-model="form.value" />
+          <el-input
+            v-model="form.value"
+            :placeholder="isEdit && form.secret ? '敏感项原值不回显，留空将清空' : ''"
+          />
         </el-form-item>
         <el-form-item label="类型">
           <el-select v-model="form.type">
