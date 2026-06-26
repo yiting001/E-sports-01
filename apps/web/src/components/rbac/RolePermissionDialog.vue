@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import type { PermissionNode, RoleView } from '@app/contracts';
+import type { RoleView } from '@app/contracts';
 import { nextTick, ref, watch } from 'vue';
 import { ElMessage, ElTree } from 'element-plus';
 import { permissionApi } from '@/api/permission.api';
 import { roleApi } from '@/api/role.api';
+import {
+  buildNamespaceTree,
+  pickRealPermissionIds,
+  type PermissionTreeNode,
+} from '@/utils/permission-tree';
 
 const props = defineProps<{
   /** 弹窗显隐（v-model） */
@@ -18,9 +23,9 @@ const emit = defineEmits<{
   saved: [];
 }>();
 
-const treeProps = { children: 'children', label: 'name' } as const;
+const treeProps = { children: 'children', label: 'label' } as const;
 
-const tree = ref<PermissionNode[]>([]);
+const tree = ref<PermissionTreeNode[]>([]);
 const loading = ref(false);
 const saving = ref(false);
 const treeRef = ref<InstanceType<typeof ElTree>>();
@@ -29,7 +34,7 @@ const treeRef = ref<InstanceType<typeof ElTree>>();
 async function loadTree(role: RoleView): Promise<void> {
   loading.value = true;
   try {
-    tree.value = await permissionApi.tree();
+    tree.value = buildNamespaceTree(await permissionApi.tree());
     await nextTick();
     treeRef.value?.setCheckedKeys(role.permissionIds);
   } finally {
@@ -37,11 +42,11 @@ async function loadTree(role: RoleView): Promise<void> {
   }
 }
 
-/** 收集选中节点：全选 + 半选，半选用于保留父级菜单授权 */
+/** 收集选中的真实权限：剔除按命名空间派生的虚拟分组节点 */
 function collectCheckedIds(): string[] {
   const checked = (treeRef.value?.getCheckedKeys() ?? []) as string[];
   const halfChecked = (treeRef.value?.getHalfCheckedKeys() ?? []) as string[];
-  return [...checked, ...halfChecked];
+  return pickRealPermissionIds([...checked, ...halfChecked]);
 }
 
 async function submit(): Promise<void> {
@@ -87,7 +92,7 @@ watch(
     >
       <template #default="{ data }">
         <span class="node">
-          <span>{{ data.name }}</span>
+          <span>{{ data.label }}</span>
           <span class="code">{{ data.code }}</span>
         </span>
       </template>

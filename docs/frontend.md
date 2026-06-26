@@ -131,29 +131,59 @@ flowchart LR
 - 新建与编辑复用同一弹窗（`editingId` 区分模式），编辑态下编码字段禁用，与后端 `UpdateRoleDto` 一致。
 - 权限分配拆为独立组件 `components/rbac/RolePermissionDialog.vue`：打开时拉取权限树并按 `role.permissionIds` 回显勾选，保存时收集全选 + 半选节点，后端落库后清空鉴权缓存即时生效。
 
-## 权限管理：树形 CRUD
+## 权限管理：命名空间树 + CRUD
 
-`PermissionListView` 保持权限的**树形结构**展示（`el-tree`，不退化为扁平列表），在每个节点上挂载操作、并提供顶部「新增根权限」入口，按钮均受细粒度权限码控制：
+后端权限是**平铺播种**的（均为 `api` 类型、`parentId` 为空），但权限码本身带命名空间语义（以 `:` 分段，如 `config:list`、`rbac:user:create`）。前端在渲染时按权限码命名空间派生出**嵌套树**，让同前缀权限聚合在同一文件夹下，而非各成根节点的"伪列表"。
+
+层级完全由权限码派生，零数据迁移、零硬编码模块名，工具收敛在 `utils/permission-tree.ts`：
+
+| 函数 | 职责 |
+| --- | --- |
+| `buildNamespaceTree(nodes)` | 把平铺权限按 code 的 `:` 分段组织成嵌套树；中间段生成虚拟分组文件夹，末段挂载真实权限为叶子 |
+| `pickRealPermissionIds(keys)` | 从勾选结果中剔除虚拟分组（id 以 `group:` 前缀），仅保留真实权限 UUID |
+
+```text
+config:list / config:save / config:remove
+        └─ config（虚拟分组）
+             ├─ 配置-查询 (config:list)
+             ├─ 配置-保存 (config:save)
+             └─ 配置-删除 (config:remove)
+
+rbac:user:create / rbac:role:update / ...
+        └─ rbac（虚拟分组）
+             ├─ user（虚拟分组）
+             │    ├─ 创建用户 (rbac:user:create)
+             │    └─ ...
+             └─ role（虚拟分组）
+                  └─ 更新角色 (rbac:role:update)
+```
+
+- 虚拟分组节点：`id = group:<命名空间路径>`、`isGroup = true`、`permission = null`，仅用于聚合展示，**不挂载任何 CRUD 操作**。
+- 叶子节点：`id = 真实权限 UUID`、`isGroup = false`，承载编辑/删除/新增子权限。
+
+`PermissionListView` 基于该树渲染（`el-tree`，`default-expand-all`），按钮均受细粒度权限码控制：
 
 | 操作 | 入口按钮 | 权限码 | 调用接口 |
 | --- | --- | --- | --- |
-| 新增根权限 | 新增根权限 | `rbac:permission:create` | `POST /rbac/permissions`（parentId=null） |
-| 新增子权限 | 节点·新增子权限 | `rbac:permission:create` | `POST /rbac/permissions`（parentId=节点 id） |
-| 编辑 | 节点·编辑 | `rbac:permission:update` | `PATCH /rbac/permissions/:id`（编码、类型不可改） |
-| 删除 | 节点·删除 | `rbac:permission:remove` | `DELETE /rbac/permissions/:id` |
+| 新增权限 | 顶部·新增权限 | `rbac:permission:create` | `POST /rbac/permissions`（无码前缀） |
+| 新增子权限 | 分组·新增子权限 | `rbac:permission:create` | `POST /rbac/permissions`（预填 `<分组路径>:` 作为码前缀） |
+| 编辑 | 叶子·编辑 | `rbac:permission:update` | `PATCH /rbac/permissions/:id`（编码、类型不可改） |
+| 删除 | 叶子·删除 | `rbac:permission:remove` | `DELETE /rbac/permissions/:id` |
 
 ```mermaid
 flowchart LR
-  Tree[权限树 el-tree] -->|新增根/子| Form[PermissionFormDialog]
-  Tree -->|编辑| Form
+  Flat[平铺权限 permissionApi.tree] -->|buildNamespaceTree| Tree[命名空间树 el-tree]
+  Tree -->|分组·新增子权限·预填码前缀| Form[PermissionFormDialog]
+  Tree -->|叶子·编辑| Form
   Form -->|create| API1[POST /rbac/permissions]
   Form -->|update| API2[PATCH /rbac/permissions/:id]
-  Tree -->|删除·二次确认| API3[DELETE /rbac/permissions/:id]
-  API1 & API2 & API3 -->|刷新| Tree
+  Tree -->|叶子·删除·二次确认| API3[DELETE /rbac/permissions/:id]
+  API1 & API2 & API3 -->|刷新| Flat
 ```
 
 - 表单拆为独立组件 `components/rbac/PermissionFormDialog.vue`：新增/编辑双模式（`permission` 非空即编辑），按权限类型条件渲染字段（菜单显示路由/组件/图标，接口显示方法/路径），与后端 `CreatePermissionDto` / `UpdatePermissionDto` 字段一致。
-- 编辑态下「权限码」「权限类型」禁用，对齐 `UpdatePermissionDto`（不接受 code/type 变更）；新增子权限通过传入父节点自动带上 `parentId`，无硬编码层级。
+- 编辑态下「权限码」「权限类型」禁用，对齐 `UpdatePermissionDto`（不接受 code/type 变更）；在分组上「新增子权限」时把该命名空间路径作为 `codePrefix` 预填进权限码输入框，引导用户延续命名空间，无硬编码层级。
+- 角色「分配权限」弹窗 `RolePermissionDialog` 复用同一棵命名空间树展示；勾选后通过 `pickRealPermissionIds` 过滤掉虚拟分组 id，仅把真实权限 UUID 提交给 `POST /rbac/roles/:id/permissions`。
 
 ## 设计要点
 
