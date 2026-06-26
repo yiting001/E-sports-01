@@ -131,6 +131,30 @@ flowchart LR
 - 新建与编辑复用同一弹窗（`editingId` 区分模式），编辑态下编码字段禁用，与后端 `UpdateRoleDto` 一致。
 - 权限分配拆为独立组件 `components/rbac/RolePermissionDialog.vue`：打开时拉取权限树并按 `role.permissionIds` 回显勾选，保存时收集全选 + 半选节点，后端落库后清空鉴权缓存即时生效。
 
+## 权限管理：树形 CRUD
+
+`PermissionListView` 保持权限的**树形结构**展示（`el-tree`，不退化为扁平列表），在每个节点上挂载操作、并提供顶部「新增根权限」入口，按钮均受细粒度权限码控制：
+
+| 操作 | 入口按钮 | 权限码 | 调用接口 |
+| --- | --- | --- | --- |
+| 新增根权限 | 新增根权限 | `rbac:permission:create` | `POST /rbac/permissions`（parentId=null） |
+| 新增子权限 | 节点·新增子权限 | `rbac:permission:create` | `POST /rbac/permissions`（parentId=节点 id） |
+| 编辑 | 节点·编辑 | `rbac:permission:update` | `PATCH /rbac/permissions/:id`（编码、类型不可改） |
+| 删除 | 节点·删除 | `rbac:permission:remove` | `DELETE /rbac/permissions/:id` |
+
+```mermaid
+flowchart LR
+  Tree[权限树 el-tree] -->|新增根/子| Form[PermissionFormDialog]
+  Tree -->|编辑| Form
+  Form -->|create| API1[POST /rbac/permissions]
+  Form -->|update| API2[PATCH /rbac/permissions/:id]
+  Tree -->|删除·二次确认| API3[DELETE /rbac/permissions/:id]
+  API1 & API2 & API3 -->|刷新| Tree
+```
+
+- 表单拆为独立组件 `components/rbac/PermissionFormDialog.vue`：新增/编辑双模式（`permission` 非空即编辑），按权限类型条件渲染字段（菜单显示路由/组件/图标，接口显示方法/路径），与后端 `CreatePermissionDto` / `UpdatePermissionDto` 字段一致。
+- 编辑态下「权限码」「权限类型」禁用，对齐 `UpdatePermissionDto`（不接受 code/type 变更）；新增子权限通过传入父节点自动带上 `parentId`，无硬编码层级。
+
 ## 设计要点
 
 - **单一判定入口**：所有鉴权收敛到 `hasPermission`，避免分散判断逻辑漂移。
