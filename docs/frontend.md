@@ -185,6 +185,23 @@ flowchart LR
 - 编辑态下「权限码」「权限类型」禁用，对齐 `UpdatePermissionDto`（不接受 code/type 变更）；在分组上「新增子权限」时把该命名空间路径作为 `codePrefix` 预填进权限码输入框，引导用户延续命名空间，无硬编码层级。
 - 角色「分配权限」弹窗 `RolePermissionDialog` 复用同一棵命名空间树展示；勾选后通过 `pickRealPermissionIds` 过滤掉虚拟分组 id，仅把真实权限 UUID 提交给 `POST /rbac/roles/:id/permissions`。
 
+## 超级管理员角色：内置全权限只读展示
+
+超级管理员（`code === SUPER_ADMIN_ROLE`）在数据库中**不显式存储任何权限**，而是靠后端 `PermissionsGuard` / `PermissionResolver` 的 `isSuper` 旁路放行全部接口，前端 `hasPermission` 同样以 `isSuper` 优先放行、菜单也据此全量加载。因此它的 `permissionIds` 恒为空——这并非回显 bug，而是设计如此。
+
+为避免"分配权限弹窗一个都没勾选"的误解、又防止误把空权限落库，做了如下处理（单一数据源、零硬编码）：
+
+- contracts `RoleView` 增加 `isSuper: boolean` 字段；后端 `role.mapper` 以 `role.code === SUPER_ADMIN_ROLE` 计算，前端不写死 `'admin'` 字符串。
+- `RolePermissionDialog` 中当 `role.isSuper` 为真时：调用 `flattenPermissions` 取全部真实权限 id 自动**全选**，权限树通过 `treeProps.disabled` 置为**只读**，顶部以 `el-alert` 提示「超级管理员内置拥有全部权限，无需也无法单独分配」，并隐藏「确定」按钮（仅保留「关闭」），`submit` 在只读态直接返回，杜绝把空权限提交覆盖。
+
+```mermaid
+flowchart LR
+  Role[角色] -->|code === SUPER_ADMIN_ROLE| Mapper[role.mapper 计算 isSuper]
+  Mapper -->|RoleView.isSuper| Dlg[RolePermissionDialog]
+  Dlg -->|isSuper| RO[全选 + 只读 + 提示 + 隐藏提交]
+  Dlg -->|普通角色| RW[按 permissionIds 回显, 可改可提交]
+```
+
 ## 设计要点
 
 - **单一判定入口**：所有鉴权收敛到 `hasPermission`，避免分散判断逻辑漂移。
