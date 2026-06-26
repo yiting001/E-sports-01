@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
 import { ChatMessageEntity } from '../domain/message.entity';
 import { MessageRepository } from '../domain/message-repository.interface';
 
@@ -26,5 +26,19 @@ export class TypeormMessageRepository implements MessageRepository {
       take: limit,
     });
     return rows.reverse();
+  }
+
+  findLatest(conversationId: string): Promise<ChatMessageEntity | null> {
+    return this.repo.findOne({
+      where: { conversationId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  countSince(conversationId: string, since: Date | null): Promise<number> {
+    return this.repo.countBy({
+      conversationId,
+      ...(since ? { createdAt: MoreThan(since) } : {}),
+    });
   }
 }

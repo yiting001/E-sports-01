@@ -3,15 +3,20 @@ import {
   ConnectedSocket,
   MessageBody,
   OnGatewayConnection,
+  OnGatewayDisconnect,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
-  WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { ChatMessage, IM_EVENTS, SendMessagePayload } from '@app/contracts';
+import { ChatMessage, IM_EVENTS, PERMS, SendMessagePayload } from '@app/contracts';
 import { TraceContextService } from '../../../observability/application/trace-context.service';
+import { PermissionResolver } from '../../../rbac/application/permission-resolver.service';
 import { TokenService } from '../../../rbac/application/token.service';
+import { ChatRealtimeService } from '../../application/chat-realtime.service';
+import { ConversationAccessService } from '../../application/conversation-access.service';
 import { GetHistoryUseCase } from '../../application/use-cases/get-history.usecase';
+import { MarkReadUseCase } from '../../application/use-cases/mark-read.usecase';
 import { SendMessageUseCase } from '../../application/use-cases/send-message.usecase';
 import { extractToken } from './ws-auth';
 
@@ -22,22 +27,29 @@ interface AuthedSocket extends Socket {
 
 /**
  * IM 网关。
- * 握手阶段复用 RBAC 访问令牌校验身份；客户端 join 会话房间后即可收发消息，
- * 消息持久化后按会话房间广播。会话维度为后续群聊、客服功能预留扩展点。
+ * 握手阶段复用 RBAC 访问令牌校验身份并加入个人房间（用于会话变更推送）。
+ * 进房/发消息均做会话成员校验；坐席可订阅客服队列房间接收待接入推送。
  */
 @WebSocketGateway({ namespace: '/im', cors: { origin: '*' } })
-export class ImGateway implements OnGatewayConnection {
+export class ImGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   private readonly logger = new Logger(ImGateway.name);
-
-  @WebSocketServer()
-  private readonly server!: Server;
 
   constructor(
     private readonly tokens: TokenService,
+    private readonly permissions: PermissionResolver,
     private readonly sendMessage: SendMessageUseCase,
     private readonly getHistory: GetHistoryUseCase,
+    private readonly markRead: MarkReadUseCase,
+    private readonly access: ConversationAccessService,
+    private readonly realtime: ChatRealtimeService,
     private readonly trace: TraceContextService,
   ) {}
+
+  afterInit(server: Server): void {
+    this.realtime.bind(server);
+  }
 
   /**
    * 在独立链路上下文中执行 WS 消息处理。
@@ -67,10 +79,15 @@ export class ImGateway implements OnGatewayConnection {
         userId: payload.sub,
         username: payload.username,
       };
+      await socket.join(this.realtime.userRoom(payload.sub));
       this.logger.debug(`IM 连接已鉴权：${payload.username}`);
     } catch {
       this.deny(socket, '访问令牌无效或已过期');
     }
+  }
+
+  handleDisconnect(socket: Socket): void {
+    this.realtime.unregisterAgent(socket.id);
   }
 
   @SubscribeMessage(IM_EVENTS.join)
@@ -82,7 +99,14 @@ export class ImGateway implements OnGatewayConnection {
       if (!conversationId) {
         return [];
       }
-      await socket.join(this.room(conversationId));
+      try {
+        await this.access.assertMember(conversationId, socket.data.userId);
+      } catch (error) {
+        this.emitError(socket, error, '无权进入该会话');
+        return [];
+      }
+      await socket.join(this.realtime.conversationRoom(conversationId));
+      await this.markRead.execute(conversationId, socket.data.userId);
       socket.emit(IM_EVENTS.joined, { conversationId });
       return this.getHistory.execute(conversationId);
     });
@@ -99,20 +123,38 @@ export class ImGateway implements OnGatewayConnection {
           payload,
           socket.data.userId,
         );
-        await socket.join(this.room(message.conversationId));
-        this.server
-          .to(this.room(message.conversationId))
-          .emit(IM_EVENTS.receive, message);
+        await this.markRead.execute(message.conversationId, socket.data.userId);
+        this.realtime.emitToConversation(
+          message.conversationId,
+          IM_EVENTS.receive,
+          message,
+        );
       } catch (error) {
-        socket.emit(IM_EVENTS.error, {
-          message: error instanceof Error ? error.message : '发送失败',
-        });
+        this.emitError(socket, error, '发送失败');
       }
     });
   }
 
-  private room(conversationId: string): string {
-    return `conversation:${conversationId}`;
+  /** 坐席订阅客服队列：校验权限后加入坐席房间并登记在线 */
+  @SubscribeMessage(IM_EVENTS.watchService)
+  async onWatchService(@ConnectedSocket() socket: AuthedSocket): Promise<void> {
+    await this.runInTrace(socket, async () => {
+      const context = await this.permissions.resolve(socket.data.userId);
+      const allowed =
+        context.isSuper || context.permissions.includes(PERMS.im.serviceAgent);
+      if (!allowed) {
+        socket.emit(IM_EVENTS.error, { message: '无客服坐席权限' });
+        return;
+      }
+      await socket.join(this.realtime.agentsRoom());
+      this.realtime.registerAgent(socket.id, socket.data.userId);
+    });
+  }
+
+  private emitError(socket: Socket, error: unknown, fallback: string): void {
+    socket.emit(IM_EVENTS.error, {
+      message: error instanceof Error ? error.message : fallback,
+    });
   }
 
   private deny(socket: Socket, reason: string): void {

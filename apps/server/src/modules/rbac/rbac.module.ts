@@ -21,6 +21,7 @@ import { RbacSeeder } from './infrastructure/rbac.seeder';
 
 import { TokenService } from './application/token.service';
 import { PermissionResolver } from './application/permission-resolver.service';
+import { UserDirectory } from './application/user-directory.service';
 import { LoginUseCase } from './application/use-cases/login.usecase';
 import { RegisterUseCase } from './application/use-cases/register.usecase';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.usecase';
@@ -102,6 +103,7 @@ import { PermissionRemoveController } from './interfaces/controllers/permission.
     PasswordService,
     TokenService,
     PermissionResolver,
+    UserDirectory,
     JwtStrategy,
     RbacSeeder,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
@@ -125,6 +127,6 @@ import { PermissionRemoveController } from './interfaces/controllers/permission.
     UpdatePermissionUseCase,
     RemovePermissionUseCase,
   ],
-  exports: [TokenService, PermissionResolver],
+  exports: [TokenService, PermissionResolver, UserDirectory],
 })
 export class RbacModule {}
