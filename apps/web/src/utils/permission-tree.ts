@@ -19,7 +19,7 @@ export interface PermissionTreeNode {
 }
 
 /** 展开成扁平的真实权限列表（兼容后端可能返回的嵌套结构） */
-function flatten(nodes: PermissionNode[]): PermissionNode[] {
+export function flattenPermissions(nodes: PermissionNode[]): PermissionNode[] {
   const out: PermissionNode[] = [];
   const walk = (list: PermissionNode[]): void => {
     for (const node of list) {
@@ -57,7 +57,7 @@ export function buildNamespaceTree(nodes: PermissionNode[]): PermissionTreeNode[
   const roots: PermissionTreeNode[] = [];
   const groupIndex = new Map<string, PermissionTreeNode>();
 
-  for (const perm of flatten(nodes)) {
+  for (const perm of flattenPermissions(nodes)) {
     const segments = perm.code.split(':');
     let siblings = roots;
     let path = '';
