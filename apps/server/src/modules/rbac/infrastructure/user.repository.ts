@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { ILike, In, Repository } from 'typeorm';
 import { User } from '../domain/user.entity';
 import { UserRepository } from '../domain/user-repository.interface';
 
@@ -14,6 +14,13 @@ export class TypeormUserRepository implements UserRepository {
 
   findById(id: string): Promise<User | null> {
     return this.repo.findOne({ where: { id }, relations: { roles: true } });
+  }
+
+  findByIds(ids: string[]): Promise<User[]> {
+    if (ids.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.repo.find({ where: { id: In(ids) } });
   }
 
   findByUsernameWithPassword(username: string): Promise<User | null> {

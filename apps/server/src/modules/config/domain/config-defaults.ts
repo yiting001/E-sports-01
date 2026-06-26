@@ -102,6 +102,27 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: '拉取历史消息默认条数',
   },
   {
+    key: CONFIG_KEYS.im.groupMaxMembers,
+    value: '100',
+    type: ConfigValueType.Number,
+    group: ConfigGroup.Im,
+    remark: '单个群聊最大成员数',
+  },
+  {
+    key: CONFIG_KEYS.im.serviceAutoAssign,
+    value: 'false',
+    type: ConfigValueType.Boolean,
+    group: ConfigGroup.Im,
+    remark: '访客发起客服会话时是否自动分配在线坐席',
+  },
+  {
+    key: CONFIG_KEYS.im.serviceWelcome,
+    value: '您好，很高兴为您服务，请问有什么可以帮您？',
+    type: ConfigValueType.String,
+    group: ConfigGroup.Im,
+    remark: '坐席接入客服会话后自动发送的欢迎语',
+  },
+  {
     key: CONFIG_KEYS.log.persistEnabled,
     value: 'true',
     type: ConfigValueType.Boolean,

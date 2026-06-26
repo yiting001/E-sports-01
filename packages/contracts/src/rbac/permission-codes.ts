@@ -36,6 +36,9 @@ export const PERMS = {
   },
   im: {
     history: 'im:message:history',
+    conversationCreate: 'im:conversation:create',
+    conversationManage: 'im:conversation:manage',
+    serviceAgent: 'im:service:agent',
   },
   log: {
     list: 'observability:log:list',

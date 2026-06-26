@@ -59,6 +59,16 @@ export const businessRoutes: RouteRecordRaw[] = [
     meta: { title: '即时通讯', icon: 'ChatDotRound', permission: PERMS.im.history },
   },
   {
+    path: 'im/service',
+    name: 'im-service',
+    component: () => import('@/views/im/ServiceConsoleView.vue'),
+    meta: {
+      title: '客服工作台',
+      icon: 'Service',
+      permission: PERMS.im.serviceAgent,
+    },
+  },
+  {
     path: 'logs',
     name: 'logs',
     component: () => import('@/views/observability/LogView.vue'),

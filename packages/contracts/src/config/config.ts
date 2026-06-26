@@ -50,6 +50,12 @@ export const CONFIG_KEYS = {
   },
   im: {
     historyLimit: 'im.historyLimit',
+    /** 群聊最大成员数 */
+    groupMaxMembers: 'im.group.maxMembers',
+    /** 客服会话是否在访客发起时自动分配在线坐席 */
+    serviceAutoAssign: 'im.service.autoAssign',
+    /** 坐席接入客服会话后自动发送的欢迎语 */
+    serviceWelcome: 'im.service.welcome',
   },
   log: {
     /** 是否将访问/错误/应用日志异步落库 */
