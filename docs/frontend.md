@@ -109,6 +109,28 @@ sequenceDiagram
   end
 ```
 
+## 角色管理：编辑与权限分配
+
+`RoleListView` 在「新建/删除」之外补齐了角色的两类编辑能力，按钮均受细粒度权限码控制：
+
+| 操作 | 入口按钮 | 权限码 | 调用接口 |
+| --- | --- | --- | --- |
+| 编辑信息 | 编辑 | `rbac:role:update` | `PATCH /rbac/roles/:id`（仅改名称/备注，编码不可改） |
+| 分配权限 | 分配权限 | `rbac:role:assignPermissions` | `POST /rbac/roles/:id/permissions` |
+
+```mermaid
+flowchart LR
+  Row[角色行] -->|编辑| Form[新建/编辑双模式弹窗]
+  Form -->|update| API1[PATCH /rbac/roles/:id]
+  Row -->|分配权限| Dlg[RolePermissionDialog]
+  Dlg -->|权限树回显勾选| Tree[el-tree show-checkbox]
+  Tree -->|getCheckedKeys + 半选| API2[POST /rbac/roles/:id/permissions]
+  API2 -->|清空鉴权缓存| Effect[即时生效]
+```
+
+- 新建与编辑复用同一弹窗（`editingId` 区分模式），编辑态下编码字段禁用，与后端 `UpdateRoleDto` 一致。
+- 权限分配拆为独立组件 `components/rbac/RolePermissionDialog.vue`：打开时拉取权限树并按 `role.permissionIds` 回显勾选，保存时收集全选 + 半选节点，后端落库后清空鉴权缓存即时生效。
+
 ## 设计要点
 
 - **单一判定入口**：所有鉴权收敛到 `hasPermission`，避免分散判断逻辑漂移。
