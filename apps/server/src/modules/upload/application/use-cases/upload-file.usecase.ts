@@ -23,8 +23,11 @@ export interface UploadFileInput {
   size: number;
 }
 
-/** 默认单文件上限（仅在配置缺失时兜底，正常以配置中心为准） */
-const FALLBACK_MAX_SIZE = 10 * 1024 * 1024;
+/** 默认单文件上限（MB，仅在配置缺失时兜底，正常以配置中心为准） */
+const FALLBACK_MAX_SIZE_MB = 10;
+
+/** MB 与字节换算系数（配置以 MB 计，校验按字节比较） */
+const BYTES_PER_MB = 1024 * 1024;
 
 /**
  * 用例：上传文件。
@@ -42,12 +45,12 @@ export class UploadFileUseCase {
     if (!input || !input.buffer || input.size <= 0) {
       throw new BadRequestException('未接收到有效文件');
     }
-    const maxSize = await this.config.getNumber(
+    const maxSizeMb = await this.config.getNumber(
       CONFIG_KEYS.upload.maxFileSize,
-      FALLBACK_MAX_SIZE,
+      FALLBACK_MAX_SIZE_MB,
     );
-    if (input.size > maxSize) {
-      throw new PayloadTooLargeException(`文件超过大小限制（${maxSize} 字节）`);
+    if (input.size > maxSizeMb * BYTES_PER_MB) {
+      throw new PayloadTooLargeException(`文件超过大小限制（${maxSizeMb} MB）`);
     }
 
     const port = await this.storage.resolve();

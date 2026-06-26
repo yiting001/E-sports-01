@@ -109,7 +109,7 @@ sequenceDiagram
 | `auth.accessTokenTtl` | Auth | `3600` | 访问令牌有效期（秒） | |
 | `auth.refreshTokenTtl` | Auth | `604800` | 刷新令牌有效期（秒） | |
 | `upload.driver` | Upload | `local` | 存储驱动 local/oss | |
-| `upload.maxFileSize` | Upload | `10485760` | 单文件最大字节数 | |
+| `upload.maxFileSize` | Upload | `10` | 单文件最大体积（MB） | |
 | `upload.localBaseUrl` | Upload | `http://127.0.0.1:3000/static` | 本地存储访问基础 URL | |
 | `upload.localDir` | Upload | `uploads` | 本地存储根目录 | |
 | `upload.ossEndpoint` | Upload | （空） | OSS Endpoint | |

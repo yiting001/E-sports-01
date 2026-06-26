@@ -84,8 +84,8 @@ sequenceDiagram
 
   C->>Ctl: POST /api/upload (multipart 文件)
   Ctl->>UU: execute(file, userId)
-  UU->>Cfg: getNumber(upload.maxFileSize)
-  UU->>UU: 校验大小，超限抛异常
+  UU->>Cfg: getNumber(upload.maxFileSize) // 单位 MB
+  UU->>UU: 校验大小（MB×1024×1024 比较），超限抛 413（提示含 MB）
   UU->>SR: resolve() 当前驱动
   SR->>Cfg: getString(upload.driver)
   SR-->>UU: StoragePort
@@ -101,7 +101,8 @@ sequenceDiagram
 
 - **策略模式 + 配置驱动**：切换存储无需改代码，体现"对扩展开放、对修改关闭"。
 - **应用层统一生成 key**：`object-key` 负责对象命名（日期分目录 + uuid），驱动只负责落字节，职责清晰。
-- **大小上限走配置中心**：`upload.maxFileSize` 可热调，不是写死常量。
+- **大小上限走配置中心**：`upload.maxFileSize` 以 **MB** 为单位、可热调，不是写死常量；应用层换算为字节后比较，超限抛 `413`，错误信息以 MB 展示。
+- **失败有反馈**：前端 `UploadView` 捕获上传异常并通过 `resolveHttpErrorMessage` 提取后端 message 弹出错误提示，杜绝静默失败。
 - **删除一致性**：存储对象与数据库记录同删，避免孤儿文件/记录。
 
 ## 相关端点
