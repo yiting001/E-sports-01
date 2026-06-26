@@ -202,6 +202,47 @@ flowchart LR
   Dlg -->|普通角色| RW[按 permissionIds 回显, 可改可提交]
 ```
 
+## 数据库驱动的动态菜单
+
+菜单不再写死在前端路由表，而是作为 `type=menu` 的权限存于数据库、按当前用户权限下
+发，实现"角色没有该菜单权限则菜单不加载、路由也访问不到"。
+
+**单一数据源**：菜单清单集中在 `packages/contracts` 的 `MENU_DEFINITIONS`（code/
+title/path/icon/sort）。后端据此播种 `menu` 权限，前端据此登记组件，二者同源、不漂
+移。
+
+**后端**：
+
+- `rbac.seeder` 启动时把 `MENU_DEFINITIONS` 播种为 `menu` 类型权限（`menu-default
+s.ts` 完成映射），可在权限管理里查看/分配。
+- `GET /rbac/menus/mine`（`MenuMineController` + `GetMyMenusUseCase`）：取全部 `m
+enu` 权限，按当前用户已授权码过滤（超管 `isSuper` 放行全部），按 `sort` 升序下发。
+
+**前端**：
+
+- `menu.api` 调 `GET /rbac/menus/mine`；`stores/menu.store` 缓存菜单并暴露 `load
+/reset`。
+- `router/component-registry`：菜单 `code` → 页面组件懒加载映射（契合 Vite 静态分
+析分包）。新增菜单 = `MENU_DEFINITIONS` 加一条 + 此处登记组件。
+- `router/menu-routes` 的 `syncMenuRoutes`：把下发菜单经 `menuToRoute` 转为路由、
+挂到 `AppLayout` 之下（`router.addRoute`），重新同步时先移除旧路由防跨用户残留。
+- `router/guard`：首次进入受保护页时拉取菜单并注册动态路由，再重解析当前导航（保
+留深链 `redirectedFrom`）；菜单 `code` 即路由 `meta.permission`，无权直接回工作台。
+- `use-menus` 改为消费 `menu.store`（不再读静态路由表），工作台首页恒置顶且不受菜
+单权限控制；登出时 `menu.store.reset()` 确保换用户后重新拉取。
+
+```mermaid
+flowchart LR
+  Def[contracts MENU_DEFINITIONS] --> Seed[rbac.seeder 播种 menu 权限]
+  Def --> Reg[前端 component-registry 登记组件]
+  Seed --> DB[(rbac_permission type=menu)]
+  DB --> API[GET /rbac/menus/mine 按权限过滤]
+  API --> Store[menu.store]
+  Store --> Menu[use-menus 侧边菜单]
+  Store --> Routes[syncMenuRoutes 动态注册路由]
+  Routes --> Guard[守卫按 menu code 拦截]
+```
+
 ## 设计要点
 
 - **单一判定入口**：所有鉴权收敛到 `hasPermission`，避免分散判断逻辑漂移。
@@ -211,13 +252,18 @@ flowchart LR
 
 ## 视图清单
 
-| 路由 | 视图 | 所需权限 |
+业务路由由后端菜单动态注册，所需权限即对应菜单 code（来自 `MENU_DEFINITIONS`）；
+登录/工作台为静态路由。
+
+| 路由 | 视图 | 所需权限（菜单 code） |
 | --- | --- | --- |
 | `/login` | LoginView | 公开 |
-| `/` | DashboardView | 登录即可 |
-| `/rbac/users` | UserListView | `rbac:user:list` |
-| `/rbac/roles` | RoleListView | `rbac:role:list` |
-| `/rbac/permissions` | PermissionListView | `rbac:permission:list` |
-| `/config` | ConfigView | `config:list` |
-| `/upload` | UploadView | `upload:file:list` |
-| `/im` | ImView | `im:message:history` |
+| `/dashboard` | DashboardView | 登录即可 |
+| `/rbac/users` | UserListView | `menu:rbac:user` |
+| `/rbac/roles` | RoleListView | `menu:rbac:role` |
+| `/rbac/permissions` | PermissionListView | `menu:rbac:permission` |
+| `/config` | ConfigView | `menu:config` |
+| `/upload` | UploadView | `menu:upload` |
+| `/im` | ImView | `menu:im` |
+| `/im/service` | ServiceConsoleView | `menu:im:service` |
+| `/logs` | LogView | `menu:logs` |

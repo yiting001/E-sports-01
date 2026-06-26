@@ -5,6 +5,7 @@ import {
   PermissionRepository,
 } from '../domain/permission-repository.interface';
 import { DEFAULT_PERMISSIONS } from '../domain/permission-defaults';
+import { DEFAULT_MENU_PERMISSIONS } from '../domain/menu-defaults';
 import { SUPER_ADMIN_ROLE } from '../domain/rbac.constants';
 import {
   ROLE_REPOSITORY,
@@ -37,6 +38,10 @@ export class RbacSeeder implements OnApplicationBootstrap {
     const createdPerms = await this.permRepo.createMissing(DEFAULT_PERMISSIONS);
     if (createdPerms > 0) {
       this.logger.log(`已播种 ${createdPerms} 条接口权限`);
+    }
+    const createdMenus = await this.permRepo.createMissing(DEFAULT_MENU_PERMISSIONS);
+    if (createdMenus > 0) {
+      this.logger.log(`已播种 ${createdMenus} 条菜单权限`);
     }
     const superRole = await this.ensureSuperRole();
     await this.ensureAdminUser(superRole.id);

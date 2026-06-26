@@ -37,6 +37,7 @@ import { UpdateRoleUseCase } from './application/use-cases/update-role.usecase';
 import { RemoveRoleUseCase } from './application/use-cases/remove-role.usecase';
 import { AssignRolePermissionsUseCase } from './application/use-cases/assign-role-permissions.usecase';
 import { ListPermissionsUseCase } from './application/use-cases/list-permissions.usecase';
+import { GetMyMenusUseCase } from './application/use-cases/get-my-menus.usecase';
 import { CreatePermissionUseCase } from './application/use-cases/create-permission.usecase';
 import { UpdatePermissionUseCase } from './application/use-cases/update-permission.usecase';
 import { RemovePermissionUseCase } from './application/use-cases/remove-permission.usecase';
@@ -63,6 +64,7 @@ import { PermissionListController } from './interfaces/controllers/permission.li
 import { PermissionCreateController } from './interfaces/controllers/permission.create.controller';
 import { PermissionUpdateController } from './interfaces/controllers/permission.update.controller';
 import { PermissionRemoveController } from './interfaces/controllers/permission.remove.controller';
+import { MenuMineController } from './interfaces/controllers/menu.mine.controller';
 
 /**
  * RBAC 模块。
@@ -95,6 +97,7 @@ import { PermissionRemoveController } from './interfaces/controllers/permission.
     PermissionCreateController,
     PermissionUpdateController,
     PermissionRemoveController,
+    MenuMineController,
   ],
   providers: [
     { provide: USER_REPOSITORY, useClass: TypeormUserRepository },
@@ -126,6 +129,7 @@ import { PermissionRemoveController } from './interfaces/controllers/permission.
     CreatePermissionUseCase,
     UpdatePermissionUseCase,
     RemovePermissionUseCase,
+    GetMyMenusUseCase,
   ],
   exports: [TokenService, PermissionResolver, UserDirectory],
 })
