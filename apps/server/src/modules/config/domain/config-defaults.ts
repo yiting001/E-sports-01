@@ -16,6 +16,26 @@ export interface ConfigDefault {
   secret?: boolean;
 }
 
+/** 历史值迁移项的形状：把仍为旧默认值的配置就地改写为新默认值 */
+export interface ConfigMigration {
+  key: string;
+  legacyValue: string;
+  newValue: string;
+}
+
+/**
+ * 历史默认值迁移清单（幂等）。
+ * 仅当库中该项仍为旧默认值时改写，已被人工改动的值不动。
+ * 当前：upload.maxFileSize 由「字节」改为「MB」，旧默认 10485760 字节 → 10 MB。
+ */
+export const CONFIG_MIGRATIONS: ConfigMigration[] = [
+  {
+    key: CONFIG_KEYS.upload.maxFileSize,
+    legacyValue: String(10 * 1024 * 1024),
+    newValue: '10',
+  },
+];
+
 /**
  * 平台默认配置清单。
  * 启动时若库中缺失则播种到配置中心；此后业务模块一律从配置中心读取，
@@ -45,10 +65,10 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
   },
   {
     key: CONFIG_KEYS.upload.maxFileSize,
-    value: String(10 * 1024 * 1024),
+    value: '10',
     type: ConfigValueType.Number,
     group: ConfigGroup.Upload,
-    remark: '单文件最大字节数',
+    remark: '单文件最大体积（MB）',
   },
   {
     key: CONFIG_KEYS.upload.localBaseUrl,
