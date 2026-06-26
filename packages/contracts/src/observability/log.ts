@@ -47,6 +47,8 @@ export interface LogView {
   ip: string;
   userAgent: string;
   stack: string | null;
+  /** 错误详情：异常响应体（含校验失败字段）与脱敏请求体，仅错误日志有值 */
+  detail: string | null;
   createdAt: string;
 }
 

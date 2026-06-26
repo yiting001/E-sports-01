@@ -17,6 +17,11 @@ interface AuthedRequest extends Request {
   user?: { id: string; username: string };
 }
 
+/** detail 字段最大长度，避免超长请求体撑爆日志表 */
+const DETAIL_MAX_LENGTH = 4000;
+/** 请求体中需脱敏的字段名（不区分大小写、子串匹配） */
+const SENSITIVE_KEYS = ['password', 'token', 'secret', 'authorization'];
+
 /**
  * 访问/错误日志拦截器。
  * 在请求完成（成功或异常）后，按配置采样并异步落库一条 access/error 日志，
@@ -96,8 +101,65 @@ export class LoggingInterceptor implements NestInterceptor {
       ip: this.clientIp(req),
       userAgent: this.header(req, 'user-agent'),
       stack: error instanceof Error ? (error.stack ?? null) : null,
+      detail: isError ? this.buildDetail(req, error) : null,
     };
     this.writer.enqueue(draft);
+  }
+
+  /**
+   * 组装错误详情：异常响应体（含 ValidationPipe 的 message 数组）+ 脱敏请求体，
+   * 便于在链路追踪里直接定位是哪个字段不合法，而非只看到通用堆栈。
+   */
+  private buildDetail(req: AuthedRequest, error: unknown): string | null {
+    const detail: { response?: unknown; body?: unknown } = {};
+    if (error instanceof HttpException) {
+      detail.response = error.getResponse();
+    }
+    if (this.hasBody(req.body)) {
+      detail.body = this.sanitize(req.body);
+    }
+    if (detail.response === undefined && detail.body === undefined) {
+      return null;
+    }
+    try {
+      const text = JSON.stringify(detail);
+      return text.length > DETAIL_MAX_LENGTH
+        ? `${text.slice(0, DETAIL_MAX_LENGTH)}…`
+        : text;
+    } catch {
+      return null;
+    }
+  }
+
+  /** 判断请求体是否有内容（排除 GET 等空体请求） */
+  private hasBody(body: unknown): boolean {
+    if (body === undefined || body === null) {
+      return false;
+    }
+    if (typeof body === 'object' && Object.keys(body).length === 0) {
+      return false;
+    }
+    return true;
+  }
+
+  /** 递归脱敏：命中敏感字段名的值替换为 ***，避免日志泄露凭证 */
+  private sanitize(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.sanitize(item));
+    }
+    if (value && typeof value === 'object') {
+      const result: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(value)) {
+        result[key] = this.isSensitive(key) ? '***' : this.sanitize(val);
+      }
+      return result;
+    }
+    return value;
+  }
+
+  private isSensitive(key: string): boolean {
+    const lower = key.toLowerCase();
+    return SENSITIVE_KEYS.some((s) => lower.includes(s));
   }
 
   private isExcluded(path: string, prefixes: string[]): boolean {

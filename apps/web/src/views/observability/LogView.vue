@@ -100,6 +100,15 @@ async function purge(): Promise<void> {
   await load();
 }
 
+/** 将 detail（JSON 字符串）美化展示，解析失败则原样返回 */
+function formatDetail(detailText: string): string {
+  try {
+    return JSON.stringify(JSON.parse(detailText), null, 2);
+  } catch {
+    return detailText;
+  }
+}
+
 onMounted(load);
 </script>
 
@@ -289,6 +298,15 @@ onMounted(load);
             <span class="ctx">[{{ log.context }}]</span>
             {{ log.message }}
           </p>
+          <div
+            v-if="log.detail"
+            class="detail-block"
+          >
+            <p class="detail-label">
+              错误详情（响应体 / 请求体）
+            </p>
+            <pre class="detail">{{ formatDetail(log.detail) }}</pre>
+          </div>
           <pre
             v-if="log.stack"
             class="stack"
@@ -322,6 +340,25 @@ onMounted(load);
   margin-top: 6px;
   padding: 8px;
   background: #f5f7fa;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.detail-block {
+  margin-top: 6px;
+}
+.detail-label {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e6a23c;
+}
+.detail {
+  margin: 0;
+  padding: 8px;
+  background: #fdf6ec;
+  border: 1px solid #faecd8;
   border-radius: 4px;
   font-size: 12px;
   white-space: pre-wrap;

@@ -20,6 +20,7 @@ export function toLogView(log: SysLog): LogView {
     ip: log.ip,
     userAgent: log.userAgent,
     stack: log.stack,
+    detail: log.detail,
     createdAt: log.createdAt.toISOString(),
   };
 }
