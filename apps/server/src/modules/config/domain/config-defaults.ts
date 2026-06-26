@@ -1,4 +1,10 @@
-import { CONFIG_KEYS, ConfigGroup, ConfigValueType, StorageDriver } from '@app/contracts';
+import {
+  CONFIG_KEYS,
+  ConfigGroup,
+  ConfigValueType,
+  LogLevel,
+  StorageDriver,
+} from '@app/contracts';
 
 /** 默认配置项的形状 */
 export interface ConfigDefault {
@@ -94,5 +100,40 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     type: ConfigValueType.Number,
     group: ConfigGroup.Im,
     remark: '拉取历史消息默认条数',
+  },
+  {
+    key: CONFIG_KEYS.log.persistEnabled,
+    value: 'true',
+    type: ConfigValueType.Boolean,
+    group: ConfigGroup.Observability,
+    remark: '是否将访问/错误/应用日志异步落库',
+  },
+  {
+    key: CONFIG_KEYS.log.level,
+    value: LogLevel.Info,
+    type: ConfigValueType.String,
+    group: ConfigGroup.Observability,
+    remark: '日志持久化最低级别：debug/info/warn/error',
+  },
+  {
+    key: CONFIG_KEYS.log.requestSampleRate,
+    value: '1',
+    type: ConfigValueType.Number,
+    group: ConfigGroup.Observability,
+    remark: '访问日志采样率 0~1，1 表示全量',
+  },
+  {
+    key: CONFIG_KEYS.log.retentionDays,
+    value: '14',
+    type: ConfigValueType.Number,
+    group: ConfigGroup.Observability,
+    remark: '日志保留天数，清理接口据此删除过期日志',
+  },
+  {
+    key: CONFIG_KEYS.log.excludePaths,
+    value: JSON.stringify(['/api/observability/logs']),
+    type: ConfigValueType.Json,
+    group: ConfigGroup.Observability,
+    remark: '不记录访问日志的路径前缀（JSON 数组）',
   },
 ];

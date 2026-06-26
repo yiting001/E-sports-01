@@ -15,6 +15,7 @@ export enum ConfigGroup {
   Auth = 'auth',
   Upload = 'upload',
   Im = 'im',
+  Observability = 'observability',
 }
 
 /** 配置项对外结构（敏感项的值在传输前会被脱敏） */
@@ -49,5 +50,17 @@ export const CONFIG_KEYS = {
   },
   im: {
     historyLimit: 'im.historyLimit',
+  },
+  log: {
+    /** 是否将访问/错误/应用日志异步落库 */
+    persistEnabled: 'log.persistEnabled',
+    /** 持久化的最低级别（低于该级别的应用日志不入库） */
+    level: 'log.level',
+    /** 访问日志采样率 0~1，1 表示全量 */
+    requestSampleRate: 'log.requestSampleRate',
+    /** 日志保留天数，清理接口据此删除过期日志 */
+    retentionDays: 'log.retentionDays',
+    /** 不记录访问日志的路径前缀（JSON 字符串数组） */
+    excludePaths: 'log.excludePaths',
   },
 } as const;

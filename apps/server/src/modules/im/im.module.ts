@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '../config/config.module';
 import { RbacModule } from '../rbac/rbac.module';
+import { ObservabilityModule } from '../observability/observability.module';
 import { ChatMessageEntity } from './domain/message.entity';
 import { MESSAGE_REPOSITORY } from './domain/message-repository.interface';
 import { TypeormMessageRepository } from './infrastructure/message.repository';
@@ -19,6 +20,7 @@ import { MessageHistoryController } from './interfaces/controllers/message.histo
   imports: [
     ConfigModule,
     RbacModule,
+    ObservabilityModule,
     TypeOrmModule.forFeature([ChatMessageEntity]),
   ],
   controllers: [MessageHistoryController],

@@ -37,4 +37,9 @@ export const PERMS = {
   im: {
     history: 'im:message:history',
   },
+  log: {
+    list: 'observability:log:list',
+    detail: 'observability:log:detail',
+    purge: 'observability:log:purge',
+  },
 } as const;

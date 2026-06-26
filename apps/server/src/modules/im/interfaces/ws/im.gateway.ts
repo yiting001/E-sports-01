@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatMessage, IM_EVENTS, SendMessagePayload } from '@app/contracts';
+import { TraceContextService } from '../../../observability/application/trace-context.service';
 import { TokenService } from '../../../rbac/application/token.service';
 import { GetHistoryUseCase } from '../../application/use-cases/get-history.usecase';
 import { SendMessageUseCase } from '../../application/use-cases/send-message.usecase';
@@ -35,7 +36,24 @@ export class ImGateway implements OnGatewayConnection {
     private readonly tokens: TokenService,
     private readonly sendMessage: SendMessageUseCase,
     private readonly getHistory: GetHistoryUseCase,
+    private readonly trace: TraceContextService,
   ) {}
+
+  /**
+   * 在独立链路上下文中执行 WS 消息处理。
+   * 每次消息生成新的 traceId/spanId，并带上握手身份，使 WS 行为与 HTTP 一致可追踪。
+   */
+  private runInTrace<T>(socket: AuthedSocket, handler: () => Promise<T>): Promise<T> {
+    return this.trace.run(
+      {
+        traceId: TraceContextService.newTraceId(),
+        spanId: TraceContextService.newSpanId(),
+        userId: socket.data?.userId ?? null,
+        username: socket.data?.username ?? null,
+      },
+      handler,
+    );
+  }
 
   async handleConnection(socket: Socket): Promise<void> {
     const token = extractToken(socket);
@@ -60,12 +78,14 @@ export class ImGateway implements OnGatewayConnection {
     @ConnectedSocket() socket: AuthedSocket,
     @MessageBody() conversationId: string,
   ): Promise<ChatMessage[]> {
-    if (!conversationId) {
-      return [];
-    }
-    await socket.join(this.room(conversationId));
-    socket.emit(IM_EVENTS.joined, { conversationId });
-    return this.getHistory.execute(conversationId);
+    return this.runInTrace(socket, async () => {
+      if (!conversationId) {
+        return [];
+      }
+      await socket.join(this.room(conversationId));
+      socket.emit(IM_EVENTS.joined, { conversationId });
+      return this.getHistory.execute(conversationId);
+    });
   }
 
   @SubscribeMessage(IM_EVENTS.send)
@@ -73,20 +93,22 @@ export class ImGateway implements OnGatewayConnection {
     @ConnectedSocket() socket: AuthedSocket,
     @MessageBody() payload: SendMessagePayload,
   ): Promise<void> {
-    try {
-      const message = await this.sendMessage.execute(
-        payload,
-        socket.data.userId,
-      );
-      await socket.join(this.room(message.conversationId));
-      this.server
-        .to(this.room(message.conversationId))
-        .emit(IM_EVENTS.receive, message);
-    } catch (error) {
-      socket.emit(IM_EVENTS.error, {
-        message: error instanceof Error ? error.message : '发送失败',
-      });
-    }
+    await this.runInTrace(socket, async () => {
+      try {
+        const message = await this.sendMessage.execute(
+          payload,
+          socket.data.userId,
+        );
+        await socket.join(this.room(message.conversationId));
+        this.server
+          .to(this.room(message.conversationId))
+          .emit(IM_EVENTS.receive, message);
+      } catch (error) {
+        socket.emit(IM_EVENTS.error, {
+          message: error instanceof Error ? error.message : '发送失败',
+        });
+      }
+    });
   }
 
   private room(conversationId: string): string {

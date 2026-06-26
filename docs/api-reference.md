@@ -97,6 +97,16 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | `im:receive` | S→C | `ChatMessage` |
 | `im:error` | S→C | `{ message }` |
 
+## Observability 日志
+
+| 方法 | 路径 | 权限码 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/observability/logs` | `observability:log:list` | 分页查询，`?page&pageSize&level&type&traceId&path&userId&startTime&endTime` |
+| GET | `/api/observability/logs/trace/:traceId` | `observability:log:detail` | 按 traceId 还原全链路日志 |
+| DELETE | `/api/observability/logs` | `observability:log:purge` | 清理过期日志，body `{ days? }`（缺省取 `log.retentionDays`） |
+
+所有响应均带 `x-trace-id` 头，可用于到日志中检索本次请求全链路。
+
 ## 权限码一览（contracts `PERMS`）
 
 | 模块 | 权限码 |
@@ -107,6 +117,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | 权限 | `rbac:permission:list` `rbac:permission:create` `rbac:permission:update` `rbac:permission:remove` |
 | 文件 | `upload:file:upload` `upload:file:list` `upload:file:remove` |
 | IM | `im:message:history` |
+| 日志 | `observability:log:list` `observability:log:detail` `observability:log:purge` |
 
 ## 业务状态码（`BizCode`）
 

@@ -5,6 +5,7 @@ import { ConfigModule } from './modules/config/config.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { ImModule } from './modules/im/im.module';
+import { ObservabilityModule } from './modules/observability/observability.module';
 
 /**
  * 应用根模块。
@@ -18,6 +19,7 @@ import { ImModule } from './modules/im/im.module';
     RbacModule,
     UploadModule,
     ImModule,
+    ObservabilityModule,
   ],
 })
 export class AppModule {}

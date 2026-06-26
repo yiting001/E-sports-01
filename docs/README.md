@@ -1,7 +1,7 @@
 # 基础设施平台 · 文档总览
 
 后端基础设施平台，技术栈 **NestJS + PostgreSQL + Redis + Vue3 + Pinia**，遵循 **DDD 分层 + 低耦合高内聚**。
-本期交付四大基础能力：**配置中心、RBAC 权限、文件上传、WebSocket IM**，以及前端基座。
+本期交付五大基础能力：**配置中心、RBAC 权限、文件上传、WebSocket IM、链路追踪与日志**，以及前端基座。
 
 ## 文档索引
 
@@ -11,6 +11,7 @@
 | RBAC 权限 | [rbac.md](./rbac.md) | 用户/角色/权限三层模型，JWT 双令牌，API/菜单/按钮级颗粒度 |
 | 文件上传 | [upload.md](./upload.md) | 策略模式，local 默认 / oss 可切，驱动由配置中心选择 |
 | WebSocket IM | [im.md](./im.md) | JWT 握手鉴权，会话房间收发文字/图片/视频，为群聊/客服预留扩展 |
+| 链路追踪与日志 | [observability.md](./observability.md) | AsyncLocalStorage 链路追踪，结构化日志异步落库 + RBAC 查询/链路详情/清理 |
 | 前端基座 | [frontend.md](./frontend.md) | Vue3 + Pinia，鉴权 store、动态路由守卫、v-permission 指令 |
 | API 参考 | [api-reference.md](./api-reference.md) | 全部 REST 端点与 WS 事件、统一响应结构、权限码一览 |
 
