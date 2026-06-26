@@ -56,6 +56,12 @@
 | PATCH | `/api/rbac/permissions/:id` | `rbac:permission:update` |
 | DELETE | `/api/rbac/permissions/:id` | `rbac:permission:remove` |
 
+### 菜单
+
+| 方法 | 路径 | 权限码 |
+| --- | --- | --- |
+| GET | `/api/rbac/menus/mine` | 登录即可（按用户权限过滤下发，超管全量） |
+
 ## 配置中心
 
 | 方法 | 路径 | 权限码 | 说明 |

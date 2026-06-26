@@ -13,7 +13,8 @@ JWT **双令牌**（access + refresh）鉴权，超级管理员走 bypass 拥有
 - **权限管理**：列表/创建/更新/删除（权限带类型：api/menu/button）。
 - **鉴权基础设施**：JWT 守卫 + 权限守卫，`@Public` / `@Permissions` 装饰器，`@CurrentUser` 注入。
 - **权限解析缓存**：`PermissionResolver` 将用户的扁平权限码集合缓存到 Redis（TTL 600s），超管直接放行。
-- **启动播种**：创建超级管理员角色 `admin` 与初始管理员账号，并按权限码登记处播种 api 权限。
+- **启动播种**：创建超级管理员角色 `admin` 与初始管理员账号，按权限码登记处播种 api 权限，并按 contracts `MENU_DEFINITIONS` 播种 menu 权限。
+- **可见菜单下发**：`GET /rbac/menus/mine` 返回当前用户可见菜单（按其授权码过滤，超管全量），前端据此渲染菜单并动态注册路由。
 
 ## 目录结构（DDD 四层）
 
