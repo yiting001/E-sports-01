@@ -15,6 +15,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { createImSocket } from '@/composables/use-im-socket';
 import { imApi } from '@/api/im.api';
+import { uploadApi } from '@/api/upload.api';
 import { userApi } from '@/api/user.api';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -27,6 +28,11 @@ const messages = ref<ChatMessage[]>([]);
 const draft = ref('');
 const draftType = ref<MessageType>(MessageType.Text);
 const listRef = ref<HTMLElement | null>(null);
+const uploading = ref(false);
+
+const mediaAccept = computed(() =>
+  draftType.value === MessageType.Video ? 'video/*' : 'image/*',
+);
 
 const users = ref<UserView[]>([]);
 const groupDialog = ref(false);
@@ -97,16 +103,33 @@ function send(): void {
   if (!activeId.value) {
     return;
   }
-  if (!draft.value) {
-    ElMessage.warning('请输入消息内容或媒体地址');
+  if (!draft.value.trim()) {
+    ElMessage.warning('请输入消息内容');
     return;
   }
   im.send({
     conversationId: activeId.value,
-    type: draftType.value,
+    type: MessageType.Text,
     content: draft.value,
   });
   draft.value = '';
+}
+
+async function sendMedia(file: File): Promise<void> {
+  if (!activeId.value) {
+    return;
+  }
+  uploading.value = true;
+  try {
+    const { url } = await uploadApi.upload(file);
+    im.send({
+      conversationId: activeId.value,
+      type: draftType.value,
+      content: url,
+    });
+  } finally {
+    uploading.value = false;
+  }
 }
 
 function isSelf(message: ChatMessage): boolean {
@@ -371,17 +394,38 @@ onBeforeUnmount(() => im.disconnect());
               :value="opt.value"
             />
           </el-select>
-          <el-input
-            v-model="draft"
-            :placeholder="draftType === MessageType.Text ? '输入文字消息' : '输入媒体资源 URL'"
-            @keyup.enter="send"
-          />
-          <el-button
-            type="primary"
-            @click="send"
+          <template v-if="draftType === MessageType.Text">
+            <el-input
+              v-model="draft"
+              placeholder="输入文字消息"
+              @keyup.enter="send"
+            />
+            <el-button
+              type="primary"
+              @click="send"
+            >
+              发送
+            </el-button>
+          </template>
+          <el-upload
+            v-else
+            class="uploader"
+            :accept="mediaAccept"
+            :show-file-list="false"
+            :before-upload="
+              (file: File) => {
+                void sendMedia(file);
+                return false;
+              }
+            "
           >
-            发送
-          </el-button>
+            <el-button
+              type="primary"
+              :loading="uploading"
+            >
+              {{ draftType === MessageType.Video ? '上传并发送视频' : '上传并发送图片' }}
+            </el-button>
+          </el-upload>
         </div>
       </template>
       <el-empty
@@ -610,6 +654,9 @@ onBeforeUnmount(() => im.disconnect());
 .type {
   width: 110px;
   flex: none;
+}
+.uploader {
+  flex: 1;
 }
 .placeholder {
   margin: auto;
