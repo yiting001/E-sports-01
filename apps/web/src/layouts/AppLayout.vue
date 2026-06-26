@@ -3,10 +3,12 @@ import { useRoute, useRouter } from 'vue-router';
 import { computed } from 'vue';
 import { useMenus } from '@/composables/use-menus';
 import { useAuthStore } from '@/stores/auth.store';
+import { useMenuStore } from '@/stores/menu.store';
 
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
+const menuStore = useMenuStore();
 const { menus } = useMenus();
 
 const activePath = computed(() => route.path);
@@ -17,6 +19,7 @@ function go(path: string): void {
 
 function onLogout(): void {
   auth.logout();
+  menuStore.reset();
   void router.push({ name: 'login' });
 }
 </script>
