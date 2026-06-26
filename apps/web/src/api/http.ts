@@ -6,8 +6,17 @@ import axios, {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from 'axios';
+import { ElMessage } from 'element-plus';
 import { ENV } from '@/config/env';
+import { resolveHttpErrorMessage } from '@/utils/http-error';
 import { tokenStorage } from './token-storage';
+
+/** 请求级开关：置 true 时本次请求失败不弹全局提示，交由调用方自行处理 */
+export interface RequestOptions {
+  silent?: boolean;
+}
+
+type RequestConfig = InternalAxiosRequestConfig & RequestOptions & { _retried?: boolean };
 
 /**
  * HTTP 客户端。
@@ -50,7 +59,7 @@ instance.interceptors.response.use(
     return data as unknown as AxiosResponse;
   },
   async (error: AxiosError<ApiResponse>) => {
-    const original = error.config as InternalAxiosRequestConfig & { _retried?: boolean };
+    const original = error.config as RequestConfig | undefined;
     const status = error.response?.status;
 
     if (status === BizCode.Unauthorized && original && !original._retried) {
@@ -64,11 +73,21 @@ instance.interceptors.response.use(
       } catch (refreshError) {
         refreshing = null;
         tokenStorage.clear();
+        notifyError(error, original);
         return Promise.reject(refreshError);
       }
     }
+    notifyError(error, original);
     return Promise.reject(error);
   },
 );
+
+/** 统一弹出接口错误提示（单一来源），调用方可用 silent 关闭 */
+function notifyError(error: AxiosError<ApiResponse>, config?: RequestConfig): void {
+  if (config?.silent) {
+    return;
+  }
+  ElMessage.error(resolveHttpErrorMessage(error));
+}
 
 export const http = instance;

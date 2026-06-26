@@ -102,7 +102,7 @@ sequenceDiagram
 - **策略模式 + 配置驱动**：切换存储无需改代码，体现"对扩展开放、对修改关闭"。
 - **应用层统一生成 key**：`object-key` 负责对象命名（日期分目录 + uuid），驱动只负责落字节，职责清晰。
 - **大小上限走配置中心**：`upload.maxFileSize` 以 **MB** 为单位、可热调，不是写死常量；应用层换算为字节后比较，超限抛 `413`，错误信息以 MB 展示。
-- **失败有反馈**：前端 `UploadView` 捕获上传异常并通过 `resolveHttpErrorMessage` 提取后端 message 弹出错误提示，杜绝静默失败。
+- **失败有反馈**：上传等任意请求失败时，由全局 http 拦截器统一 `ElMessage.error` 弹出后端 message（`resolveHttpErrorMessage` 提取），杜绝静默失败；`UploadView` 仅负责成功提示与重置输入。
 - **删除一致性**：存储对象与数据库记录同删，避免孤儿文件/记录。
 
 ## 相关端点
