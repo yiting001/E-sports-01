@@ -4,7 +4,6 @@ import { PERMS } from '@app/contracts';
 import { onMounted, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { uploadApi } from '@/api/upload.api';
-import { resolveHttpErrorMessage } from '@/utils/http-error';
 
 const list = ref<UploadedFileView[]>([]);
 const total = ref(0);
@@ -38,8 +37,8 @@ async function onFileChange(event: Event): Promise<void> {
     await uploadApi.upload(file);
     ElMessage.success('上传成功');
     await load();
-  } catch (error) {
-    ElMessage.error(resolveHttpErrorMessage(error, '上传失败'));
+  } catch {
+    // 错误提示由全局 http 拦截器统一弹出
   } finally {
     target.value = '';
   }
