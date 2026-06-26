@@ -62,4 +62,8 @@ export class SysLog extends BaseEntity {
   /** 异常堆栈（仅错误日志有值） */
   @Column({ type: 'text', nullable: true })
   stack!: string | null;
+
+  /** 错误详情：异常响应体（含校验失败字段）与脱敏请求体，仅错误日志有值 */
+  @Column({ type: 'text', nullable: true })
+  detail!: string | null;
 }

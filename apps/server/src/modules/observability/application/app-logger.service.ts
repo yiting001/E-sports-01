@@ -84,6 +84,7 @@ export class AppLogger {
       ip: '',
       userAgent: '',
       stack,
+      detail: null,
     };
     this.writer.enqueue(draft);
   }

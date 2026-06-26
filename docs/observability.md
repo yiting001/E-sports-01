@@ -9,6 +9,7 @@
 - **链路追踪**：基于 `AsyncLocalStorage`，每个请求生成 `traceId`/`spanId`，兼容透传上游 `x-trace-id` / W3C `traceparent`，响应头回写 `x-trace-id`；WS 消息处理同样在独立链路上下文中执行。
 - **结构化日志**：`AppLogger` 输出 JSON（time/level/traceId/context/message/stack），统一替换裸 `console`。
 - **访问/错误日志自动采集**：全局 `LoggingInterceptor` 记录 method/path/status/耗时/userId/ip/ua/traceId，异常时附错误栈，**带缓冲异步落库**，不阻塞响应。
+- **错误详情 `detail`**：错误日志额外落库异常响应体（含 `ValidationPipe` 的 `message` 字段数组，直指哪个入参不合法）与脱敏请求体（`password`/`token`/`secret`/`authorization` 等字段替换为 `***`），便于在链路详情里直接定位校验失败原因；超 4000 字符截断。
 - **日志查询**（REST `GET /api/observability/logs`）：分页 + 多条件（level/type/traceId/path/userId/时间段）。
 - **链路详情**（REST `GET /api/observability/logs/trace/:traceId`）：同一 traceId 下按时间排序的全部 span。
 - **日志清理**（REST `DELETE /api/observability/logs`）：按保留天数删除过期日志，缺省取配置中心 `log.retentionDays`。
@@ -107,6 +108,7 @@ erDiagram
     varchar ip
     varchar user_agent
     text stack
+    text detail "异常响应体+脱敏请求体，仅错误日志"
     timestamptz created_at
   }
 ```

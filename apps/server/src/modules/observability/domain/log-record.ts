@@ -20,6 +20,7 @@ export interface LogRecordDraft {
   ip: string;
   userAgent: string;
   stack: string | null;
+  detail: string | null;
 }
 
 /** 日志过滤条件（领域内的查询规格，独立于 HTTP DTO） */
