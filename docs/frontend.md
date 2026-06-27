@@ -243,6 +243,16 @@ flowchart LR
   Routes --> Guard[守卫按 menu code 拦截]
 ```
 
+### 侧边栏分组收纳与图标
+
+侧边栏把可见菜单按**业务分组**收纳成两级树（如「系统管理」下含用户/角色/权限/配置/上传/日志，「在线沟通」下含即时通讯/客服工作台），并渲染 Element Plus 图标。
+
+- **分组单一来源**：分组清单在 `contracts` 的 `MENU_GROUPS`（code/title/icon/sort），每个 `MENU_DEFINITIONS` 项用 `group` 字段声明所属分组（不填则顶层平铺）。
+- **职责分离**：后端 `GET /rbac/menus/mine` 决定「**可见哪些叶子**」（按权限过滤），`MENU_GROUPS` 决定「**如何收纳**」。`use-menus` 据二者组装树：把可见叶子按 `group` 归位到对应分组，分组与未分组叶子再按 `sort` 升序混排，工作台恒置顶。
+- **空组自动隐藏**：某分组无任何可见子菜单时整组不渲染——角色未授予组内任一菜单权限时，该分组不出现。
+- **图标**：`main.ts` 全量注册 `@element-plus/icons-vue`，模板以 `<component :is="icon">` 按图标名动态渲染；叶子图标取后端下发（可在权限管理里改），分组图标取 `MENU_GROUPS`。
+- `AppLayout` 据树渲染：含 `children` 的节点渲染为 `el-sub-menu`，叶子渲染为 `el-menu-item`（`router` 模式按 `path` 导航）。
+
 ## 设计要点
 
 - **单一判定入口**：所有鉴权收敛到 `hasPermission`，避免分散判断逻辑漂移。

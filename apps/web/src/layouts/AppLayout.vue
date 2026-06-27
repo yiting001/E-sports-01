@@ -13,10 +13,6 @@ const { menus } = useMenus();
 
 const activePath = computed(() => route.path);
 
-function go(path: string): void {
-  void router.push(path);
-}
-
 function onLogout(): void {
   auth.logout();
   menuStore.reset();
@@ -35,16 +31,46 @@ function onLogout(): void {
       </div>
       <el-menu
         :default-active="activePath"
+        background-color="#001529"
+        text-color="#c0c4cc"
+        active-text-color="#ffffff"
         router
       >
-        <el-menu-item
+        <template
           v-for="item in menus"
-          :key="item.path"
-          :index="item.path"
-          @click="go(item.path)"
+          :key="item.key"
         >
-          {{ item.title }}
-        </el-menu-item>
+          <el-sub-menu
+            v-if="item.children"
+            :index="item.key"
+          >
+            <template #title>
+              <el-icon v-if="item.icon">
+                <component :is="item.icon" />
+              </el-icon>
+              <span>{{ item.title }}</span>
+            </template>
+            <el-menu-item
+              v-for="child in item.children"
+              :key="child.key"
+              :index="child.path"
+            >
+              <el-icon v-if="child.icon">
+                <component :is="child.icon" />
+              </el-icon>
+              <span>{{ child.title }}</span>
+            </el-menu-item>
+          </el-sub-menu>
+          <el-menu-item
+            v-else
+            :index="item.path"
+          >
+            <el-icon v-if="item.icon">
+              <component :is="item.icon" />
+            </el-icon>
+            <span>{{ item.title }}</span>
+          </el-menu-item>
+        </template>
       </el-menu>
     </el-aside>
     <el-container>
@@ -74,6 +100,9 @@ function onLogout(): void {
 }
 .aside {
   background: #001529;
+}
+.aside :deep(.el-menu) {
+  border-right: none;
 }
 .logo {
   height: 56px;
