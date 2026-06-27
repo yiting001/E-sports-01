@@ -1,5 +1,10 @@
 import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
-import { PermissionType } from '@app/contracts';
+import {
+  DEFAULT_TENANT_CODE,
+  DEFAULT_TENANT_ID,
+  PermissionType,
+  TenantStatus,
+} from '@app/contracts';
 import { loadEnvConfig } from '../../../bootstrap/env.config';
 import {
   PERMISSION_REPOSITORY,
@@ -12,6 +17,10 @@ import {
   ROLE_REPOSITORY,
   RoleRepository,
 } from '../domain/role-repository.interface';
+import {
+  TENANT_REPOSITORY,
+  TenantRepository,
+} from '../domain/tenant-repository.interface';
 import {
   USER_REPOSITORY,
   UserRepository,
@@ -32,10 +41,12 @@ export class RbacSeeder implements OnApplicationBootstrap {
     @Inject(PERMISSION_REPOSITORY) private readonly permRepo: PermissionRepository,
     @Inject(ROLE_REPOSITORY) private readonly roleRepo: RoleRepository,
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
+    @Inject(TENANT_REPOSITORY) private readonly tenantRepo: TenantRepository,
     private readonly password: PasswordService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
+    await this.ensureDefaultTenant();
     const createdPerms = await this.permRepo.createMissing(DEFAULT_PERMISSIONS);
     if (createdPerms > 0) {
       this.logger.log(`已播种 ${createdPerms} 条接口权限`);
@@ -47,6 +58,27 @@ export class RbacSeeder implements OnApplicationBootstrap {
     await this.pruneObsoleteMenus();
     const superRole = await this.ensureSuperRole();
     await this.ensureAdminUser(superRole.id);
+  }
+
+  /**
+   * 确保内置默认租户存在（固定主键 = 各租户表 tenant_id 列默认值）。
+   * 历史数据随建列默认值归入该租户，无需数据迁移。
+   */
+  private async ensureDefaultTenant(): Promise<void> {
+    const existing = await this.tenantRepo.findById(DEFAULT_TENANT_ID);
+    if (existing) {
+      return;
+    }
+    const tenant = this.tenantRepo.create({
+      id: DEFAULT_TENANT_ID,
+      code: DEFAULT_TENANT_CODE,
+      name: '默认租户',
+      status: TenantStatus.Enabled,
+      remark: '内置默认租户，承载历史数据与平台超级管理员',
+      builtin: true,
+    });
+    await this.tenantRepo.save(tenant);
+    this.logger.log('已创建内置默认租户');
   }
 
   /** 清理不在当前菜单清单中的历史 menu 权限（如旧的命名方案），多对多关联随之级联删除 */
@@ -73,6 +105,7 @@ export class RbacSeeder implements OnApplicationBootstrap {
       code: SUPER_ADMIN_ROLE,
       name: '超级管理员',
       remark: '内置角色，拥有全部权限',
+      tenantId: DEFAULT_TENANT_ID,
     });
     this.logger.log('已创建超级管理员角色');
     return this.roleRepo.save(role);
@@ -89,6 +122,7 @@ export class RbacSeeder implements OnApplicationBootstrap {
       passwordHash: await this.password.hash(adminPassword),
       nickname: '超级管理员',
       roles: role ? [role] : [],
+      tenantId: DEFAULT_TENANT_ID,
     });
     await this.userRepo.save(user);
     this.logger.warn(`已创建初始管理员 [${adminUsername}]，请尽快修改默认密码`);

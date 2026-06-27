@@ -10,6 +10,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatMessage, IM_EVENTS, PERMS, SendMessagePayload } from '@app/contracts';
+import { TenantContextService } from '../../../../shared/tenant/tenant-context.service';
 import { TraceContextService } from '../../../observability/application/trace-context.service';
 import { PermissionResolver } from '../../../rbac/application/permission-resolver.service';
 import { TokenService } from '../../../rbac/application/token.service';
@@ -22,7 +23,7 @@ import { extractToken } from './ws-auth';
 
 /** 握手鉴权后注入到连接上的登录身份 */
 interface AuthedSocket extends Socket {
-  data: { userId: string; username: string };
+  data: { userId: string; username: string; tenantId: string | null; isSuper: boolean };
 }
 
 /**
@@ -45,6 +46,7 @@ export class ImGateway
     private readonly access: ConversationAccessService,
     private readonly realtime: ChatRealtimeService,
     private readonly trace: TraceContextService,
+    private readonly tenant: TenantContextService,
   ) {}
 
   afterInit(server: Server): void {
@@ -63,7 +65,14 @@ export class ImGateway
         userId: socket.data?.userId ?? null,
         username: socket.data?.username ?? null,
       },
-      handler,
+      () =>
+        this.tenant.run(
+          {
+            tenantId: socket.data?.tenantId ?? null,
+            isSuper: socket.data?.isSuper ?? false,
+          },
+          handler,
+        ),
     );
   }
 
@@ -75,9 +84,12 @@ export class ImGateway
     }
     try {
       const payload = await this.tokens.verifyAccess(token);
+      const auth = await this.permissions.resolve(payload.sub);
       (socket as AuthedSocket).data = {
         userId: payload.sub,
         username: payload.username,
+        tenantId: payload.tenantId ?? null,
+        isSuper: auth.isSuper,
       };
       await socket.join(this.realtime.userRoom(payload.sub));
       this.logger.debug(`IM 连接已鉴权：${payload.username}`);

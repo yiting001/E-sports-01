@@ -5,6 +5,9 @@ import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { userApi, type CreateUserBody } from '@/api/user.api';
 import { roleApi } from '@/api/role.api';
+import { useAuthStore } from '@/stores/auth.store';
+
+const auth = useAuthStore();
 
 const list = ref<UserView[]>([]);
 const total = ref(0);
@@ -138,6 +141,12 @@ onMounted(load);
         prop="status"
         label="状态"
         width="100"
+      />
+      <el-table-column
+        v-if="auth.profile?.isSuper"
+        prop="tenantCode"
+        label="所属租户"
+        width="140"
       />
       <el-table-column label="角色">
         <template #default="{ row }">

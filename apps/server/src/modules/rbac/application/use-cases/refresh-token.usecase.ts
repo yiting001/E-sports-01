@@ -23,6 +23,6 @@ export class RefreshTokenUseCase {
     if (!user || user.status !== UserStatus.Enabled) {
       throw new UnauthorizedException('用户不存在或已被禁用');
     }
-    return this.token.issueTokenPair(user.id, user.username);
+    return this.token.issueTokenPair(user.id, user.username, user.tenantId);
   }
 }

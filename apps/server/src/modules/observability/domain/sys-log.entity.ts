@@ -1,6 +1,6 @@
 import { LogLevel, LogType } from '@app/contracts';
 import { Column, Entity, Index } from 'typeorm';
-import { BaseEntity } from '../../../shared/domain/base.entity';
+import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 
 /**
  * 系统日志聚合根。
@@ -8,7 +8,7 @@ import { BaseEntity } from '../../../shared/domain/base.entity';
  * 仅追加写入，查询接口按时间倒序分页，清理接口按保留天数删除过期记录。
  */
 @Entity('sys_log')
-export class SysLog extends BaseEntity {
+export class SysLog extends TenantScopedEntity {
   /** 链路 ID：同一请求内所有日志共享，按其检索可还原整条调用链 */
   @Index()
   @Column({ name: 'trace_id', length: 64 })

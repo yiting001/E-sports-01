@@ -4,6 +4,12 @@
  * 前端路由 meta 与 v-permission 指令复用同一份常量，避免“码”不一致或硬编码。
  */
 export const PERMS = {
+  tenant: {
+    list: 'rbac:tenant:list',
+    create: 'rbac:tenant:create',
+    update: 'rbac:tenant:update',
+    remove: 'rbac:tenant:remove',
+  },
   config: {
     list: 'config:list',
     save: 'config:save',

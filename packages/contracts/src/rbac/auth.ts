@@ -3,6 +3,8 @@ export interface LoginPayload {
   /** 登录账号：用户名或已绑定的手机号 */
   account: string;
   password: string;
+  /** 租户编码（选填）：多租户下用于消解同名歧义，空表示按平台/默认租户解析 */
+  tenantCode?: string;
 }
 
 /** 注册入参 */
@@ -12,6 +14,8 @@ export interface RegisterPayload {
   nickname?: string;
   /** 绑定手机号（选填），绑定后可用短信验证码登录 */
   phone?: string;
+  /** 注册到的租户编码（选填），空表示注册到默认租户 */
+  tenantCode?: string;
 }
 
 /** 登录/刷新返回的令牌对 */
@@ -32,4 +36,8 @@ export interface AuthProfile {
   permissions: string[];
   /** 是否超级管理员：为真时拥有全部权限，前端鉴权直接放行 */
   isSuper: boolean;
+  /** 所属租户编码 */
+  tenantCode: string;
+  /** 所属租户名称 */
+  tenantName: string;
 }

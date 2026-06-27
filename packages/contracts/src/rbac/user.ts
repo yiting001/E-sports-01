@@ -20,5 +20,7 @@ export interface UserView {
   phone: string;
   status: UserStatusEnum;
   roles: UserRoleBrief[];
+  /** 所属租户编码（平台超管查看跨租户列表时区分归属） */
+  tenantCode: string;
   createdAt: string;
 }

@@ -13,6 +13,6 @@ export class AuthSmsCodeController {
   @Public()
   @HttpCode(HttpStatus.OK)
   send(@Body() dto: SendSmsCodeDto): Promise<SendSmsCodeResult> {
-    return this.useCase.execute(dto.phone);
+    return this.useCase.execute(dto.phone, dto.tenantCode);
   }
 }
