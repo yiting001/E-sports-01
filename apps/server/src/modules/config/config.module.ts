@@ -8,7 +8,9 @@ import { ConfigService } from './application/config.service';
 import { ListConfigsUseCase } from './application/use-cases/list-configs.usecase';
 import { UpsertConfigUseCase } from './application/use-cases/upsert-config.usecase';
 import { RemoveConfigUseCase } from './application/use-cases/remove-config.usecase';
+import { GetBrandingUseCase } from './application/use-cases/get-branding.usecase';
 import { ListConfigsController } from './interfaces/list-configs.controller';
+import { GetBrandingController } from './interfaces/get-branding.controller';
 import { UpsertConfigController } from './interfaces/upsert-config.controller';
 import { RemoveConfigController } from './interfaces/remove-config.controller';
 
@@ -20,6 +22,7 @@ import { RemoveConfigController } from './interfaces/remove-config.controller';
 @Module({
   imports: [TypeOrmModule.forFeature([ConfigItem])],
   controllers: [
+    GetBrandingController,
     ListConfigsController,
     UpsertConfigController,
     RemoveConfigController,
@@ -31,6 +34,7 @@ import { RemoveConfigController } from './interfaces/remove-config.controller';
     ListConfigsUseCase,
     UpsertConfigUseCase,
     RemoveConfigUseCase,
+    GetBrandingUseCase,
   ],
   exports: [ConfigService],
 })

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { Trophy } from '@element-plus/icons-vue';
+import { useBrandingStore } from '@/stores/branding.store';
 import './AuthHeroPanel.css';
+
+const branding = useBrandingStore();
 </script>
 
 <template>
@@ -8,9 +11,15 @@ import './AuthHeroPanel.css';
     <div class="hero-inner">
       <div class="brand-line">
         <span class="brand-mark">
-          <el-icon><Trophy /></el-icon>
+          <img
+            v-if="branding.appLogo"
+            :src="branding.appLogo"
+            class="brand-logo"
+            alt="logo"
+          >
+          <el-icon v-else><Trophy /></el-icon>
         </span>
-        <span>基础设施平台</span>
+        <span>{{ branding.appName }}</span>
       </div>
 
       <section class="hero-copy">
