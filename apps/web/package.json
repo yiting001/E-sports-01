@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@app/contracts": "workspace:*",
+    "aieditor": "1.4.2",
     "axios": "1.7.9",
+    "dompurify": "3.4.11",
     "element-plus": "2.8.8",
     "pinia": "2.2.6",
     "socket.io-client": "4.8.1",
