@@ -1,6 +1,7 @@
 /** 登录入参 */
 export interface LoginPayload {
-  username: string;
+  /** 登录账号：用户名或已绑定的手机号 */
+  account: string;
   password: string;
 }
 
@@ -9,6 +10,8 @@ export interface RegisterPayload {
   username: string;
   password: string;
   nickname?: string;
+  /** 绑定手机号（选填），绑定后可用短信验证码登录 */
+  phone?: string;
 }
 
 /** 登录/刷新返回的令牌对 */

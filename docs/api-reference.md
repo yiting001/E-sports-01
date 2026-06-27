@@ -13,16 +13,16 @@
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| POST | `/api/auth/register` | 公开 | 注册用户 |
-| POST | `/api/auth/login` | 公开 | 登录，返回 `{ accessToken, refreshToken }` |
+| POST | `/api/auth/register` | 公开 | 注册用户 `{ username, password, nickname?, phone? }`（phone 选填绑定） |
+| POST | `/api/auth/login` | 公开 | 登录 `{ account, password }`（account 为用户名或手机号），返回 `{ accessToken, refreshToken }` |
 | POST | `/api/auth/refresh` | 公开 | 用 refresh 令牌换发新双令牌 |
 | POST | `/api/auth/sms/code` | 公开 | 发送登录短信验证码 `{ phone }` → `{ cooldown }`（仅已绑定启用账号） |
 | POST | `/api/auth/sms/login` | 公开 | 短信验证码登录 `{ phone, code }`，返回双令牌 |
 | GET | `/api/auth/profile` | 登录 | 当前用户 `{ id, username, nickname, roles[], permissions[], isSuper }` |
 
 ```jsonc
-// POST /api/auth/login  请求
-{ "username": "admin", "password": "admin123456" }
+// POST /api/auth/login  请求（account 可填用户名或已绑定手机号）
+{ "account": "admin", "password": "admin123456" }
 // data
 { "accessToken": "<jwt>", "refreshToken": "<jwt>" }
 ```

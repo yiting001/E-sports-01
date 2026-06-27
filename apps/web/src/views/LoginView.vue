@@ -16,7 +16,7 @@ const tab = ref<'password' | 'sms'>('password');
 const mode = ref<'login' | 'register'>('login');
 const loading = ref(false);
 
-const form = reactive({ username: '', password: '', nickname: '' });
+const form = reactive({ account: '', username: '', password: '', nickname: '', phone: '' });
 const smsForm = reactive({ phone: '', code: '' });
 
 /** 验证码发送冷却倒计时（秒） */
@@ -42,19 +42,25 @@ async function goRedirect(): Promise<void> {
 }
 
 async function submit(): Promise<void> {
-  if (!form.username || !form.password) {
+  if (mode.value === 'login') {
+    if (!form.account || !form.password) {
+      ElMessage.warning('请输入账号与密码');
+      return;
+    }
+  } else if (!form.username || !form.password) {
     ElMessage.warning('请输入用户名与密码');
     return;
   }
   loading.value = true;
   try {
     if (mode.value === 'login') {
-      await auth.login({ username: form.username, password: form.password });
+      await auth.login({ account: form.account, password: form.password });
     } else {
       await auth.register({
         username: form.username,
         password: form.password,
         nickname: form.nickname || undefined,
+        phone: form.phone || undefined,
       });
     }
     await goRedirect();
@@ -111,7 +117,19 @@ async function smsSubmit(): Promise<void> {
             label-width="72px"
             @submit.prevent
           >
-            <el-form-item label="用户名">
+            <el-form-item
+              v-if="mode === 'login'"
+              label="账号"
+            >
+              <el-input
+                v-model="form.account"
+                placeholder="用户名或手机号"
+              />
+            </el-form-item>
+            <el-form-item
+              v-else
+              label="用户名"
+            >
               <el-input
                 v-model="form.username"
                 placeholder="请输入用户名"
@@ -133,6 +151,16 @@ async function smsSubmit(): Promise<void> {
               <el-input
                 v-model="form.nickname"
                 placeholder="选填"
+              />
+            </el-form-item>
+            <el-form-item
+              v-if="mode === 'register'"
+              label="手机号"
+            >
+              <el-input
+                v-model="form.phone"
+                maxlength="11"
+                placeholder="选填，绑定后可短信登录"
               />
             </el-form-item>
             <el-form-item>
