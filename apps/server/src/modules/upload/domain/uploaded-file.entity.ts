@@ -1,6 +1,6 @@
 import { StorageDriver } from '@app/contracts';
 import { Column, Entity, Index } from 'typeorm';
-import { BaseEntity } from '../../../shared/domain/base.entity';
+import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 
 /**
  * 文件记录聚合根。
@@ -8,7 +8,7 @@ import { BaseEntity } from '../../../shared/domain/base.entity';
  * 通过 key 关联存储对象，driver 标识它由哪种存储保存以便删除时复用同一驱动。
  */
 @Entity('sys_uploaded_file')
-export class UploadedFileEntity extends BaseEntity {
+export class UploadedFileEntity extends TenantScopedEntity {
   /** 存储对象 key（相对路径/对象名），同一驱动内唯一 */
   @Index()
   @Column({ length: 512 })

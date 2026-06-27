@@ -53,6 +53,14 @@ export interface MenuView {
  * 后端播种为 menu 权限、用户分配后方可见；前端路由 meta.permission 取同名 code。
  */
 export const MENU_DEFINITIONS: MenuDefinition[] = [
+  {
+    code: 'rbac:tenant:menu',
+    title: '租户管理',
+    path: 'rbac/tenants',
+    icon: 'OfficeBuilding',
+    sort: 5,
+    group: 'system',
+  },
   { code: 'rbac:user:menu', title: '用户管理', path: 'rbac/users', icon: 'User', sort: 10, group: 'system' },
   { code: 'rbac:role:menu', title: '角色管理', path: 'rbac/roles', icon: 'UserFilled', sort: 20, group: 'system' },
   {

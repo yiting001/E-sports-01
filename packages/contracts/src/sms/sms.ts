@@ -16,6 +16,8 @@ export const CHINA_MOBILE_PATTERN = /^1[3-9]\d{9}$/;
 export interface SendSmsCodePayload {
   /** 手机号（11 位中国大陆号码） */
   phone: string;
+  /** 租户编码（选填）：多租户下限定手机号所属租户，空表示按全局/默认租户解析 */
+  tenantCode?: string;
 }
 
 /** 短信验证码登录入参 */
@@ -23,6 +25,8 @@ export interface SmsLoginPayload {
   phone: string;
   /** 收到的验证码 */
   code: string;
+  /** 租户编码（选填）：多租户下限定手机号所属租户 */
+  tenantCode?: string;
 }
 
 /** 发送验证码后的返回：仅回传必要的限流信息，绝不回传验证码本身 */

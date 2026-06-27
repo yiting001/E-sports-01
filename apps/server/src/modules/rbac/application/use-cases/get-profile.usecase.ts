@@ -5,13 +5,15 @@ import {
   UserRepository,
 } from '../../domain/user-repository.interface';
 import { PermissionResolver } from '../permission-resolver.service';
+import { TenantResolver } from '../tenant-resolver.service';
 
-/** 用例：获取当前登录用户概要（含角色与扁平权限码） */
+/** 用例：获取当前登录用户概要（含角色、扁平权限码与所属租户） */
 @Injectable()
 export class GetProfileUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     private readonly resolver: PermissionResolver,
+    private readonly tenants: TenantResolver,
   ) {}
 
   async execute(userId: string): Promise<AuthProfile> {
@@ -20,6 +22,7 @@ export class GetProfileUseCase {
       throw new NotFoundException('用户不存在');
     }
     const auth = await this.resolver.resolve(userId);
+    const tenant = await this.tenants.findById(user.tenantId);
     return {
       id: user.id,
       username: user.username,
@@ -27,6 +30,8 @@ export class GetProfileUseCase {
       roles: auth.roles,
       permissions: auth.permissions,
       isSuper: auth.isSuper,
+      tenantCode: tenant?.code ?? '',
+      tenantName: tenant?.name ?? '',
     };
   }
 }

@@ -10,19 +10,27 @@ import { SmsModule } from '../sms/sms.module';
 import { User } from './domain/user.entity';
 import { Role } from './domain/role.entity';
 import { Permission } from './domain/permission.entity';
+import { TenantEntity } from './domain/tenant.entity';
 import { USER_REPOSITORY } from './domain/user-repository.interface';
 import { ROLE_REPOSITORY } from './domain/role-repository.interface';
 import { PERMISSION_REPOSITORY } from './domain/permission-repository.interface';
+import { TENANT_REPOSITORY } from './domain/tenant-repository.interface';
 
 import { TypeormUserRepository } from './infrastructure/user.repository';
 import { TypeormRoleRepository } from './infrastructure/role.repository';
 import { TypeormPermissionRepository } from './infrastructure/permission.repository';
+import { TypeormTenantRepository } from './infrastructure/tenant.repository';
 import { PasswordService } from './infrastructure/password.service';
 import { RbacSeeder } from './infrastructure/rbac.seeder';
 
 import { TokenService } from './application/token.service';
 import { PermissionResolver } from './application/permission-resolver.service';
+import { TenantResolver } from './application/tenant-resolver.service';
 import { UserDirectory } from './application/user-directory.service';
+import { ListTenantsUseCase } from './application/use-cases/list-tenants.usecase';
+import { CreateTenantUseCase } from './application/use-cases/create-tenant.usecase';
+import { UpdateTenantUseCase } from './application/use-cases/update-tenant.usecase';
+import { RemoveTenantUseCase } from './application/use-cases/remove-tenant.usecase';
 import { LoginUseCase } from './application/use-cases/login.usecase';
 import { SmsLoginUseCase } from './application/use-cases/sms-login.usecase';
 import { SendLoginSmsCodeUseCase } from './application/use-cases/send-login-sms-code.usecase';
@@ -70,6 +78,10 @@ import { PermissionCreateController } from './interfaces/controllers/permission.
 import { PermissionUpdateController } from './interfaces/controllers/permission.update.controller';
 import { PermissionRemoveController } from './interfaces/controllers/permission.remove.controller';
 import { MenuMineController } from './interfaces/controllers/menu.mine.controller';
+import { TenantListController } from './interfaces/controllers/tenant.list.controller';
+import { TenantCreateController } from './interfaces/controllers/tenant.create.controller';
+import { TenantUpdateController } from './interfaces/controllers/tenant.update.controller';
+import { TenantRemoveController } from './interfaces/controllers/tenant.remove.controller';
 
 /**
  * RBAC 模块。
@@ -82,7 +94,7 @@ import { MenuMineController } from './interfaces/controllers/menu.mine.controlle
     SmsModule,
     PassportModule,
     JwtModule.register({}),
-    TypeOrmModule.forFeature([User, Role, Permission]),
+    TypeOrmModule.forFeature([User, Role, Permission, TenantEntity]),
   ],
   controllers: [
     AuthLoginController,
@@ -106,14 +118,20 @@ import { MenuMineController } from './interfaces/controllers/menu.mine.controlle
     PermissionUpdateController,
     PermissionRemoveController,
     MenuMineController,
+    TenantListController,
+    TenantCreateController,
+    TenantUpdateController,
+    TenantRemoveController,
   ],
   providers: [
     { provide: USER_REPOSITORY, useClass: TypeormUserRepository },
     { provide: ROLE_REPOSITORY, useClass: TypeormRoleRepository },
     { provide: PERMISSION_REPOSITORY, useClass: TypeormPermissionRepository },
+    { provide: TENANT_REPOSITORY, useClass: TypeormTenantRepository },
     PasswordService,
     TokenService,
     PermissionResolver,
+    TenantResolver,
     UserDirectory,
     JwtStrategy,
     RbacSeeder,
@@ -140,6 +158,10 @@ import { MenuMineController } from './interfaces/controllers/menu.mine.controlle
     UpdatePermissionUseCase,
     RemovePermissionUseCase,
     GetMyMenusUseCase,
+    ListTenantsUseCase,
+    CreateTenantUseCase,
+    UpdateTenantUseCase,
+    RemoveTenantUseCase,
   ],
   exports: [TokenService, PermissionResolver, UserDirectory],
 })

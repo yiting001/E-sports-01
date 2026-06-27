@@ -1,6 +1,6 @@
 import { ConversationMemberRole } from '@app/contracts';
 import { Column, Entity, Index, Unique } from 'typeorm';
-import { BaseEntity } from '../../../shared/domain/base.entity';
+import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 
 /**
  * 会话成员实体。
@@ -9,7 +9,7 @@ import { BaseEntity } from '../../../shared/domain/base.entity';
  */
 @Entity('sys_conversation_member')
 @Unique(['conversationId', 'userId'])
-export class ConversationMemberEntity extends BaseEntity {
+export class ConversationMemberEntity extends TenantScopedEntity {
   @Index()
   @Column({ name: 'conversation_id', length: 36 })
   conversationId!: string;

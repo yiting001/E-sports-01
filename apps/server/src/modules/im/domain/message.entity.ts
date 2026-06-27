@@ -1,6 +1,6 @@
 import { MessageType } from '@app/contracts';
 import { Column, Entity, Index } from 'typeorm';
-import { BaseEntity } from '../../../shared/domain/base.entity';
+import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 
 /**
  * 聊天消息实体。
@@ -8,7 +8,7 @@ import { BaseEntity } from '../../../shared/domain/base.entity';
  * 会话维度用 conversationId 表达，群聊/客服等会话类型在上层语义中区分。
  */
 @Entity('sys_chat_message')
-export class ChatMessageEntity extends BaseEntity {
+export class ChatMessageEntity extends TenantScopedEntity {
   @Index()
   @Column({ length: 64 })
   conversationId!: string;

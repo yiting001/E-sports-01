@@ -6,6 +6,7 @@ import {
   UserRepository,
 } from '../../domain/user-repository.interface';
 import { UserStatus } from '../../domain/user.entity';
+import { TenantResolver } from '../tenant-resolver.service';
 import { TokenService } from '../token.service';
 
 /**
@@ -18,6 +19,7 @@ export class SmsLoginUseCase {
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     private readonly smsCode: SmsCodeService,
     private readonly token: TokenService,
+    private readonly tenants: TenantResolver,
   ) {}
 
   async execute(payload: SmsLoginPayload): Promise<TokenPair> {
@@ -25,10 +27,12 @@ export class SmsLoginUseCase {
     if (!valid) {
       throw new UnauthorizedException('验证码错误或已过期');
     }
-    const user = await this.userRepo.findByPhone(payload.phone);
+    const tenantId = await this.tenants.resolveOptionalId(payload.tenantCode);
+    const user = await this.userRepo.findByPhone(payload.phone, tenantId);
     if (!user || user.status !== UserStatus.Enabled) {
       throw new UnauthorizedException('该手机号未绑定可用账号');
     }
-    return this.token.issueTokenPair(user.id, user.username);
+    await this.tenants.assertTenantEnabled(user.tenantId);
+    return this.token.issueTokenPair(user.id, user.username, user.tenantId);
   }
 }

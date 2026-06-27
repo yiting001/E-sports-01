@@ -10,6 +10,10 @@ export interface PermissionDefault {
 
 /** 权限码 → 中文名映射，集中维护，避免散落 */
 const PERMISSION_NAMES: Record<string, string> = {
+  [PERMS.tenant.list]: '租户-查询',
+  [PERMS.tenant.create]: '租户-创建',
+  [PERMS.tenant.update]: '租户-更新',
+  [PERMS.tenant.remove]: '租户-删除',
   [PERMS.config.list]: '配置-查询',
   [PERMS.config.save]: '配置-保存',
   [PERMS.config.remove]: '配置-删除',
