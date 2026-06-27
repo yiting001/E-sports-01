@@ -202,6 +202,7 @@ erDiagram
 - 私聊 / 群聊 / 客服会话统一列表展示，保留未读数、状态、最后消息预览和更新时间。
 - 第一屏直接进入通讯工作台，去掉装饰型头图与统计卡，降低运营展示感。
 - 聊天面板使用桌面聊天常见的会话头与底部 compose box：头部展示会话头像、类型、状态、成员数和更新时间；输入面板内提供图标化图片/视频工具、多行文本输入和右侧发送按钮，媒体仍复用上传模块。
+- `/im/service` 为坐席侧客服工作台：左侧展示待接入队列、队列汇总和访客工单；右侧展示当前接待会话、系统欢迎语、消息气泡和桌面式回复输入框。
 - 系统富文本消息继续经 DOMPurify 净化。
 - 群聊操作保留改名、成员管理、退群；成员管理弹窗保留加成员和移除成员能力。
 - 页面保持响应式：桌面左右工作台，窄屏上下布局，消息列表和会话列表各自内部滚动。
@@ -213,7 +214,9 @@ flowchart TD
   Page --> GroupDialog["ImGroupDialog 建群弹窗"]
   Page --> MemberDialog["ImMemberDialog 成员弹窗"]
   Page --> Socket["createImSocket 实时收发"]
+  ServiceConsole["ServiceConsoleView 客服工作台"] --> Socket
   Chat --> UploadApi["uploadApi 媒体上传"]
-  GroupDialog --> ImApi["imApi 会话/群管理"]
+  ServiceConsole --> ImApi["imApi 会话/客服管理"]
+  GroupDialog --> ImApi
   MemberDialog --> ImApi
 ```

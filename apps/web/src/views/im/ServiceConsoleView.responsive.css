@@ -1,0 +1,85 @@
+@media (max-width: 1180px) {
+  .service-workspace {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .service-console-page {
+    height: auto;
+    min-height: 0;
+  }
+
+  .service-workspace {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: auto;
+  }
+
+  .service-queue {
+    min-height: 360px;
+    border-right: 0;
+    border-bottom: 1px solid #dfe7ef;
+  }
+
+  .service-panel {
+    min-height: 560px;
+  }
+
+  .service-panel__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .service-panel__head > .el-button {
+    width: 100%;
+  }
+
+  .service-message {
+    max-width: 88%;
+  }
+}
+
+@media (max-width: 640px) {
+  .service-queue__head,
+  .service-panel__head,
+  .service-messages {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .service-queue__summary {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .service-queue__list {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .service-ticket__foot,
+  .service-composer__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .service-ticket__foot .el-button,
+  .service-composer__footer > .el-button {
+    width: 100%;
+  }
+
+  .service-composer {
+    padding: 10px 10px 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .service-message {
+    max-width: 96%;
+  }
+
+  .service-media {
+    max-width: 240px;
+  }
+}

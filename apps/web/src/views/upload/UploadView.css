@@ -1,0 +1,381 @@
+.upload-page {
+  display: grid;
+  min-width: 0;
+  gap: 18px;
+}
+
+.upload-hero,
+.upload-panel,
+.upload-stat {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+}
+
+.upload-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+  gap: 20px;
+  min-height: 196px;
+  padding: 28px;
+  overflow: hidden;
+  color: #f8fafc;
+  border: 0;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 14% 20%, rgba(56, 189, 248, 0.28), transparent 28%),
+    radial-gradient(circle at 86% 68%, rgba(250, 204, 21, 0.22), transparent 30%),
+    linear-gradient(135deg, #111827, #0f3f46 58%, #0f766e);
+}
+
+.upload-hero::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: '';
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.upload-hero__content,
+.upload-hero__visual,
+.upload-flow,
+.upload-flow__line,
+.upload-core,
+.upload-node,
+.upload-panel,
+.upload-stat {
+  position: relative;
+}
+
+.upload-hero__content {
+  z-index: 1;
+  align-self: center;
+  max-width: 680px;
+}
+
+.upload-eyebrow {
+  display: inline-flex;
+  margin-bottom: 8px;
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.upload-hero h1 {
+  margin: 0;
+  font-size: 38px;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.upload-hero p {
+  max-width: 590px;
+  margin: 14px 0 0;
+  color: #d1fae5;
+  line-height: 1.72;
+}
+
+.upload-hero__visual {
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+}
+
+.upload-flow {
+  width: 200px;
+  height: 150px;
+}
+
+.upload-flow__line {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(191, 219, 254, 0.76), transparent);
+  transform-origin: left center;
+}
+
+.flow-line-a {
+  left: 24px;
+  top: 38px;
+  width: 150px;
+  transform: rotate(18deg);
+}
+
+.flow-line-b {
+  left: 34px;
+  top: 108px;
+  width: 138px;
+  transform: rotate(-22deg);
+}
+
+.flow-line-c {
+  left: 96px;
+  top: 24px;
+  width: 96px;
+  transform: rotate(90deg);
+}
+
+.upload-core {
+  position: absolute;
+  left: 62px;
+  top: 36px;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  color: #0f172a;
+  font-size: 30px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #f8fafc, #7dd3fc);
+  box-shadow: 0 24px 54px rgba(56, 189, 248, 0.32);
+}
+
+.upload-node {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: #0f172a;
+  border: 4px solid rgba(248, 250, 252, 0.88);
+  border-radius: 14px;
+  background: #facc15;
+  box-shadow: 0 0 24px rgba(250, 204, 21, 0.5);
+}
+
+.upload-node-a {
+  left: 16px;
+  top: 18px;
+}
+
+.upload-node-b {
+  right: 12px;
+  top: 36px;
+  background: #2dd4bf;
+  box-shadow: 0 0 24px rgba(45, 212, 191, 0.5);
+}
+
+.upload-node-c {
+  right: 44px;
+  bottom: 8px;
+  background: #a7f3d0;
+  box-shadow: 0 0 24px rgba(167, 243, 208, 0.48);
+}
+
+.upload-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.upload-stat {
+  min-width: 0;
+  padding: 18px;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.upload-stat::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  content: '';
+  background: linear-gradient(90deg, #38bdf8, #14b8a6);
+}
+
+.upload-stat:nth-child(2)::before {
+  background: linear-gradient(90deg, #14b8a6, #2dd4bf);
+}
+
+.upload-stat:nth-child(3)::before {
+  background: linear-gradient(90deg, #f59e0b, #facc15);
+}
+
+.upload-stat:nth-child(4)::before {
+  background: linear-gradient(90deg, #6366f1, #38bdf8);
+}
+
+.upload-stat span,
+.upload-stat small,
+.upload-file small,
+.upload-size,
+.upload-date {
+  color: #64748b;
+}
+
+.upload-stat span,
+.upload-stat small,
+.upload-file small,
+.upload-size,
+.upload-date {
+  font-size: 13px;
+}
+
+.upload-stat strong {
+  display: block;
+  margin-top: 10px;
+  overflow: hidden;
+  color: #111827;
+  font-size: 30px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-stat small {
+  display: block;
+  margin-top: 8px;
+}
+
+.upload-panel {
+  min-width: 0;
+  padding: 20px;
+  border-radius: 18px;
+}
+
+.upload-panel__head,
+.upload-panel__actions,
+.upload-file,
+.upload-driver,
+.upload-link,
+.upload-date,
+.upload-actions {
+  display: flex;
+  align-items: center;
+}
+
+.upload-panel__head {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.upload-panel__head h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.upload-panel__actions {
+  gap: 8px;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.upload-file {
+  min-width: 0;
+  gap: 12px;
+}
+
+.upload-file__icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: #0f766e;
+  font-size: 18px;
+  border-radius: 14px;
+  background: #ccfbf1;
+}
+
+.upload-file div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.upload-file strong,
+.upload-file small,
+.upload-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-file strong {
+  color: #111827;
+  line-height: 1.25;
+}
+
+.upload-file small {
+  display: block;
+}
+
+.upload-driver,
+.upload-type {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 999px;
+}
+
+.upload-driver {
+  gap: 6px;
+  color: #0f766e;
+  background: #ccfbf1;
+  white-space: nowrap;
+}
+
+.upload-driver.is-oss {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.upload-type {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+  color: #1d4ed8;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: #dbeafe;
+}
+
+.upload-size {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.upload-link {
+  max-width: 100%;
+  min-width: 0;
+  gap: 6px;
+}
+
+.upload-link span {
+  display: inline-block;
+  min-width: 0;
+}
+
+.upload-date {
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.upload-actions {
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.upload-actions .el-button + .el-button {
+  margin-left: 0;
+}
+
+.upload-pager {
+  margin-top: 16px;
+  justify-content: flex-end;
+}

@@ -1,0 +1,256 @@
+.service-console-page {
+  box-sizing: border-box;
+  height: calc(100vh - 112px);
+  min-height: 560px;
+  min-width: 0;
+}
+
+.service-console-page *,
+.service-console-page *::before,
+.service-console-page *::after {
+  box-sizing: border-box;
+}
+
+.service-workspace {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #dfe7ef;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow:
+    0 18px 42px rgba(15, 23, 42, 0.07),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.service-queue,
+.service-panel {
+  min-width: 0;
+}
+
+.service-queue {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+  border-right: 1px solid #dfe7ef;
+  background: #fbfcfd;
+}
+
+.service-queue__head,
+.service-heading,
+.service-queue__summary,
+.service-ticket__top,
+.service-ticket__foot {
+  display: flex;
+  align-items: center;
+}
+
+.service-queue__head {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px;
+  border-bottom: 1px solid #e8edf3;
+  background: linear-gradient(180deg, #ffffff, #fbfcfd);
+}
+
+.service-heading {
+  gap: 11px;
+  min-width: 0;
+}
+
+.service-heading__icon,
+.service-ticket__avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  font-weight: 700;
+}
+
+.service-heading__icon {
+  width: 40px;
+  height: 40px;
+  color: #9a3412;
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  border-radius: 11px;
+  background: #fff3df;
+}
+
+.service-heading h2 {
+  margin: 0;
+  overflow: hidden;
+  color: #111827;
+  line-height: 1.25;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-heading h2 {
+  font-size: 18px;
+}
+
+.service-heading small {
+  display: block;
+  margin-top: 4px;
+  color: #718096;
+  font-size: 12px;
+}
+
+.service-queue__head .el-button {
+  color: #475569;
+  border-color: #d8e1ea;
+}
+
+.service-queue__summary {
+  gap: 8px;
+  padding: 12px 18px;
+  border-bottom: 1px solid #e8edf3;
+}
+
+.service-queue__summary span {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #e1e8ef;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.service-queue__summary strong {
+  color: #0f766e;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.service-queue__summary small,
+.service-ticket__top small,
+.service-ticket__foot {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.service-queue__list {
+  min-height: 0;
+  padding: 10px;
+}
+
+.service-ticket {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.service-ticket + .service-ticket {
+  margin-top: 8px;
+}
+
+.service-ticket:hover {
+  border-color: #d3e9e5;
+  background: #f5faf9;
+  box-shadow: 0 10px 22px rgba(15, 118, 110, 0.08);
+}
+
+.service-ticket__top {
+  gap: 10px;
+  min-width: 0;
+}
+
+.service-ticket__avatar {
+  width: 38px;
+  height: 38px;
+  color: #9a3412;
+  font-size: 12px;
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  border-radius: 10px;
+  background: #fff3df;
+}
+
+.service-ticket__top div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.service-ticket__top strong {
+  overflow: hidden;
+  color: #111827;
+  font-size: 14.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-ticket p {
+  min-height: 38px;
+  margin: 0;
+  overflow: hidden;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.service-ticket__foot {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.service-ticket__foot .el-button {
+  min-width: 70px;
+  height: 30px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.service-queue-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 56px 18px;
+  color: #64748b;
+  text-align: center;
+}
+
+.service-queue-empty__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: #9a3412;
+  border: 1px solid rgba(154, 52, 18, 0.14);
+  border-radius: 12px;
+  background: #fff3df;
+}
+
+.service-queue-empty strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.service-queue-empty small {
+  max-width: 190px;
+  line-height: 1.5;
+}
+
+.service-queue-empty .el-button {
+  height: 32px;
+  border-radius: 8px;
+}
+
+.service-console-page .el-button--primary {
+  --el-button-active-bg-color: #115e59;
+  --el-button-active-border-color: #115e59;
+  --el-button-bg-color: #0f766e;
+  --el-button-border-color: #0f766e;
+  --el-button-hover-bg-color: #12877e;
+  --el-button-hover-border-color: #12877e;
+}

@@ -1,0 +1,86 @@
+@media (max-width: 1180px) {
+  .log-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .log-filters {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
+
+  .log-filter-actions {
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 1080px) {
+  .log-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .log-hero__visual {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .log-page {
+    gap: 14px;
+  }
+
+  .log-hero,
+  .log-panel,
+  .log-stat {
+    border-radius: 14px;
+  }
+
+  .log-hero,
+  .log-panel {
+    padding: 18px;
+  }
+
+  .log-hero h1 {
+    font-size: 30px;
+  }
+
+  .log-panel__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .log-panel__actions,
+  .log-filter-actions .el-form-item__content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .log-panel__actions .el-button,
+  .log-filter-actions .el-button {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .log-filters,
+  .log-stats,
+  .log-trace-head {
+    grid-template-columns: 1fr;
+  }
+
+  .log-pager {
+    justify-content: center;
+  }
+
+  .log-drawer {
+    width: min(92vw, 620px) !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .log-panel__actions,
+  .log-filter-actions .el-form-item__content {
+    grid-template-columns: 1fr;
+  }
+
+  .log-drawer {
+    width: 100% !important;
+  }
+}

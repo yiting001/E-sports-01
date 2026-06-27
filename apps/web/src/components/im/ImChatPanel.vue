@@ -234,11 +234,11 @@ watch(
         </div>
       </div>
     </template>
-    <el-empty
+    <div
       v-else
-      :image-size="132"
-      description="选择左侧会话开始聊天"
       class="im-placeholder"
-    />
+    >
+      选择左侧会话开始聊天
+    </div>
   </section>
 </template>
