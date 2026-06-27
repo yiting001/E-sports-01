@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { computed } from 'vue';
+import { ArrowDown, Fold, HomeFilled, SwitchButton, UserFilled } from '@element-plus/icons-vue';
 import { useMenus } from '@/composables/use-menus';
 import { useAuthStore } from '@/stores/auth.store';
 import { useMenuStore } from '@/stores/menu.store';
+import './AppLayout.css';
 
 const router = useRouter();
 const route = useRoute();
@@ -11,29 +13,38 @@ const auth = useAuthStore();
 const menuStore = useMenuStore();
 const { menus } = useMenus();
 
+const mobileMenuVisible = ref(false);
 const activePath = computed(() => route.path);
+const userName = computed(() => auth.profile?.nickname || auth.profile?.username || '-');
+const roleText = computed(() => (auth.profile?.isSuper ? '超级管理员' : '授权账号'));
 
 function onLogout(): void {
   auth.logout();
   menuStore.reset();
   void router.push({ name: 'login' });
 }
+
+function closeMobileMenu(): void {
+  mobileMenuVisible.value = false;
+}
 </script>
 
 <template>
-  <el-container class="layout">
-    <el-aside
-      width="220px"
-      class="aside"
-    >
-      <div class="logo">
-        基础设施平台
+  <el-container class="layout-shell">
+    <el-aside class="app-aside">
+      <div class="brand-block">
+        <span class="brand-mark">
+          <el-icon><HomeFilled /></el-icon>
+        </span>
+        <div>
+          <strong>基础设施平台</strong>
+          <small>Operations Console</small>
+        </div>
       </div>
+
       <el-menu
         :default-active="activePath"
-        background-color="#001529"
-        text-color="#c0c4cc"
-        active-text-color="#ffffff"
+        class="app-menu"
         router
       >
         <template
@@ -72,57 +83,136 @@ function onLogout(): void {
           </el-menu-item>
         </template>
       </el-menu>
-    </el-aside>
-    <el-container>
-      <el-header class="header">
-        <span class="title">{{ route.meta.title }}</span>
-        <div class="user">
-          <span>{{ auth.profile?.nickname || auth.profile?.username }}</span>
-          <el-button
-            type="primary"
-            link
-            @click="onLogout"
-          >
-            退出登录
-          </el-button>
+
+      <div class="aside-user">
+        <span class="aside-avatar">
+          <el-icon><UserFilled /></el-icon>
+        </span>
+        <div>
+          <strong>{{ userName }}</strong>
+          <small>{{ roleText }}</small>
         </div>
+      </div>
+    </el-aside>
+
+    <el-container class="layout-main">
+      <el-header class="app-header">
+        <div class="header-left">
+          <el-button
+            class="mobile-menu-button"
+            :icon="Fold"
+            circle
+            @click="mobileMenuVisible = true"
+          />
+          <div>
+            <p>{{ route.meta.title || '工作台' }}</p>
+            <span>统一管理入口</span>
+          </div>
+        </div>
+
+        <el-dropdown trigger="click">
+          <button
+            class="user-trigger"
+            type="button"
+          >
+            <span class="header-avatar">
+              <el-icon><UserFilled /></el-icon>
+            </span>
+            <span class="user-name">{{ userName }}</span>
+            <el-icon><ArrowDown /></el-icon>
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item disabled>
+                {{ roleText }}
+              </el-dropdown-item>
+              <el-dropdown-item
+                divided
+                @click="onLogout"
+              >
+                <el-icon><SwitchButton /></el-icon>
+                退出登录
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </el-header>
-      <el-main>
-        <router-view />
+
+      <el-main class="main">
+        <router-view v-slot="{ Component, route: currentRoute }">
+          <transition
+            name="page-route"
+            mode="out-in"
+            appear
+          >
+            <component
+              :is="Component"
+              :key="currentRoute.fullPath"
+            />
+          </transition>
+        </router-view>
       </el-main>
     </el-container>
+
+    <el-drawer
+      v-model="mobileMenuVisible"
+      class="mobile-menu-drawer"
+      direction="ltr"
+      size="304px"
+      :with-header="false"
+    >
+      <div class="brand-block drawer-brand">
+        <span class="brand-mark">
+          <el-icon><HomeFilled /></el-icon>
+        </span>
+        <div>
+          <strong>基础设施平台</strong>
+          <small>Operations Console</small>
+        </div>
+      </div>
+
+      <el-menu
+        :default-active="activePath"
+        class="app-menu drawer-menu"
+        router
+        @select="closeMobileMenu"
+      >
+        <template
+          v-for="item in menus"
+          :key="item.key"
+        >
+          <el-sub-menu
+            v-if="item.children"
+            :index="item.key"
+          >
+            <template #title>
+              <el-icon v-if="item.icon">
+                <component :is="item.icon" />
+              </el-icon>
+              <span>{{ item.title }}</span>
+            </template>
+            <el-menu-item
+              v-for="child in item.children"
+              :key="child.key"
+              :index="child.path"
+            >
+              <el-icon v-if="child.icon">
+                <component :is="child.icon" />
+              </el-icon>
+              <span>{{ child.title }}</span>
+            </el-menu-item>
+          </el-sub-menu>
+          <el-menu-item
+            v-else
+            :index="item.path"
+          >
+            <el-icon v-if="item.icon">
+              <component :is="item.icon" />
+            </el-icon>
+            <span>{{ item.title }}</span>
+          </el-menu-item>
+        </template>
+      </el-menu>
+    </el-drawer>
   </el-container>
 </template>
-
-<style scoped>
-.layout {
-  height: 100vh;
-}
-.aside {
-  background: #001529;
-}
-.aside :deep(.el-menu) {
-  border-right: none;
-}
-.logo {
-  height: 56px;
-  line-height: 56px;
-  text-align: center;
-  color: #fff;
-  font-weight: 600;
-}
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid #eee;
-}
-.title {
-  font-weight: 600;
-}
-.user {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-</style>
