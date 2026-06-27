@@ -22,6 +22,10 @@ export class User extends BaseEntity {
   @Column({ length: 64, default: '' })
   nickname!: string;
 
+  /** 绑定手机号，用于短信验证码登录；空串表示未绑定。非空手机号的唯一性在应用层校验 */
+  @Column({ length: 20, default: '' })
+  phone!: string;
+
   @Column({ type: 'varchar', length: 16, default: UserStatus.Enabled })
   status!: UserStatus;
 

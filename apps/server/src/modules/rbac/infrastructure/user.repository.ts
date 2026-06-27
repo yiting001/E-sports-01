@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, In, Repository } from 'typeorm';
+import { ILike, In, Not, Repository } from 'typeorm';
 import { User } from '../domain/user.entity';
 import { UserRepository } from '../domain/user-repository.interface';
 
@@ -32,8 +32,19 @@ export class TypeormUserRepository implements UserRepository {
       .getOne();
   }
 
+  findByPhone(phone: string): Promise<User | null> {
+    return this.repo.findOne({ where: { phone }, relations: { roles: true } });
+  }
+
   async existsByUsername(username: string): Promise<boolean> {
     return (await this.repo.countBy({ username })) > 0;
+  }
+
+  async existsByPhone(phone: string, excludeUserId?: string): Promise<boolean> {
+    const count = await this.repo.countBy(
+      excludeUserId ? { phone, id: Not(excludeUserId) } : { phone },
+    );
+    return count > 0;
   }
 
   paginate(skip: number, take: number, keyword?: string): Promise<[User[], number]> {

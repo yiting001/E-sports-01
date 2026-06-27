@@ -13,16 +13,17 @@ const pageSize = ref(10);
 const loading = ref(false);
 
 const dialogVisible = ref(false);
-const form = reactive<CreateUserBody>({ username: '', password: '', nickname: '' });
+const form = reactive<CreateUserBody>({ username: '', password: '', nickname: '', phone: '' });
 
 const roles = ref<RoleView[]>([]);
 const editVisible = ref(false);
 const editForm = reactive<{
   id: string;
   nickname: string;
+  phone: string;
   status: UserStatusEnum;
   roleId: string;
-}>({ id: '', nickname: '', status: UserStatusEnum.Enabled, roleId: '' });
+}>({ id: '', nickname: '', phone: '', status: UserStatusEnum.Enabled, roleId: '' });
 let originalRoleId = '';
 
 const statusOptions = [
@@ -51,6 +52,7 @@ function openCreate(): void {
   form.username = '';
   form.password = '';
   form.nickname = '';
+  form.phone = '';
   dialogVisible.value = true;
 }
 
@@ -59,7 +61,7 @@ async function create(): Promise<void> {
     ElMessage.warning('用户名与密码必填');
     return;
   }
-  await userApi.create({ ...form });
+  await userApi.create({ ...form, phone: form.phone || undefined });
   ElMessage.success('创建成功');
   dialogVisible.value = false;
   await load();
@@ -69,6 +71,7 @@ async function openEdit(row: UserView): Promise<void> {
   await ensureRoles();
   editForm.id = row.id;
   editForm.nickname = row.nickname;
+  editForm.phone = row.phone;
   editForm.status = row.status;
   editForm.roleId = row.roles[0]?.id ?? '';
   originalRoleId = editForm.roleId;
@@ -78,6 +81,7 @@ async function openEdit(row: UserView): Promise<void> {
 async function saveEdit(): Promise<void> {
   await userApi.update(editForm.id, {
     nickname: editForm.nickname,
+    phone: editForm.phone,
     status: editForm.status,
   });
   if (editForm.roleId !== originalRoleId) {
@@ -124,6 +128,11 @@ onMounted(load);
       <el-table-column
         prop="nickname"
         label="昵称"
+      />
+      <el-table-column
+        prop="phone"
+        label="手机号"
+        width="140"
       />
       <el-table-column
         prop="status"
@@ -198,6 +207,13 @@ onMounted(load);
         <el-form-item label="昵称">
           <el-input v-model="form.nickname" />
         </el-form-item>
+        <el-form-item label="手机号">
+          <el-input
+            v-model="form.phone"
+            maxlength="11"
+            placeholder="选填，用于短信登录"
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">
@@ -220,6 +236,13 @@ onMounted(load);
       <el-form label-width="72px">
         <el-form-item label="昵称">
           <el-input v-model="editForm.nickname" />
+        </el-form-item>
+        <el-form-item label="手机号">
+          <el-input
+            v-model="editForm.phone"
+            maxlength="11"
+            placeholder="用于短信登录，留空可解绑"
+          />
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="editForm.status">

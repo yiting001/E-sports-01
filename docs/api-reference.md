@@ -16,6 +16,8 @@
 | POST | `/api/auth/register` | 公开 | 注册用户 |
 | POST | `/api/auth/login` | 公开 | 登录，返回 `{ accessToken, refreshToken }` |
 | POST | `/api/auth/refresh` | 公开 | 用 refresh 令牌换发新双令牌 |
+| POST | `/api/auth/sms/code` | 公开 | 发送登录短信验证码 `{ phone }` → `{ cooldown }`（仅已绑定启用账号） |
+| POST | `/api/auth/sms/login` | 公开 | 短信验证码登录 `{ phone, code }`，返回双令牌 |
 | GET | `/api/auth/profile` | 登录 | 当前用户 `{ id, username, nickname, roles[], permissions[], isSuper }` |
 
 ```jsonc

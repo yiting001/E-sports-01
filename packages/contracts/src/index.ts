@@ -9,5 +9,6 @@ export * from './rbac/role';
 export * from './im/message';
 export * from './im/conversation';
 export * from './upload/storage';
+export * from './sms/sms';
 export * from './config/config';
 export * from './observability/log';

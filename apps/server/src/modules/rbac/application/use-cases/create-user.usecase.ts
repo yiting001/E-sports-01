@@ -17,6 +17,7 @@ export interface CreateUserInput {
   username: string;
   password: string;
   nickname?: string;
+  phone?: string;
   status?: UserStatus;
   roleIds?: string[];
 }
@@ -34,11 +35,16 @@ export class CreateUserUseCase {
     if (await this.userRepo.existsByUsername(input.username)) {
       throw new ConflictException('用户名已存在');
     }
+    const phone = input.phone ?? '';
+    if (phone && (await this.userRepo.existsByPhone(phone))) {
+      throw new ConflictException('手机号已被其他用户绑定');
+    }
     const roles = input.roleIds?.length ? await this.roleRepo.findByIds(input.roleIds) : [];
     const entity = this.userRepo.create({
       username: input.username,
       passwordHash: await this.password.hash(input.password),
       nickname: input.nickname ?? input.username,
+      phone,
       status: input.status ?? UserStatus.Enabled,
       roles,
     });

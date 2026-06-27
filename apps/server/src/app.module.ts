@@ -3,6 +3,7 @@ import { DatabaseModule } from './shared/database/database.module';
 import { RedisModule } from './shared/redis/redis.module';
 import { ConfigModule } from './modules/config/config.module';
 import { RbacModule } from './modules/rbac/rbac.module';
+import { SmsModule } from './modules/sms/sms.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { ImModule } from './modules/im/im.module';
 import { ObservabilityModule } from './modules/observability/observability.module';
@@ -16,6 +17,7 @@ import { ObservabilityModule } from './modules/observability/observability.modul
     DatabaseModule,
     RedisModule,
     ConfigModule,
+    SmsModule,
     RbacModule,
     UploadModule,
     ImModule,
