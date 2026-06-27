@@ -65,3 +65,28 @@
 | POST | `/rbac/tenants` | `rbac:tenant:create` | 新建租户（含播种管理员角色/账号） |
 | PATCH | `/rbac/tenants/:id` | `rbac:tenant:update` | 更新名称/状态/备注（内置租户不可禁用） |
 | DELETE | `/rbac/tenants/:id` | `rbac:tenant:remove` | 删除租户（内置默认租户不可删除） |
+
+## 前端租户管理页
+
+`/rbac/tenants` 只承载平台超管的租户目录管理，不下沉后端业务规则；页面容器负责
+调用 `tenantApi`，展示组件只接收数据和抛出事件，便于后续复用到其他 RBAC 管理页。
+
+已实现能力：
+
+- 租户总数、本页启用数、普通租户数概览。
+- 租户编码/名称关键字搜索，复用已有 `GET /rbac/tenants?keyword=` 查询能力。
+- 租户目录保持表格视图，窄屏通过目录容器横向滚动，按钮权限沿用 `v-permission`。
+- 目录表格复用 `AppDataTable`，统一横向滚动、滚动条和 Element Plus 表格基础样式。
+- 创建租户与编辑租户弹窗，内置租户禁用/删除限制由接口兜底，前端只做视觉提示。
+
+```mermaid
+flowchart TD
+  Page["TenantListView.vue 页面容器"] --> Hero["TenantHero 头部视觉"]
+  Page --> Stats["TenantStats 指标概览"]
+  Page --> Directory["TenantDirectory 目录/搜索/分页"]
+  Page --> CreateDialog["CreateTenantDialog 新建弹窗"]
+  Page --> EditDialog["EditTenantDialog 编辑弹窗"]
+  Directory --> Api["tenantApi.list/create/update/remove"]
+  CreateDialog --> Api
+  EditDialog --> Api
+```

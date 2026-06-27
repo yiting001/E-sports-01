@@ -1,15 +1,24 @@
 <script setup lang="ts">
 import type { CreateTenantPayload, TenantView } from '@app/contracts';
-import { PERMS, TenantStatus } from '@app/contracts';
-import { onMounted, reactive, ref } from 'vue';
+import { TenantStatus } from '@app/contracts';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { tenantApi } from '@/api/tenant.api';
+import CreateTenantDialog from '@/components/rbac/tenant/CreateTenantDialog.vue';
+import EditTenantDialog from '@/components/rbac/tenant/EditTenantDialog.vue';
+import TenantDirectory from '@/components/rbac/tenant/TenantDirectory.vue';
+import TenantHero from '@/components/rbac/tenant/TenantHero.vue';
+import TenantStats from '@/components/rbac/tenant/TenantStats.vue';
+import type { EditTenantForm } from '@/components/rbac/tenant/tenant-ui.types';
+import './TenantListView.css';
+import './TenantListView.responsive.css';
 
 const list = ref<TenantView[]>([]);
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref(10);
 const loading = ref(false);
+const keyword = ref('');
 
 const createVisible = ref(false);
 const createForm = reactive<CreateTenantPayload>({
@@ -21,32 +30,66 @@ const createForm = reactive<CreateTenantPayload>({
 });
 
 const editVisible = ref(false);
-const editForm = reactive<{
-  id: string;
-  name: string;
-  status: TenantStatus;
-  remark: string;
-  builtin: boolean;
-}>({ id: '', name: '', status: TenantStatus.Enabled, remark: '', builtin: false });
+const editForm = reactive<EditTenantForm>({
+  id: '',
+  name: '',
+  status: TenantStatus.Enabled,
+  remark: '',
+  builtin: false,
+});
 
 const statusOptions = [
   { label: '启用', value: TenantStatus.Enabled },
   { label: '停用', value: TenantStatus.Disabled },
 ];
 
+const enabledCount = computed(
+  () => list.value.filter((item) => item.status === TenantStatus.Enabled).length,
+);
+const builtinCount = computed(() => list.value.filter((item) => item.builtin).length);
+const normalCount = computed(() => Math.max(total.value - builtinCount.value, 0));
+
 function statusLabel(status: TenantStatus): string {
   return status === TenantStatus.Enabled ? '启用' : '停用';
+}
+
+function formatDate(value: string): string {
+  if (!value) {
+    return '-';
+  }
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
 }
 
 async function load(): Promise<void> {
   loading.value = true;
   try {
-    const res = await tenantApi.list(page.value, pageSize.value);
+    const res = await tenantApi.list(page.value, pageSize.value, keyword.value || undefined);
     list.value = res.list;
     total.value = res.total;
   } finally {
     loading.value = false;
   }
+}
+
+async function search(): Promise<void> {
+  page.value = 1;
+  await load();
+}
+
+async function resetSearch(): Promise<void> {
+  keyword.value = '';
+  await search();
+}
+
+async function changePage(value: number): Promise<void> {
+  page.value = value;
+  await load();
 }
 
 function openCreate(): void {
@@ -56,6 +99,10 @@ function openCreate(): void {
   createForm.adminUsername = '';
   createForm.adminPassword = '';
   createVisible.value = true;
+}
+
+function updateCreateForm(value: CreateTenantPayload): void {
+  Object.assign(createForm, value);
 }
 
 async function create(): Promise<void> {
@@ -84,6 +131,10 @@ function openEdit(row: TenantView): void {
   editVisible.value = true;
 }
 
+function updateEditForm(value: EditTenantForm): void {
+  Object.assign(editForm, value);
+}
+
 async function saveEdit(): Promise<void> {
   await tenantApi.update(editForm.id, {
     name: editForm.name,
@@ -110,202 +161,41 @@ onMounted(load);
 </script>
 
 <template>
-  <div>
-    <div class="toolbar">
-      <el-button
-        v-permission="PERMS.tenant.create"
-        type="primary"
-        @click="openCreate"
-      >
-        新建租户
-      </el-button>
-    </div>
-    <el-table
-      v-loading="loading"
-      :data="list"
-      border
-    >
-      <el-table-column
-        prop="code"
-        label="租户编码"
-        width="160"
-      />
-      <el-table-column
-        prop="name"
-        label="名称"
-      />
-      <el-table-column
-        label="状态"
-        width="100"
-      >
-        <template #default="{ row }">
-          <el-tag :type="row.status === TenantStatus.Enabled ? 'success' : 'info'">
-            {{ statusLabel(row.status) }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column
-        label="类型"
-        width="100"
-      >
-        <template #default="{ row }">
-          <el-tag
-            v-if="row.builtin"
-            type="warning"
-          >
-            内置
-          </el-tag>
-          <span v-else>普通</span>
-        </template>
-      </el-table-column>
-      <el-table-column
-        prop="remark"
-        label="备注"
-        show-overflow-tooltip
-      />
-      <el-table-column
-        prop="createdAt"
-        label="创建时间"
-        width="200"
-      />
-      <el-table-column
-        label="操作"
-        width="160"
-      >
-        <template #default="{ row }">
-          <el-button
-            v-permission="PERMS.tenant.update"
-            type="primary"
-            link
-            @click="openEdit(row)"
-          >
-            编辑
-          </el-button>
-          <el-button
-            v-permission="PERMS.tenant.remove"
-            type="danger"
-            link
-            :disabled="row.builtin"
-            @click="remove(row)"
-          >
-            删除
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-    <el-pagination
-      class="pager"
-      layout="total, prev, pager, next"
+  <section class="tenant-page">
+    <tenant-hero />
+    <tenant-stats
       :total="total"
-      :current-page="page"
-      :page-size="pageSize"
-      @current-change="(p: number) => { page = p; load(); }"
+      :enabled-count="enabledCount"
+      :normal-count="normalCount"
     />
-
-    <el-dialog
+    <tenant-directory
+      v-model:keyword="keyword"
+      :list="list"
+      :total="total"
+      :page="page"
+      :page-size="pageSize"
+      :loading="loading"
+      :status-label="statusLabel"
+      :format-date="formatDate"
+      @update:page="changePage"
+      @search="search"
+      @reset="resetSearch"
+      @create="openCreate"
+      @edit="openEdit"
+      @remove="remove"
+    />
+    <create-tenant-dialog
       v-model="createVisible"
-      title="新建租户"
-      width="460px"
-    >
-      <el-form label-width="92px">
-        <el-form-item label="租户编码">
-          <el-input
-            v-model="createForm.code"
-            placeholder="小写字母/数字/连字符，登录时可用于区分租户"
-          />
-        </el-form-item>
-        <el-form-item label="名称">
-          <el-input v-model="createForm.name" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input
-            v-model="createForm.remark"
-            type="textarea"
-            :rows="2"
-          />
-        </el-form-item>
-        <el-form-item label="管理员账号">
-          <el-input
-            v-model="createForm.adminUsername"
-            placeholder="选填，默认为 <编码>_admin"
-          />
-        </el-form-item>
-        <el-form-item label="管理员密码">
-          <el-input
-            v-model="createForm.adminPassword"
-            type="password"
-            show-password
-            placeholder="选填，默认使用平台初始密码"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createVisible = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          @click="create"
-        >
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog
+      :form="createForm"
+      @update:form="updateCreateForm"
+      @submit="create"
+    />
+    <edit-tenant-dialog
       v-model="editVisible"
-      title="编辑租户"
-      width="460px"
-    >
-      <el-form label-width="72px">
-        <el-form-item label="名称">
-          <el-input v-model="editForm.name" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select
-            v-model="editForm.status"
-            :disabled="editForm.builtin"
-            class="full"
-          >
-            <el-option
-              v-for="s in statusOptions"
-              :key="s.value"
-              :label="s.label"
-              :value="s.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input
-            v-model="editForm.remark"
-            type="textarea"
-            :rows="2"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          @click="saveEdit"
-        >
-          保存
-        </el-button>
-      </template>
-    </el-dialog>
-  </div>
+      :form="editForm"
+      :status-options="statusOptions"
+      @update:form="updateEditForm"
+      @submit="saveEdit"
+    />
+  </section>
 </template>
-
-<style scoped>
-.toolbar {
-  margin-bottom: 12px;
-}
-.pager {
-  margin-top: 12px;
-}
-.full {
-  width: 100%;
-}
-</style>

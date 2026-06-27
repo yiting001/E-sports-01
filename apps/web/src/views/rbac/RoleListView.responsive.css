@@ -1,0 +1,74 @@
+@media (max-width: 1180px) {
+  .role-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .role-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .role-hero__visual {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .role-page {
+    gap: 14px;
+  }
+
+  .role-hero,
+  .role-panel,
+  .role-stat {
+    border-radius: 14px;
+  }
+
+  .role-hero,
+  .role-panel {
+    padding: 18px;
+  }
+
+  .role-hero h1 {
+    font-size: 30px;
+  }
+
+  .role-panel__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .role-panel__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .role-panel__actions .el-button {
+    margin-left: 0;
+  }
+
+  .role-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .role-pager {
+    justify-content: center;
+  }
+
+  .role-form__grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .role-dialog,
+  .role-permission-dialog {
+    width: calc(100% - 24px) !important;
+  }
+
+  .role-panel__actions .el-button {
+    width: 100%;
+  }
+}

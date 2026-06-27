@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import type { RoleView } from '@app/contracts';
-import { PERMS } from '@app/contracts';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { roleApi, type CreateRoleBody } from '@/api/role.api';
+import { roleApi } from '@/api/role.api';
 import RolePermissionDialog from '@/components/rbac/RolePermissionDialog.vue';
+import RoleDirectory from '@/components/rbac/role/RoleDirectory.vue';
+import RoleFormDialog from '@/components/rbac/role/RoleFormDialog.vue';
+import RoleHero from '@/components/rbac/role/RoleHero.vue';
+import RoleStats from '@/components/rbac/role/RoleStats.vue';
+import type { RoleForm } from '@/components/rbac/role/role-ui.types';
+import './RoleListView.css';
+import './RoleListView.responsive.css';
 
 const list = ref<RoleView[]>([]);
 const total = ref(0);
@@ -13,13 +19,31 @@ const pageSize = ref(10);
 const loading = ref(false);
 
 const dialogVisible = ref(false);
-/** 当前编辑的角色 id，null 表示新建 */
 const editingId = ref<string | null>(null);
-const form = reactive<CreateRoleBody>({ code: '', name: '', remark: '' });
+const form = reactive<RoleForm>({ code: '', name: '', remark: '' });
 const isEdit = computed(() => editingId.value !== null);
 
 const permVisible = ref(false);
 const permRole = ref<RoleView | null>(null);
+
+const builtinCount = computed(() => list.value.filter((item) => item.isSuper).length);
+const configurableCount = computed(() => Math.max(total.value - builtinCount.value, 0));
+const permissionCount = computed(() =>
+  list.value.reduce((sum, item) => sum + item.permissionIds.length, 0),
+);
+
+function formatDate(value: string): string {
+  if (!value) {
+    return '-';
+  }
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
 
 async function load(): Promise<void> {
   loading.value = true;
@@ -30,6 +54,11 @@ async function load(): Promise<void> {
   } finally {
     loading.value = false;
   }
+}
+
+async function changePage(value: number): Promise<void> {
+  page.value = value;
+  await load();
 }
 
 function openCreate(): void {
@@ -46,6 +75,10 @@ function openEdit(row: RoleView): void {
   form.name = row.name;
   form.remark = row.remark;
   dialogVisible.value = true;
+}
+
+function updateForm(value: RoleForm): void {
+  Object.assign(form, value);
 }
 
 async function submit(): Promise<void> {
@@ -79,124 +112,39 @@ onMounted(load);
 </script>
 
 <template>
-  <div>
-    <div class="toolbar">
-      <el-button
-        v-permission="PERMS.role.create"
-        type="primary"
-        @click="openCreate"
-      >
-        新建角色
-      </el-button>
-    </div>
-    <el-table
-      v-loading="loading"
-      :data="list"
-      border
-    >
-      <el-table-column
-        prop="code"
-        label="编码"
-      />
-      <el-table-column
-        prop="name"
-        label="名称"
-      />
-      <el-table-column
-        prop="remark"
-        label="备注"
-      />
-      <el-table-column
-        prop="createdAt"
-        label="创建时间"
-        width="200"
-      />
-      <el-table-column
-        label="操作"
-        width="240"
-      >
-        <template #default="{ row }">
-          <el-button
-            v-permission="PERMS.role.update"
-            type="primary"
-            link
-            @click="openEdit(row)"
-          >
-            编辑
-          </el-button>
-          <el-button
-            v-permission="PERMS.role.assignPermissions"
-            type="primary"
-            link
-            @click="openPermissions(row)"
-          >
-            分配权限
-          </el-button>
-          <el-button
-            v-permission="PERMS.role.remove"
-            type="danger"
-            link
-            @click="remove(row)"
-          >
-            删除
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-    <el-pagination
-      class="pager"
-      layout="total, prev, pager, next"
+  <section class="role-page">
+    <role-hero />
+    <role-stats
       :total="total"
-      :current-page="page"
-      :page-size="pageSize"
-      @current-change="(p: number) => { page = p; load(); }"
+      :builtin-count="builtinCount"
+      :configurable-count="configurableCount"
+      :permission-count="permissionCount"
     />
-
-    <el-dialog
+    <role-directory
+      :list="list"
+      :total="total"
+      :page="page"
+      :page-size="pageSize"
+      :loading="loading"
+      :format-date="formatDate"
+      @refresh="load"
+      @create="openCreate"
+      @edit="openEdit"
+      @permissions="openPermissions"
+      @remove="remove"
+      @update:page="changePage"
+    />
+    <role-form-dialog
       v-model="dialogVisible"
-      :title="isEdit ? '编辑角色' : '新建角色'"
-      width="420px"
-    >
-      <el-form label-width="72px">
-        <el-form-item label="编码">
-          <el-input
-            v-model="form.code"
-            :disabled="isEdit"
-          />
-        </el-form-item>
-        <el-form-item label="名称">
-          <el-input v-model="form.name" />
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          @click="submit"
-        >
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
-
+      :form="form"
+      :is-edit="isEdit"
+      @update:form="updateForm"
+      @submit="submit"
+    />
     <role-permission-dialog
       v-model="permVisible"
       :role="permRole"
       @saved="load"
     />
-  </div>
+  </section>
 </template>
-
-<style scoped>
-.toolbar {
-  margin-bottom: 12px;
-}
-.pager {
-  margin-top: 12px;
-}
-</style>

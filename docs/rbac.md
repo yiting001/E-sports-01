@@ -140,3 +140,55 @@ flowchart LR
 ## 相关端点
 
 详见 [api-reference.md](./api-reference.md#rbac-权限)。
+
+## 前端用户管理页
+
+`/rbac/users` 是 RBAC 用户目录的页面容器，只编排现有 `userApi` / `roleApi`，
+不把后端权限规则写进视图层。展示组件通过 props 接收用户、角色、分页与状态格式化
+函数，通过事件把新建、编辑、删除、翻页交回页面容器处理。
+
+已实现能力：
+
+- 用户总数、本页启用、绑定手机、已分配角色四类概览。
+- 用户目录保持表格视图，窄屏通过目录容器横向滚动，平台超管额外显示所属租户。
+- 目录表格复用 `AppDataTable`，统一 Element Plus 表格的横向滚动与最小宽度策略。
+- 新建用户弹窗维护用户名、密码、昵称、手机号。
+- 编辑用户弹窗维护昵称、手机号、启停状态和单角色绑定。
+- 按钮权限继续沿用 `v-permission`，接口调用仍复用 `userApi` 与 `roleApi`。
+
+```mermaid
+flowchart TD
+  Page["UserListView.vue 页面容器"] --> Hero["UserHero 头部视觉"]
+  Page --> Stats["UserStats 指标概览"]
+  Page --> Directory["UserDirectory 用户目录"]
+  Page --> CreateDialog["CreateUserDialog 新建弹窗"]
+  Page --> EditDialog["EditUserDialog 编辑弹窗"]
+  Directory --> UserApi["userApi.list/create/update/remove/assignRoles"]
+  EditDialog --> RoleApi["roleApi.list"]
+```
+
+## 前端角色管理页
+
+`/rbac/roles` 是 RBAC 角色目录的页面容器，只编排现有 `roleApi` 与权限分配弹窗；
+展示组件通过 props 接收角色、分页和时间格式化函数，通过事件把新建、编辑、删除、
+分配权限和翻页交回页面容器处理。
+
+已实现能力：
+
+- 角色总数、内置角色、可配置角色、已绑定权限四类概览。
+- 角色目录保持表格视图，窄屏通过目录容器横向滚动。
+- 目录表格复用 `AppDataTable`，避免不同 RBAC 页面重复维护滚动容器样式。
+- 新建/编辑角色弹窗维护编码、名称、备注，编辑态保持编码只读。
+- 分配权限继续复用 `RolePermissionDialog` 与 `roleApi.assignPermissions`。
+- 按钮权限继续沿用 `v-permission`，接口调用仍复用 `roleApi`。
+
+```mermaid
+flowchart TD
+  Page["RoleListView.vue 页面容器"] --> Hero["RoleHero 头部视觉"]
+  Page --> Stats["RoleStats 指标概览"]
+  Page --> Directory["RoleDirectory 角色目录"]
+  Page --> FormDialog["RoleFormDialog 新建/编辑弹窗"]
+  Page --> PermissionDialog["RolePermissionDialog 权限分配弹窗"]
+  Directory --> RoleApi["roleApi.list/create/update/remove"]
+  PermissionDialog --> AssignApi["roleApi.assignPermissions"]
+```
