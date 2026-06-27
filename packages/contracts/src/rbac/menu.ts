@@ -6,7 +6,7 @@
 
 /** 菜单定义：播种与前端路由共用的元数据（组件在前端按 code 注册，不入此表） */
 export interface MenuDefinition {
-  /** 菜单权限码，同时作为路由名与守卫权限，例如 menu:rbac:user */
+  /** 菜单权限码，同时作为路由名与守卫权限；按「业务命名空间 + :menu」组织，例如 rbac:user:menu */
   code: string;
   /** 菜单标题 */
   title: string;
@@ -33,18 +33,18 @@ export interface MenuView {
  * 后端播种为 menu 权限、用户分配后方可见；前端路由 meta.permission 取同名 code。
  */
 export const MENU_DEFINITIONS: MenuDefinition[] = [
-  { code: 'menu:rbac:user', title: '用户管理', path: 'rbac/users', icon: 'User', sort: 10 },
-  { code: 'menu:rbac:role', title: '角色管理', path: 'rbac/roles', icon: 'UserFilled', sort: 20 },
+  { code: 'rbac:user:menu', title: '用户管理', path: 'rbac/users', icon: 'User', sort: 10 },
+  { code: 'rbac:role:menu', title: '角色管理', path: 'rbac/roles', icon: 'UserFilled', sort: 20 },
   {
-    code: 'menu:rbac:permission',
+    code: 'rbac:permission:menu',
     title: '权限管理',
     path: 'rbac/permissions',
     icon: 'Key',
     sort: 30,
   },
-  { code: 'menu:config', title: '配置中心', path: 'config', icon: 'Setting', sort: 40 },
-  { code: 'menu:upload', title: '文件上传', path: 'upload', icon: 'UploadFilled', sort: 50 },
-  { code: 'menu:im', title: '即时通讯', path: 'im', icon: 'ChatDotRound', sort: 60 },
-  { code: 'menu:im:service', title: '客服工作台', path: 'im/service', icon: 'Service', sort: 70 },
-  { code: 'menu:logs', title: '日志管理', path: 'logs', icon: 'Document', sort: 80 },
+  { code: 'config:menu', title: '配置中心', path: 'config', icon: 'Setting', sort: 40 },
+  { code: 'upload:file:menu', title: '文件上传', path: 'upload', icon: 'UploadFilled', sort: 50 },
+  { code: 'im:menu', title: '即时通讯', path: 'im', icon: 'ChatDotRound', sort: 60 },
+  { code: 'im:service:menu', title: '客服工作台', path: 'im/service', icon: 'Service', sort: 70 },
+  { code: 'observability:log:menu', title: '日志管理', path: 'logs', icon: 'Document', sort: 80 },
 ];

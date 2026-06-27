@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { PermissionType } from '@app/contracts';
 import { loadEnvConfig } from '../../../bootstrap/env.config';
 import {
   PERMISSION_REPOSITORY,
@@ -43,8 +44,24 @@ export class RbacSeeder implements OnApplicationBootstrap {
     if (createdMenus > 0) {
       this.logger.log(`已播种 ${createdMenus} 条菜单权限`);
     }
+    await this.pruneObsoleteMenus();
     const superRole = await this.ensureSuperRole();
     await this.ensureAdminUser(superRole.id);
+  }
+
+  /** 清理不在当前菜单清单中的历史 menu 权限（如旧的命名方案），多对多关联随之级联删除 */
+  private async pruneObsoleteMenus(): Promise<void> {
+    const valid = new Set(DEFAULT_MENU_PERMISSIONS.map((m) => m.code));
+    const all = await this.permRepo.findAll();
+    const obsolete = all.filter(
+      (p) => p.type === PermissionType.Menu && !valid.has(p.code),
+    );
+    for (const permission of obsolete) {
+      await this.permRepo.remove(permission.id);
+    }
+    if (obsolete.length > 0) {
+      this.logger.log(`已清理 ${obsolete.length} 条历史菜单权限`);
+    }
   }
 
   private async ensureSuperRole() {
