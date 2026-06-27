@@ -32,6 +32,16 @@ export class TypeormUserRepository implements UserRepository {
       .getOne();
   }
 
+  findByAccountWithPassword(account: string): Promise<User | null> {
+    return this.repo
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .leftJoinAndSelect('user.roles', 'role')
+      .where('user.username = :account', { account })
+      .orWhere('user.phone = :phone', { phone: account })
+      .getOne();
+  }
+
   findByPhone(phone: string): Promise<User | null> {
     return this.repo.findOne({ where: { phone }, relations: { roles: true } });
   }

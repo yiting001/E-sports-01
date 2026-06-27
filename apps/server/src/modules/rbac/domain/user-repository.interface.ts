@@ -10,6 +10,8 @@ export interface UserRepository {
   findByIds(ids: string[]): Promise<User[]>;
   /** 登录用：显式选出密码哈希 */
   findByUsernameWithPassword(username: string): Promise<User | null>;
+  /** 登录用：按用户名或手机号匹配，并显式选出密码哈希 */
+  findByAccountWithPassword(account: string): Promise<User | null>;
   /** 短信登录用：按手机号取启用中的用户（含角色） */
   findByPhone(phone: string): Promise<User | null>;
   existsByUsername(username: string): Promise<boolean>;

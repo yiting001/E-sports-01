@@ -18,9 +18,9 @@ export class LoginUseCase {
   ) {}
 
   async execute(payload: LoginPayload): Promise<TokenPair> {
-    const user = await this.userRepo.findByUsernameWithPassword(payload.username);
+    const user = await this.userRepo.findByAccountWithPassword(payload.account);
     if (!user || !(await this.password.compare(payload.password, user.passwordHash))) {
-      throw new UnauthorizedException('用户名或密码错误');
+      throw new UnauthorizedException('账号或密码错误');
     }
     if (user.status !== UserStatus.Enabled) {
       throw new UnauthorizedException('账号已被禁用');
