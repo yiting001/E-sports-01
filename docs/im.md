@@ -191,3 +191,29 @@ erDiagram
 ## 相关端点
 
 详见 [api-reference.md](./api-reference.md#websocket-im)。
+
+## 前端即时消息页
+
+`/im` 是用户侧消息工作台，页面容器只负责 `imApi`、`uploadApi`、`userApi` 与 WebSocket 状态编排；
+展示层拆分为会话列表、聊天面板、建群弹窗和成员弹窗，业务动作全部通过事件回到容器执行。
+
+已实现能力：
+
+- 私聊 / 群聊 / 客服会话统一列表展示，保留未读数、状态、最后消息预览和更新时间。
+- 第一屏直接进入通讯工作台，去掉装饰型头图与统计卡，降低运营展示感。
+- 聊天面板使用桌面聊天常见的会话头与底部 compose box：头部展示会话头像、类型、状态、成员数和更新时间；输入面板内提供图标化图片/视频工具、多行文本输入和右侧发送按钮，媒体仍复用上传模块。
+- 系统富文本消息继续经 DOMPurify 净化。
+- 群聊操作保留改名、成员管理、退群；成员管理弹窗保留加成员和移除成员能力。
+- 页面保持响应式：桌面左右工作台，窄屏上下布局，消息列表和会话列表各自内部滚动。
+
+```mermaid
+flowchart TD
+  Page --> List["ImConversationList 会话列表"]
+  Page --> Chat["ImChatPanel 聊天面板"]
+  Page --> GroupDialog["ImGroupDialog 建群弹窗"]
+  Page --> MemberDialog["ImMemberDialog 成员弹窗"]
+  Page --> Socket["createImSocket 实时收发"]
+  Chat --> UploadApi["uploadApi 媒体上传"]
+  GroupDialog --> ImApi["imApi 会话/群管理"]
+  MemberDialog --> ImApi
+```

@@ -192,3 +192,28 @@ flowchart TD
   Directory --> RoleApi["roleApi.list/create/update/remove"]
   PermissionDialog --> AssignApi["roleApi.assignPermissions"]
 ```
+
+## 前端权限管理页
+
+`/rbac/permissions` 是 RBAC 权限目录的页面容器，只编排现有 `permissionApi`
+和 `PermissionFormDialog`；权限树仍由 `buildNamespaceTree` 按权限码命名空间派生，
+不在视图层硬编码业务模块。
+
+已实现能力：
+
+- 权限总数、命名空间、接口权限、前端权限四类概览。
+- 权限目录保持树形视图，展示分组、权限类型、权限码以及路由或接口信息。
+- 窄屏通过目录容器横向滚动，避免树节点操作区遮挡。
+- 新增顶级权限和命名空间子权限，新增时自动带入权限码前缀。
+- 编辑/删除真实权限节点，虚拟分组只提供新增子权限入口。
+- 按钮权限继续沿用 `v-permission`，接口调用仍复用 `permissionApi`。
+
+```mermaid
+flowchart TD
+  Page["PermissionListView.vue 页面容器"] --> Hero["PermissionHero 头部视觉"]
+  Page --> Stats["PermissionStats 指标概览"]
+  Page --> Directory["PermissionDirectory 权限目录"]
+  Page --> FormDialog["PermissionFormDialog 新建/编辑弹窗"]
+  Page --> TreeUtil["buildNamespaceTree/flattenPermissions"]
+  Directory --> PermissionApi["permissionApi.tree/create/update/remove"]
+```

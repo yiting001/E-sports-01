@@ -5,20 +5,21 @@ import type {
   ConversationView,
   UserView,
 } from '@app/contracts';
-import {
-  ConversationType,
-  MessageType,
-  PERMS,
-  SYSTEM_SENDER_ID,
-} from '@app/contracts';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { MessageType, PERMS, SYSTEM_SENDER_ID } from '@app/contracts';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { createImSocket } from '@/composables/use-im-socket';
 import { imApi } from '@/api/im.api';
 import { uploadApi } from '@/api/upload.api';
 import { userApi } from '@/api/user.api';
+import ImChatPanel from '@/components/im/ImChatPanel.vue';
+import ImConversationList from '@/components/im/ImConversationList.vue';
+import ImGroupDialog from '@/components/im/ImGroupDialog.vue';
+import ImMemberDialog from '@/components/im/ImMemberDialog.vue';
+import { createImSocket } from '@/composables/use-im-socket';
 import { useAuthStore } from '@/stores/auth.store';
-import { sanitizeHtml } from '@/utils/sanitize-html';
+import './ImChatPanel.css';
+import './ImView.css';
+import './ImView.responsive.css';
 
 const auth = useAuthStore();
 const im = createImSocket();
@@ -27,13 +28,7 @@ const conversations = ref<ConversationView[]>([]);
 const activeId = ref<string | null>(null);
 const messages = ref<ChatMessage[]>([]);
 const draft = ref('');
-const draftType = ref<MessageType>(MessageType.Text);
-const listRef = ref<HTMLElement | null>(null);
 const uploading = ref(false);
-
-const mediaAccept = computed(() =>
-  draftType.value === MessageType.Video ? 'video/*' : 'image/*',
-);
 
 const users = ref<UserView[]>([]);
 const groupDialog = ref(false);
@@ -43,12 +38,6 @@ const memberDialog = ref(false);
 const detail = ref<ConversationDetailView | null>(null);
 const addPicks = ref<string[]>([]);
 
-const typeOptions = [
-  { label: '文字', value: MessageType.Text },
-  { label: '图片', value: MessageType.Image },
-  { label: '视频', value: MessageType.Video },
-];
-
 const canManage = computed(() => auth.hasPermission(PERMS.im.conversationManage));
 const canCreateGroup = computed(() =>
   auth.hasPermission(PERMS.im.conversationCreate),
@@ -56,26 +45,12 @@ const canCreateGroup = computed(() =>
 const active = computed(() =>
   conversations.value.find((c) => c.id === activeId.value),
 );
-const isGroup = computed(() => active.value?.type === ConversationType.Group);
-
-const typeLabel: Record<ConversationType, string> = {
-  [ConversationType.Private]: '私聊',
-  [ConversationType.Group]: '群聊',
-  [ConversationType.Service]: '客服',
-};
 
 const memberCandidates = computed(() =>
   users.value.filter(
     (u) => !detail.value?.members.some((m) => m.userId === u.id),
   ),
 );
-
-async function scrollToBottom(): Promise<void> {
-  await nextTick();
-  if (listRef.value) {
-    listRef.value.scrollTop = listRef.value.scrollHeight;
-  }
-}
 
 function upsertConversation(view: ConversationView): void {
   const idx = conversations.value.findIndex((c) => c.id === view.id);
@@ -97,7 +72,6 @@ async function selectConversation(id: string): Promise<void> {
   if (item) {
     item.unread = 0;
   }
-  await scrollToBottom();
 }
 
 function send(): void {
@@ -116,7 +90,7 @@ function send(): void {
   draft.value = '';
 }
 
-async function sendMedia(file: File): Promise<void> {
+async function sendMedia(file: File, type: MessageType.Image | MessageType.Video): Promise<void> {
   if (!activeId.value) {
     return;
   }
@@ -125,7 +99,7 @@ async function sendMedia(file: File): Promise<void> {
     const { url } = await uploadApi.upload(file);
     im.send({
       conversationId: activeId.value,
-      type: draftType.value,
+      type,
       content: url,
     });
   } finally {
@@ -233,7 +207,6 @@ onMounted(async () => {
   im.onReceive((message) => {
     if (message.conversationId === activeId.value) {
       messages.value.push(message);
-      void scrollToBottom();
     }
     const item = conversations.value.find(
       (c) => c.id === message.conversationId,
@@ -255,421 +228,46 @@ onBeforeUnmount(() => im.disconnect());
 </script>
 
 <template>
-  <div class="im">
-    <aside class="sidebar">
-      <div class="toolbar">
-        <el-button
-          v-if="canCreateGroup"
-          type="primary"
-          size="small"
-          @click="openGroupDialog"
-        >
-          建群
-        </el-button>
-        <el-button
-          size="small"
-          @click="startService"
-        >
-          联系客服
-        </el-button>
-      </div>
-      <el-scrollbar class="conv-list">
-        <div
-          v-for="c in conversations"
-          :key="c.id"
-          class="conv"
-          :class="{ active: c.id === activeId }"
-          @click="selectConversation(c.id)"
-        >
-          <div class="conv-top">
-            <span class="conv-title">{{ c.title }}</span>
-            <el-badge
-              v-if="c.unread > 0"
-              :value="c.unread"
-            />
-          </div>
-          <div class="conv-sub">
-            <el-tag
-              size="small"
-              effect="plain"
-            >
-              {{ typeLabel[c.type] }}
-            </el-tag>
-            <span class="preview">{{ c.lastMessage?.content ?? '' }}</span>
-          </div>
-        </div>
-        <el-empty
-          v-if="conversations.length === 0"
-          description="暂无会话"
-        />
-      </el-scrollbar>
-    </aside>
-
-    <section class="panel">
-      <template v-if="active">
-        <header class="panel-head">
-          <span class="head-title">{{ active.title }}</span>
-          <div class="head-actions">
-            <el-button
-              v-if="isGroup && canManage"
-              size="small"
-              @click="rename"
-            >
-              改名
-            </el-button>
-            <el-button
-              v-if="isGroup"
-              size="small"
-              @click="openMemberDialog"
-            >
-              成员
-            </el-button>
-            <el-button
-              v-if="isGroup"
-              size="small"
-              type="danger"
-              @click="leave"
-            >
-              退群
-            </el-button>
-          </div>
-        </header>
-
-        <div
-          ref="listRef"
-          class="messages"
-        >
-          <div
-            v-for="m in messages"
-            :key="m.id"
-          >
-            <!-- 系统消息（如客服欢迎语）为富文本，渲染前已 DOMPurify 净化 -->
-            <!-- eslint-disable vue/no-v-html -->
-            <div
-              v-if="isSystem(m)"
-              class="system"
-              v-html="sanitizeHtml(m.content)"
-            />
-            <!-- eslint-enable vue/no-v-html -->
-            <div
-              v-else
-              class="message"
-              :class="{ self: isSelf(m) }"
-            >
-              <div class="meta">
-                {{ m.senderId.slice(0, 8) }} · {{ m.type }}
-              </div>
-              <div
-                v-if="m.type === MessageType.Text"
-                class="bubble"
-              >
-                {{ m.content }}
-              </div>
-              <img
-                v-else-if="m.type === MessageType.Image"
-                :src="m.content"
-                class="media"
-                alt="image"
-              >
-              <video
-                v-else
-                :src="m.content"
-                controls
-                class="media"
-              />
-            </div>
-          </div>
-          <el-empty
-            v-if="messages.length === 0"
-            description="暂无消息"
-          />
-        </div>
-
-        <div class="composer">
-          <el-select
-            v-model="draftType"
-            class="type"
-          >
-            <el-option
-              v-for="opt in typeOptions"
-              :key="opt.value"
-              :label="opt.label"
-              :value="opt.value"
-            />
-          </el-select>
-          <template v-if="draftType === MessageType.Text">
-            <el-input
-              v-model="draft"
-              placeholder="输入文字消息"
-              @keyup.enter="send"
-            />
-            <el-button
-              type="primary"
-              @click="send"
-            >
-              发送
-            </el-button>
-          </template>
-          <el-upload
-            v-else
-            class="uploader"
-            :accept="mediaAccept"
-            :show-file-list="false"
-            :before-upload="
-              (file: File) => {
-                void sendMedia(file);
-                return false;
-              }
-            "
-          >
-            <el-button
-              type="primary"
-              :loading="uploading"
-            >
-              {{ draftType === MessageType.Video ? '上传并发送视频' : '上传并发送图片' }}
-            </el-button>
-          </el-upload>
-        </div>
-      </template>
-      <el-empty
-        v-else
-        description="选择左侧会话开始聊天"
-        class="placeholder"
+  <section class="im-page">
+    <section class="im-workspace">
+      <im-conversation-list
+        :conversations="conversations"
+        :active-id="activeId"
+        :can-create-group="canCreateGroup"
+        @create-group="openGroupDialog"
+        @start-service="startService"
+        @select="selectConversation"
+      />
+      <im-chat-panel
+        v-model:draft="draft"
+        :active="active"
+        :messages="messages"
+        :uploading="uploading"
+        :can-manage="canManage"
+        :is-self="isSelf"
+        :is-system="isSystem"
+        @send="send"
+        @send-media="sendMedia"
+        @rename="rename"
+        @open-members="openMemberDialog"
+        @leave="leave"
       />
     </section>
-
-    <el-dialog
+    <im-group-dialog
       v-model="groupDialog"
-      title="创建群聊"
-      width="420px"
-    >
-      <el-form label-width="72px">
-        <el-form-item label="群名称">
-          <el-input
-            v-model="groupTitle"
-            maxlength="128"
-          />
-        </el-form-item>
-        <el-form-item label="成员">
-          <el-select
-            v-model="groupMembers"
-            multiple
-            filterable
-            placeholder="选择成员"
-            class="full"
-          >
-            <el-option
-              v-for="u in users"
-              :key="u.id"
-              :label="u.nickname || u.username"
-              :value="u.id"
-            />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="groupDialog = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          @click="createGroup"
-        >
-          创建
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog
+      v-model:title="groupTitle"
+      v-model:members="groupMembers"
+      :users="users"
+      @submit="createGroup"
+    />
+    <im-member-dialog
       v-model="memberDialog"
-      title="群成员管理"
-      width="460px"
-    >
-      <div
-        v-if="canManage"
-        class="add-row"
-      >
-        <el-select
-          v-model="addPicks"
-          multiple
-          filterable
-          placeholder="选择要加入的成员"
-          class="full"
-        >
-          <el-option
-            v-for="u in memberCandidates"
-            :key="u.id"
-            :label="u.nickname || u.username"
-            :value="u.id"
-          />
-        </el-select>
-        <el-button
-          type="primary"
-          @click="addMembers"
-        >
-          加入
-        </el-button>
-      </div>
-      <el-table
-        :data="detail?.members ?? []"
-        size="small"
-      >
-        <el-table-column
-          prop="username"
-          label="成员"
-        />
-        <el-table-column
-          prop="role"
-          label="角色"
-          width="100"
-        />
-        <el-table-column
-          label="操作"
-          width="90"
-        >
-          <template #default="{ row }">
-            <el-button
-              v-if="canManage && row.role !== 'owner'"
-              type="danger"
-              size="small"
-              link
-              @click="removeMember(row.userId)"
-            >
-              移除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
-  </div>
+      v-model:picks="addPicks"
+      :detail="detail"
+      :candidates="memberCandidates"
+      :can-manage="canManage"
+      @add="addMembers"
+      @remove="removeMember"
+    />
+  </section>
 </template>
-
-<style scoped>
-.im {
-  display: flex;
-  height: calc(100vh - 140px);
-  border: 1px solid #ebeef5;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.sidebar {
-  width: 260px;
-  border-right: 1px solid #ebeef5;
-  display: flex;
-  flex-direction: column;
-}
-.toolbar {
-  display: flex;
-  gap: 8px;
-  padding: 10px;
-  border-bottom: 1px solid #ebeef5;
-}
-.conv-list {
-  flex: 1;
-}
-.conv {
-  padding: 10px 12px;
-  cursor: pointer;
-  border-bottom: 1px solid #f5f7fa;
-}
-.conv:hover,
-.conv.active {
-  background: #ecf5ff;
-}
-.conv-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.conv-title {
-  font-weight: 600;
-}
-.conv-sub {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-.preview {
-  font-size: 12px;
-  color: #909399;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.panel-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid #ebeef5;
-}
-.head-title {
-  font-weight: 600;
-}
-.head-actions {
-  display: flex;
-  gap: 8px;
-}
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px;
-}
-.message {
-  margin-bottom: 12px;
-}
-.message.self {
-  text-align: right;
-}
-.meta {
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 4px;
-}
-.bubble {
-  display: inline-block;
-  padding: 8px 12px;
-  background: #ecf5ff;
-  border-radius: 6px;
-}
-.media {
-  max-width: 240px;
-  border-radius: 6px;
-}
-.system {
-  text-align: center;
-  font-size: 12px;
-  color: #909399;
-  margin: 8px 0;
-}
-.composer {
-  display: flex;
-  gap: 8px;
-  padding: 12px;
-  border-top: 1px solid #ebeef5;
-}
-.type {
-  width: 110px;
-  flex: none;
-}
-.uploader {
-  flex: 1;
-}
-.placeholder {
-  margin: auto;
-}
-.full {
-  width: 100%;
-}
-.add-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-</style>
