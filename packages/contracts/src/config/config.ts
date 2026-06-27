@@ -4,6 +4,8 @@ export enum ConfigValueType {
   Number = 'number',
   Boolean = 'boolean',
   Json = 'json',
+  /** 富文本：值为 HTML 字符串，编辑时用富文本编辑器，读取与 string 一致 */
+  RichText = 'richtext',
 }
 
 /**

@@ -12,7 +12,9 @@
 - 配置项**列表查询**（密钥类配置值脱敏返回 `******`）。
 - 配置项**新增/更新**（upsert）并失效缓存。
 - 配置项**删除**并失效缓存。
-- 统一**读穿透缓存**（Redis，TTL 300s），并按类型（string/number/boolean/json）安全读取，缓存不可用时降级回源。
+- 统一**读穿透缓存**（Redis，TTL 300s），并按类型（string/number/boolean/json/richtext）安全读取，缓存不可用时降级回源。
+- **富文本配置（richtext）**：值为 HTML 字符串（读取等同 string），配置中心编辑时启用富文本编辑器（AiEditor，图片/视频走 `POST /upload` 返回 URL），渲染前经 DOMPurify 净化防 XSS。如 `im.service.welcome`。
+- **历史迁移（幂等）**：`im.service.welcome` 由 string 改为 richtext 仅纠正类型、保留已编辑内容；`upload.maxFileSize` 旧字节默认值迁移为 MB。
 
 ## 目录结构（DDD 四层）
 

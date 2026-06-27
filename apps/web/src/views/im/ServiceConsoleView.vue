@@ -6,6 +6,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { createImSocket } from '@/composables/use-im-socket';
 import { imApi } from '@/api/im.api';
 import { useAuthStore } from '@/stores/auth.store';
+import { sanitizeHtml } from '@/utils/sanitize-html';
 
 const auth = useAuthStore();
 const im = createImSocket();
@@ -152,12 +153,14 @@ onBeforeUnmount(() => im.disconnect());
             v-for="m in messages"
             :key="m.id"
           >
+            <!-- 系统消息（如客服欢迎语）为富文本，渲染前已 DOMPurify 净化 -->
+            <!-- eslint-disable vue/no-v-html -->
             <div
               v-if="isSystem(m)"
               class="system"
-            >
-              {{ m.content }}
-            </div>
+              v-html="sanitizeHtml(m.content)"
+            />
+            <!-- eslint-enable vue/no-v-html -->
             <div
               v-else
               class="message"

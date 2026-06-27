@@ -178,7 +178,7 @@ erDiagram
 | `im.historyLimit` | 历史消息拉取条数 |
 | `im.group.maxMembers` | 群成员上限 |
 | `im.service.autoAssign` | 是否自动分配在线坐席 |
-| `im.service.welcome` | 客服接入欢迎语 |
+| `im.service.welcome` | 客服接入欢迎语（richtext 富文本，支持图片/视频；客户端渲染前经 DOMPurify 净化） |
 
 ## 设计要点
 

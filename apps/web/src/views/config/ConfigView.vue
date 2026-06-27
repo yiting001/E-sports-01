@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import type { ConfigItemView } from '@app/contracts';
 import { ConfigGroup, ConfigValueType, PERMS } from '@app/contracts';
-import { onMounted, reactive, ref } from 'vue';
+import { defineAsyncComponent, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { configApi, type UpsertConfigBody } from '@/api/config.api';
+import { sanitizeHtml } from '@/utils/sanitize-html';
+
+/** 富文本编辑器较重，按需懒加载（仅编辑 richtext 配置时加载 AiEditor） */
+const RichTextEditor = defineAsyncComponent(
+  () => import('@/components/common/RichTextEditor.vue'),
+);
 
 const list = ref<ConfigItemView[]>([]);
 const loading = ref(false);
@@ -96,7 +102,16 @@ onMounted(load);
       />
       <el-table-column label="值">
         <template #default="{ row }">
-          <span>{{ row.secret ? '******' : row.value }}</span>
+          <span v-if="row.secret">******</span>
+          <!-- 内容已经 DOMPurify 净化，安全渲染 -->
+          <!-- eslint-disable vue/no-v-html -->
+          <div
+            v-else-if="row.type === ConfigValueType.RichText"
+            class="rich-preview"
+            v-html="sanitizeHtml(row.value)"
+          />
+          <!-- eslint-enable vue/no-v-html -->
+          <span v-else>{{ row.value }}</span>
         </template>
       </el-table-column>
       <el-table-column
@@ -141,7 +156,7 @@ onMounted(load);
     <el-dialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑配置' : '新增配置'"
-      width="480px"
+      :width="form.type === ConfigValueType.RichText ? '760px' : '480px'"
     >
       <el-form label-width="72px">
         <el-form-item label="键">
@@ -151,7 +166,12 @@ onMounted(load);
           />
         </el-form-item>
         <el-form-item label="值">
+          <RichTextEditor
+            v-if="form.type === ConfigValueType.RichText"
+            v-model="form.value"
+          />
           <el-input
+            v-else
             v-model="form.value"
             :placeholder="isEdit && form.secret ? '敏感项原值不回显，留空将清空' : ''"
           />
@@ -201,5 +221,14 @@ onMounted(load);
 <style scoped>
 .toolbar {
   margin-bottom: 12px;
+}
+.rich-preview {
+  max-height: 88px;
+  overflow: auto;
+}
+.rich-preview :deep(img),
+.rich-preview :deep(video) {
+  max-width: 160px;
+  max-height: 80px;
 }
 </style>
