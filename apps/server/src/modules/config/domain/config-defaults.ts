@@ -2,6 +2,7 @@ import {
   CONFIG_KEYS,
   ConfigGroup,
   ConfigValueType,
+  DEFAULT_APP_NAME,
   LogLevel,
   SmsProvider,
   StorageDriver,
@@ -51,6 +52,20 @@ export const CONFIG_MIGRATIONS: ConfigMigration[] = [
  * 这里是默认值的“唯一登记处”，从根本上消除散落的硬编码。
  */
 export const DEFAULT_CONFIGS: ConfigDefault[] = [
+  {
+    key: CONFIG_KEYS.system.appName,
+    value: DEFAULT_APP_NAME,
+    type: ConfigValueType.String,
+    group: ConfigGroup.System,
+    remark: '软件名称（浏览器标题、登录页、侧边栏显示）',
+  },
+  {
+    key: CONFIG_KEYS.system.appLogo,
+    value: '',
+    type: ConfigValueType.Image,
+    group: ConfigGroup.System,
+    remark: '软件图标（上传图片，作 logo 与 favicon）',
+  },
   {
     key: CONFIG_KEYS.auth.accessTokenTtl,
     value: '3600',

@@ -8,6 +8,9 @@ import { CONFIG_GROUP_META, CONFIG_TYPE_META } from './config-ui';
 const RichTextEditor = defineAsyncComponent(
   () => import('@/components/common/RichTextEditor.vue'),
 );
+const ImageUploader = defineAsyncComponent(
+  () => import('@/components/common/ImageUploader.vue'),
+);
 
 const props = defineProps<{
   modelValue: boolean;
@@ -59,6 +62,11 @@ function updateForm(patch: Partial<ConfigFormModel>): void {
       <el-form-item label="配置值">
         <RichTextEditor
           v-if="form.type === ConfigValueType.RichText"
+          :model-value="form.value"
+          @update:model-value="(value: string) => updateForm({ value })"
+        />
+        <ImageUploader
+          v-else-if="form.type === ConfigValueType.Image"
           :model-value="form.value"
           @update:model-value="(value: string) => updateForm({ value })"
         />

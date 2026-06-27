@@ -119,6 +119,12 @@ function typeTone(type: ConfigValueType): string {
             v-html="sanitizeHtml(row.value)"
           />
           <!-- eslint-enable vue/no-v-html -->
+          <img
+            v-else-if="row.type === ConfigValueType.Image && row.value"
+            :src="row.value"
+            style="height: 36px; max-width: 120px; object-fit: contain; vertical-align: middle"
+            alt="图片"
+          >
           <span
             v-else
             class="config-value"

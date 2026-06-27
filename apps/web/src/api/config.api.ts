@@ -1,5 +1,11 @@
-import type { ConfigGroup, ConfigItemView, ConfigValueType } from '@app/contracts';
-import { http } from './http';
+import type {
+  BrandingView,
+  ConfigGroup,
+  ConfigItemView,
+  ConfigValueType,
+} from '@app/contracts';
+import type { AxiosRequestConfig } from 'axios';
+import { http, type RequestOptions } from './http';
 
 /** 新增/更新配置项入参 */
 export interface UpsertConfigBody {
@@ -21,5 +27,10 @@ export const configApi = {
   },
   remove(key: string): Promise<void> {
     return http.delete(`/config/${encodeURIComponent(key)}`);
+  },
+  /** 读取平台品牌信息（公开，登录前即可调用） */
+  branding(): Promise<BrandingView> {
+    const options: AxiosRequestConfig & RequestOptions = { silent: true };
+    return http.get('/config/branding', options);
   },
 };
