@@ -17,6 +17,7 @@ export enum ConfigGroup {
   Auth = 'auth',
   Upload = 'upload',
   Im = 'im',
+  Sms = 'sms',
   Observability = 'observability',
 }
 
@@ -49,6 +50,38 @@ export const CONFIG_KEYS = {
     ossBucket: 'upload.oss.bucket',
     ossAccessKeyId: 'upload.oss.accessKeyId',
     ossAccessKeySecret: 'upload.oss.accessKeySecret',
+  },
+  sms: {
+    /** 当前生效的短信服务商：aliyun / tencent / volcano / log */
+    provider: 'sms.provider',
+    /** 验证码位数 */
+    codeLength: 'sms.code.length',
+    /** 验证码有效期（秒） */
+    codeTtl: 'sms.code.ttl',
+    /** 同一手机号两次发送的最小间隔（秒），用于发送限流 */
+    sendInterval: 'sms.code.sendInterval',
+    /** 国际区号（E.164），腾讯云等需要带区号的服务商使用 */
+    countryCode: 'sms.countryCode',
+    /** 阿里云 */
+    aliyunAccessKeyId: 'sms.aliyun.accessKeyId',
+    aliyunAccessKeySecret: 'sms.aliyun.accessKeySecret',
+    aliyunSignName: 'sms.aliyun.signName',
+    aliyunTemplateCode: 'sms.aliyun.templateCode',
+    aliyunEndpoint: 'sms.aliyun.endpoint',
+    /** 腾讯云 */
+    tencentSecretId: 'sms.tencent.secretId',
+    tencentSecretKey: 'sms.tencent.secretKey',
+    tencentSdkAppId: 'sms.tencent.sdkAppId',
+    tencentSignName: 'sms.tencent.signName',
+    tencentTemplateId: 'sms.tencent.templateId',
+    tencentRegion: 'sms.tencent.region',
+    /** 火山引擎 */
+    volcanoAccessKeyId: 'sms.volcano.accessKeyId',
+    volcanoSecretAccessKey: 'sms.volcano.secretAccessKey',
+    volcanoSmsAccount: 'sms.volcano.smsAccount',
+    volcanoSignName: 'sms.volcano.signName',
+    volcanoTemplateId: 'sms.volcano.templateId',
+    volcanoRegion: 'sms.volcano.region',
   },
   im: {
     historyLimit: 'im.historyLimit',

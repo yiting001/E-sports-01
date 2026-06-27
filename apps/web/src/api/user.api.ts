@@ -7,11 +7,13 @@ export interface CreateUserBody {
   username: string;
   password: string;
   nickname?: string;
+  phone?: string;
 }
 
 /** 更新用户入参 */
 export interface UpdateUserBody {
   nickname?: string;
+  phone?: string;
   status?: string;
 }
 

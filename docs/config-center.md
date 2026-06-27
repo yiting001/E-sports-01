@@ -119,8 +119,19 @@ sequenceDiagram
 | `upload.ossAccessKeyId` | Upload | （空） | OSS AccessKeyId | ✓ |
 | `upload.ossAccessKeySecret` | Upload | （空） | OSS AccessKeySecret | ✓ |
 | `im.historyLimit` | Im | `50` | 拉取历史消息默认条数 | |
+| `sms.provider` | Sms | `log` | 短信服务商 aliyun/tencent/volcano/log | |
+| `sms.code.length` | Sms | `6` | 验证码位数 | |
+| `sms.code.ttl` | Sms | `300` | 验证码有效期（秒） | |
+| `sms.code.sendInterval` | Sms | `60` | 同号两次发送最小间隔（秒） | |
+| `sms.countryCode` | Sms | `+86` | 国际区号（E.164） | |
+| `sms.aliyun.accessKeyId` / `accessKeySecret` | Sms | （空） | 阿里云凭证 | ✓ |
+| `sms.aliyun.signName` / `templateCode` / `endpoint` | Sms | — | 阿里云签名/模板/Endpoint | |
+| `sms.tencent.secretId` / `secretKey` | Sms | （空） | 腾讯云凭证 | ✓ |
+| `sms.tencent.sdkAppId` / `signName` / `templateId` / `region` | Sms | — | 腾讯云应用/签名/模板/地域 | |
+| `sms.volcano.accessKeyId` / `secretAccessKey` | Sms | （空） | 火山引擎凭证 | ✓ |
+| `sms.volcano.smsAccount` / `signName` / `templateId` / `region` | Sms | — | 火山引擎账号/签名/模板/地域 | |
 
-> 标记为密钥（`secret: true`）的配置项，列表查询时值会被脱敏为 `******`，不会明文返回前端。
+> 标记为密钥（`secret: true`）的配置项，列表查询时值会被脱敏为 `******`，不会明文返回前端。短信详见 [sms.md](./sms.md)。
 
 ## 设计要点
 

@@ -1,4 +1,9 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserView } from '@app/contracts';
 import {
   USER_REPOSITORY,
@@ -11,6 +16,7 @@ import { toUserView } from '../user.mapper';
 /** 更新用户入参（均为可选，按需更新） */
 export interface UpdateUserInput {
   nickname?: string;
+  phone?: string;
   status?: UserStatus;
   password?: string;
 }
@@ -30,6 +36,12 @@ export class UpdateUserUseCase {
     }
     if (input.nickname !== undefined) {
       user.nickname = input.nickname;
+    }
+    if (input.phone !== undefined) {
+      if (input.phone && (await this.userRepo.existsByPhone(input.phone, id))) {
+        throw new ConflictException('手机号已被其他用户绑定');
+      }
+      user.phone = input.phone;
     }
     if (input.status !== undefined) {
       user.status = input.status;

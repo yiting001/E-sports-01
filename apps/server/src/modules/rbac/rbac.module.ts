@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { ConfigModule } from '../config/config.module';
+import { SmsModule } from '../sms/sms.module';
 
 import { User } from './domain/user.entity';
 import { Role } from './domain/role.entity';
@@ -23,6 +24,8 @@ import { TokenService } from './application/token.service';
 import { PermissionResolver } from './application/permission-resolver.service';
 import { UserDirectory } from './application/user-directory.service';
 import { LoginUseCase } from './application/use-cases/login.usecase';
+import { SmsLoginUseCase } from './application/use-cases/sms-login.usecase';
+import { SendLoginSmsCodeUseCase } from './application/use-cases/send-login-sms-code.usecase';
 import { RegisterUseCase } from './application/use-cases/register.usecase';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.usecase';
 import { GetProfileUseCase } from './application/use-cases/get-profile.usecase';
@@ -47,6 +50,8 @@ import { JwtAuthGuard } from './interfaces/auth/jwt-auth.guard';
 import { PermissionsGuard } from './interfaces/auth/permissions.guard';
 
 import { AuthLoginController } from './interfaces/controllers/auth.login.controller';
+import { AuthSmsCodeController } from './interfaces/controllers/auth.sms-code.controller';
+import { AuthSmsLoginController } from './interfaces/controllers/auth.sms-login.controller';
 import { AuthRegisterController } from './interfaces/controllers/auth.register.controller';
 import { AuthRefreshController } from './interfaces/controllers/auth.refresh.controller';
 import { AuthProfileController } from './interfaces/controllers/auth.profile.controller';
@@ -74,12 +79,15 @@ import { MenuMineController } from './interfaces/controllers/menu.mine.controlle
 @Module({
   imports: [
     ConfigModule,
+    SmsModule,
     PassportModule,
     JwtModule.register({}),
     TypeOrmModule.forFeature([User, Role, Permission]),
   ],
   controllers: [
     AuthLoginController,
+    AuthSmsCodeController,
+    AuthSmsLoginController,
     AuthRegisterController,
     AuthRefreshController,
     AuthProfileController,
@@ -112,6 +120,8 @@ import { MenuMineController } from './interfaces/controllers/menu.mine.controlle
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     LoginUseCase,
+    SmsLoginUseCase,
+    SendLoginSmsCodeUseCase,
     RegisterUseCase,
     RefreshTokenUseCase,
     GetProfileUseCase,
