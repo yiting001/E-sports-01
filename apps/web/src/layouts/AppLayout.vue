@@ -5,12 +5,14 @@ import { ArrowDown, Fold, HomeFilled, SwitchButton, UserFilled } from '@element-
 import { useMenus } from '@/composables/use-menus';
 import { useAuthStore } from '@/stores/auth.store';
 import { useMenuStore } from '@/stores/menu.store';
+import { useBrandingStore } from '@/stores/branding.store';
 import './AppLayout.css';
 
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
 const menuStore = useMenuStore();
+const branding = useBrandingStore();
 const { menus } = useMenus();
 
 const mobileMenuVisible = ref(false);
@@ -34,10 +36,16 @@ function closeMobileMenu(): void {
     <el-aside class="app-aside">
       <div class="brand-block">
         <span class="brand-mark">
-          <el-icon><HomeFilled /></el-icon>
+          <img
+            v-if="branding.appLogo"
+            :src="branding.appLogo"
+            class="brand-logo"
+            alt="logo"
+          >
+          <el-icon v-else><HomeFilled /></el-icon>
         </span>
         <div>
-          <strong>基础设施平台</strong>
+          <strong>{{ branding.appName }}</strong>
           <small>Operations Console</small>
         </div>
       </div>
@@ -163,10 +171,16 @@ function closeMobileMenu(): void {
     >
       <div class="brand-block drawer-brand">
         <span class="brand-mark">
-          <el-icon><HomeFilled /></el-icon>
+          <img
+            v-if="branding.appLogo"
+            :src="branding.appLogo"
+            class="brand-logo"
+            alt="logo"
+          >
+          <el-icon v-else><HomeFilled /></el-icon>
         </span>
         <div>
-          <strong>基础设施平台</strong>
+          <strong>{{ branding.appName }}</strong>
           <small>Operations Console</small>
         </div>
       </div>

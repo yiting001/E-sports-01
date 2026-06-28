@@ -14,6 +14,7 @@ export const CONFIG_TYPE_META: Record<ConfigValueType, { label: string; tone: st
   [ConfigValueType.Json]: { label: 'JSON', tone: 'json' },
   [ConfigValueType.Number]: { label: '数值', tone: 'number' },
   [ConfigValueType.RichText]: { label: '富文本', tone: 'richtext' },
+  [ConfigValueType.Image]: { label: '图片', tone: 'image' },
   [ConfigValueType.String]: { label: '文本', tone: 'string' },
 };
 

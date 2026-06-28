@@ -7,9 +7,11 @@ import { CHINA_MOBILE_PATTERN } from '@app/contracts';
 import { authApi } from '@/api/auth.api';
 import AuthHeroPanel from '@/components/auth/AuthHeroPanel.vue';
 import { useAuthStore } from '@/stores/auth.store';
+import { useBrandingStore } from '@/stores/branding.store';
 import './LoginView.css';
 
 const auth = useAuthStore();
+const branding = useBrandingStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -121,7 +123,7 @@ async function smsSubmit(): Promise<void> {
   <div class="login-page">
     <section
       class="auth-shell"
-      aria-label="基础设施平台登录注册"
+      :aria-label="`${branding.appName}登录注册`"
     >
       <AuthHeroPanel />
 
