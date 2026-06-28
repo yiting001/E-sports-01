@@ -53,6 +53,7 @@ export interface MenuView {
  * 后端播种为 menu 权限、用户分配后方可见；前端路由 meta.permission 取同名 code。
  */
 export const MENU_DEFINITIONS: MenuDefinition[] = [
+  { code: 'wallet:menu', title: '我的钱包', path: 'wallet', icon: 'Wallet', sort: 1 },
   {
     code: 'rbac:tenant:menu',
     title: '租户管理',

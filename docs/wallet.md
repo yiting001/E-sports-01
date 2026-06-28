@@ -2,11 +2,11 @@
 
 ## 模块职责
 
-面向**所有登录角色**的通用钱包：打开页面无钱包则自动初始化（懒创建），支持充值、提现、收支明细与统计。
+纳入 RBAC 权限体系的钱包：菜单与功能均受权限控制，授权后打开页面无钱包则自动初始化（懒创建），支持充值、提现、收支明细与统计。
 
 实现的功能：
 
-- **钱包自动初始化**：所有角色通用，每个用户在租户内唯一；首次访问 `GET /wallet/mine` 时若不存在则懒创建。
+- **钱包自动初始化**：每个用户在租户内唯一；持 `wallet:view` 权限首次访问 `GET /wallet/mine` 时若不存在则懒创建。
 - **充值（扫码支付，官方协议）**：
   - 支付宝 `alipay.trade.precreate`（当面付/扫码），返回二维码内容供前端渲染。
   - 微信支付 v3 `Native 下单`，返回 `code_url` 供前端渲染二维码。
@@ -16,6 +16,20 @@
 - **统计**：余额、累计充值/提现金额与成功笔数。
 - **金额一律以「分」整数存储与传输**，杜绝浮点误差；展示「元」由 `fenToYuan` 统一换算（前后端共享）。
 - **零硬编码**：所有商户凭证、网关、最小金额、回调地址均入配置中心（`ConfigGroup.Wallet`，敏感项脱敏）。
+
+## 权限（RBAC）
+
+钱包菜单与功能权限纳入权限树（`MENU_DEFINITIONS` / `PERMS.wallet`），默认仅超级管理员拥有，其他角色在「角色管理」按需分配。
+
+| 权限码 | 名称 | 类型 | 守卫接口 |
+| --- | --- | --- | --- |
+| `wallet:menu` | 我的钱包 | 菜单 | 前端动态路由 `/wallet`（菜单守卫） |
+| `wallet:view` | 钱包-查看 | 接口 | `GET /wallet/mine`、`GET /wallet/stats` |
+| `wallet:transaction:list` | 钱包-明细 | 接口 | `GET /wallet/transactions` |
+| `wallet:recharge` | 钱包-充值 | 接口/按钮 | `POST /wallet/recharge`（前端「充值」按钮 `v-permission`） |
+| `wallet:withdraw` | 钱包-提现 | 接口/按钮 | `POST /wallet/withdrawal`（前端「提现」按钮 `v-permission`） |
+
+> 充值异步回调 `POST /wallet/recharge/callback/:provider` 为 `@Public()` 渠道回调端点，不受权限控制（靠验签保障）。
 
 ## 不变量与一致性
 
@@ -204,6 +218,7 @@ sequenceDiagram
 
 ## 前端
 
-- 路由 `/wallet`（静态注册，登录即可访问，不受菜单权限控制），侧边菜单「我的钱包」对所有角色恒显。
+- 路由 `/wallet` 由后端按 `wallet:menu` 菜单权限动态下发（组件在 `component-registry` 以 code 登记），侧边菜单「我的钱包」仅对获授权角色可见。
+- 充值/提现按钮以 `v-permission` 绑定 `wallet:recharge` / `wallet:withdraw`，无权时隐藏。
 - `stores/wallet.store.ts`：打开页面并发拉取钱包/统计/首页流水；收支成功后 `refresh`。
 - `views/wallet/WalletView.vue`：余额卡片、统计卡片、明细表格分页；充值弹窗（金额+渠道，下单后用 `qrcode` 渲染二维码，支付完成点「我已支付」刷新）；提现弹窗（金额+支付宝账号+姓名）。

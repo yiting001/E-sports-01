@@ -129,16 +129,16 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 ## 钱包
 
-所有端点**登录即可访问**（无需权限码，所有角色通用），回调端点除外（公开）。金额一律以「分」整数传输。
+钱包菜单与功能纳入 RBAC 权限树（默认仅超管拥有，其他角色按需分配），回调端点除外（公开）。金额一律以「分」整数传输。
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| GET | `/api/wallet/mine` | 登录 | 当前用户钱包，不存在则自动初始化 → `{ id, balanceFen, balanceYuan, status }` |
-| GET | `/api/wallet/stats` | 登录 | 钱包统计（余额、累计充值/提现、成功笔数） |
-| GET | `/api/wallet/transactions` | 登录 | 分页查询本人收支明细，`?page&pageSize`，按时间倒序 |
-| POST | `/api/wallet/recharge` | 登录 | 发起充值 `{ amountFen, provider }`（provider: alipay/wechat）→ `{ orderId, outTradeNo, provider, qrCode, amountFen, amountYuan }` |
+| GET | `/api/wallet/mine` | `wallet:view` | 当前用户钱包，不存在则自动初始化 → `{ id, balanceFen, balanceYuan, status }` |
+| GET | `/api/wallet/stats` | `wallet:view` | 钱包统计（余额、累计充值/提现、成功笔数） |
+| GET | `/api/wallet/transactions` | `wallet:transaction:list` | 分页查询本人收支明细，`?page&pageSize`，按时间倒序 |
+| POST | `/api/wallet/recharge` | `wallet:recharge` | 发起充值 `{ amountFen, provider }`（provider: alipay/wechat）→ `{ orderId, outTradeNo, provider, qrCode, amountFen, amountYuan }` |
 | POST | `/api/wallet/recharge/callback/:provider` | 公开 | 支付渠道异步回调（验签后幂等入账），返回渠道要求的原始应答 |
-| POST | `/api/wallet/withdrawal` | 登录 | 发起提现 `{ amountFen, provider, account, accountName }`（provider 仅 alipay；wechat 预留）→ `{ orderId, status, failReason }` |
+| POST | `/api/wallet/withdrawal` | `wallet:withdraw` | 发起提现 `{ amountFen, provider, account, accountName }`（provider 仅 alipay；wechat 预留）→ `{ orderId, status, failReason }` |
 
 ```jsonc
 // POST /api/wallet/recharge  请求
@@ -160,6 +160,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | 文件 | `upload:file:upload` `upload:file:list` `upload:file:remove` |
 | IM | `im:message:history` |
 | 日志 | `observability:log:list` `observability:log:detail` `observability:log:purge` |
+| 钱包 | `wallet:view` `wallet:transaction:list` `wallet:recharge` `wallet:withdraw` |
 
 ## 业务状态码（`BizCode`）
 

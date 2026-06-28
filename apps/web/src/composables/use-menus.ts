@@ -17,9 +17,6 @@ export interface MenuItem {
 /** 工作台首页：登录即可见，不受菜单权限控制，恒置于菜单首位 */
 const DASHBOARD_MENU: MenuItem = { key: 'dashboard', path: '/dashboard', title: '工作台', icon: 'HomeFilled' };
 
-/** 我的钱包：所有角色通用，登录即可见，不受菜单权限控制 */
-const WALLET_MENU: MenuItem = { key: 'wallet', path: '/wallet', title: '我的钱包', icon: 'Wallet' };
-
 /** 菜单 code → 所属分组 code（取自 contracts 单一来源） */
 const CODE_TO_GROUP = new Map(MENU_DEFINITIONS.map((m) => [m.code, m.group]));
 
@@ -63,11 +60,7 @@ export function useMenus() {
     }
 
     topLevel.sort((a, b) => a.sort - b.sort);
-    return [
-      DASHBOARD_MENU,
-      WALLET_MENU,
-      ...topLevel.map((entry) => entry.item),
-    ];
+    return [DASHBOARD_MENU, ...topLevel.map((entry) => entry.item)];
   });
 
   return { menus };

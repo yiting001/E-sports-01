@@ -6,6 +6,7 @@ import {
   WalletTxnType,
   FundDirection,
   WithdrawalStatus,
+  PERMS,
 } from '@app/contracts';
 import { ElMessage } from 'element-plus';
 import { Money, Wallet, Upload, Download } from '@element-plus/icons-vue';
@@ -127,6 +128,7 @@ onMounted(() => {
         <strong class="hero-amount">{{ wallet?.balanceYuan ?? '0.00' }}</strong>
         <div class="hero-actions">
           <el-button
+            v-permission="PERMS.wallet.recharge"
             type="primary"
             :icon="Upload"
             @click="openRecharge"
@@ -134,6 +136,7 @@ onMounted(() => {
             充值
           </el-button>
           <el-button
+            v-permission="PERMS.wallet.withdraw"
             :icon="Download"
             @click="openWithdraw"
           >
