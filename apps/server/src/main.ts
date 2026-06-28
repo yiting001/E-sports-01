@@ -15,7 +15,10 @@ import { ResponseInterceptor } from './shared/http/response.interceptor';
  */
 async function bootstrap(): Promise<void> {
   const env = loadEnvConfig();
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    // 保留原始请求体，供支付回调按渠道规范做签名校验
+    rawBody: true,
+  });
 
   app.setGlobalPrefix('api');
   app.enableCors();

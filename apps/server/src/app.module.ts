@@ -8,6 +8,7 @@ import { SmsModule } from './modules/sms/sms.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { ImModule } from './modules/im/im.module';
 import { ObservabilityModule } from './modules/observability/observability.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 
 /**
  * 应用根模块。
@@ -24,6 +25,7 @@ import { ObservabilityModule } from './modules/observability/observability.modul
     UploadModule,
     ImModule,
     ObservabilityModule,
+    WalletModule,
   ],
 })
 export class AppModule {}
