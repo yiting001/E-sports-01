@@ -51,4 +51,10 @@ export const PERMS = {
     detail: 'observability:log:detail',
     purge: 'observability:log:purge',
   },
+  wallet: {
+    view: 'wallet:view',
+    transaction: 'wallet:transaction:list',
+    recharge: 'wallet:recharge',
+    withdraw: 'wallet:withdraw',
+  },
 } as const;

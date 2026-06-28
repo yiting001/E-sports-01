@@ -10,6 +10,7 @@ type ComponentLoader = () => Promise<RouteComponent>;
  * 使用注册表而非按路径动态拼接，是为契合 Vite 静态分析以保证按需分包。
  */
 const COMPONENT_REGISTRY: Record<string, ComponentLoader> = {
+  'wallet:menu': () => import('@/views/wallet/WalletView.vue'),
   'rbac:tenant:menu': () => import('@/views/rbac/TenantListView.vue'),
   'rbac:user:menu': () => import('@/views/rbac/UserListView.vue'),
   'rbac:role:menu': () => import('@/views/rbac/RoleListView.vue'),
