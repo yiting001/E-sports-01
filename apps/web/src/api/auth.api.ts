@@ -6,6 +6,8 @@ import type {
   SendSmsCodeResult,
   SmsLoginPayload,
   TokenPair,
+  UpdateProfilePayload,
+  UserView,
 } from '@app/contracts';
 import { http } from './http';
 
@@ -27,5 +29,9 @@ export const authApi = {
   },
   profile(): Promise<AuthProfile> {
     return http.get('/auth/profile');
+  },
+  /** 自助更新本人资料（昵称/头像/手机号） */
+  updateProfile(payload: UpdateProfilePayload): Promise<UserView> {
+    return http.put('/auth/profile', payload);
   },
 };

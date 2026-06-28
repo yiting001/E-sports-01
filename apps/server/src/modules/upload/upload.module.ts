@@ -18,6 +18,7 @@ import { ListFilesUseCase } from './application/use-cases/list-files.usecase';
 import { RemoveFileUseCase } from './application/use-cases/remove-file.usecase';
 
 import { UploadController } from './interfaces/controllers/upload.controller';
+import { UploadSelfController } from './interfaces/controllers/upload.self.controller';
 import { FileListController } from './interfaces/controllers/file.list.controller';
 import { FileRemoveController } from './interfaces/controllers/file.remove.controller';
 
@@ -32,7 +33,12 @@ import { FileRemoveController } from './interfaces/controllers/file.remove.contr
     RbacModule,
     TypeOrmModule.forFeature([UploadedFileEntity]),
   ],
-  controllers: [UploadController, FileListController, FileRemoveController],
+  controllers: [
+    UploadController,
+    UploadSelfController,
+    FileListController,
+    FileRemoveController,
+  ],
   providers: [
     { provide: FILE_REPOSITORY, useClass: TypeormFileRepository },
     LocalStorageDriver,

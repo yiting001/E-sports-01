@@ -192,13 +192,13 @@ onMounted(load);
       <app-data-table
         :data="list"
         :loading="loading"
-        :min-width="1140"
+        :min-width="900"
         table-class="upload-table"
         empty-text="暂无上传文件"
       >
         <el-table-column
           label="文件"
-          min-width="260"
+          min-width="240"
         >
           <template #default="{ row }">
             <div class="upload-file">
@@ -214,7 +214,7 @@ onMounted(load);
         </el-table-column>
         <el-table-column
           label="存储"
-          width="110"
+          width="96"
         >
           <template #default="{ row }">
             <span :class="['upload-driver', row.driver === StorageDriver.Oss ? 'is-oss' : '']">
@@ -225,7 +225,7 @@ onMounted(load);
         </el-table-column>
         <el-table-column
           label="类型"
-          width="130"
+          width="96"
         >
           <template #default="{ row }">
             <span class="upload-type">{{ shortMimeType(row.mimeType) }}</span>
@@ -233,7 +233,7 @@ onMounted(load);
         </el-table-column>
         <el-table-column
           label="大小"
-          width="120"
+          width="96"
         >
           <template #default="{ row }">
             <span class="upload-size">{{ formatSize(row.size) }}</span>
@@ -241,7 +241,7 @@ onMounted(load);
         </el-table-column>
         <el-table-column
           label="访问地址"
-          min-width="240"
+          min-width="150"
         >
           <template #default="{ row }">
             <el-link
@@ -257,7 +257,7 @@ onMounted(load);
         </el-table-column>
         <el-table-column
           label="上传时间"
-          width="170"
+          width="144"
         >
           <template #default="{ row }">
             <span class="upload-date">
@@ -268,7 +268,7 @@ onMounted(load);
         </el-table-column>
         <el-table-column
           label="操作"
-          width="110"
+          width="86"
         >
           <template #default="{ row }">
             <div class="upload-actions">
@@ -286,14 +286,17 @@ onMounted(load);
         </el-table-column>
       </app-data-table>
 
-      <el-pagination
-        class="upload-pager"
-        layout="total, prev, pager, next"
-        :total="total"
-        :current-page="page"
-        :page-size="pageSize"
-        @current-change="(value: number) => { page = value; load(); }"
-      />
+      <div class="upload-pager">
+        <span class="upload-pager__summary">共 {{ total }} 个文件</span>
+        <el-pagination
+          class="upload-pagination"
+          layout="prev, pager, next"
+          :total="total"
+          :current-page="page"
+          :page-size="pageSize"
+          @current-change="(value: number) => { page = value; load(); }"
+        />
+      </div>
     </section>
   </section>
 </template>

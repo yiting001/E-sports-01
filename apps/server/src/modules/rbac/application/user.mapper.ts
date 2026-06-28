@@ -7,6 +7,7 @@ export function toUserView(user: User, tenantCode = ''): UserView {
     id: user.id,
     username: user.username,
     nickname: user.nickname,
+    avatar: user.avatar,
     phone: user.phone,
     status: user.status as unknown as UserStatusEnum,
     roles: (user.roles ?? []).map((r) => ({ id: r.id, code: r.code, name: r.name })),

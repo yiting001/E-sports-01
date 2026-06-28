@@ -75,6 +75,14 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
   { code: 'config:menu', title: '配置中心', path: 'config', icon: 'Setting', sort: 40, group: 'system' },
   { code: 'upload:file:menu', title: '文件上传', path: 'upload', icon: 'UploadFilled', sort: 50, group: 'system' },
   { code: 'observability:log:menu', title: '日志管理', path: 'logs', icon: 'Document', sort: 60, group: 'system' },
+  {
+    code: 'realname:menu',
+    title: '实名管理',
+    path: 'realname',
+    icon: 'Postcard',
+    sort: 65,
+    group: 'system',
+  },
   { code: 'im:menu', title: '即时通讯', path: 'im', icon: 'ChatDotRound', sort: 70, group: 'communication' },
   { code: 'im:service:menu', title: '客服工作台', path: 'im/service', icon: 'Service', sort: 80, group: 'communication' },
 ];

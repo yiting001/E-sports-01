@@ -13,6 +13,9 @@
 | 短信登录 | [sms.md](./sms.md) | 策略模式多云短信（阿里/腾讯/火山/日志），配置中心切换，验证码登录 |
 | WebSocket IM | [im.md](./im.md) | JWT 握手鉴权，会话房间收发文字/图片/视频，为群聊/客服预留扩展 |
 | 链路追踪与日志 | [observability.md](./observability.md) | AsyncLocalStorage 链路追踪，结构化日志异步落库 + RBAC 查询/链路详情/清理 |
+| 钱包 | [wallet.md](./wallet.md) | RBAC 门控的钱包，支付宝/微信扫码充值 + 支付宝转账提现 + 明细统计，金额以分整数 |
+| 用户资料自助 | [user-profile.md](./user-profile.md) | 登录用户自助改头像/昵称/手机号，免授权自助上传，个人中心页 |
+| 实名认证 | [realname.md](./realname.md) | 证件提交 + 人工审核状态机，身份证 AES-256-GCM 加密脱敏，超管按角色配置需实名 |
 | 前端基座 | [frontend.md](./frontend.md) | Vue3 + Pinia，鉴权 store、动态路由守卫、v-permission 指令 |
 | 登录注册 UI | [auth-ui.md](./auth-ui.md) | 企业级电竞风格登录/注册/短信验证码入口，仅重做 UI 不改鉴权逻辑 |
 | 工作台 UI | [dashboard-ui.md](./dashboard-ui.md) | 响应式账号概览、业务入口、快捷访问和权限摘要 |

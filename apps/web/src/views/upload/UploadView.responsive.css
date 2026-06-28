@@ -53,7 +53,12 @@
   }
 
   .upload-pager {
-    justify-content: center;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .upload-pagination {
+    justify-content: flex-start;
   }
 }
 

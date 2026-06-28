@@ -27,6 +27,8 @@ export class GetProfileUseCase {
       id: user.id,
       username: user.username,
       nickname: user.nickname,
+      avatar: user.avatar,
+      phone: user.phone,
       roles: auth.roles,
       permissions: auth.permissions,
       isSuper: auth.isSuper,

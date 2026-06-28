@@ -43,6 +43,19 @@
   border-radius: 14px;
 }
 
+.aside-avatar,
+.header-avatar {
+  overflow: hidden;
+}
+
+.aside-avatar-img,
+.header-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
 .brand-mark {
   width: 42px;
   height: 42px;
