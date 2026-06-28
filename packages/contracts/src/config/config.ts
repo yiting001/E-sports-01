@@ -6,6 +6,8 @@ export enum ConfigValueType {
   Json = 'json',
   /** 富文本：值为 HTML 字符串，编辑时用富文本编辑器，读取与 string 一致 */
   RichText = 'richtext',
+  /** 图片：值为上传后可访问的 URL，编辑时用图片上传控件，读取与 string 一致 */
+  Image = 'image',
 }
 
 /**
@@ -32,11 +34,28 @@ export interface ConfigItemView {
   secret: boolean;
 }
 
+/** 平台品牌信息（公开，登录前即可读取） */
+export interface BrandingView {
+  /** 软件名称 */
+  appName: string;
+  /** 软件图标 URL，未配置则为空串 */
+  appLogo: string;
+}
+
+/** 软件名称默认值（未在配置中心设置时回退使用） */
+export const DEFAULT_APP_NAME = '基础设施平台';
+
 /**
  * 全平台配置键常量。
  * 任何模块需要可配置参数时都应在此登记，杜绝散落的硬编码。
  */
 export const CONFIG_KEYS = {
+  system: {
+    /** 软件名称（显示在浏览器标题、登录页、侧边栏等） */
+    appName: 'system.appName',
+    /** 软件图标 URL（上传图片后保存其访问地址，作 logo 与 favicon） */
+    appLogo: 'system.appLogo',
+  },
   auth: {
     accessTokenTtl: 'auth.accessTokenTtl',
     refreshTokenTtl: 'auth.refreshTokenTtl',
