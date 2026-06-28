@@ -1,5 +1,5 @@
 import { Column, Entity, Index, JoinTable, ManyToMany } from 'typeorm';
-import { BaseEntity } from '../../../shared/domain/base.entity';
+import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 import { Role } from './role.entity';
 
 /** 用户状态 */
@@ -8,10 +8,10 @@ export enum UserStatus {
   Disabled = 'disabled',
 }
 
-/** 用户实体（聚合根） */
+/** 用户实体（聚合根）。用户名在租户内唯一 */
 @Entity('rbac_user')
-export class User extends BaseEntity {
-  @Index({ unique: true })
+@Index(['tenantId', 'username'], { unique: true })
+export class User extends TenantScopedEntity {
   @Column({ length: 64 })
   username!: string;
 

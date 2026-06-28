@@ -1,12 +1,12 @@
 import { Column, Entity, Index, JoinTable, ManyToMany } from 'typeorm';
-import { BaseEntity } from '../../../shared/domain/base.entity';
+import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 import { Permission } from './permission.entity';
 import { User } from './user.entity';
 
-/** 角色实体，连接用户与权限的中间概念 */
+/** 角色实体，连接用户与权限的中间概念。角色码在租户内唯一 */
 @Entity('rbac_role')
-export class Role extends BaseEntity {
-  @Index({ unique: true })
+@Index(['tenantId', 'code'], { unique: true })
+export class Role extends TenantScopedEntity {
   @Column({ length: 64 })
   code!: string;
 

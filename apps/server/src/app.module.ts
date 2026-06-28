@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from './shared/database/database.module';
 import { RedisModule } from './shared/redis/redis.module';
+import { TenantContextModule } from './shared/tenant/tenant-context.module';
 import { ConfigModule } from './modules/config/config.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { SmsModule } from './modules/sms/sms.module';
@@ -16,6 +17,7 @@ import { ObservabilityModule } from './modules/observability/observability.modul
   imports: [
     DatabaseModule,
     RedisModule,
+    TenantContextModule,
     ConfigModule,
     SmsModule,
     RbacModule,

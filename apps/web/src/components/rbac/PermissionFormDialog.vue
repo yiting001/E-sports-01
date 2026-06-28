@@ -126,6 +126,7 @@ watch(
     :model-value="modelValue"
     :title="title"
     width="520px"
+    class="permission-dialog"
     @update:model-value="(v: boolean) => emit('update:modelValue', v)"
   >
     <el-form label-width="92px">

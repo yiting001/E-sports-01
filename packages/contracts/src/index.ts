@@ -6,6 +6,7 @@ export * from './rbac/menu';
 export * from './rbac/auth';
 export * from './rbac/user';
 export * from './rbac/role';
+export * from './rbac/tenant';
 export * from './im/message';
 export * from './im/conversation';
 export * from './upload/storage';

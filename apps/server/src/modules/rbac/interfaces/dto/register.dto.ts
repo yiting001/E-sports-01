@@ -20,4 +20,10 @@ export class RegisterDto implements RegisterPayload {
   @ValidateIf((o: RegisterDto) => o.phone !== undefined && o.phone !== '')
   @Matches(CHINA_MOBILE_PATTERN, { message: '手机号格式不正确' })
   phone?: string;
+
+  /** 注册到的租户编码（选填），空表示默认租户 */
+  @IsOptional()
+  @IsString()
+  @Length(0, 64)
+  tenantCode?: string;
 }

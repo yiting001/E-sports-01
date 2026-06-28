@@ -1,0 +1,74 @@
+@media (max-width: 1180px) {
+  .config-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .config-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .config-hero__visual {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .config-page {
+    gap: 14px;
+  }
+
+  .config-hero,
+  .config-panel,
+  .config-stat {
+    border-radius: 14px;
+  }
+
+  .config-hero,
+  .config-panel {
+    padding: 18px;
+  }
+
+  .config-hero h1 {
+    font-size: 30px;
+  }
+
+  .config-panel__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .config-panel__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .config-panel__actions .el-button {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .config-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .config-search {
+    width: 100%;
+  }
+
+  .config-toolbar__meta {
+    align-self: flex-start;
+  }
+
+  .config-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .config-dialog {
+    width: calc(100% - 24px) !important;
+  }
+}

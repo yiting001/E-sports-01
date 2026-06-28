@@ -8,6 +8,8 @@ import { ConfigService } from '../../config/application/config.service';
 export interface TokenPayload {
   sub: string;
   username: string;
+  /** 所属租户主键，用于行级数据隔离 */
+  tenantId: string;
   type: 'access' | 'refresh';
 }
 
@@ -24,16 +26,20 @@ export class TokenService {
     private readonly config: ConfigService,
   ) {}
 
-  async issueTokenPair(userId: string, username: string): Promise<TokenPair> {
+  async issueTokenPair(
+    userId: string,
+    username: string,
+    tenantId: string,
+  ): Promise<TokenPair> {
     const accessTtl = await this.config.getNumber(CONFIG_KEYS.auth.accessTokenTtl, 3600);
     const refreshTtl = await this.config.getNumber(CONFIG_KEYS.auth.refreshTokenTtl, 604800);
 
     const accessToken = await this.jwt.signAsync(
-      { sub: userId, username, type: 'access' } satisfies TokenPayload,
+      { sub: userId, username, tenantId, type: 'access' } satisfies TokenPayload,
       { secret: this.env.jwt.accessSecret, expiresIn: accessTtl },
     );
     const refreshToken = await this.jwt.signAsync(
-      { sub: userId, username, type: 'refresh' } satisfies TokenPayload,
+      { sub: userId, username, tenantId, type: 'refresh' } satisfies TokenPayload,
       { secret: this.env.jwt.refreshSecret, expiresIn: refreshTtl },
     );
     return { accessToken, refreshToken, expiresIn: accessTtl };

@@ -1,6 +1,6 @@
 import { ConversationStatus, ConversationType } from '@app/contracts';
 import { Column, Entity, Index } from 'typeorm';
-import { BaseEntity } from '../../../shared/domain/base.entity';
+import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 
 /**
  * 会话实体（聚合根）。
@@ -8,7 +8,7 @@ import { BaseEntity } from '../../../shared/domain/base.entity';
  * 群聊恒为 active；客服走 pending → active → closed。
  */
 @Entity('sys_conversation')
-export class ConversationEntity extends BaseEntity {
+export class ConversationEntity extends TenantScopedEntity {
   @Index()
   @Column({ type: 'varchar', length: 16 })
   type!: ConversationType;

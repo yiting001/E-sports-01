@@ -6,6 +6,7 @@ import {
   UserRepository,
 } from '../../domain/user-repository.interface';
 import { UserStatus } from '../../domain/user.entity';
+import { TenantResolver } from '../tenant-resolver.service';
 
 /**
  * 用例：发送登录短信验证码。
@@ -17,10 +18,12 @@ export class SendLoginSmsCodeUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     private readonly smsCode: SmsCodeService,
+    private readonly tenants: TenantResolver,
   ) {}
 
-  async execute(phone: string): Promise<SendSmsCodeResult> {
-    const user = await this.userRepo.findByPhone(phone);
+  async execute(phone: string, tenantCode?: string): Promise<SendSmsCodeResult> {
+    const tenantId = await this.tenants.resolveOptionalId(tenantCode);
+    const user = await this.userRepo.findByPhone(phone, tenantId);
     if (!user || user.status !== UserStatus.Enabled) {
       throw new BadRequestException('该手机号未绑定可用账号');
     }

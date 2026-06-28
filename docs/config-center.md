@@ -142,3 +142,29 @@ sequenceDiagram
 ## 相关端点
 
 详见 [api-reference.md](./api-reference.md#配置中心)。
+
+## 前端配置中心页
+
+`/config` 是配置中心的页面容器，只编排现有 `configApi` 和表单状态；
+展示组件通过 props 接收列表、统计和表单数据，通过事件把新增、编辑、删除和保存交回页面容器处理。
+
+已实现能力：
+
+- 配置总数、覆盖分组、敏感配置、富文本配置四类概览。
+- 配置目录保持表格视图，窄屏通过 `AppDataTable` 横向滚动。
+- 配置目录支持按配置键、分组、类型、备注和非敏感值快速搜索，敏感值不参与前端明文匹配。
+- 敏感项列表脱敏展示，编辑敏感项时不回填原值。
+- 富文本配置继续按需加载 `RichTextEditor`，列表预览仍先经 `sanitizeHtml` 净化。
+- 新增/编辑弹窗维护 key、value、type、group、remark、secret。
+- 按钮权限继续沿用 `v-permission`，接口调用仍复用 `configApi`。
+
+```mermaid
+flowchart TD
+  Page["ConfigView.vue 页面容器"] --> Hero["ConfigHero 头部视觉"]
+  Page --> Stats["ConfigStats 指标概览"]
+  Page --> Directory["ConfigDirectory 配置目录"]
+  Page --> FormDialog["ConfigFormDialog 新增/编辑弹窗"]
+  Directory --> ConfigApi["configApi.list/upsert/remove"]
+  FormDialog --> RichText["RichTextEditor 按需加载"]
+  Directory --> Sanitize["sanitizeHtml 富文本预览净化"]
+```

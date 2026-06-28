@@ -13,6 +13,7 @@
 - **日志查询**（REST `GET /api/observability/logs`）：分页 + 多条件（level/type/traceId/path/userId/时间段）。
 - **链路详情**（REST `GET /api/observability/logs/trace/:traceId`）：同一 traceId 下按时间排序的全部 span。
 - **日志清理**（REST `DELETE /api/observability/logs`）：按保留天数删除过期日志，缺省取配置中心 `log.retentionDays`。
+- **前端日志台**：`LogView` 提供日志总览、筛选、分页目录、链路详情抽屉和清理入口；表格复用 `AppDataTable`，窄屏保留横向滚动能力。
 - **全程配置驱动**：是否落库、最低级别、采样率、保留天数、排除路径均来自配置中心，零硬编码。
 
 ## 目录结构（DDD 四层）
@@ -47,6 +48,30 @@ modules/observability/
         ├── log.list.controller.ts       GET  /observability/logs
         ├── log.trace-detail.controller.ts GET /observability/logs/trace/:traceId
         └── log.purge.controller.ts       DELETE /observability/logs
+```
+
+## 前端页面结构
+
+```
+apps/web/src/views/observability/
+├── LogView.vue                         日志状态、筛选、链路详情、清理交互
+├── LogView.css                         桌面端头图、统计、筛选、表格样式
+├── LogView.drawer.css                  链路详情抽屉与错误详情样式
+└── LogView.responsive.css              窄屏布局与抽屉响应式
+```
+
+```mermaid
+flowchart LR
+  PAGE[LogView]
+  API[observabilityApi]
+  FILTER[筛选条件]
+  TABLE[AppDataTable]
+  DRAWER[链路详情抽屉]
+
+  PAGE --> FILTER
+  PAGE --> API
+  API --> TABLE
+  API --> DRAWER
 ```
 
 ## 链路传播流程

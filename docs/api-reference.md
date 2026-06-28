@@ -29,6 +29,17 @@
 
 ## RBAC 权限
 
+### 租户（仅平台超管）
+
+| 方法 | 路径 | 权限码 |
+| --- | --- | --- |
+| GET | `/api/rbac/tenants` | `rbac:tenant:list` |
+| POST | `/api/rbac/tenants` | `rbac:tenant:create` |
+| PATCH | `/api/rbac/tenants/:id` | `rbac:tenant:update` |
+| DELETE | `/api/rbac/tenants/:id` | `rbac:tenant:remove` |
+
+> 多租户行级隔离设计见 [multi-tenant.md](./multi-tenant.md)。
+
 ### 用户
 
 | 方法 | 路径 | 权限码 |

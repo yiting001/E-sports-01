@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ChatDotRound, Key, Lock, Phone, Platform, User } from '@element-plus/icons-vue';
+import { ChatDotRound, Key, Lock, OfficeBuilding, Phone, Platform, User } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import { CHINA_MOBILE_PATTERN } from '@app/contracts';
 import { authApi } from '@/api/auth.api';
@@ -21,6 +21,8 @@ const loading = ref(false);
 
 const form = reactive({ account: '', username: '', password: '', nickname: '', phone: '' });
 const smsForm = reactive({ phone: '', code: '' });
+/** 租户编码（选填）：留空则归入平台默认租户，多租户下用于消解同名账号歧义 */
+const tenantCode = ref('');
 
 /** 验证码发送冷却倒计时（秒） */
 const countdown = ref(0);
@@ -58,14 +60,16 @@ async function submit(): Promise<void> {
   }
   loading.value = true;
   try {
+    const code = tenantCode.value.trim() || undefined;
     if (mode.value === 'login') {
-      await auth.login({ account: form.account, password: form.password });
+      await auth.login({ account: form.account, password: form.password, tenantCode: code });
     } else {
       await auth.register({
         username: form.username,
         password: form.password,
         nickname: form.nickname || undefined,
         phone: form.phone || undefined,
+        tenantCode: code,
       });
     }
     await goRedirect();
@@ -82,7 +86,10 @@ async function sendCode(): Promise<void> {
   }
   sending.value = true;
   try {
-    const { cooldown } = await authApi.sendSmsCode({ phone: smsForm.phone });
+    const { cooldown } = await authApi.sendSmsCode({
+      phone: smsForm.phone,
+      tenantCode: tenantCode.value.trim() || undefined,
+    });
     ElMessage.success('验证码已发送');
     startCountdown(cooldown);
   } finally {
@@ -98,7 +105,11 @@ async function smsSubmit(): Promise<void> {
   }
   loading.value = true;
   try {
-    await auth.smsLogin({ phone: smsForm.phone, code: smsForm.code });
+    await auth.smsLogin({
+      phone: smsForm.phone,
+      code: smsForm.code,
+      tenantCode: tenantCode.value.trim() || undefined,
+    });
     await goRedirect();
   } finally {
     loading.value = false;
@@ -206,6 +217,15 @@ async function smsSubmit(): Promise<void> {
                   @keyup.enter="submit"
                 />
               </el-form-item>
+              <el-form-item label="租户编码">
+                <el-input
+                  v-model="tenantCode"
+                  size="large"
+                  :prefix-icon="OfficeBuilding"
+                  placeholder="选填，默认进入平台默认租户"
+                  @keyup.enter="submit"
+                />
+              </el-form-item>
               <el-button
                 class="primary-action"
                 type="primary"
@@ -265,6 +285,15 @@ async function smsSubmit(): Promise<void> {
                     {{ countdown > 0 ? `${countdown}s` : '发送验证码' }}
                   </el-button>
                 </div>
+              </el-form-item>
+              <el-form-item label="租户编码">
+                <el-input
+                  v-model="tenantCode"
+                  size="large"
+                  :prefix-icon="OfficeBuilding"
+                  placeholder="选填，默认进入平台默认租户"
+                  @keyup.enter="smsSubmit"
+                />
               </el-form-item>
               <el-button
                 class="primary-action"

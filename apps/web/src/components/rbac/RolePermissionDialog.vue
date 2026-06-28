@@ -94,6 +94,7 @@ watch(
     :model-value="modelValue"
     :title="role ? `分配权限 · ${role.name}` : '分配权限'"
     width="480px"
+    class="role-permission-dialog"
     @update:model-value="(v: boolean) => emit('update:modelValue', v)"
   >
     <el-alert

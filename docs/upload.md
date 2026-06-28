@@ -12,6 +12,7 @@
 - **删除**：删除存储对象的同时清理数据库记录（返回 204）。
 - **驱动切换**：读配置中心 `upload.driver` 即可在 local / oss 间切换，无需改代码或重启。
 - **凭证安全**：OSS endpoint/bucket/ak/sk 全部存配置中心，密钥项脱敏返回。
+- **前端文件库**：`UploadView` 提供文件统计、上传入口、分页目录、访问链接和删除操作；表格复用 `AppDataTable`，窄屏通过统一横向滚动避免字段遮挡。
 
 ## 目录结构（DDD 四层）
 
@@ -38,6 +39,31 @@ modules/upload/
     ├── upload.controller.ts             POST   /api/upload
     ├── file.list.controller.ts          GET    /api/upload/files
     └── file.remove.controller.ts        DELETE /api/upload/files/:id
+```
+
+## 前端页面结构
+
+```
+apps/web/src/views/upload/
+├── UploadView.vue                       上传页状态、上传/删除/分页交互
+├── UploadView.css                       桌面端文件库、统计卡片、表格单元样式
+└── UploadView.responsive.css            窄屏布局与操作区响应式
+```
+
+`UploadView` 不承载存储策略判断，只展示接口返回的 `driver`、`size`、`mimeType`、`createdAt` 等元数据；上传失败仍交给全局 HTTP 拦截器提示，页面只处理成功反馈与文件输入重置。
+
+```mermaid
+flowchart LR
+  PAGE[UploadView]
+  API[uploadApi]
+  TABLE[AppDataTable]
+  STATS[文件统计]
+  LIST[文件目录]
+
+  PAGE --> API
+  PAGE --> STATS
+  PAGE --> TABLE
+  TABLE --> LIST
 ```
 
 ## 策略模式结构
