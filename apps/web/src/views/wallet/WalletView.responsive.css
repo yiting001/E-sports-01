@@ -76,7 +76,7 @@
     flex-direction: column;
   }
 
-  .wallet-pager .el-pagination {
+  .wallet-pagination {
     justify-content: flex-start;
   }
 

@@ -206,6 +206,7 @@
 .upload-stat span,
 .upload-stat small,
 .upload-file small,
+.upload-pager__summary,
 .upload-size,
 .upload-date {
   color: #64748b;
@@ -214,6 +215,7 @@
 .upload-stat span,
 .upload-stat small,
 .upload-file small,
+.upload-pager__summary,
 .upload-size,
 .upload-date {
   font-size: 13px;
@@ -376,6 +378,13 @@
 }
 
 .upload-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: 16px;
-  justify-content: flex-end;
+}
+
+.upload-pagination {
+  flex: 0 0 auto;
 }

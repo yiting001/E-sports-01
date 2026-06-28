@@ -231,28 +231,34 @@ watch(
 
 .app-data-table__controls {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  grid-template-columns: 26px minmax(0, 1fr) 26px;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px 8px;
-  background: #f8fafc;
-  border-top: 1px solid #e5e7eb;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
 }
 
 .app-data-table__scroll-button {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   color: #475569;
+}
+
+.app-data-table__scroll-button.is-disabled,
+.app-data-table__scroll-button:disabled {
+  color: #cbd5e1;
 }
 
 .app-data-table__track {
   position: relative;
-  height: 10px;
+  height: 6px;
   padding: 0;
   cursor: pointer;
   border: 0;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: #eef2f7;
 }
 
 .app-data-table__thumb {
@@ -261,6 +267,11 @@ watch(
   bottom: 0;
   min-width: 44px;
   border-radius: 999px;
-  background: #94a3b8;
+  background: #cbd5e1;
+  transition: background-color 0.18s ease;
+}
+
+.app-data-table__track:hover .app-data-table__thumb {
+  background: #14b8a6;
 }
 </style>

@@ -287,7 +287,7 @@
 .wallet-type small,
 .wallet-date,
 .wallet-panel__head p,
-.wallet-pager,
+.wallet-pager__summary,
 .wallet-action small,
 .wallet-dialog__intro p,
 .qr-block p {
@@ -299,7 +299,7 @@
 .wallet-type small,
 .wallet-date,
 .wallet-panel__head p,
-.wallet-pager,
+.wallet-pager__summary,
 .wallet-action small,
 .wallet-dialog__intro p,
 .qr-block p {
@@ -343,6 +343,10 @@
   font-weight: 800;
   letter-spacing: 0;
   text-transform: uppercase;
+}
+
+.wallet-panel__head .wallet-eyebrow {
+  color: #0f766e;
 }
 
 .wallet-panel__head h2 {
@@ -424,6 +428,10 @@
   justify-content: space-between;
   gap: 12px;
   margin-top: 16px;
+}
+
+.wallet-pagination {
+  flex: 0 0 auto;
 }
 
 .wallet-actions-panel {
