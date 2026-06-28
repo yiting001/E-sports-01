@@ -21,6 +21,7 @@ export enum ConfigGroup {
   Im = 'im',
   Sms = 'sms',
   Observability = 'observability',
+  Wallet = 'wallet',
 }
 
 /** 配置项对外结构（敏感项的值在传输前会被脱敏） */
@@ -122,5 +123,32 @@ export const CONFIG_KEYS = {
     retentionDays: 'log.retentionDays',
     /** 不记录访问日志的路径前缀（JSON 字符串数组） */
     excludePaths: 'log.excludePaths',
+  },
+  wallet: {
+    /** 当前生效的充值渠道：alipay / wechat */
+    paymentProvider: 'wallet.payment.provider',
+    /** 当前生效的提现渠道：alipay（wechat 预留） */
+    payoutProvider: 'wallet.payout.provider',
+    /** 最小充值金额（分） */
+    minRechargeFen: 'wallet.minRechargeFen',
+    /** 最小提现金额（分） */
+    minWithdrawFen: 'wallet.minWithdrawFen',
+    /** 支付回调可达的公网基础地址，用于拼接异步通知 URL，例如 https://api.example.com */
+    notifyBaseUrl: 'wallet.notifyBaseUrl',
+    /** 支付宝 */
+    alipayAppId: 'wallet.alipay.appId',
+    alipayPrivateKey: 'wallet.alipay.privateKey',
+    alipayPublicKey: 'wallet.alipay.publicKey',
+    alipayGateway: 'wallet.alipay.gateway',
+    /** 微信支付 v3 */
+    wechatAppId: 'wallet.wechat.appId',
+    wechatMchId: 'wallet.wechat.mchId',
+    wechatSerialNo: 'wallet.wechat.serialNo',
+    wechatPrivateKey: 'wallet.wechat.privateKey',
+    wechatApiV3Key: 'wallet.wechat.apiV3Key',
+    /** 微信支付平台证书公钥（PEM），用于回调验签 */
+    wechatPlatformPublicKey: 'wallet.wechat.platformPublicKey',
+    /** 微信支付平台证书序列号，用于回调验签匹配 */
+    wechatPlatformSerialNo: 'wallet.wechat.platformSerialNo',
   },
 } as const;

@@ -41,6 +41,12 @@ export const routes: RouteRecordRaw[] = [
         component: () => import('@/views/DashboardView.vue'),
         meta: { title: '工作台', icon: 'HomeFilled' },
       },
+      {
+        path: 'wallet',
+        name: 'wallet',
+        component: () => import('@/views/wallet/WalletView.vue'),
+        meta: { title: '我的钱包', icon: 'Wallet' },
+      },
     ],
   },
   {

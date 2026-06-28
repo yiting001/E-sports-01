@@ -127,6 +127,28 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 所有响应均带 `x-trace-id` 头，可用于到日志中检索本次请求全链路。
 
+## 钱包
+
+所有端点**登录即可访问**（无需权限码，所有角色通用），回调端点除外（公开）。金额一律以「分」整数传输。
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/wallet/mine` | 登录 | 当前用户钱包，不存在则自动初始化 → `{ id, balanceFen, balanceYuan, status }` |
+| GET | `/api/wallet/stats` | 登录 | 钱包统计（余额、累计充值/提现、成功笔数） |
+| GET | `/api/wallet/transactions` | 登录 | 分页查询本人收支明细，`?page&pageSize`，按时间倒序 |
+| POST | `/api/wallet/recharge` | 登录 | 发起充值 `{ amountFen, provider }`（provider: alipay/wechat）→ `{ orderId, outTradeNo, provider, qrCode, amountFen, amountYuan }` |
+| POST | `/api/wallet/recharge/callback/:provider` | 公开 | 支付渠道异步回调（验签后幂等入账），返回渠道要求的原始应答 |
+| POST | `/api/wallet/withdrawal` | 登录 | 发起提现 `{ amountFen, provider, account, accountName }`（provider 仅 alipay；wechat 预留）→ `{ orderId, status, failReason }` |
+
+```jsonc
+// POST /api/wallet/recharge  请求
+{ "amountFen": 1000, "provider": "alipay" }
+// data（qrCode 由前端渲染成二维码供扫码支付）
+{ "orderId": "...", "outTradeNo": "R1782...", "provider": "alipay", "qrCode": "https://qr.alipay.com/...", "amountFen": 1000, "amountYuan": "10.00" }
+```
+
+> 真实到账需在配置中心（钱包组）填入商户凭证；未配置时下单/转账会如实返回「渠道未配置」。回调地址 `{wallet.notifyBaseUrl}/wallet/recharge/callback/{provider}` 需公网可达。
+
 ## 权限码一览（contracts `PERMS`）
 
 | 模块 | 权限码 |
