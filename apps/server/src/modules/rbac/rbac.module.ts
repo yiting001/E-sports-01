@@ -37,6 +37,7 @@ import { SendLoginSmsCodeUseCase } from './application/use-cases/send-login-sms-
 import { RegisterUseCase } from './application/use-cases/register.usecase';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.usecase';
 import { GetProfileUseCase } from './application/use-cases/get-profile.usecase';
+import { UpdateProfileUseCase } from './application/use-cases/update-profile.usecase';
 import { ListUsersUseCase } from './application/use-cases/list-users.usecase';
 import { CreateUserUseCase } from './application/use-cases/create-user.usecase';
 import { UpdateUserUseCase } from './application/use-cases/update-user.usecase';
@@ -63,6 +64,7 @@ import { AuthSmsLoginController } from './interfaces/controllers/auth.sms-login.
 import { AuthRegisterController } from './interfaces/controllers/auth.register.controller';
 import { AuthRefreshController } from './interfaces/controllers/auth.refresh.controller';
 import { AuthProfileController } from './interfaces/controllers/auth.profile.controller';
+import { AuthUpdateProfileController } from './interfaces/controllers/auth.update-profile.controller';
 import { UserListController } from './interfaces/controllers/user.list.controller';
 import { UserCreateController } from './interfaces/controllers/user.create.controller';
 import { UserUpdateController } from './interfaces/controllers/user.update.controller';
@@ -103,6 +105,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     AuthRegisterController,
     AuthRefreshController,
     AuthProfileController,
+    AuthUpdateProfileController,
     UserListController,
     UserCreateController,
     UserUpdateController,
@@ -143,6 +146,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     RegisterUseCase,
     RefreshTokenUseCase,
     GetProfileUseCase,
+    UpdateProfileUseCase,
     ListUsersUseCase,
     CreateUserUseCase,
     UpdateUserUseCase,

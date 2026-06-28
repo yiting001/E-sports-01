@@ -18,7 +18,8 @@
 | POST | `/api/auth/refresh` | 公开 | 用 refresh 令牌换发新双令牌 |
 | POST | `/api/auth/sms/code` | 公开 | 发送登录短信验证码 `{ phone }` → `{ cooldown }`（仅已绑定启用账号） |
 | POST | `/api/auth/sms/login` | 公开 | 短信验证码登录 `{ phone, code }`，返回双令牌 |
-| GET | `/api/auth/profile` | 登录 | 当前用户 `{ id, username, nickname, roles[], permissions[], isSuper }` |
+| GET | `/api/auth/profile` | 登录 | 当前用户 `{ id, username, nickname, avatar, phone, roles[], permissions[], isSuper }` |
+| PUT | `/api/auth/profile` | 登录 | 自助更新本人资料 `{ nickname?, avatar?, phone? }`（手机号唯一校验，传空串解绑），返回更新后的 `UserView` |
 
 ```jsonc
 // POST /api/auth/login  请求（account 可填用户名或已绑定手机号）
@@ -94,6 +95,7 @@
 | 方法 | 路径 | 权限码 | 说明 |
 | --- | --- | --- | --- |
 | POST | `/api/upload` | `upload:file:upload` | multipart 上传，返回元数据 + URL |
+| POST | `/api/upload/self` | 登录 | 登录用户自助上传（无需上传权限），供头像/实名证件等场景，返回同上 |
 | GET | `/api/upload/files` | `upload:file:list` | 分页列表 |
 | DELETE | `/api/upload/files/:id` | `upload:file:remove` | 删对象 + 删记录，204 |
 
@@ -149,6 +151,28 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 > 真实到账需在配置中心（钱包组）填入商户凭证；未配置时下单/转账会如实返回「渠道未配置」。回调地址 `{wallet.notifyBaseUrl}/wallet/recharge/callback/{provider}` 需公网可达。
 
+## 实名认证
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/realname/mine` | 登录 | 当前用户实名概览 `{ required, status, record }`（required 由其角色是否命中策略决定；record 脱敏） |
+| POST | `/api/realname` | 登录 | 提交/重提实名 `{ realName, idCardNo, frontImage, backImage }`（已通过/审核中会拒绝重复提交）→ 脱敏 `RealnameView` |
+| GET | `/api/realname` | `realname:list` | 分页审核列表 `?page&pageSize&status`，按提交时间倒序 |
+| POST | `/api/realname/:id/review` | `realname:review` | 审核 `{ approve, rejectReason? }`（驳回必填理由；仅待审核记录可审） |
+| GET | `/api/realname/policy` | `realname:policy` | 读取需实名的角色集合 `{ requiredRoleCodes }` |
+| PUT | `/api/realname/policy` | `realname:policy` | 设置需实名的角色集合 `{ requiredRoleCodes }` |
+
+```jsonc
+// POST /api/realname  请求
+{ "realName": "张三", "idCardNo": "11010119900307123X",
+  "frontImage": "http://.../front.png", "backImage": "http://.../back.png" }
+// data（身份证号脱敏，明文经 AES-256-GCM 加密入库）
+{ "id": "...", "realName": "张三", "idCardMasked": "110***********123X",
+  "status": "pending", "rejectReason": "", "frontImage": "...", "backImage": "..." }
+```
+
+> 身份证号以密文存储（密钥首次启动随机生成并存于配置中心 `realname.idCipherKey`，secret），对外一律返回脱敏串。「需实名的角色」存于配置中心 `realname.requiredRoleCodes`（实名组），建议在「实名管理」页维护。
+
 ## 权限码一览（contracts `PERMS`）
 
 | 模块 | 权限码 |
@@ -161,6 +185,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | IM | `im:message:history` |
 | 日志 | `observability:log:list` `observability:log:detail` `observability:log:purge` |
 | 钱包 | `wallet:view` `wallet:transaction:list` `wallet:recharge` `wallet:withdraw` |
+| 实名 | `realname:list` `realname:review` `realname:policy` |
 
 ## 业务状态码（`BizCode`）
 

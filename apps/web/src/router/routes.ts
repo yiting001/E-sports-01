@@ -41,6 +41,18 @@ export const routes: RouteRecordRaw[] = [
         component: () => import('@/views/DashboardView.vue'),
         meta: { title: '工作台', icon: 'HomeFilled' },
       },
+      {
+        path: 'profile',
+        name: 'profile',
+        component: () => import('@/views/profile/ProfileView.vue'),
+        meta: { title: '个人中心' },
+      },
+      {
+        path: 'realname/me',
+        name: 'realname-me',
+        component: () => import('@/views/realname/RealnameMineView.vue'),
+        meta: { title: '实名认证' },
+      },
     ],
   },
   {

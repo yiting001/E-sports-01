@@ -7,6 +7,7 @@ import {
   SmsProvider,
   StorageDriver,
   WALLET_DEFAULTS,
+  REALNAME_REQUIRED_ROLES_KEY,
 } from '@app/contracts';
 
 /** 默认配置项的形状 */
@@ -478,5 +479,12 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     type: ConfigValueType.String,
     group: ConfigGroup.Wallet,
     remark: '微信支付平台证书序列号（回调验签匹配）',
+  },
+  {
+    key: REALNAME_REQUIRED_ROLES_KEY,
+    value: '[]',
+    type: ConfigValueType.Json,
+    group: ConfigGroup.Realname,
+    remark: '需实名认证的角色 code 集合（建议在「实名管理」页维护）',
   },
 ];

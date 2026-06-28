@@ -16,6 +16,8 @@ export interface UserView {
   id: string;
   username: string;
   nickname: string;
+  /** 头像可访问 URL；未设置为空串 */
+  avatar: string;
   /** 绑定手机号，用于短信验证码登录；未绑定为空串 */
   phone: string;
   status: UserStatusEnum;

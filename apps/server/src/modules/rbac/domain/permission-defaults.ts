@@ -45,6 +45,9 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.wallet.transaction]: '钱包-明细',
   [PERMS.wallet.recharge]: '钱包-充值',
   [PERMS.wallet.withdraw]: '钱包-提现',
+  [PERMS.realname.list]: '实名-审核列表',
+  [PERMS.realname.review]: '实名-审核',
+  [PERMS.realname.policy]: '实名-策略配置',
 };
 
 /**

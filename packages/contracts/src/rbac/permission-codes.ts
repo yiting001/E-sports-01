@@ -57,4 +57,9 @@ export const PERMS = {
     recharge: 'wallet:recharge',
     withdraw: 'wallet:withdraw',
   },
+  realname: {
+    list: 'realname:list',
+    review: 'realname:review',
+    policy: 'realname:policy',
+  },
 } as const;
