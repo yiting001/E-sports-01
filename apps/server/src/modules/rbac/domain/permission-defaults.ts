@@ -41,6 +41,10 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.log.list]: '日志-查询',
   [PERMS.log.detail]: '日志-链路详情',
   [PERMS.log.purge]: '日志-清理',
+  [PERMS.wallet.view]: '钱包-查看',
+  [PERMS.wallet.transaction]: '钱包-明细',
+  [PERMS.wallet.recharge]: '钱包-充值',
+  [PERMS.wallet.withdraw]: '钱包-提现',
 };
 
 /**
