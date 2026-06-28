@@ -14,3 +14,4 @@ export * from './sms/sms';
 export * from './config/config';
 export * from './observability/log';
 export * from './wallet/wallet';
+export * from './realname/realname';

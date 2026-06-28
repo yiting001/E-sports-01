@@ -5,6 +5,7 @@ import {
   CONFIG_REPOSITORY,
   ConfigRepository,
 } from '../domain/config-repository.interface';
+import type { ConfigItem } from '../domain/config-item.entity';
 
 /**
  * 配置读取服务（应用层）。
@@ -70,6 +71,24 @@ export class ConfigService {
       this.logger.warn(`配置 ${key} 不是合法 JSON，返回默认值`);
       return fallback;
     }
+  }
+
+  /**
+   * 写入原始字符串值（不存在则建、存在则更新值），并使缓存失效。
+   * meta 仅在新建/需要纠正元数据时给出（分组/类型/备注/敏感标记）。
+   */
+  async setRaw(
+    key: string,
+    value: string,
+    meta?: Partial<Pick<ConfigItem, 'type' | 'group' | 'remark' | 'secret'>>,
+  ): Promise<void> {
+    await this.repository.upsert({ key, value, ...meta });
+    await this.invalidate(key);
+  }
+
+  /** 写入 JSON 值（序列化为字符串落库），并使缓存失效 */
+  async setJson<T>(key: string, value: T): Promise<void> {
+    await this.setRaw(key, JSON.stringify(value));
   }
 
   /** 配置变更后清理缓存，使下次读取回源 */

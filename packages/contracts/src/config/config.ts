@@ -22,6 +22,7 @@ export enum ConfigGroup {
   Sms = 'sms',
   Observability = 'observability',
   Wallet = 'wallet',
+  Realname = 'realname',
 }
 
 /** 配置项对外结构（敏感项的值在传输前会被脱敏） */

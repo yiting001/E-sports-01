@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowDown, Fold, HomeFilled, SwitchButton, UserFilled } from '@element-plus/icons-vue';
+import { ArrowDown, Fold, HomeFilled, Postcard, SwitchButton, User, UserFilled } from '@element-plus/icons-vue';
 import { useMenus } from '@/composables/use-menus';
 import { useAuthStore } from '@/stores/auth.store';
 import { useMenuStore } from '@/stores/menu.store';
@@ -19,11 +19,20 @@ const mobileMenuVisible = ref(false);
 const activePath = computed(() => route.path);
 const userName = computed(() => auth.profile?.nickname || auth.profile?.username || '-');
 const roleText = computed(() => (auth.profile?.isSuper ? '超级管理员' : '授权账号'));
+const avatarUrl = computed(() => auth.profile?.avatar || '');
 
 function onLogout(): void {
   auth.logout();
   menuStore.reset();
   void router.push({ name: 'login' });
+}
+
+function goProfile(): void {
+  void router.push({ name: 'profile' });
+}
+
+function goRealname(): void {
+  void router.push({ name: 'realname-me' });
 }
 
 function closeMobileMenu(): void {
@@ -94,7 +103,13 @@ function closeMobileMenu(): void {
 
       <div class="aside-user">
         <span class="aside-avatar">
-          <el-icon><UserFilled /></el-icon>
+          <img
+            v-if="avatarUrl"
+            :src="avatarUrl"
+            class="aside-avatar-img"
+            alt="头像"
+          >
+          <el-icon v-else><UserFilled /></el-icon>
         </span>
         <div>
           <strong>{{ userName }}</strong>
@@ -124,7 +139,13 @@ function closeMobileMenu(): void {
             type="button"
           >
             <span class="header-avatar">
-              <el-icon><UserFilled /></el-icon>
+              <img
+                v-if="avatarUrl"
+                :src="avatarUrl"
+                class="header-avatar-img"
+                alt="头像"
+              >
+              <el-icon v-else><UserFilled /></el-icon>
             </span>
             <span class="user-name">{{ userName }}</span>
             <el-icon><ArrowDown /></el-icon>
@@ -133,6 +154,17 @@ function closeMobileMenu(): void {
             <el-dropdown-menu>
               <el-dropdown-item disabled>
                 {{ roleText }}
+              </el-dropdown-item>
+              <el-dropdown-item
+                divided
+                @click="goProfile"
+              >
+                <el-icon><User /></el-icon>
+                个人中心
+              </el-dropdown-item>
+              <el-dropdown-item @click="goRealname">
+                <el-icon><Postcard /></el-icon>
+                实名认证
               </el-dropdown-item>
               <el-dropdown-item
                 divided

@@ -4,7 +4,10 @@ import { ElMessage, type UploadFile } from 'element-plus';
 import { ref } from 'vue';
 import { uploadApi } from '@/api/upload.api';
 
-const props = defineProps<{ modelValue: string }>();
+const props = withDefaults(
+  defineProps<{ modelValue: string; self?: boolean }>(),
+  { self: false },
+);
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
 const uploading = ref(false);
@@ -29,7 +32,9 @@ async function onChange(uploadFile: UploadFile): Promise<void> {
   }
   uploading.value = true;
   try {
-    const result = await uploadApi.upload(file);
+    const result = props.self
+      ? await uploadApi.uploadSelf(file)
+      : await uploadApi.upload(file);
     emit('update:modelValue', result.url);
     ElMessage.success('图片已上传');
   } finally {

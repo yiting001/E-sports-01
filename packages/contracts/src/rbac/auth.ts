@@ -18,6 +18,16 @@ export interface RegisterPayload {
   tenantCode?: string;
 }
 
+/** 当前登录用户自助更新资料入参（仅本人可改的字段，均可选按需更新） */
+export interface UpdateProfilePayload {
+  /** 昵称 */
+  nickname?: string;
+  /** 头像 URL（先经自助上传得到） */
+  avatar?: string;
+  /** 绑定手机号；传空串解绑，传非空须为合法手机号 */
+  phone?: string;
+}
+
 /** 登录/刷新返回的令牌对 */
 export interface TokenPair {
   accessToken: string;
@@ -31,6 +41,10 @@ export interface AuthProfile {
   id: string;
   username: string;
   nickname: string;
+  /** 头像可访问 URL；未设置为空串 */
+  avatar: string;
+  /** 绑定手机号；未绑定为空串 */
+  phone: string;
   roles: string[];
   /** 扁平化权限码集合，前端按钮级鉴权使用 */
   permissions: string[];

@@ -10,6 +10,12 @@ export interface UserBrief {
   username: string;
 }
 
+/** 用户展示资料（用户名 + 昵称），供需要显示提交人/成员的模块使用 */
+export interface UserProfileBrief {
+  username: string;
+  nickname: string;
+}
+
 /**
  * 用户目录服务。
  * 对外只暴露按 id 取用户名等只读查询，供 IM 等模块解析成员显示名，
@@ -33,5 +39,14 @@ export class UserDirectory {
     const unique = [...new Set(ids.filter(Boolean))];
     const rows = await this.users.findByIds(unique);
     return rows.map((u) => ({ id: u.id, username: u.username }));
+  }
+
+  /** 批量解析用户展示资料，返回 id → { username, nickname } 映射 */
+  async resolveProfiles(ids: string[]): Promise<Map<string, UserProfileBrief>> {
+    const unique = [...new Set(ids.filter(Boolean))];
+    const rows = await this.users.findByIds(unique);
+    return new Map(
+      rows.map((u) => [u.id, { username: u.username, nickname: u.nickname }]),
+    );
   }
 }
