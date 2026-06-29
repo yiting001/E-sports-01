@@ -34,7 +34,7 @@
   .profile-header,
   .profile-panel {
     padding: 16px;
-    border-radius: 12px;
+    border-radius: var(--radius);
   }
 
   .profile-actions .el-form-item__content {

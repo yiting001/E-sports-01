@@ -9,7 +9,7 @@
 .permission-stat {
   border: 1px solid #e5e7eb;
   background: #ffffff;
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .permission-hero {
@@ -22,11 +22,8 @@
   overflow: hidden;
   color: #f8fafc;
   border: 0;
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 14% 22%, rgba(45, 212, 191, 0.24), transparent 28%),
-    radial-gradient(circle at 86% 62%, rgba(250, 204, 21, 0.24), transparent 30%),
-    linear-gradient(135deg, #111827, #312e81 58%, #0f766e);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
 
 .permission-hero::before {
@@ -34,9 +31,7 @@
   inset: 0;
   pointer-events: none;
   content: '';
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-image: none;
   background-size: 36px 36px;
 }
 
@@ -69,7 +64,7 @@
 
 .permission-hero h1 {
   margin: 0;
-  font-size: 38px;
+  font-size: 22px;
   line-height: 1.12;
   letter-spacing: 0;
 }
@@ -96,7 +91,7 @@
 .permission-map__line {
   position: absolute;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(167, 243, 208, 0.76), transparent);
+  background: var(--color-border);
   transform-origin: left center;
 }
 
@@ -130,10 +125,10 @@
   width: 76px;
   height: 76px;
   color: #0f172a;
-  font-size: 30px;
-  border-radius: 22px;
-  background: linear-gradient(135deg, #f8fafc, #6ee7b7);
-  box-shadow: 0 24px 54px rgba(45, 212, 191, 0.3);
+  font-size: 24px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
+  box-shadow: 0 24px 54px rgba(37, 99, 235, 0.3);
 }
 
 .permission-token {
@@ -154,15 +149,15 @@
 .token-b {
   right: 18px;
   top: 44px;
-  background: #38bdf8;
-  box-shadow: 0 0 22px rgba(56, 189, 248, 0.5);
+  background: #2563eb;
+  box-shadow: 0 0 22px rgba(37, 99, 235, 0.5);
 }
 
 .token-c {
   right: 50px;
   bottom: 14px;
-  background: #2dd4bf;
-  box-shadow: 0 0 22px rgba(45, 212, 191, 0.55);
+  background: #2563eb;
+  box-shadow: 0 0 22px rgba(37, 99, 235, 0.55);
 }
 
 .token-d {
@@ -182,7 +177,7 @@
   min-width: 0;
   padding: 18px;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
 }
 
 .permission-stat::before {
@@ -192,7 +187,7 @@
   width: 100%;
   height: 4px;
   content: '';
-  background: linear-gradient(90deg, #2dd4bf, #facc15);
+  background: var(--color-primary);
 }
 
 .permission-stat span,
@@ -213,7 +208,7 @@
   display: block;
   margin-top: 10px;
   color: #111827;
-  font-size: 30px;
+  font-size: 24px;
   line-height: 1.15;
 }
 
@@ -225,7 +220,7 @@
 .permission-panel {
   min-width: 0;
   padding: 20px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
 }
 
 .permission-panel__head,
@@ -261,7 +256,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   border: 1px solid #e5e7eb;
-  border-radius: 14px;
+  border-radius: var(--radius);
 }
 
 .permission-directory {
@@ -326,8 +321,8 @@
 }
 
 .permission-node__toggle:hover {
-  color: #0f766e;
-  background: #ecfeff;
+  color: #1d4ed8;
+  background: #eff4ff;
 }
 
 .permission-node__toggle.is-expanded {
@@ -344,10 +339,10 @@
   place-items: center;
   width: 36px;
   height: 36px;
-  color: #0f766e;
+  color: #1d4ed8;
   font-size: 17px;
-  border-radius: 12px;
-  background: #ccfbf1;
+  border-radius: var(--radius);
+  background: #eff4ff;
 }
 
 .permission-node.is-group .permission-node__icon {
@@ -390,8 +385,8 @@
 }
 
 .permission-type.is-api {
-  color: #0f766e;
-  background: #ccfbf1;
+  color: #1d4ed8;
+  background: #eff4ff;
 }
 
 .permission-type.is-button {
@@ -424,7 +419,7 @@
 }
 
 .permission-dialog .el-dialog {
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
 }
 
 .permission-dialog .el-dialog__header {
@@ -443,3 +438,15 @@
 .permission-dialog .el-dialog__footer {
   padding: 12px 24px 22px;
 }
+
+/* 简约企业级 hero 覆盖 */
+.permission-hero {
+  grid-template-columns: 1fr;
+  min-height: 0;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.permission-hero__visual { display: none; }
+.permission-eyebrow { display: none; }
+.permission-hero h1 { font-size: 22px; font-weight: 600; color: var(--color-text); }
+.permission-hero p { margin-top: 8px; color: var(--color-text-muted); }
