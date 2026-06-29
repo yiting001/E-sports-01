@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { In } from 'typeorm';
 import type { FindOptionsWhere, Repository } from 'typeorm';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
 import { withTenant } from '../../../shared/tenant/tenant-scope.util';
@@ -19,6 +20,17 @@ export class TypeormWalletRepository implements WalletRepository {
     return this.repo.findOne({
       where: withTenant<WalletEntity>(this.tenant, {
         userId,
+      }) as FindOptionsWhere<WalletEntity>,
+    });
+  }
+
+  findByUserIds(userIds: string[]): Promise<WalletEntity[]> {
+    if (userIds.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.repo.find({
+      where: withTenant<WalletEntity>(this.tenant, {
+        userId: In(userIds),
       }) as FindOptionsWhere<WalletEntity>,
     });
   }

@@ -1,0 +1,258 @@
+.realname-mine-page {
+  display: grid;
+  width: 100%;
+  max-width: 920px;
+  min-width: 0;
+  gap: 14px;
+}
+
+.realname-mine-header,
+.realname-mine-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.realname-mine-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+.realname-mine-header h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.realname-mine-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.realname-mine-panel {
+  min-width: 0;
+  padding: 20px;
+}
+
+.realname-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.realname-status div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.realname-status span,
+.realname-record span,
+.realname-section-title span,
+.realname-upload-card__head small,
+.realname-form-tip {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.realname-status strong,
+.realname-record strong {
+  overflow: hidden;
+  color: #111827;
+  font-size: 18px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.realname-status.is-approved {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.realname-status.is-pending {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.realname-status.is-rejected {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.realname-record {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.realname-record div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.realname-reject {
+  color: #dc2626 !important;
+}
+
+.realname-alert {
+  margin-top: 14px;
+}
+
+.realname-form {
+  margin-top: 20px;
+}
+
+.realname-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 18px;
+  align-items: start;
+}
+
+.realname-fields,
+.realname-upload-grid {
+  min-width: 0;
+}
+
+.realname-upload-section {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.realname-section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.realname-section-title strong {
+  color: #111827;
+  font-size: 15px;
+}
+
+.realname-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.realname-upload-item {
+  margin-bottom: 0;
+}
+
+.realname-upload-card {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.realname-upload-card__head {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.realname-upload-card__head strong {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.realname-upload-card__head strong span {
+  color: #ef4444;
+}
+
+.realname-upload-item .el-form-item__content {
+  display: block;
+  margin-left: 0 !important;
+  min-width: 0;
+}
+
+.realname-upload-card .image-uploader,
+.realname-upload-card .el-upload {
+  width: 100%;
+}
+
+.realname-upload-card .image-uploader__trigger {
+  width: 100%;
+  height: 136px;
+  border-color: #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.realname-upload-card .image-uploader__trigger:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.realname-upload-card .image-uploader__preview {
+  object-fit: contain;
+  background: #ffffff;
+}
+
+.realname-upload-card .image-uploader__icon {
+  color: #94a3b8;
+  font-size: 32px;
+}
+
+.realname-upload-card .image-uploader__actions {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.realname-upload-card .image-uploader__actions .el-button {
+  align-self: flex-start;
+  margin-left: 0;
+}
+
+.realname-form-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.realname-actions .el-form-item__content {
+  justify-content: flex-end;
+}
+
+.realname-actions .el-button + .el-button {
+  margin-left: 8px;
+}

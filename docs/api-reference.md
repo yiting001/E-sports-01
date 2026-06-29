@@ -131,16 +131,26 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 ## 钱包
 
-钱包菜单与功能纳入 RBAC 权限树（默认仅超管拥有，其他角色按需分配），回调端点除外（公开）。金额一律以「分」整数传输。
+个人侧端点仅需登录态（全员可用，与「我的实名」一致）；管理侧端点纳入 RBAC 权限树（默认仅超管拥有，其他角色按需分配）；回调端点公开（靠验签）。金额一律以「分」整数传输。
+
+### 个人侧（我的钱包，登录态）
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| GET | `/api/wallet/mine` | `wallet:view` | 当前用户钱包，不存在则自动初始化 → `{ id, balanceFen, balanceYuan, status }` |
-| GET | `/api/wallet/stats` | `wallet:view` | 钱包统计（余额、累计充值/提现、成功笔数） |
-| GET | `/api/wallet/transactions` | `wallet:transaction:list` | 分页查询本人收支明细，`?page&pageSize`，按时间倒序 |
-| POST | `/api/wallet/recharge` | `wallet:recharge` | 发起充值 `{ amountFen, provider }`（provider: alipay/wechat）→ `{ orderId, outTradeNo, provider, qrCode, amountFen, amountYuan }` |
+| GET | `/api/wallet/mine` | 登录态 | 当前用户钱包，不存在则自动初始化 → `{ id, balanceFen, balanceYuan, status }` |
+| GET | `/api/wallet/stats` | 登录态 | 钱包统计（余额、累计充值/提现、成功笔数） |
+| GET | `/api/wallet/transactions` | 登录态 | 分页查询本人收支明细，`?page&pageSize`，按时间倒序 |
+| POST | `/api/wallet/recharge` | 登录态 | 发起充值 `{ amountFen, provider }`（provider: alipay/wechat）→ `{ orderId, outTradeNo, provider, qrCode, amountFen, amountYuan }` |
 | POST | `/api/wallet/recharge/callback/:provider` | 公开 | 支付渠道异步回调（验签后幂等入账），返回渠道要求的原始应答 |
-| POST | `/api/wallet/withdrawal` | `wallet:withdraw` | 发起提现 `{ amountFen, provider, account, accountName }`（provider 仅 alipay；wechat 预留）→ `{ orderId, status, failReason }` |
+| POST | `/api/wallet/withdrawal` | 登录态 | 发起提现 `{ amountFen, provider, account, accountName }`（provider 仅 alipay；wechat 预留）→ `{ orderId, status, failReason }` |
+
+### 管理侧（钱包管理，RBAC 门控）
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/wallet/admin/wallets` | `wallet:admin:list` | 分页查看所有用户钱包（按用户聚合，`?page&pageSize&keyword`，未开通按零值）→ `WalletAdminView[]` |
+| GET | `/api/wallet/admin/wallets/:userId/transactions` | `wallet:admin:transaction` | 分页查看指定用户收支明细（用户未开通钱包返回空页） |
+| POST | `/api/wallet/admin/wallets/:userId/adjust` | `wallet:admin:adjust` | 人工调整余额 `{ direction, amountFen, remark }`（direction: in 增/out 扣；钱包不存在则懒创建）→ `WalletAdminView` |
 
 ```jsonc
 // POST /api/wallet/recharge  请求
@@ -184,7 +194,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | 文件 | `upload:file:upload` `upload:file:list` `upload:file:remove` |
 | IM | `im:message:history` |
 | 日志 | `observability:log:list` `observability:log:detail` `observability:log:purge` |
-| 钱包 | `wallet:view` `wallet:transaction:list` `wallet:recharge` `wallet:withdraw` |
+| 钱包管理 | `wallet:admin:list` `wallet:admin:transaction` `wallet:admin:adjust` |
 | 实名 | `realname:list` `realname:review` `realname:policy` |
 
 ## 业务状态码（`BizCode`）

@@ -16,6 +16,11 @@ export interface UserProfileBrief {
   nickname: string;
 }
 
+/** 带 id 的用户展示资料（分页列表项） */
+export interface UserProfileItem extends UserProfileBrief {
+  id: string;
+}
+
 /**
  * 用户目录服务。
  * 对外只暴露按 id 取用户名等只读查询，供 IM 等模块解析成员显示名，
@@ -48,5 +53,23 @@ export class UserDirectory {
     return new Map(
       rows.map((u) => [u.id, { username: u.username, nickname: u.nickname }]),
     );
+  }
+
+  /**
+   * 分页查询用户展示资料（可按用户名/昵称等关键字过滤）。
+   * 供钱包管理等「按用户聚合」的管理列表复用，避免各模块重复实现用户分页。
+   */
+  async paginateProfiles(
+    skip: number,
+    take: number,
+    keyword?: string,
+  ): Promise<[UserProfileItem[], number]> {
+    const [rows, total] = await this.users.paginate(skip, take, keyword);
+    const list = rows.map((u) => ({
+      id: u.id,
+      username: u.username,
+      nickname: u.nickname,
+    }));
+    return [list, total];
   }
 }

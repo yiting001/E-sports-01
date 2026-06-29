@@ -48,10 +48,16 @@ export const routes: RouteRecordRaw[] = [
         meta: { title: '个人中心' },
       },
       {
+        path: 'wallet',
+        name: 'wallet-mine',
+        component: () => import('@/views/wallet/WalletView.vue'),
+        meta: { title: '我的钱包' },
+      },
+      {
         path: 'realname/me',
         name: 'realname-me',
         component: () => import('@/views/realname/RealnameMineView.vue'),
-        meta: { title: '实名认证' },
+        meta: { title: '我的实名' },
       },
     ],
   },

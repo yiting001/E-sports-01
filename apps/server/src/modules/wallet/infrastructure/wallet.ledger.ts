@@ -13,6 +13,7 @@ import { WalletTransactionEntity } from '../domain/wallet-transaction.entity';
 import { RechargeOrderEntity } from '../domain/recharge-order.entity';
 import { WithdrawalOrderEntity } from '../domain/withdrawal-order.entity';
 import {
+  AdjustBalanceInput,
   CreditRechargeInput,
   ReserveWithdrawalInput,
   WalletLedger,
@@ -150,6 +151,33 @@ export class TypeormWalletLedger implements WalletLedger {
     });
   }
 
+  async adjustBalance(input: AdjustBalanceInput): Promise<WalletEntity> {
+    return this.dataSource.transaction(async (m) => {
+      const wallet = await this.lockWallet(m, input.walletId);
+      if (!wallet) {
+        throw new NotFoundException('钱包不存在');
+      }
+      if (input.direction === FundDirection.Out) {
+        if (wallet.balanceFen < input.amountFen) {
+          throw new BadRequestException('余额不足，无法扣减');
+        }
+        wallet.balanceFen -= input.amountFen;
+      } else {
+        wallet.balanceFen += input.amountFen;
+      }
+      const saved = await m.getRepository(WalletEntity).save(wallet);
+      await this.appendTxn(m, {
+        wallet: saved,
+        type: WalletTxnType.Adjust,
+        direction: input.direction,
+        amountFen: input.amountFen,
+        bizOrderId: null,
+        remark: input.remark,
+      });
+      return saved;
+    });
+  }
+
   /** 事务内对钱包行加悲观写锁后读取 */
   private lockWallet(
     m: EntityManager,
@@ -169,7 +197,7 @@ export class TypeormWalletLedger implements WalletLedger {
       type: WalletTxnType;
       direction: FundDirection;
       amountFen: number;
-      bizOrderId: string;
+      bizOrderId: string | null;
       remark: string;
     },
   ): Promise<void> {

@@ -52,10 +52,9 @@ export const PERMS = {
     purge: 'observability:log:purge',
   },
   wallet: {
-    view: 'wallet:view',
-    transaction: 'wallet:transaction:list',
-    recharge: 'wallet:recharge',
-    withdraw: 'wallet:withdraw',
+    list: 'wallet:admin:list',
+    transaction: 'wallet:admin:transaction',
+    adjust: 'wallet:admin:adjust',
   },
   realname: {
     list: 'realname:list',

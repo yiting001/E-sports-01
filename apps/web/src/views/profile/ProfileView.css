@@ -1,0 +1,136 @@
+.profile-page {
+  display: grid;
+  width: 100%;
+  max-width: 920px;
+  min-width: 0;
+  gap: 14px;
+}
+
+.profile-header,
+.profile-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+.profile-header h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.profile-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.profile-panel {
+  min-width: 0;
+  padding: 20px;
+}
+
+.profile-account {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.profile-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  color: #0f766e;
+  font-size: 24px;
+  border-radius: 16px;
+  background: #ccfbf1;
+  place-items: center;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-account__main {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.profile-account__main strong,
+.profile-account__main span,
+.profile-account__meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-account__main strong {
+  color: #111827;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.profile-account__main span,
+.profile-account__meta span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.profile-account__meta {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 8px;
+}
+
+.profile-account__meta span {
+  max-width: 150px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.profile-form {
+  margin-top: 20px;
+}
+
+.profile-form__grid {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.profile-fields {
+  min-width: 0;
+}
+
+.profile-actions .el-form-item__content {
+  justify-content: flex-end;
+}
+
+.profile-actions .el-button + .el-button {
+  margin-left: 8px;
+}
