@@ -98,6 +98,35 @@ export interface WalletTransactionView {
   createdAt: string;
 }
 
+/**
+ * 钱包管理端列表项视图（按用户聚合）。
+ * 展示用户及其钱包余额与累计收支；未开通钱包的用户以零值展示（initialized=false）。
+ */
+export interface WalletAdminView {
+  userId: string;
+  username: string;
+  nickname: string;
+  /** 是否已开通钱包；false 表示用户尚未初始化，余额按 0 展示 */
+  initialized: boolean;
+  balanceFen: number;
+  balanceYuan: string;
+  totalRechargeFen: number;
+  totalRechargeYuan: string;
+  totalWithdrawFen: number;
+  totalWithdrawYuan: string;
+  status: WalletStatus;
+}
+
+/** 钱包人工调整入参（管理端：增加/扣减余额并记一条 adjust 流水） */
+export interface AdjustWalletBody {
+  /** 调整方向：入账=增加余额，出账=扣减余额 */
+  direction: FundDirection;
+  /** 调整金额（分，正整数） */
+  amountFen: number;
+  /** 调整备注（必填，便于审计追溯） */
+  remark: string;
+}
+
 /** 发起充值入参 */
 export interface CreateRechargeBody {
   /** 充值金额（分） */

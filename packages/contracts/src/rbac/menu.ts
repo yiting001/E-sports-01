@@ -53,7 +53,6 @@ export interface MenuView {
  * 后端播种为 menu 权限、用户分配后方可见；前端路由 meta.permission 取同名 code。
  */
 export const MENU_DEFINITIONS: MenuDefinition[] = [
-  { code: 'wallet:menu', title: '我的钱包', path: 'wallet', icon: 'Wallet', sort: 1 },
   {
     code: 'rbac:tenant:menu',
     title: '租户管理',
@@ -75,6 +74,14 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
   { code: 'config:menu', title: '配置中心', path: 'config', icon: 'Setting', sort: 40, group: 'system' },
   { code: 'upload:file:menu', title: '文件上传', path: 'upload', icon: 'UploadFilled', sort: 50, group: 'system' },
   { code: 'observability:log:menu', title: '日志管理', path: 'logs', icon: 'Document', sort: 60, group: 'system' },
+  {
+    code: 'wallet:admin:menu',
+    title: '钱包管理',
+    path: 'wallet/admin',
+    icon: 'Wallet',
+    sort: 62,
+    group: 'system',
+  },
   {
     code: 'realname:menu',
     title: '实名管理',

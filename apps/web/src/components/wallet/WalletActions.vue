@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { PERMS } from '@app/contracts';
 import { CreditCard, Money, TrendCharts } from '@element-plus/icons-vue';
 
 const emit = defineEmits<{
@@ -12,7 +11,6 @@ const emit = defineEmits<{
 <template>
   <section class="wallet-actions-panel">
     <button
-      v-permission="PERMS.wallet.recharge"
       type="button"
       class="wallet-action"
       @click="emit('recharge')"
@@ -24,7 +22,6 @@ const emit = defineEmits<{
       <small>生成支付宝或微信支付二维码</small>
     </button>
     <button
-      v-permission="PERMS.wallet.withdraw"
       type="button"
       class="wallet-action"
       @click="emit('withdraw')"

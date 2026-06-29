@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { PERMS } from '@app/contracts';
 import { Download, Money, Refresh, Tickets, Upload, Wallet } from '@element-plus/icons-vue';
 
 defineProps<{
@@ -20,10 +19,9 @@ const emit = defineEmits<{
     <div class="wallet-hero__content">
       <span class="wallet-eyebrow">Wallet Center</span>
       <h1>资金钱包</h1>
-      <p>统一管理当前账号的钱包余额、充值提现和收支流水，交易能力接入权限控制与配置中心。</p>
+      <p>统一管理当前账号的钱包余额、充值提现和收支流水，支付渠道凭证统一接入配置中心。</p>
       <div class="wallet-hero__actions">
         <el-button
-          v-permission="PERMS.wallet.recharge"
           type="primary"
           :icon="Upload"
           @click="emit('recharge')"
@@ -31,7 +29,6 @@ const emit = defineEmits<{
           充值
         </el-button>
         <el-button
-          v-permission="PERMS.wallet.withdraw"
           :icon="Download"
           @click="emit('withdraw')"
         >

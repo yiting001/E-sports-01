@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { WalletTransactionView } from '@app/contracts';
-import { FundDirection, PERMS, WalletTxnType } from '@app/contracts';
+import { FundDirection, WalletTxnType } from '@app/contracts';
 import { Download, Refresh, Upload } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 
@@ -40,7 +40,6 @@ const txnTypeText: Record<WalletTxnType, string> = {
           刷新
         </el-button>
         <el-button
-          v-permission="PERMS.wallet.recharge"
           type="primary"
           :icon="Upload"
           @click="emit('recharge')"

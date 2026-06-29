@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '../config/config.module';
+import { RbacModule } from '../rbac/rbac.module';
 
 import { WalletEntity } from './domain/wallet.entity';
 import { WalletTransactionEntity } from './domain/wallet-transaction.entity';
@@ -36,6 +37,9 @@ import { ListTransactionsUseCase } from './application/use-cases/list-transactio
 import { CreateRechargeUseCase } from './application/use-cases/create-recharge.usecase';
 import { HandleRechargeCallbackUseCase } from './application/use-cases/handle-recharge-callback.usecase';
 import { CreateWithdrawalUseCase } from './application/use-cases/create-withdrawal.usecase';
+import { ListWalletsUseCase } from './application/use-cases/list-wallets.usecase';
+import { ListUserTransactionsUseCase } from './application/use-cases/list-user-transactions.usecase';
+import { AdjustWalletUseCase } from './application/use-cases/adjust-wallet.usecase';
 
 import { WalletMineController } from './interfaces/controllers/wallet.mine.controller';
 import { WalletStatsController } from './interfaces/controllers/wallet.stats.controller';
@@ -43,16 +47,21 @@ import { WalletTransactionsController } from './interfaces/controllers/wallet.tr
 import { RechargeCreateController } from './interfaces/controllers/recharge.create.controller';
 import { RechargeCallbackController } from './interfaces/controllers/recharge.callback.controller';
 import { WithdrawalCreateController } from './interfaces/controllers/withdrawal.create.controller';
+import { WalletAdminListController } from './interfaces/controllers/wallet.admin.list.controller';
+import { WalletAdminTransactionsController } from './interfaces/controllers/wallet.admin.transactions.controller';
+import { WalletAdminAdjustController } from './interfaces/controllers/wallet.admin.adjust.controller';
 
 /**
  * 钱包模块。
- * DDD 四层装配：所有角色通用的钱包，支持充值（支付宝/微信扫码，官方协议）、
- * 提现（支付宝转账，微信预留）、明细与统计；打开页面无钱包则自动初始化。
+ * DDD 四层装配。个人侧（登录即用，无需特定权限）：我的钱包/统计/明细、充值
+ * （支付宝/微信扫码，官方协议）、提现（支付宝转账，微信预留），打开无则自动初始化。
+ * 管理侧（RBAC 门控，钱包管理）：分页查看所有用户钱包、查看任意用户明细、人工调整余额。
  * 充值/提现渠道均为「策略模式 + 配置驱动」，凭证全部入配置中心，无硬编码。
  */
 @Module({
   imports: [
     ConfigModule,
+    RbacModule,
     TypeOrmModule.forFeature([
       WalletEntity,
       WalletTransactionEntity,
@@ -67,6 +76,9 @@ import { WithdrawalCreateController } from './interfaces/controllers/withdrawal.
     RechargeCreateController,
     RechargeCallbackController,
     WithdrawalCreateController,
+    WalletAdminListController,
+    WalletAdminTransactionsController,
+    WalletAdminAdjustController,
   ],
   providers: [
     { provide: WALLET_REPOSITORY, useClass: TypeormWalletRepository },
@@ -113,6 +125,9 @@ import { WithdrawalCreateController } from './interfaces/controllers/withdrawal.
     CreateRechargeUseCase,
     HandleRechargeCallbackUseCase,
     CreateWithdrawalUseCase,
+    ListWalletsUseCase,
+    ListUserTransactionsUseCase,
+    AdjustWalletUseCase,
   ],
 })
 export class WalletModule {}
