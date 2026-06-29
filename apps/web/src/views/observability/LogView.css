@@ -9,7 +9,7 @@
 .log-stat {
   border: 1px solid #e5e7eb;
   background: #ffffff;
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .log-hero {
@@ -22,11 +22,8 @@
   overflow: hidden;
   color: #f8fafc;
   border: 0;
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 14% 20%, rgba(45, 212, 191, 0.26), transparent 28%),
-    radial-gradient(circle at 86% 68%, rgba(248, 113, 113, 0.22), transparent 30%),
-    linear-gradient(135deg, #111827, #312e81 58%, #0f766e);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
 
 .log-hero::before {
@@ -34,9 +31,7 @@
   inset: 0;
   pointer-events: none;
   content: '';
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-image: none;
   background-size: 36px 36px;
 }
 
@@ -70,7 +65,7 @@
 
 .log-hero h1 {
   margin: 0;
-  font-size: 38px;
+  font-size: 22px;
   line-height: 1.12;
   letter-spacing: 0;
 }
@@ -112,7 +107,7 @@
 .log-radar__line {
   position: absolute;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(167, 243, 208, 0.74), transparent);
+  background: var(--color-border);
   transform-origin: left center;
 }
 
@@ -139,10 +134,10 @@
   width: 76px;
   height: 76px;
   color: #0f172a;
-  font-size: 30px;
-  border-radius: 22px;
-  background: linear-gradient(135deg, #f8fafc, #a7f3d0);
-  box-shadow: 0 24px 54px rgba(20, 184, 166, 0.32);
+  font-size: 24px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
+  box-shadow: 0 24px 54px rgba(37, 99, 235, 0.32);
 }
 
 .log-pulse {
@@ -151,8 +146,8 @@
   height: 18px;
   border: 4px solid rgba(248, 250, 252, 0.92);
   border-radius: 50%;
-  background: #38bdf8;
-  box-shadow: 0 0 22px rgba(56, 189, 248, 0.5);
+  background: #2563eb;
+  box-shadow: 0 0 22px rgba(37, 99, 235, 0.5);
 }
 
 .pulse-a {
@@ -184,7 +179,7 @@
   min-width: 0;
   padding: 18px;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
 }
 
 .log-stat::before {
@@ -194,19 +189,19 @@
   width: 100%;
   height: 4px;
   content: '';
-  background: linear-gradient(90deg, #2dd4bf, #38bdf8);
+  background: var(--color-primary);
 }
 
 .log-stat:nth-child(2)::before {
-  background: linear-gradient(90deg, #fb7185, #f43f5e);
+  background: var(--color-primary);
 }
 
 .log-stat:nth-child(3)::before {
-  background: linear-gradient(90deg, #38bdf8, #6366f1);
+  background: var(--color-primary);
 }
 
 .log-stat:nth-child(4)::before {
-  background: linear-gradient(90deg, #facc15, #f97316);
+  background: var(--color-primary);
 }
 
 .log-stat span,
@@ -236,7 +231,7 @@
   margin-top: 10px;
   overflow: hidden;
   color: #111827;
-  font-size: 30px;
+  font-size: 24px;
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -250,7 +245,7 @@
 .log-panel {
   min-width: 0;
   padding: 20px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
 }
 
 .log-panel__head,
@@ -288,7 +283,7 @@
   margin-bottom: 16px;
   padding: 14px;
   border: 1px solid #e5e7eb;
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: #f8fafc;
 }
 
@@ -352,8 +347,8 @@
 
 .log-level.is-info,
 .log-type.is-app {
-  color: #0f766e;
-  background: #ccfbf1;
+  color: #1d4ed8;
+  background: #eff4ff;
 }
 
 .log-level.is-warn {
@@ -452,3 +447,15 @@
   margin-top: 16px;
   justify-content: flex-end;
 }
+
+/* 简约企业级 hero 覆盖 */
+.log-hero {
+  grid-template-columns: 1fr;
+  min-height: 0;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.log-hero__visual { display: none; }
+.log-eyebrow { display: none; }
+.log-hero h1 { font-size: 22px; font-weight: 600; color: var(--color-text); }
+.log-hero p { margin-top: 8px; color: var(--color-text-muted); }
