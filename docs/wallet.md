@@ -2,11 +2,14 @@
 
 ## 模块职责
 
-纳入 RBAC 权限体系的钱包：菜单与功能均受权限控制，授权后打开页面无钱包则自动初始化（懒创建），支持充值、提现、收支明细与统计。
+钱包分为**个人侧**与**管理侧**两层：
+
+- **个人侧（我的钱包）**：所有登录用户均可使用，无需特定权限（从右上角头像下拉「我的钱包」进入，静态路由 `/wallet`）。打开页面无钱包则自动初始化（懒创建），支持充值、提现、本人收支明细与统计。
+- **管理侧（钱包管理）**：纳入 RBAC 权限树的后台菜单（侧边栏「钱包管理」），默认仅超管拥有。分页查看所有用户钱包与余额、查看任意用户收支明细、人工调整任意用户余额（充/扣并自动记一条 `adjust` 流水）。
 
 实现的功能：
 
-- **钱包自动初始化**：每个用户在租户内唯一；持 `wallet:view` 权限首次访问 `GET /wallet/mine` 时若不存在则懒创建。
+- **钱包自动初始化**：每个用户在租户内唯一；登录用户首次访问 `GET /wallet/mine` 时若不存在则懒创建。
 - **充值（扫码支付，官方协议）**：
   - 支付宝 `alipay.trade.precreate`（当面付/扫码），返回二维码内容供前端渲染。
   - 微信支付 v3 `Native 下单`，返回 `code_url` 供前端渲染二维码。
@@ -19,17 +22,20 @@
 
 ## 权限（RBAC）
 
-钱包菜单与功能权限纳入权限树（`MENU_DEFINITIONS` / `PERMS.wallet`），默认仅超级管理员拥有，其他角色在「角色管理」按需分配。
+**个人侧端点仅需登录态，不挂任何功能权限**（与「我的实名」一致，全员可用）：`GET /wallet/mine`、`GET /wallet/stats`、`GET /wallet/transactions`、`POST /wallet/recharge`、`POST /wallet/withdrawal`。
 
-| 权限码 | 名称 | 类型 | 守卫接口 |
+**管理侧**菜单与功能权限纳入权限树（`MENU_DEFINITIONS` / `PERMS.wallet`），默认仅超级管理员拥有，其他角色在「角色管理」按需分配：
+
+| 权限码 | 名称 | 类型 | 守卫 |
 | --- | --- | --- | --- |
-| `wallet:menu` | 我的钱包 | 菜单 | 前端动态路由 `/wallet`（菜单守卫） |
-| `wallet:view` | 钱包-查看 | 接口 | `GET /wallet/mine`、`GET /wallet/stats` |
-| `wallet:transaction:list` | 钱包-明细 | 接口 | `GET /wallet/transactions` |
-| `wallet:recharge` | 钱包-充值 | 接口/按钮 | `POST /wallet/recharge`（前端「充值」按钮 `v-permission`） |
-| `wallet:withdraw` | 钱包-提现 | 接口/按钮 | `POST /wallet/withdrawal`（前端「提现」按钮 `v-permission`） |
+| `wallet:admin:menu` | 钱包管理 | 菜单 | 侧边栏「钱包管理」动态路由 `/wallet/admin`（系统管理组） |
+| `wallet:admin:list` | 钱包-用户列表 | 接口 | `GET /wallet/admin/wallets` |
+| `wallet:admin:transaction` | 钱包-明细查看 | 接口/按钮 | `GET /wallet/admin/wallets/:userId/transactions`（前端「明细」按钮 `v-permission`） |
+| `wallet:admin:adjust` | 钱包-余额调整 | 接口/按钮 | `POST /wallet/admin/wallets/:userId/adjust`（前端「调整余额」按钮 `v-permission`） |
 
 > 充值异步回调 `POST /wallet/recharge/callback/:provider` 为 `@Public()` 渠道回调端点，不受权限控制（靠验签保障）。
+>
+> 历史命名（`wallet:menu`/`wallet:view` 等）已废弃：菜单权限会在启动时由 `pruneObsoleteMenus()` 自动清理；旧的接口权限行不再被任何控制器引用（无副作用）。
 
 ## 不变量与一致性
 
@@ -65,6 +71,7 @@ modules/wallet/
 │   ├── payout.resolver.ts                提现渠道选择器
 │   ├── wallet.mapper.ts                  实体 → 钱包/统计视图
 │   ├── transaction.mapper.ts             实体 → 流水视图
+│   ├── wallet-admin.mapper.ts            用户 + 钱包 → 管理端列表视图（未开通按零值）
 │   ├── order-no.util.ts                  商户订单号生成（幂等键）
 │   └── use-cases/
 │       ├── get-my-wallet.usecase.ts
@@ -72,7 +79,10 @@ modules/wallet/
 │       ├── list-transactions.usecase.ts
 │       ├── create-recharge.usecase.ts
 │       ├── handle-recharge-callback.usecase.ts
-│       └── create-withdrawal.usecase.ts
+│       ├── create-withdrawal.usecase.ts
+│       ├── list-wallets.usecase.ts          管理端：分页所有用户钱包
+│       ├── list-user-transactions.usecase.ts 管理端：任意用户明细
+│       └── adjust-wallet.usecase.ts          管理端：人工调整余额（记流水）
 ├── infrastructure/
 │   ├── wallet.repository.ts              TypeORM 仓储（按租户过滤）
 │   ├── transaction.repository.ts
@@ -89,14 +99,18 @@ modules/wallet/
 └── interfaces/
     ├── dto/
     │   ├── create-recharge.dto.ts
-    │   └── create-withdrawal.dto.ts
+    │   ├── create-withdrawal.dto.ts
+    │   └── adjust-wallet.dto.ts                管理端调整入参校验
     └── controllers/
-        ├── wallet.mine.controller.ts         GET  /api/wallet/mine
-        ├── wallet.stats.controller.ts        GET  /api/wallet/stats
-        ├── wallet.transactions.controller.ts GET  /api/wallet/transactions
-        ├── recharge.create.controller.ts     POST /api/wallet/recharge
+        ├── wallet.mine.controller.ts         GET  /api/wallet/mine（登录态）
+        ├── wallet.stats.controller.ts        GET  /api/wallet/stats（登录态）
+        ├── wallet.transactions.controller.ts GET  /api/wallet/transactions（登录态）
+        ├── recharge.create.controller.ts     POST /api/wallet/recharge（登录态）
         ├── recharge.callback.controller.ts   POST /api/wallet/recharge/callback/:provider（公开）
-        └── withdrawal.create.controller.ts   POST /api/wallet/withdrawal
+        ├── withdrawal.create.controller.ts   POST /api/wallet/withdrawal（登录态）
+        ├── wallet.admin.list.controller.ts         GET  /api/wallet/admin/wallets
+        ├── wallet.admin.transactions.controller.ts GET  /api/wallet/admin/wallets/:userId/transactions
+        └── wallet.admin.adjust.controller.ts       POST /api/wallet/admin/wallets/:userId/adjust
 ```
 
 ## 结构与依赖

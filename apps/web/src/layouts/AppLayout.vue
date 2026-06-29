@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowDown, Fold, HomeFilled, Postcard, SwitchButton, User, UserFilled } from '@element-plus/icons-vue';
+import { ArrowDown, Fold, HomeFilled, Postcard, SwitchButton, User, UserFilled, Wallet } from '@element-plus/icons-vue';
 import { useMenus } from '@/composables/use-menus';
 import { useAuthStore } from '@/stores/auth.store';
 import { useMenuStore } from '@/stores/menu.store';
@@ -29,6 +29,10 @@ function onLogout(): void {
 
 function goProfile(): void {
   void router.push({ name: 'profile' });
+}
+
+function goWallet(): void {
+  void router.push({ name: 'wallet-mine' });
 }
 
 function goRealname(): void {
@@ -162,9 +166,13 @@ function closeMobileMenu(): void {
                 <el-icon><User /></el-icon>
                 个人中心
               </el-dropdown-item>
+              <el-dropdown-item @click="goWallet">
+                <el-icon><Wallet /></el-icon>
+                我的钱包
+              </el-dropdown-item>
               <el-dropdown-item @click="goRealname">
                 <el-icon><Postcard /></el-icon>
-                实名认证
+                我的实名
               </el-dropdown-item>
               <el-dropdown-item
                 divided

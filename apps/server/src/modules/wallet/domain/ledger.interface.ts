@@ -1,4 +1,5 @@
-import { PayoutProvider } from '@app/contracts';
+import { FundDirection, PayoutProvider } from '@app/contracts';
+import { WalletEntity } from './wallet.entity';
 import { WithdrawalOrderEntity } from './withdrawal-order.entity';
 
 /** 充值入账入参 */
@@ -16,6 +17,17 @@ export interface ReserveWithdrawalInput {
   account: string;
   accountName: string;
   outBizNo: string;
+}
+
+/** 管理端人工调整入参 */
+export interface AdjustBalanceInput {
+  walletId: string;
+  /** 入账增加余额 / 出账扣减余额 */
+  direction: FundDirection;
+  /** 调整金额（分，正整数） */
+  amountFen: number;
+  /** 调整备注（审计追溯用） */
+  remark: string;
 }
 
 /** 钱包账务单元（唯一余额写入口）注入令牌 */
@@ -50,4 +62,10 @@ export interface WalletLedger {
 
   /** 转账失败：回滚余额、写补偿入账流水、置订单 failed */
   refundWithdrawal(orderId: string, reason: string): Promise<void>;
+
+  /**
+   * 管理端人工调整余额（增加/扣减），写入一条 adjust 流水。
+   * 出账方向余额不足时抛异常；钱包不存在时抛异常。返回调整后的钱包。
+   */
+  adjustBalance(input: AdjustBalanceInput): Promise<WalletEntity>;
 }
