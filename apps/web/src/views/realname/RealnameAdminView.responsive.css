@@ -1,0 +1,77 @@
+@media (max-width: 1180px) {
+  .realname-stats,
+  .realname-role-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .realname-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .realname-hero__visual {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .realname-page {
+    gap: 14px;
+  }
+
+  .realname-hero,
+  .realname-panel,
+  .realname-stat {
+    border-radius: 14px;
+  }
+
+  .realname-hero,
+  .realname-panel {
+    padding: 18px;
+  }
+
+  .realname-hero h1 {
+    font-size: 30px;
+  }
+
+  .realname-panel__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .realname-panel__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .realname-panel__actions .el-button,
+  .realname-filter {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .realname-stats,
+  .realname-role-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .realname-pager {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .realname-pagination {
+    justify-content: flex-start;
+  }
+
+  .realname-panel__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .realname-policy__intro {
+    align-items: flex-start;
+  }
+}

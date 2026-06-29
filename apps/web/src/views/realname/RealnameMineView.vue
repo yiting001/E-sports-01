@@ -5,13 +5,13 @@ import {
   RealnameStatus,
   type RealnameMineView,
 } from '@app/contracts';
+import { Check, Refresh, WarningFilled } from '@element-plus/icons-vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import ImageUploader from '@/components/common/ImageUploader.vue';
 import { realnameApi } from '@/api/realname.api';
+import './RealnameMineView.css';
+import './RealnameMineView.responsive.css';
 
-/**
- * 我的实名认证：展示是否需实名与当前状态；未提交/被驳回时可提交证件信息。
- */
 const loading = ref(false);
 const submitting = ref(false);
 const mine = ref<RealnameMineView | null>(null);
@@ -27,21 +27,33 @@ const form = reactive({
 const status = computed(() => mine.value?.status ?? RealnameStatus.None);
 const record = computed(() => mine.value?.record ?? null);
 const required = computed(() => mine.value?.required ?? false);
-/** 仅未提交或被驳回时允许提交/重提 */
 const canSubmit = computed(
-  () =>
-    status.value === RealnameStatus.None ||
-    status.value === RealnameStatus.Rejected,
+  () => status.value === RealnameStatus.None || status.value === RealnameStatus.Rejected,
 );
+const pageHint = computed(() => {
+  if (required.value && status.value !== RealnameStatus.Approved) {
+    return '当前角色要求完成实名认证，请提交证件信息等待审核。';
+  }
+  if (!required.value && status.value === RealnameStatus.None) {
+    return '当前账号暂不强制实名，也可以主动提交完成认证。';
+  }
+  if (status.value === RealnameStatus.Pending) {
+    return '认证信息已提交，请等待管理员审核。';
+  }
+  if (status.value === RealnameStatus.Approved) {
+    return '实名认证已通过。';
+  }
+  return '认证已驳回，请根据原因修正后重新提交。';
+});
 
 const statusMeta: Record<
   RealnameStatus,
-  { text: string; type: 'info' | 'warning' | 'success' | 'danger' }
+  { text: string; type: 'info' | 'warning' | 'success' | 'danger'; className: string }
 > = {
-  [RealnameStatus.None]: { text: '未认证', type: 'info' },
-  [RealnameStatus.Pending]: { text: '审核中', type: 'warning' },
-  [RealnameStatus.Approved]: { text: '已通过', type: 'success' },
-  [RealnameStatus.Rejected]: { text: '已驳回', type: 'danger' },
+  [RealnameStatus.None]: { text: '未认证', type: 'info', className: 'is-none' },
+  [RealnameStatus.Pending]: { text: '审核中', type: 'warning', className: 'is-pending' },
+  [RealnameStatus.Approved]: { text: '已通过', type: 'success', className: 'is-approved' },
+  [RealnameStatus.Rejected]: { text: '已驳回', type: 'danger', className: 'is-rejected' },
 };
 
 const rules: FormRules = {
@@ -70,6 +82,13 @@ async function load(): Promise<void> {
   }
 }
 
+function resetForm(): void {
+  form.realName = '';
+  form.idCardNo = '';
+  form.frontImage = '';
+  form.backImage = '';
+}
+
 async function submit(): Promise<void> {
   if (!formRef.value) {
     return;
@@ -79,10 +98,7 @@ async function submit(): Promise<void> {
   try {
     await realnameApi.submit({ ...form });
     ElMessage.success('已提交，等待审核');
-    form.realName = '';
-    form.idCardNo = '';
-    form.frontImage = '';
-    form.backImage = '';
+    resetForm();
     await load();
   } finally {
     submitting.value = false;
@@ -93,107 +109,150 @@ onMounted(load);
 </script>
 
 <template>
-  <div
+  <section
     v-loading="loading"
-    class="realname-view"
+    class="realname-mine-page"
   >
-    <el-card shadow="never">
-      <template #header>
-        <div class="realname-header">
-          <strong>实名认证</strong>
-          <el-tag :type="statusMeta[status].type">
-            {{ statusMeta[status].text }}
-          </el-tag>
-        </div>
-      </template>
-
-      <el-alert
-        v-if="required && status !== RealnameStatus.Approved"
-        class="realname-alert"
-        type="warning"
-        show-icon
-        :closable="false"
-        title="你的角色要求完成实名认证，请尽快提交认证信息"
-      />
-      <el-alert
-        v-else-if="!required && status === RealnameStatus.None"
-        class="realname-alert"
-        type="info"
-        show-icon
-        :closable="false"
-        title="你当前无需实名认证，也可主动提交完成认证"
-      />
-
-      <!-- 已提交：展示脱敏信息与审核结果 -->
-      <el-descriptions
-        v-if="record"
-        class="realname-info"
-        :column="1"
-        border
+    <header class="realname-mine-header">
+      <div>
+        <h1>实名认证</h1>
+        <p>{{ pageHint }}</p>
+      </div>
+      <el-button
+        :icon="Refresh"
+        @click="load"
       >
-        <el-descriptions-item label="真实姓名">
-          {{ record.realName }}
-        </el-descriptions-item>
-        <el-descriptions-item label="身份证号">
-          {{ record.idCardMasked }}
-        </el-descriptions-item>
-        <el-descriptions-item
-          v-if="status === RealnameStatus.Rejected"
-          label="驳回理由"
-        >
-          <span class="realname-reject">{{ record.rejectReason }}</span>
-        </el-descriptions-item>
-      </el-descriptions>
+        刷新
+      </el-button>
+    </header>
 
-      <!-- 未提交 / 被驳回：可提交认证 -->
+    <section class="realname-mine-panel">
+      <div
+        class="realname-status"
+        :class="statusMeta[status].className"
+      >
+        <div>
+          <span>认证状态</span>
+          <strong>{{ statusMeta[status].text }}</strong>
+        </div>
+        <el-tag
+          round
+          effect="light"
+          :type="statusMeta[status].type"
+        >
+          {{ required ? '角色要求实名' : '非强制实名' }}
+        </el-tag>
+      </div>
+
+      <div
+        v-if="record"
+        class="realname-record"
+      >
+        <div>
+          <span>真实姓名</span>
+          <strong>{{ record.realName }}</strong>
+        </div>
+        <div>
+          <span>身份证号</span>
+          <strong>{{ record.idCardMasked }}</strong>
+        </div>
+        <div v-if="status === RealnameStatus.Rejected">
+          <span>驳回理由</span>
+          <strong class="realname-reject">{{ record.rejectReason || '未填写原因' }}</strong>
+        </div>
+      </div>
+
+      <el-alert
+        v-if="status === RealnameStatus.Rejected"
+        class="realname-alert"
+        type="error"
+        show-icon
+        :closable="false"
+        title="认证被驳回，请核对信息后重新提交"
+      />
+
       <el-form
         v-if="canSubmit"
         ref="formRef"
         :model="form"
         :rules="rules"
-        label-width="110px"
+        label-width="98px"
         class="realname-form"
       >
-        <el-form-item
-          label="真实姓名"
-          prop="realName"
-        >
-          <el-input
-            v-model="form.realName"
-            placeholder="请输入与身份证一致的姓名"
-          />
-        </el-form-item>
-        <el-form-item
-          label="身份证号"
-          prop="idCardNo"
-        >
-          <el-input
-            v-model="form.idCardNo"
-            maxlength="18"
-            placeholder="请输入 18 位身份证号"
-          />
-        </el-form-item>
-        <el-form-item
-          label="人像面"
-          prop="frontImage"
-        >
-          <ImageUploader
-            v-model="form.frontImage"
-            self
-          />
-        </el-form-item>
-        <el-form-item
-          label="国徽面"
-          prop="backImage"
-        >
-          <ImageUploader
-            v-model="form.backImage"
-            self
-          />
-        </el-form-item>
-        <el-form-item>
+        <div class="realname-fields">
+          <el-form-item
+            label="真实姓名"
+            prop="realName"
+          >
+            <el-input
+              v-model="form.realName"
+              placeholder="请输入与身份证一致的姓名"
+            />
+          </el-form-item>
+          <el-form-item
+            label="身份证号"
+            prop="idCardNo"
+          >
+            <el-input
+              v-model="form.idCardNo"
+              maxlength="18"
+              placeholder="请输入 18 位身份证号"
+            />
+          </el-form-item>
+        </div>
+
+        <div class="realname-upload-section">
+          <div class="realname-section-title">
+            <strong>证件照片</strong>
+            <span>请上传身份证正反面，保证文字和边角清晰完整。</span>
+          </div>
+
+          <div class="realname-upload-grid">
+            <el-form-item
+              prop="frontImage"
+              class="realname-upload-item"
+            >
+              <div class="realname-upload-card">
+                <div class="realname-upload-card__head">
+                  <strong><span>*</span>身份证人像面</strong>
+                  <small>姓名、头像、身份证号需清晰可见</small>
+                </div>
+                <ImageUploader
+                  v-model="form.frontImage"
+                  self
+                />
+              </div>
+            </el-form-item>
+            <el-form-item
+              prop="backImage"
+              class="realname-upload-item"
+            >
+              <div class="realname-upload-card">
+                <div class="realname-upload-card__head">
+                  <strong><span>*</span>身份证国徽面</strong>
+                  <small>签发机关和有效期限需清晰可见</small>
+                </div>
+                <ImageUploader
+                  v-model="form.backImage"
+                  self
+                />
+              </div>
+            </el-form-item>
+          </div>
+        </div>
+
+        <div class="realname-form-tip">
+          <el-icon><WarningFilled /></el-icon>
+          <span>请上传清晰、完整的身份证正反面照片，提交后等待管理员审核。</span>
+        </div>
+
+        <el-form-item class="realname-actions">
+          <el-button @click="resetForm">
+            重置
+          </el-button>
           <el-button
             type="primary"
+            :icon="Check"
             :loading="submitting"
             @click="submit"
           >
@@ -206,27 +265,6 @@ onMounted(load);
         v-else-if="status === RealnameStatus.Pending"
         description="认证信息审核中，请耐心等待"
       />
-    </el-card>
-  </div>
+    </section>
+  </section>
 </template>
-
-<style scoped>
-.realname-view {
-  max-width: 620px;
-}
-.realname-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.realname-alert,
-.realname-info {
-  margin-bottom: 16px;
-}
-.realname-reject {
-  color: var(--el-color-danger);
-}
-.realname-form {
-  margin-top: 8px;
-}
-</style>

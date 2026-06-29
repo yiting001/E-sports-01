@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { CHINA_MOBILE_PATTERN } from '@app/contracts';
+import { Check, Refresh, UserFilled } from '@element-plus/icons-vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import ImageUploader from '@/components/common/ImageUploader.vue';
 import { authApi } from '@/api/auth.api';
 import { useAuthStore } from '@/stores/auth.store';
+import './ProfileView.css';
+import './ProfileView.responsive.css';
 
-/**
- * 个人中心：登录用户自助维护本人资料（头像 / 昵称 / 手机号）。
- * 保存后回灌 auth.store 的 profile，使侧边栏头像/昵称即时更新。
- */
 const auth = useAuthStore();
 const formRef = ref<FormInstance>();
 const saving = ref(false);
+const loading = ref(false);
 
 const form = reactive({
   username: '',
@@ -25,25 +25,41 @@ const rules: FormRules = {
   nickname: [{ max: 64, message: '昵称不超过 64 个字符', trigger: 'blur' }],
   phone: [
     {
-      validator: (_r, value: string, cb) => {
+      validator: (_rule, value: string, callback) => {
         if (!value || CHINA_MOBILE_PATTERN.test(value)) {
-          cb();
+          callback();
           return;
         }
-        cb(new Error('手机号格式不正确'));
+        callback(new Error('手机号格式不正确'));
       },
       trigger: 'blur',
     },
   ],
 };
 
-/** 从当前档案回填表单（用户名只读，仅展示） */
+const displayName = computed(
+  () => form.nickname || auth.profile?.nickname || auth.profile?.username || '-',
+);
+const roleLabel = computed(() => (auth.profile?.isSuper ? '超级管理员' : '授权账号'));
+const tenantText = computed(() => auth.profile?.tenantName || auth.profile?.tenantCode || '-');
+const phoneStatus = computed(() => (form.phone ? '已绑定手机号' : '未绑定手机号'));
+
 function fill(): void {
-  const p = auth.profile;
-  form.username = p?.username ?? '';
-  form.avatar = p?.avatar ?? '';
-  form.nickname = p?.nickname ?? '';
-  form.phone = p?.phone ?? '';
+  const profile = auth.profile;
+  form.username = profile?.username ?? '';
+  form.avatar = profile?.avatar ?? '';
+  form.nickname = profile?.nickname ?? '';
+  form.phone = profile?.phone ?? '';
+}
+
+async function refreshProfile(): Promise<void> {
+  loading.value = true;
+  try {
+    await auth.loadProfile();
+    fill();
+  } finally {
+    loading.value = false;
+  }
 }
 
 async function save(): Promise<void> {
@@ -68,7 +84,7 @@ async function save(): Promise<void> {
 
 onMounted(() => {
   if (!auth.loaded) {
-    void auth.loadProfile().then(fill);
+    void refreshProfile();
     return;
   }
   fill();
@@ -76,82 +92,103 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="profile-view">
-    <el-card shadow="never">
-      <template #header>
-        <div class="profile-header">
-          <strong>个人中心</strong>
-          <span>维护你的头像、昵称与绑定手机号</span>
+  <section
+    v-loading="loading"
+    class="profile-page"
+  >
+    <header class="profile-header">
+      <div>
+        <h1>个人中心</h1>
+        <p>维护头像、昵称和手机号。</p>
+      </div>
+      <el-button
+        :icon="Refresh"
+        @click="refreshProfile"
+      >
+        刷新
+      </el-button>
+    </header>
+
+    <section class="profile-panel">
+      <div class="profile-account">
+        <span class="profile-avatar">
+          <img
+            v-if="form.avatar"
+            :src="form.avatar"
+            alt="头像"
+          >
+          <el-icon v-else><UserFilled /></el-icon>
+        </span>
+        <div class="profile-account__main">
+          <strong>{{ displayName }}</strong>
+          <span>{{ form.username || '-' }}</span>
         </div>
-      </template>
+        <div class="profile-account__meta">
+          <span>{{ roleLabel }}</span>
+          <span>{{ tenantText }}</span>
+          <span>{{ phoneStatus }}</span>
+        </div>
+      </div>
 
       <el-form
         ref="formRef"
         :model="form"
         :rules="rules"
-        label-width="96px"
+        label-width="88px"
         class="profile-form"
       >
-        <el-form-item label="头像">
-          <ImageUploader
-            v-model="form.avatar"
-            self
-          />
-        </el-form-item>
-        <el-form-item label="用户名">
-          <el-input
-            v-model="form.username"
-            disabled
-          />
-        </el-form-item>
-        <el-form-item
-          label="昵称"
-          prop="nickname"
-        >
-          <el-input
-            v-model="form.nickname"
-            maxlength="64"
-            placeholder="请输入昵称"
-          />
-        </el-form-item>
-        <el-form-item
-          label="手机号"
-          prop="phone"
-        >
-          <el-input
-            v-model="form.phone"
-            maxlength="20"
-            placeholder="绑定后可用短信验证码登录；清空并保存即解绑"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button
-            type="primary"
-            :loading="saving"
-            @click="save"
-          >
-            保存
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-  </div>
-</template>
+        <div class="profile-form__grid">
+          <el-form-item label="头像">
+            <ImageUploader
+              v-model="form.avatar"
+              self
+            />
+          </el-form-item>
 
-<style scoped>
-.profile-view {
-  max-width: 560px;
-}
-.profile-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.profile-header span {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-.profile-form {
-  margin-top: 8px;
-}
-</style>
+          <div class="profile-fields">
+            <el-form-item label="用户名">
+              <el-input
+                v-model="form.username"
+                disabled
+              />
+            </el-form-item>
+            <el-form-item
+              label="昵称"
+              prop="nickname"
+            >
+              <el-input
+                v-model="form.nickname"
+                maxlength="64"
+                placeholder="请输入昵称"
+                show-word-limit
+              />
+            </el-form-item>
+            <el-form-item
+              label="手机号"
+              prop="phone"
+            >
+              <el-input
+                v-model="form.phone"
+                maxlength="20"
+                placeholder="清空并保存即解绑手机号"
+              />
+            </el-form-item>
+            <el-form-item class="profile-actions">
+              <el-button @click="fill">
+                重置
+              </el-button>
+              <el-button
+                type="primary"
+                :icon="Check"
+                :loading="saving"
+                @click="save"
+              >
+                保存
+              </el-button>
+            </el-form-item>
+          </div>
+        </div>
+      </el-form>
+    </section>
+  </section>
+</template>
