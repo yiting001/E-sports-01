@@ -30,7 +30,7 @@
   .log-hero,
   .log-panel,
   .log-stat {
-    border-radius: 14px;
+    border-radius: var(--radius);
   }
 
   .log-hero,
@@ -39,7 +39,7 @@
   }
 
   .log-hero h1 {
-    font-size: 30px;
+    font-size: 24px;
   }
 
   .log-panel__head {

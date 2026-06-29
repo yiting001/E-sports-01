@@ -27,7 +27,7 @@
   .wallet-panel,
   .wallet-stat,
   .wallet-actions-panel {
-    border-radius: 14px;
+    border-radius: var(--radius);
   }
 
   .wallet-hero,
@@ -36,7 +36,7 @@
   }
 
   .wallet-hero h1 {
-    font-size: 30px;
+    font-size: 24px;
   }
 
   .wallet-panel__head {

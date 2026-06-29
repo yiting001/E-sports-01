@@ -22,7 +22,7 @@
   .permission-hero,
   .permission-panel,
   .permission-stat {
-    border-radius: 14px;
+    border-radius: var(--radius);
   }
 
   .permission-hero,
@@ -31,7 +31,7 @@
   }
 
   .permission-hero h1 {
-    font-size: 30px;
+    font-size: 24px;
   }
 
   .permission-panel__head {

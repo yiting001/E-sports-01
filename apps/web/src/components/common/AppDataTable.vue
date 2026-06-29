@@ -272,6 +272,6 @@ watch(
 }
 
 .app-data-table__track:hover .app-data-table__thumb {
-  background: #14b8a6;
+  background: #2563eb;
 }
 </style>
