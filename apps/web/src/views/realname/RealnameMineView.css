@@ -9,9 +9,9 @@
 .realname-mine-header,
 .realname-mine-panel {
   border: 1px solid #e5e7eb;
-  border-radius: var(--radius);
+  border-radius: 14px;
   background: #ffffff;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
 }
 
 .realname-mine-header {
@@ -48,7 +48,7 @@
   gap: 14px;
   padding: 14px;
   border: 1px solid #e2e8f0;
-  border-radius: var(--radius);
+  border-radius: 12px;
   background: #f8fafc;
 }
 
@@ -105,7 +105,7 @@
   gap: 5px;
   padding: 12px;
   border: 1px solid #e2e8f0;
-  border-radius: var(--radius);
+  border-radius: 12px;
   background: #ffffff;
 }
 
@@ -136,7 +136,7 @@
 .realname-upload-section {
   padding: 14px;
   border: 1px solid #e2e8f0;
-  border-radius: var(--radius);
+  border-radius: 12px;
   background: #f8fafc;
 }
 
@@ -169,7 +169,7 @@
   gap: 12px;
   padding: 14px;
   border: 1px solid #e2e8f0;
-  border-radius: var(--radius);
+  border-radius: 12px;
   background: #ffffff;
 }
 
@@ -207,7 +207,7 @@
   width: 100%;
   height: 136px;
   border-color: #cbd5e1;
-  border-radius: var(--radius);
+  border-radius: 12px;
   background: #f8fafc;
 }
 
@@ -223,7 +223,7 @@
 
 .realname-upload-card .image-uploader__icon {
   color: #94a3b8;
-  font-size: 24px;
+  font-size: 32px;
 }
 
 .realname-upload-card .image-uploader__actions {
@@ -245,7 +245,7 @@
   margin: 16px 0;
   padding: 10px 12px;
   border: 1px solid #e2e8f0;
-  border-radius: var(--radius);
+  border-radius: 12px;
   background: #f8fafc;
 }
 

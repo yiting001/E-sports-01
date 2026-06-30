@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { ArrowRight, Key, Menu, Monitor, UserFilled } from '@element-plus/icons-vue';
+import { ArrowRight, Key, Menu, Monitor, Trophy, UserFilled } from '@element-plus/icons-vue';
 import { useMenus, type MenuItem } from '@/composables/use-menus';
 import { useAuthStore } from '@/stores/auth.store';
 import './DashboardView.css';
@@ -107,8 +107,22 @@ function openModule(item: ModuleCard | MenuItem): void {
   <section class="dashboard-page">
     <header class="dashboard-hero">
       <div class="hero-content">
+        <p>Operations Workspace</p>
         <h1>工作台</h1>
         <span>聚合当前账号的角色、权限与可见业务入口，快速进入日常管理流程。</span>
+      </div>
+      <div
+        class="hero-visual"
+        aria-hidden="true"
+      >
+        <div class="orbit orbit-a" />
+        <div class="orbit orbit-b" />
+        <div class="hero-core">
+          <el-icon><Trophy /></el-icon>
+        </div>
+        <span class="visual-node node-a" />
+        <span class="visual-node node-b" />
+        <span class="visual-node node-c" />
       </div>
     </header>
 
@@ -133,6 +147,7 @@ function openModule(item: ModuleCard | MenuItem): void {
         <section class="panel module-panel">
           <div class="panel-heading">
             <div>
+              <p>Modules</p>
               <h2>业务入口</h2>
             </div>
             <span>{{ leafMenus.length }} 个入口可用</span>
@@ -165,6 +180,7 @@ function openModule(item: ModuleCard | MenuItem): void {
         <section class="panel quick-panel">
           <div class="panel-heading">
             <div>
+              <p>Quick Access</p>
               <h2>快捷访问</h2>
             </div>
           </div>
@@ -209,6 +225,7 @@ function openModule(item: ModuleCard | MenuItem): void {
         <section class="panel permission-panel">
           <div class="panel-heading compact">
             <div>
+              <p>Permissions</p>
               <h2>权限分布</h2>
             </div>
             <el-icon><Key /></el-icon>

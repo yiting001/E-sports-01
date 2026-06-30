@@ -22,7 +22,7 @@
   .upload-hero,
   .upload-panel,
   .upload-stat {
-    border-radius: var(--radius);
+    border-radius: 14px;
   }
 
   .upload-hero,
@@ -31,7 +31,7 @@
   }
 
   .upload-hero h1 {
-    font-size: 24px;
+    font-size: 30px;
   }
 
   .upload-panel__head {
