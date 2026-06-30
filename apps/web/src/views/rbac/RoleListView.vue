@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { RoleView } from '@app/contracts';
+import { PAGINATION_DEFAULTS } from '@app/contracts';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { roleApi } from '@/api/role.api';
 import RolePermissionDialog from '@/components/rbac/RolePermissionDialog.vue';
 import RoleDirectory from '@/components/rbac/role/RoleDirectory.vue';
 import RoleFormDialog from '@/components/rbac/role/RoleFormDialog.vue';
-import RoleHero from '@/components/rbac/role/RoleHero.vue';
 import RoleStats from '@/components/rbac/role/RoleStats.vue';
 import type { RoleForm } from '@/components/rbac/role/role-ui.types';
 import './RoleListView.css';
@@ -14,8 +14,8 @@ import './RoleListView.responsive.css';
 
 const list = ref<RoleView[]>([]);
 const total = ref(0);
-const page = ref(1);
-const pageSize = ref(10);
+const page = ref<number>(PAGINATION_DEFAULTS.page);
+const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const loading = ref(false);
 
 const dialogVisible = ref(false);
@@ -58,6 +58,12 @@ async function load(): Promise<void> {
 
 async function changePage(value: number): Promise<void> {
   page.value = value;
+  await load();
+}
+
+async function changePageSize(value: number): Promise<void> {
+  pageSize.value = value;
+  page.value = PAGINATION_DEFAULTS.page;
   await load();
 }
 
@@ -112,8 +118,7 @@ onMounted(load);
 </script>
 
 <template>
-  <section class="role-page">
-    <role-hero />
+  <section class="admin-page role-page">
     <role-stats
       :total="total"
       :builtin-count="builtinCount"
@@ -133,6 +138,7 @@ onMounted(load);
       @permissions="openPermissions"
       @remove="remove"
       @update:page="changePage"
+      @update:page-size="changePageSize"
     />
     <role-form-dialog
       v-model="dialogVisible"

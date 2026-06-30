@@ -4,6 +4,7 @@ import { CHINA_MOBILE_PATTERN } from '@app/contracts';
 import { Check, Refresh, UserFilled } from '@element-plus/icons-vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import ImageUploader from '@/components/common/ImageUploader.vue';
+import AppPanel from '@/components/common/AppPanel.vue';
 import { authApi } from '@/api/auth.api';
 import { useAuthStore } from '@/stores/auth.store';
 import './ProfileView.css';
@@ -94,22 +95,21 @@ onMounted(() => {
 <template>
   <section
     v-loading="loading"
-    class="profile-page"
+    class="admin-page profile-page"
   >
-    <header class="profile-header">
-      <div>
-        <h1>个人中心</h1>
-        <p>维护头像、昵称和手机号。</p>
-      </div>
-      <el-button
-        :icon="Refresh"
-        @click="refreshProfile"
-      >
-        刷新
-      </el-button>
-    </header>
+    <app-panel
+      class="profile-panel"
+      title="个人资料"
+    >
+      <template #actions>
+        <el-button
+          :icon="Refresh"
+          @click="refreshProfile"
+        >
+          刷新
+        </el-button>
+      </template>
 
-    <section class="profile-panel">
       <div class="profile-account">
         <span class="profile-avatar">
           <img
@@ -189,6 +189,6 @@ onMounted(() => {
           </div>
         </div>
       </el-form>
-    </section>
+    </app-panel>
   </section>
 </template>

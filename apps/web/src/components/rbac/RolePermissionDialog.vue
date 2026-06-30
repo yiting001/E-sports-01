@@ -90,11 +90,11 @@ watch(
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     :model-value="modelValue"
     :title="role ? `分配权限 · ${role.name}` : '分配权限'"
-    width="480px"
-    class="role-permission-dialog"
+    size="520px"
+    class="admin-drawer role-permission-dialog"
     @update:model-value="(v: boolean) => emit('update:modelValue', v)"
   >
     <el-alert
@@ -111,7 +111,6 @@ watch(
       :props="treeProps"
       node-key="id"
       show-checkbox
-      default-expand-all
     >
       <template #default="{ data }">
         <span class="node">
@@ -121,19 +120,21 @@ watch(
       </template>
     </el-tree>
     <template #footer>
-      <el-button @click="emit('update:modelValue', false)">
-        {{ readonly ? '关闭' : '取消' }}
-      </el-button>
-      <el-button
-        v-if="!readonly"
-        type="primary"
-        :loading="saving"
-        @click="submit"
-      >
-        确定
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="emit('update:modelValue', false)">
+          {{ readonly ? '关闭' : '取消' }}
+        </el-button>
+        <el-button
+          v-if="!readonly"
+          type="primary"
+          :loading="saving"
+          @click="submit"
+        >
+          确定
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>
 
 <style scoped>

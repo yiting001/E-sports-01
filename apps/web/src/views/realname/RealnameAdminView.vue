@@ -7,7 +7,6 @@ import {
   type RoleView,
 } from '@app/contracts';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import RealnameHero from '@/components/realname/RealnameHero.vue';
 import RealnamePolicyPanel from '@/components/realname/RealnamePolicyPanel.vue';
 import RealnameReviewDirectory from '@/components/realname/RealnameReviewDirectory.vue';
 import RealnameStats from '@/components/realname/RealnameStats.vue';
@@ -19,7 +18,7 @@ import './RealnameAdminView.responsive.css';
 const list = ref<RealnameView[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = ref(PAGINATION_DEFAULTS.pageSize);
+const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const statusFilter = ref<RealnameStatus | undefined>(undefined);
 const loading = ref(false);
 
@@ -73,6 +72,12 @@ async function load(): Promise<void> {
 
 async function changePage(value: number): Promise<void> {
   page.value = value;
+  await load();
+}
+
+async function changePageSize(value: number): Promise<void> {
+  pageSize.value = value;
+  page.value = PAGINATION_DEFAULTS.page;
   await load();
 }
 
@@ -136,8 +141,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="realname-page">
-    <realname-hero />
+  <section class="admin-page realname-page">
     <realname-stats
       :total="total"
       :pending-count="pendingCount"
@@ -159,6 +163,7 @@ onMounted(() => {
       @approve="approve"
       @reject="reject"
       @update:page="changePage"
+      @update:page-size="changePageSize"
     />
     <realname-policy-panel
       v-model:selected-role-codes="selectedRoleCodes"

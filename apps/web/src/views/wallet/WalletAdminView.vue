@@ -12,13 +12,15 @@ import {
 import { ElMessage } from 'element-plus';
 import { Refresh, Search } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
+import AppPanel from '@/components/common/AppPanel.vue';
 import { walletAdminApi } from '@/api/wallet.api';
+import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 
 /** 列表状态 */
 const list = ref<WalletAdminView[]>([]);
 const total = ref(0);
-const page = ref(1);
-const pageSize = ref(PAGINATION_DEFAULTS.pageSize);
+const page = ref<number>(PAGINATION_DEFAULTS.page);
+const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const keyword = ref('');
 const loading = ref(false);
 
@@ -48,6 +50,12 @@ async function changePage(value: number): Promise<void> {
   await load();
 }
 
+async function changePageSize(value: number): Promise<void> {
+  pageSize.value = value;
+  page.value = PAGINATION_DEFAULTS.page;
+  await load();
+}
+
 async function onSearch(): Promise<void> {
   page.value = 1;
   await load();
@@ -59,7 +67,7 @@ const txnLoading = ref(false);
 const txnList = ref<WalletTransactionView[]>([]);
 const txnTotal = ref(0);
 const txnPage = ref(1);
-const txnPageSize = ref(PAGINATION_DEFAULTS.pageSize);
+const txnPageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const currentUser = ref<WalletAdminView | null>(null);
 
 async function loadTxns(): Promise<void> {
@@ -88,6 +96,12 @@ function openTxns(row: WalletAdminView): void {
 
 async function changeTxnPage(value: number): Promise<void> {
   txnPage.value = value;
+  await loadTxns();
+}
+
+async function changeTxnPageSize(value: number): Promise<void> {
+  txnPageSize.value = value;
+  txnPage.value = PAGINATION_DEFAULTS.page;
   await loadTxns();
 }
 
@@ -137,142 +151,144 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="wallet-admin">
-    <header class="wallet-admin__head">
-      <div>
-        <span class="wallet-admin__eyebrow">Wallet Management</span>
-        <h1>钱包管理</h1>
-        <p>分页查看所有用户钱包与余额，查看任意用户收支明细，并可人工调整余额（充/扣，自动记流水）。</p>
-      </div>
-      <div class="wallet-admin__search">
-        <el-input
-          v-model="keyword"
-          placeholder="按用户名/昵称搜索"
-          clearable
-          :prefix-icon="Search"
-          @keyup.enter="onSearch"
-          @clear="onSearch"
-        />
-        <el-button
-          type="primary"
-          :icon="Search"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button
-          :icon="Refresh"
-          @click="load"
-        >
-          刷新
-        </el-button>
-      </div>
-    </header>
-
-    <app-data-table
-      :data="list"
-      :loading="loading"
-      :min-width="900"
-      empty-text="暂无用户钱包"
-    >
-      <el-table-column
-        label="用户"
-        min-width="200"
-      >
-        <template #default="{ row }">
-          <div class="wallet-admin__user">
-            <strong>{{ row.nickname || row.username }}</strong>
-            <small>{{ row.username }}</small>
+  <section class="admin-page wallet-admin">
+    <app-panel title="用户钱包">
+      <template #toolbar>
+        <div class="admin-toolbar">
+          <el-input
+            v-model="keyword"
+            placeholder="按用户名/昵称搜索"
+            clearable
+            :prefix-icon="Search"
+            @keyup.enter="onSearch"
+            @clear="onSearch"
+          />
+          <div class="admin-actions">
+            <el-button
+              type="primary"
+              :icon="Search"
+              @click="onSearch"
+            >
+              搜索
+            </el-button>
+            <el-button
+              :icon="Refresh"
+              @click="load"
+            >
+              刷新
+            </el-button>
           </div>
-        </template>
-      </el-table-column>
-      <el-table-column
-        label="余额（元）"
-        width="150"
-      >
-        <template #default="{ row }">
-          <span class="wallet-admin__balance">{{ row.balanceYuan }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column
-        label="累计充值（元）"
-        width="150"
-        prop="totalRechargeYuan"
-      />
-      <el-table-column
-        label="累计提现（元）"
-        width="150"
-        prop="totalWithdrawYuan"
-      />
-      <el-table-column
-        label="状态"
-        width="120"
-      >
-        <template #default="{ row }">
-          <el-tag
-            v-if="!row.initialized"
-            type="info"
-            effect="plain"
-          >
-            未开通
-          </el-tag>
-          <el-tag
-            v-else-if="row.status === WalletStatus.Frozen"
-            type="danger"
-            effect="light"
-          >
-            冻结
-          </el-tag>
-          <el-tag
-            v-else
-            type="success"
-            effect="light"
-          >
-            正常
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column
-        label="操作"
-        width="200"
-        fixed="right"
-      >
-        <template #default="{ row }">
-          <el-button
-            v-permission="PERMS.wallet.transaction"
-            link
-            type="primary"
-            @click="openTxns(row)"
-          >
-            明细
-          </el-button>
-          <el-button
-            v-permission="PERMS.wallet.adjust"
-            link
-            type="warning"
-            @click="openAdjust(row)"
-          >
-            调整余额
-          </el-button>
-        </template>
-      </el-table-column>
-    </app-data-table>
+        </div>
+      </template>
 
-    <div class="wallet-admin__pager">
-      <span>共 {{ total }} 位用户</span>
-      <el-pagination
-        layout="prev, pager, next"
-        :total="total"
-        :current-page="page"
-        :page-size="pageSize"
-        @current-change="changePage"
-      />
-    </div>
+      <app-data-table
+        :data="list"
+        :loading="loading"
+        :min-width="900"
+        empty-text="暂无用户钱包"
+      >
+        <el-table-column
+          label="用户"
+          min-width="200"
+        >
+          <template #default="{ row }">
+            <div class="wallet-admin__user">
+              <strong>{{ row.nickname || row.username }}</strong>
+              <small>{{ row.username }}</small>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="余额（元）"
+          width="150"
+        >
+          <template #default="{ row }">
+            <span class="wallet-admin__balance">{{ row.balanceYuan }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="累计充值（元）"
+          width="150"
+          prop="totalRechargeYuan"
+        />
+        <el-table-column
+          label="累计提现（元）"
+          width="150"
+          prop="totalWithdrawYuan"
+        />
+        <el-table-column
+          label="状态"
+          width="120"
+        >
+          <template #default="{ row }">
+            <el-tag
+              v-if="!row.initialized"
+              type="info"
+              effect="plain"
+            >
+              未开通
+            </el-tag>
+            <el-tag
+              v-else-if="row.status === WalletStatus.Frozen"
+              type="danger"
+              effect="light"
+            >
+              冻结
+            </el-tag>
+            <el-tag
+              v-else
+              type="success"
+              effect="light"
+            >
+              正常
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="操作"
+          width="200"
+          fixed="right"
+        >
+          <template #default="{ row }">
+            <el-button
+              v-permission="PERMS.wallet.transaction"
+              link
+              type="primary"
+              @click="openTxns(row)"
+            >
+              明细
+            </el-button>
+            <el-button
+              v-permission="PERMS.wallet.adjust"
+              link
+              type="warning"
+              @click="openAdjust(row)"
+            >
+              调整余额
+            </el-button>
+          </template>
+        </el-table-column>
+      </app-data-table>
 
-    <el-dialog
+      <div class="admin-pager">
+        <span>共 {{ total }} 位用户</span>
+        <el-pagination
+          layout="sizes, prev, pager, next"
+          :total="total"
+          :current-page="page"
+          :page-size="pageSize"
+          :page-sizes="[...PAGE_SIZE_OPTIONS]"
+          @size-change="changePageSize"
+          @current-change="changePage"
+        />
+      </div>
+    </app-panel>
+
+    <el-drawer
       v-model="txnVisible"
       :title="`收支明细 · ${currentUser?.nickname || currentUser?.username || ''}`"
-      width="760px"
+      size="760px"
+      class="admin-drawer wallet-admin-drawer"
     >
       <app-data-table
         :data="txnList"
@@ -330,22 +346,32 @@ onMounted(() => {
           </template>
         </el-table-column>
       </app-data-table>
-      <div class="wallet-admin__pager">
+      <div class="admin-pager">
         <span>共 {{ txnTotal }} 条流水</span>
         <el-pagination
-          layout="prev, pager, next"
+          layout="sizes, prev, pager, next"
           :total="txnTotal"
           :current-page="txnPage"
           :page-size="txnPageSize"
+          :page-sizes="[...PAGE_SIZE_OPTIONS]"
+          @size-change="changeTxnPageSize"
           @current-change="changeTxnPage"
         />
       </div>
-    </el-dialog>
+      <template #footer>
+        <div class="admin-drawer__footer">
+          <el-button @click="txnVisible = false">
+            关闭
+          </el-button>
+        </div>
+      </template>
+    </el-drawer>
 
-    <el-dialog
+    <el-drawer
       v-model="adjustVisible"
       :title="`人工调整余额 · ${currentUser?.nickname || currentUser?.username || ''}`"
-      width="460px"
+      size="480px"
+      class="admin-drawer wallet-admin-drawer"
     >
       <el-form
         label-width="92px"
@@ -384,18 +410,20 @@ onMounted(() => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="adjustVisible = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          :loading="adjustSubmitting"
-          @click="submitAdjust"
-        >
-          确认调整
-        </el-button>
+        <div class="admin-drawer__footer">
+          <el-button @click="adjustVisible = false">
+            取消
+          </el-button>
+          <el-button
+            type="primary"
+            :loading="adjustSubmitting"
+            @click="submitAdjust"
+          >
+            确认调整
+          </el-button>
+        </div>
       </template>
-    </el-dialog>
+    </el-drawer>
   </section>
 </template>
 
@@ -403,45 +431,7 @@ onMounted(() => {
 .wallet-admin {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-}
-
-.wallet-admin__head {
-  display: flex;
-  flex-wrap: wrap;
   gap: 16px;
-  align-items: flex-end;
-  justify-content: space-between;
-}
-
-.wallet-admin__eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #14b8a6;
-  text-transform: uppercase;
-}
-
-.wallet-admin__head h1 {
-  margin: 6px 0 4px;
-  font-size: 22px;
-}
-
-.wallet-admin__head p {
-  margin: 0;
-  max-width: 560px;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.wallet-admin__search {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.wallet-admin__search .el-input {
-  width: 220px;
 }
 
 .wallet-admin__user {
@@ -456,13 +446,5 @@ onMounted(() => {
 .wallet-admin__balance {
   font-weight: 800;
   color: #0f766e;
-}
-
-.wallet-admin__pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #64748b;
-  font-size: 13px;
 }
 </style>

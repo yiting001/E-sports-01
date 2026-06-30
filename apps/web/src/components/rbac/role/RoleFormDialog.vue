@@ -20,11 +20,11 @@ function updateField<K extends keyof RoleForm>(key: K, value: RoleForm[K]): void
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     :model-value="modelValue"
     :title="isEdit ? '编辑角色' : '新建角色'"
-    width="500px"
-    class="role-dialog"
+    size="500px"
+    class="admin-drawer role-dialog"
     @update:model-value="(value: boolean) => emit('update:modelValue', value)"
   >
     <div class="role-dialog__intro">
@@ -66,15 +66,17 @@ function updateField<K extends keyof RoleForm>(key: K, value: RoleForm[K]): void
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="emit('update:modelValue', false)">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        @click="emit('submit')"
-      >
-        {{ isEdit ? '保存' : '确定创建' }}
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="emit('update:modelValue', false)">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          @click="emit('submit')"
+        >
+          {{ isEdit ? '保存' : '确定创建' }}
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>

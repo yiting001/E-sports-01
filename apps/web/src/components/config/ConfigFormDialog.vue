@@ -26,7 +26,7 @@ const emit = defineEmits<{
   submit: [];
 }>();
 
-const dialogWidth = computed(() =>
+const drawerSize = computed(() =>
   props.form.type === ConfigValueType.RichText ? '760px' : '520px',
 );
 
@@ -36,11 +36,11 @@ function updateForm(patch: Partial<ConfigFormModel>): void {
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     :model-value="modelValue"
     :title="isEdit ? '编辑配置' : '新增配置'"
-    :width="dialogWidth"
-    class="config-dialog"
+    :size="drawerSize"
+    class="admin-drawer config-dialog"
     @update:model-value="(value: boolean) => emit('update:modelValue', value)"
   >
     <div class="config-dialog__intro">
@@ -118,15 +118,17 @@ function updateForm(patch: Partial<ConfigFormModel>): void {
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="emit('update:modelValue', false)">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        @click="emit('submit')"
-      >
-        确定
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="emit('update:modelValue', false)">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          @click="emit('submit')"
+        >
+          确定
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>

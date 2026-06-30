@@ -1,54 +1,13 @@
-@media (max-width: 900px) {
-  .realname-mine-page {
-    max-width: none;
-  }
-
-  .realname-mine-header,
-  .realname-status {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .realname-mine-header .el-button {
-    width: 100%;
-    margin-left: 0;
-  }
-
+@media (max-width: 760px) {
   .realname-record,
   .realname-fields,
   .realname-upload-grid {
     grid-template-columns: 1fr;
   }
 
-  .realname-section-title {
+  .realname-section-title,
+  .realname-status {
     align-items: flex-start;
     flex-direction: column;
-  }
-}
-
-@media (max-width: 520px) {
-  .realname-mine-header,
-  .realname-mine-panel {
-    padding: 16px;
-    border-radius: 12px;
-  }
-
-  .realname-form-tip {
-    align-items: flex-start;
-  }
-
-  .realname-actions .el-form-item__content {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .realname-actions .el-button {
-    width: 100%;
-    margin-left: 0;
-  }
-
-  .realname-actions .el-button + .el-button {
-    margin-top: 8px;
-    margin-left: 0;
   }
 }

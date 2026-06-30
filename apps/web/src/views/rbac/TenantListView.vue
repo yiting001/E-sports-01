@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import type { CreateTenantPayload, TenantView } from '@app/contracts';
-import { TenantStatus } from '@app/contracts';
+import { PAGINATION_DEFAULTS, TenantStatus } from '@app/contracts';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { tenantApi } from '@/api/tenant.api';
 import CreateTenantDialog from '@/components/rbac/tenant/CreateTenantDialog.vue';
 import EditTenantDialog from '@/components/rbac/tenant/EditTenantDialog.vue';
 import TenantDirectory from '@/components/rbac/tenant/TenantDirectory.vue';
-import TenantHero from '@/components/rbac/tenant/TenantHero.vue';
 import TenantStats from '@/components/rbac/tenant/TenantStats.vue';
 import type { EditTenantForm } from '@/components/rbac/tenant/tenant-ui.types';
 import './TenantListView.css';
@@ -15,8 +14,8 @@ import './TenantListView.responsive.css';
 
 const list = ref<TenantView[]>([]);
 const total = ref(0);
-const page = ref(1);
-const pageSize = ref(10);
+const page = ref<number>(PAGINATION_DEFAULTS.page);
+const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const loading = ref(false);
 const keyword = ref('');
 
@@ -92,6 +91,12 @@ async function changePage(value: number): Promise<void> {
   await load();
 }
 
+async function changePageSize(value: number): Promise<void> {
+  pageSize.value = value;
+  page.value = PAGINATION_DEFAULTS.page;
+  await load();
+}
+
 function openCreate(): void {
   createForm.code = '';
   createForm.name = '';
@@ -161,8 +166,7 @@ onMounted(load);
 </script>
 
 <template>
-  <section class="tenant-page">
-    <tenant-hero />
+  <section class="admin-page tenant-page">
     <tenant-stats
       :total="total"
       :enabled-count="enabledCount"
@@ -178,6 +182,7 @@ onMounted(load);
       :status-label="statusLabel"
       :format-date="formatDate"
       @update:page="changePage"
+      @update:page-size="changePageSize"
       @search="search"
       @reset="resetSearch"
       @create="openCreate"

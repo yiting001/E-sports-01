@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import type { UploadedFileView } from '@app/contracts';
-import { PERMS, StorageDriver } from '@app/contracts';
+import { PAGINATION_DEFAULTS, PERMS, StorageDriver } from '@app/contracts';
 import { computed, onMounted, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Clock, Delete, Document, FolderOpened, Link, Refresh, UploadFilled } from '@element-plus/icons-vue';
 import { uploadApi } from '@/api/upload.api';
 import AppDataTable from '@/components/common/AppDataTable.vue';
+import AppPanel from '@/components/common/AppPanel.vue';
+import AppStats from '@/components/common/AppStats.vue';
+import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import './UploadView.css';
 import './UploadView.responsive.css';
 
 const list = ref<UploadedFileView[]>([]);
 const total = ref(0);
-const page = ref(1);
-const pageSize = ref(10);
+const page = ref<number>(PAGINATION_DEFAULTS.page);
+const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const loading = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
 
@@ -23,6 +26,12 @@ const ossCount = computed(
   () => list.value.filter((item) => item.driver === StorageDriver.Oss).length,
 );
 const pageTotalSize = computed(() => list.value.reduce((sum, item) => sum + item.size, 0));
+const statItems = computed(() => [
+  { label: '文件总数', value: total.value, helper: '分页记录总量' },
+  { label: '本地存储', value: localCount.value, helper: '当前页文件' },
+  { label: 'OSS 存储', value: ossCount.value, helper: '当前页文件' },
+  { label: '本页容量', value: formatSize(pageTotalSize.value), helper: '按当前分页统计' },
+]);
 
 async function load(): Promise<void> {
   loading.value = true;
@@ -101,71 +110,30 @@ async function remove(row: UploadedFileView): Promise<void> {
   await load();
 }
 
+async function changePage(value: number): Promise<void> {
+  page.value = value;
+  await load();
+}
+
+async function changePageSize(value: number): Promise<void> {
+  pageSize.value = value;
+  page.value = PAGINATION_DEFAULTS.page;
+  await load();
+}
+
 onMounted(load);
 </script>
 
 <template>
-  <section class="upload-page">
-    <header class="upload-hero">
-      <div class="upload-hero__content">
-        <span class="upload-eyebrow">Asset Hub</span>
-        <h1>文件上传</h1>
-        <p>统一查看上传文件、存储驱动、访问地址与占用空间，删除操作会同步清理存储对象和文件记录。</p>
-      </div>
-      <div
-        class="upload-hero__visual"
-        aria-hidden="true"
-      >
-        <div class="upload-flow">
-          <span class="upload-flow__line flow-line-a" />
-          <span class="upload-flow__line flow-line-b" />
-          <span class="upload-flow__line flow-line-c" />
-          <span class="upload-core">
-            <el-icon><UploadFilled /></el-icon>
-          </span>
-          <span class="upload-node upload-node-a">
-            <el-icon><Document /></el-icon>
-          </span>
-          <span class="upload-node upload-node-b">
-            <el-icon><FolderOpened /></el-icon>
-          </span>
-          <span class="upload-node upload-node-c">
-            <el-icon><Link /></el-icon>
-          </span>
-        </div>
-      </div>
-    </header>
+  <section class="admin-page upload-page">
+    <app-stats :items="statItems" />
 
-    <section class="upload-stats">
-      <article class="upload-stat">
-        <span>文件总数</span>
-        <strong>{{ total }}</strong>
-        <small>分页记录总量</small>
-      </article>
-      <article class="upload-stat">
-        <span>本地存储</span>
-        <strong>{{ localCount }}</strong>
-        <small>当前页文件</small>
-      </article>
-      <article class="upload-stat">
-        <span>OSS 存储</span>
-        <strong>{{ ossCount }}</strong>
-        <small>当前页文件</small>
-      </article>
-      <article class="upload-stat">
-        <span>本页容量</span>
-        <strong>{{ formatSize(pageTotalSize) }}</strong>
-        <small>按当前分页统计</small>
-      </article>
-    </section>
-
-    <section class="upload-panel">
-      <div class="upload-panel__head">
-        <div>
-          <span class="upload-eyebrow">Directory</span>
-          <h2>上传目录</h2>
-        </div>
-        <div class="upload-panel__actions">
+    <app-panel
+      title="上传目录"
+      eyebrow="Directory"
+    >
+      <template #actions>
+        <div class="admin-actions">
           <el-button
             :icon="Refresh"
             @click="load"
@@ -187,7 +155,7 @@ onMounted(load);
             @change="onFileChange"
           >
         </div>
-      </div>
+      </template>
 
       <app-data-table
         :data="list"
@@ -286,17 +254,19 @@ onMounted(load);
         </el-table-column>
       </app-data-table>
 
-      <div class="upload-pager">
+      <div class="admin-pager">
         <span class="upload-pager__summary">共 {{ total }} 个文件</span>
         <el-pagination
           class="upload-pagination"
-          layout="prev, pager, next"
+          layout="sizes, prev, pager, next"
           :total="total"
           :current-page="page"
           :page-size="pageSize"
-          @current-change="(value: number) => { page = value; load(); }"
+          :page-sizes="[...PAGE_SIZE_OPTIONS]"
+          @size-change="changePageSize"
+          @current-change="changePage"
         />
       </div>
-    </section>
+    </app-panel>
   </section>
 </template>

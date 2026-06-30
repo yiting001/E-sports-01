@@ -42,6 +42,94 @@ apps/web/src/
 └── main.ts                 Pinia + Router + Element Plus + v-permission 装配
 ```
 
+## 后台 UI 基座重构
+
+除登录页外，后台页面统一改为朴素 Element Plus 管理台风格：白底、细边框、4px 圆角、弱装饰、少层级。页面标题由后台顶部栏承载，内容区不再重复放页面头卡片；业务页面只保留数据加载、动作编排和表格/表单里的业务特有展示。
+
+实现的功能：
+
+- **统一统计区**：`AppStats` 承载 1-4 个统计项，使用响应式网格。
+- **统一内容面板**：`AppPanel` 承载标题、操作区、筛选工具栏、主体和底部区域。
+- **统一分页交互**：列表分页使用 Element Plus `el-pagination` 的 `sizes` 能力，支持选择每页条数并回到第一页重新查询。
+- **统一业务抽屉**：新增、编辑、权限分配、明细展示等内容型弹层统一使用右侧 `el-drawer`，中间内容区滚动，底部操作栏固定且按钮左对齐。
+- **统一菜单渲染**：`AppMenu` 复用桌面侧边栏和移动抽屉菜单，避免两份菜单模板重复。
+- **页面级样式瘦身**：RBAC、配置、上传、实名、钱包、日志、IM 等页面只保留业务单元样式，如身份块、状态标签、权限树、聊天工作区、上传列表。
+- **登录页隔离**：`LoginView` 和 `components/auth` 保持原有视觉，不纳入后台 UI 基座。
+
+```text
+apps/web/src/
+├── components/common/
+│   ├── AppStats.vue        统一统计卡网格
+│   ├── AppPanel.vue        内容面板、工具栏、底部区域
+│   └── AppDataTable.vue    Element Plus 表格薄封装
+├── layouts/
+│   ├── AppLayout.vue       后台壳、用户菜单、移动抽屉
+│   └── AppMenu.vue         桌面/移动共用菜单树
+└── views/
+    ├── rbac/ config/ upload/ realname/ wallet/ observability/ im/
+    └── LoginView.vue       登录页独立保留
+```
+
+```mermaid
+flowchart TB
+  AppLayout[AppLayout 后台壳] --> AppMenu[AppMenu 菜单树]
+  AppLayout --> RouterView[router-view 内容区]
+  RouterView --> Page[业务页面]
+  Page --> Stats[AppStats]
+  Page --> Panel[AppPanel]
+  Panel --> DataTable[AppDataTable / 表单 / 工作区]
+  Page --> Drawer[业务抽屉组件]
+```
+
+新后台页面接入规则：
+
+- 页面根节点使用 `admin-page`，不要重复写页面间距。
+- 页面标题交给 `AppLayout` 顶部栏，内容区不要再放独立页面头卡片。
+- 有统计数据时使用 `AppStats`，不要在页面内新写统计卡 CSS。
+- 数据表使用 `AppDataTable`，只统一外层滚动、空态、加载态和表头风格；列定义、宽度、插槽仍按 Element Plus `el-table-column` 官方方式在业务模块声明。
+- 分页使用 `el-pagination` 的 `sizes`、`page-sizes`、`size-change` 和 `current-change`，每页条数选项来自 `PAGINATION_PAGE_SIZES`。
+- 内容较多的新增/编辑/详情展示使用 `el-drawer` 并挂 `admin-drawer`，底部按钮放在 `#footer` 内的 `admin-drawer__footer`，不要在业务页面重复写固定底栏样式。
+- 页面 CSS 只写业务特有元素，不写 hero、渐变背景、装饰节点和重复面板样式。
+- 操作按钮仍使用 Element Plus 按钮和图标，权限按钮继续通过 `v-permission` 控制。
+
+### 公共表格组件
+
+`AppDataTable` 负责把后台列表页的表格视觉统一到 Element Plus 管理台风格，不重新实现表格行为。它保留当前页面已使用的 `data`、`loading`、`minWidth`、`tableClass`、`emptyText` 参数，内部直接渲染 `el-table`，业务列通过默认插槽传入。
+
+实现的功能：
+
+- **官方用法对齐**：保持 `el-table :data` + `el-table-column` 的列声明方式。
+- **统一加载与空态**：通过 `v-loading` 和 `empty-text` 复用 Element Plus 能力。
+- **横向溢出兜底**：仅由外层容器提供原生横向滚动，不维护自定义滚动条、滚动状态或监听器。
+- **最小视觉统一**：只设置 4px 圆角、细边框、表头背景和单元格间距，业务页面不再重复写表格壳样式。
+
+```mermaid
+flowchart LR
+  Page[业务列表页面] --> Table[AppDataTable]
+  Table --> ElTable[el-table]
+  Page --> Columns[el-table-column 列定义]
+  Columns --> ElTable
+```
+
+### 公共业务抽屉
+
+`admin-drawer` 是直接作用于 Element Plus `el-drawer` 的轻量样式约定，不封装业务 API。它用于新增、编辑、分配权限、成员管理、交易明细和日志链路详情等内容型弹层。
+
+实现的功能：
+
+- **右侧打开**：业务层直接使用 `el-drawer`，保持 Element Plus 官方交互。
+- **内容滚动**：`el-drawer__body` 占满剩余高度并独立滚动，长表单或明细列表不会挤走操作按钮。
+- **固定底栏**：`#footer` 插槽固定在底部，按钮使用 `admin-drawer__footer` 左对齐。
+- **移动端兜底**：小屏下业务抽屉自动占满宽度，避免固定像素尺寸溢出。
+
+```mermaid
+flowchart TB
+  Drawer[el-drawer.admin-drawer] --> Header[标题区]
+  Drawer --> Body[内容滚动区]
+  Drawer --> Footer[#footer 固定操作栏]
+  Footer --> Actions[admin-drawer__footer 左对齐按钮]
+```
+
 ## 鉴权数据流
 
 ```mermaid

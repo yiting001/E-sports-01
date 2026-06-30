@@ -3,6 +3,8 @@ import type { TenantView } from '@app/contracts';
 import { PERMS, TenantStatus } from '@app/contracts';
 import { Clock, Delete, EditPen, Plus, Refresh, Search } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
+import AppPanel from '@/components/common/AppPanel.vue';
+import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 
 defineProps<{
   list: TenantView[];
@@ -23,16 +25,16 @@ const emit = defineEmits<{
   create: [];
   edit: [row: TenantView];
   remove: [row: TenantView];
+  'update:pageSize': [value: number];
 }>();
 </script>
 
 <template>
-  <section class="tenant-panel">
-    <div class="tenant-panel__head">
-      <div>
-        <span class="tenant-eyebrow">Directory</span>
-        <h2>租户目录</h2>
-      </div>
+  <app-panel
+    title="租户目录"
+    eyebrow="Directory"
+  >
+    <template #actions>
       <el-button
         v-permission="PERMS.tenant.create"
         type="primary"
@@ -41,34 +43,36 @@ const emit = defineEmits<{
       >
         新建租户
       </el-button>
-    </div>
+    </template>
 
-    <div class="tenant-toolbar">
-      <el-input
-        :model-value="keyword"
-        clearable
-        class="tenant-search"
-        placeholder="搜索租户编码或名称"
-        :prefix-icon="Search"
-        @update:model-value="(value: string) => emit('update:keyword', value.trim())"
-        @keyup.enter="emit('search')"
-        @clear="emit('search')"
-      />
-      <div class="tenant-toolbar__actions">
-        <el-button
-          :icon="Search"
-          @click="emit('search')"
-        >
-          搜索
-        </el-button>
-        <el-button
-          :icon="Refresh"
-          @click="emit('reset')"
-        >
-          重置
-        </el-button>
+    <template #toolbar>
+      <div class="admin-toolbar">
+        <el-input
+          :model-value="keyword"
+          clearable
+          class="tenant-search"
+          placeholder="搜索租户编码或名称"
+          :prefix-icon="Search"
+          @update:model-value="(value: string) => emit('update:keyword', value.trim())"
+          @keyup.enter="emit('search')"
+          @clear="emit('search')"
+        />
+        <div class="admin-actions">
+          <el-button
+            :icon="Search"
+            @click="emit('search')"
+          >
+            搜索
+          </el-button>
+          <el-button
+            :icon="Refresh"
+            @click="emit('reset')"
+          >
+            重置
+          </el-button>
+        </div>
       </div>
-    </div>
+    </template>
 
     <app-data-table
       :data="list"
@@ -164,12 +168,14 @@ const emit = defineEmits<{
       </el-table-column>
     </app-data-table>
     <el-pagination
-      class="tenant-pager"
-      layout="total, prev, pager, next"
+      class="admin-pager"
+      layout="total, sizes, prev, pager, next"
       :total="total"
       :current-page="page"
       :page-size="pageSize"
+      :page-sizes="[...PAGE_SIZE_OPTIONS]"
+      @size-change="(value: number) => emit('update:pageSize', value)"
       @current-change="(value: number) => emit('update:page', value)"
     />
-  </section>
+  </app-panel>
 </template>

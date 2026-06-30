@@ -1,36 +1,22 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+import AppStats from '@/components/common/AppStats.vue';
+
+const props = defineProps<{
   total: number;
   pendingCount: number;
   approvedCount: number;
   requiredRoleCount: number;
 }>();
+
+const items = computed(() => [
+  { label: '审核记录', value: props.total, helper: '当前筛选条件下的实名申请' },
+  { label: '待审核', value: props.pendingCount, helper: '需要管理员处理的申请' },
+  { label: '已通过', value: props.approvedCount, helper: '本页已完成认证的用户' },
+  { label: '策略角色', value: props.requiredRoleCount, helper: '要求完成实名的角色数量' },
+]);
 </script>
 
 <template>
-  <section
-    class="realname-stats"
-    aria-label="实名审核概览"
-  >
-    <article class="realname-stat">
-      <span>审核记录</span>
-      <strong>{{ total }}</strong>
-      <small>当前筛选条件下的实名申请</small>
-    </article>
-    <article class="realname-stat">
-      <span>待审核</span>
-      <strong>{{ pendingCount }}</strong>
-      <small>需要管理员处理的申请</small>
-    </article>
-    <article class="realname-stat">
-      <span>已通过</span>
-      <strong>{{ approvedCount }}</strong>
-      <small>本页已完成认证的用户</small>
-    </article>
-    <article class="realname-stat">
-      <span>策略角色</span>
-      <strong>{{ requiredRoleCount }}</strong>
-      <small>要求完成实名的角色数量</small>
-    </article>
-  </section>
+  <app-stats :items="items" />
 </template>

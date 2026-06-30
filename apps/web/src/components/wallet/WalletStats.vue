@@ -1,5 +1,8 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+import AppStats from '@/components/common/AppStats.vue';
+
+const props = defineProps<{
   balanceYuan: string;
   statusLabel: string;
   totalRechargeYuan: string;
@@ -9,29 +12,15 @@ defineProps<{
   total: number;
   latestTransactionText: string;
 }>();
+
+const items = computed(() => [
+  { label: '账户余额（元）', value: props.balanceYuan, helper: `${props.statusLabel}状态` },
+  { label: '累计充值（元）', value: props.totalRechargeYuan, helper: `${props.rechargeCount} 笔` },
+  { label: '累计提现（元）', value: props.totalWithdrawYuan, helper: `${props.withdrawCount} 笔` },
+  { label: '最近流水', value: props.total, helper: props.latestTransactionText },
+]);
 </script>
 
 <template>
-  <section class="wallet-stats">
-    <article class="wallet-stat">
-      <span>账户余额（元）</span>
-      <strong>{{ balanceYuan }}</strong>
-      <small>{{ statusLabel }}状态</small>
-    </article>
-    <article class="wallet-stat">
-      <span>累计充值（元）</span>
-      <strong>{{ totalRechargeYuan }}</strong>
-      <small>{{ rechargeCount }} 笔</small>
-    </article>
-    <article class="wallet-stat">
-      <span>累计提现（元）</span>
-      <strong>{{ totalWithdrawYuan }}</strong>
-      <small>{{ withdrawCount }} 笔</small>
-    </article>
-    <article class="wallet-stat">
-      <span>最近流水</span>
-      <strong>{{ total }}</strong>
-      <small>{{ latestTransactionText }}</small>
-    </article>
-  </section>
+  <app-stats :items="items" />
 </template>

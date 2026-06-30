@@ -77,12 +77,12 @@
 - 租户编码/名称关键字搜索，复用已有 `GET /rbac/tenants?keyword=` 查询能力。
 - 租户目录保持表格视图，窄屏通过目录容器横向滚动，按钮权限沿用 `v-permission`。
 - 目录表格复用 `AppDataTable`，统一横向滚动、滚动条和 Element Plus 表格基础样式。
+- 分页使用 Element Plus `sizes`，支持选择每页 10/20/50/100 条并回到第一页重新查询。
 - 创建租户与编辑租户弹窗，内置租户禁用/删除限制由接口兜底，前端只做视觉提示。
 
 ```mermaid
 flowchart TD
-  Page["TenantListView.vue 页面容器"] --> Hero["TenantHero 头部视觉"]
-  Page --> Stats["TenantStats 指标概览"]
+  Page["TenantListView.vue 页面容器"] --> Stats["TenantStats 指标概览"]
   Page --> Directory["TenantDirectory 目录/搜索/分页"]
   Page --> CreateDialog["CreateTenantDialog 新建弹窗"]
   Page --> EditDialog["EditTenantDialog 编辑弹窗"]

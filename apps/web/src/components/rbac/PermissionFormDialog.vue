@@ -122,11 +122,11 @@ watch(
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     :model-value="modelValue"
     :title="title"
-    width="520px"
-    class="permission-dialog"
+    size="520px"
+    class="admin-drawer permission-dialog"
     @update:model-value="(v: boolean) => emit('update:modelValue', v)"
   >
     <el-form label-width="92px">
@@ -187,16 +187,18 @@ watch(
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="emit('update:modelValue', false)">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        :loading="saving"
-        @click="submit"
-      >
-        确定
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="emit('update:modelValue', false)">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="saving"
+          @click="submit"
+        >
+          确定
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>

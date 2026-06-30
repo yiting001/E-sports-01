@@ -3,6 +3,8 @@ import type { UserView } from '@app/contracts';
 import { PERMS, UserStatusEnum } from '@app/contracts';
 import { Clock, Delete, EditPen, Phone, Plus, Refresh } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
+import AppPanel from '@/components/common/AppPanel.vue';
+import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 
 defineProps<{
   list: UserView[];
@@ -21,17 +23,17 @@ const emit = defineEmits<{
   edit: [row: UserView];
   remove: [row: UserView];
   'update:page': [value: number];
+  'update:pageSize': [value: number];
 }>();
 </script>
 
 <template>
-  <section class="user-panel">
-    <div class="user-panel__head">
-      <div>
-        <span class="user-eyebrow">Directory</span>
-        <h2>用户目录</h2>
-      </div>
-      <div class="user-panel__actions">
+  <app-panel
+    title="用户目录"
+    eyebrow="Directory"
+  >
+    <template #actions>
+      <div class="admin-actions">
         <el-button
           :icon="Refresh"
           @click="emit('refresh')"
@@ -47,7 +49,7 @@ const emit = defineEmits<{
           新建用户
         </el-button>
       </div>
-    </div>
+    </template>
 
     <app-data-table
       :data="list"
@@ -164,12 +166,14 @@ const emit = defineEmits<{
       </el-table-column>
     </app-data-table>
     <el-pagination
-      class="user-pager"
-      layout="total, prev, pager, next"
+      class="admin-pager"
+      layout="total, sizes, prev, pager, next"
       :total="total"
       :current-page="page"
       :page-size="pageSize"
+      :page-sizes="[...PAGE_SIZE_OPTIONS]"
+      @size-change="(value: number) => emit('update:pageSize', value)"
       @current-change="(value: number) => emit('update:page', value)"
     />
-  </section>
+  </app-panel>
 </template>

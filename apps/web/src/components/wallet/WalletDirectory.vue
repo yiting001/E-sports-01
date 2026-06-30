@@ -3,6 +3,8 @@ import type { WalletTransactionView } from '@app/contracts';
 import { FundDirection, WalletTxnType } from '@app/contracts';
 import { Download, Refresh, Upload } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
+import AppPanel from '@/components/common/AppPanel.vue';
+import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 
 defineProps<{
   transactions: WalletTransactionView[];
@@ -15,7 +17,9 @@ defineProps<{
 const emit = defineEmits<{
   refresh: [];
   recharge: [];
+  withdraw: [];
   'update:page': [value: number];
+  'update:pageSize': [value: number];
 }>();
 
 const txnTypeText: Record<WalletTxnType, string> = {
@@ -26,13 +30,12 @@ const txnTypeText: Record<WalletTxnType, string> = {
 </script>
 
 <template>
-  <section class="wallet-panel">
-    <div class="wallet-panel__head">
-      <div>
-        <span class="wallet-eyebrow">Transaction Ledger</span>
-        <h2>收支明细</h2>
-      </div>
-      <div class="wallet-panel__actions">
+  <app-panel
+    title="收支明细"
+    eyebrow="Transaction Ledger"
+  >
+    <template #actions>
+      <div class="admin-actions">
         <el-button
           :icon="Refresh"
           @click="emit('refresh')"
@@ -46,8 +49,14 @@ const txnTypeText: Record<WalletTxnType, string> = {
         >
           充值
         </el-button>
+        <el-button
+          :icon="Download"
+          @click="emit('withdraw')"
+        >
+          提现
+        </el-button>
       </div>
-    </div>
+    </template>
 
     <app-data-table
       :data="transactions"
@@ -126,16 +135,18 @@ const txnTypeText: Record<WalletTxnType, string> = {
       </el-table-column>
     </app-data-table>
 
-    <div class="wallet-pager">
+    <div class="admin-pager">
       <span class="wallet-pager__summary">共 {{ total }} 条流水</span>
       <el-pagination
         class="wallet-pagination"
-        layout="prev, pager, next"
+        layout="sizes, prev, pager, next"
         :total="total"
         :current-page="page"
         :page-size="pageSize"
+        :page-sizes="[...PAGE_SIZE_OPTIONS]"
+        @size-change="(value: number) => emit('update:pageSize', value)"
         @current-change="(value: number) => emit('update:page', value)"
       />
     </div>
-  </section>
+  </app-panel>
 </template>

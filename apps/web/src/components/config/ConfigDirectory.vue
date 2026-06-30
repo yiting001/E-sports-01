@@ -3,6 +3,7 @@ import type { ConfigItemView } from '@app/contracts';
 import { ConfigGroup, ConfigValueType, PERMS } from '@app/contracts';
 import { Delete, EditPen, Key, Lock, Plus, Refresh, Search } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
+import AppPanel from '@/components/common/AppPanel.vue';
 import { sanitizeHtml } from '@/utils/sanitize-html';
 import { CONFIG_GROUP_META, CONFIG_TYPE_META } from './config-ui';
 
@@ -10,12 +11,15 @@ defineProps<{
   list: ConfigItemView[];
   loading: boolean;
   keyword: string;
+  group: ConfigGroup | '';
+  groupOptions: Array<{ label: string; value: ConfigGroup | ''; count: number }>;
   total: number;
   matchedCount: number;
 }>();
 
 const emit = defineEmits<{
   'update:keyword': [value: string];
+  'update:group': [value: ConfigGroup | ''];
   refresh: [];
   create: [];
   edit: [row: ConfigItemView];
@@ -36,13 +40,12 @@ function typeTone(type: ConfigValueType): string {
 </script>
 
 <template>
-  <section class="config-panel">
-    <div class="config-panel__head">
-      <div>
-        <span class="config-eyebrow">Directory</span>
-        <h2>配置目录</h2>
-      </div>
-      <div class="config-panel__actions">
+  <app-panel
+    title="配置目录"
+    eyebrow="Directory"
+  >
+    <template #actions>
+      <div class="admin-actions">
         <el-button
           :icon="Refresh"
           @click="emit('refresh')"
@@ -58,21 +61,44 @@ function typeTone(type: ConfigValueType): string {
           新增配置
         </el-button>
       </div>
-    </div>
+    </template>
 
-    <div class="config-toolbar">
-      <el-input
-        :model-value="keyword"
-        class="config-search"
-        :prefix-icon="Search"
-        clearable
-        placeholder="搜索配置键、分组、类型或备注"
-        @update:model-value="emit('update:keyword', String($event))"
-      />
-      <span class="config-toolbar__meta">
-        {{ keyword ? `${matchedCount} / ${total}` : `${total} 项配置` }}
-      </span>
-    </div>
+    <template #toolbar>
+      <div class="config-toolbar">
+        <el-tabs
+          :model-value="group"
+          class="config-group-tabs"
+          @update:model-value="emit('update:group', $event as ConfigGroup | '')"
+        >
+          <el-tab-pane
+            v-for="option in groupOptions"
+            :key="option.value || 'all'"
+            :name="option.value"
+          >
+            <template #label>
+              <span class="config-group-tab">
+                <span>{{ option.label }}</span>
+                <small>{{ option.count }}</small>
+              </span>
+            </template>
+          </el-tab-pane>
+        </el-tabs>
+
+        <div class="admin-toolbar">
+          <el-input
+            :model-value="keyword"
+            class="config-search"
+            :prefix-icon="Search"
+            clearable
+            placeholder="搜索配置键、分组、类型或备注"
+            @update:model-value="emit('update:keyword', String($event))"
+          />
+          <span class="config-toolbar__meta">
+            {{ keyword ? `${matchedCount} / ${total}` : `${total} 项配置` }}
+          </span>
+        </div>
+      </div>
+    </template>
 
     <app-data-table
       :data="list"
@@ -180,5 +206,5 @@ function typeTone(type: ConfigValueType): string {
         </template>
       </el-table-column>
     </app-data-table>
-  </section>
+  </app-panel>
 </template>

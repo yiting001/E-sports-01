@@ -93,10 +93,6 @@
 }
 
 @media (max-width: 520px) {
-  .im-dialog {
-    width: calc(100% - 24px) !important;
-  }
-
   .im-sidebar__actions,
   .im-chat__actions {
     grid-template-columns: 1fr;

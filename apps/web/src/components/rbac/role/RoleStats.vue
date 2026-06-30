@@ -1,36 +1,22 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+import AppStats from '@/components/common/AppStats.vue';
+
+const props = defineProps<{
   total: number;
   builtinCount: number;
   configurableCount: number;
   permissionCount: number;
 }>();
+
+const items = computed(() => [
+  { label: '角色总数', value: props.total, helper: '当前权限范围内的角色数' },
+  { label: '内置角色', value: props.builtinCount, helper: '平台预置的全局授权角色' },
+  { label: '可配置角色', value: props.configurableCount, helper: '支持维护名称与权限范围' },
+  { label: '已绑定权限', value: props.permissionCount, helper: '本页角色关联的权限数量' },
+]);
 </script>
 
 <template>
-  <section
-    class="role-stats"
-    aria-label="角色概览"
-  >
-    <article class="role-stat">
-      <span>角色总数</span>
-      <strong>{{ total }}</strong>
-      <small>当前权限范围内的角色数</small>
-    </article>
-    <article class="role-stat">
-      <span>内置角色</span>
-      <strong>{{ builtinCount }}</strong>
-      <small>平台预置的全局授权角色</small>
-    </article>
-    <article class="role-stat">
-      <span>可配置角色</span>
-      <strong>{{ configurableCount }}</strong>
-      <small>支持维护名称与权限范围</small>
-    </article>
-    <article class="role-stat">
-      <span>已绑定权限</span>
-      <strong>{{ permissionCount }}</strong>
-      <small>本页角色关联的权限数量</small>
-    </article>
-  </section>
+  <app-stats :items="items" />
 </template>

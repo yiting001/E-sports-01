@@ -22,11 +22,11 @@ function userName(user: UserView): string {
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     :model-value="modelValue"
     title="创建群聊"
-    width="460px"
-    class="im-dialog"
+    size="480px"
+    class="admin-drawer im-dialog"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div class="im-dialog__intro">
@@ -69,15 +69,17 @@ function userName(user: UserView): string {
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="emit('update:modelValue', false)">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        @click="emit('submit')"
-      >
-        创建
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="emit('update:modelValue', false)">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          @click="emit('submit')"
+        >
+          创建
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>

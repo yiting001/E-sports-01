@@ -63,6 +63,13 @@ export const useWalletStore = defineStore('wallet', () => {
     await loadTransactions();
   }
 
+  /** 切换流水每页条数并回到第一页 */
+  async function changePageSize(next: number): Promise<void> {
+    pageSize.value = next;
+    page.value = PAGINATION_DEFAULTS.page;
+    await loadTransactions();
+  }
+
   return {
     wallet,
     stats,
@@ -74,5 +81,6 @@ export const useWalletStore = defineStore('wallet', () => {
     init,
     refresh,
     changePage,
+    changePageSize,
   };
 });

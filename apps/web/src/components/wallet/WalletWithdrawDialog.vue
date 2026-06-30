@@ -27,11 +27,11 @@ function updateForm(patch: Partial<WalletWithdrawForm>): void {
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     :model-value="modelValue"
     title="账户提现"
-    width="460px"
-    class="wallet-dialog"
+    size="460px"
+    class="admin-drawer wallet-dialog"
     @update:model-value="(value: boolean) => emit('update:modelValue', value)"
   >
     <div class="wallet-dialog__intro">
@@ -82,16 +82,18 @@ function updateForm(patch: Partial<WalletWithdrawForm>): void {
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="emit('update:modelValue', false)">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        :loading="submitting"
-        @click="emit('submit')"
-      >
-        确认提现
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="emit('update:modelValue', false)">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="submitting"
+          @click="emit('submit')"
+        >
+          确认提现
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>

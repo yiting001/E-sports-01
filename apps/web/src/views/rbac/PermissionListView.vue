@@ -5,7 +5,6 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { permissionApi } from '@/api/permission.api';
 import PermissionDirectory from '@/components/rbac/permission/PermissionDirectory.vue';
 import PermissionFormDialog from '@/components/rbac/PermissionFormDialog.vue';
-import PermissionHero from '@/components/rbac/permission/PermissionHero.vue';
 import PermissionStats from '@/components/rbac/permission/PermissionStats.vue';
 import {
   buildNamespaceTree,
@@ -81,8 +80,7 @@ onMounted(load);
 </script>
 
 <template>
-  <section class="permission-page">
-    <permission-hero />
+  <section class="admin-page permission-page">
     <permission-stats
       :total="permissions.length"
       :namespace-count="namespaceCount"

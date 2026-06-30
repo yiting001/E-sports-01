@@ -156,6 +156,7 @@ sequenceDiagram
 
 - 配置总数、覆盖分组、敏感配置、富文本配置四类概览。
 - 配置目录保持表格视图，窄屏通过 `AppDataTable` 横向滚动。
+- 配置目录按 `ConfigGroup` 提供分组页签，默认进入系统分组，仍可切回全部；搜索只在当前分组范围内过滤。
 - 配置目录支持按配置键、分组、类型、备注和非敏感值快速搜索，敏感值不参与前端明文匹配。
 - 敏感项列表脱敏展示，编辑敏感项时不回填原值。
 - 富文本配置继续按需加载 `RichTextEditor`，列表预览仍先经 `sanitizeHtml` 净化。
@@ -164,10 +165,10 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  Page["ConfigView.vue 页面容器"] --> Hero["ConfigHero 头部视觉"]
-  Page --> Stats["ConfigStats 指标概览"]
+  Page["ConfigView.vue 页面容器"] --> Stats["ConfigStats 指标概览"]
   Page --> Directory["ConfigDirectory 配置目录"]
   Page --> FormDialog["ConfigFormDialog 新增/编辑弹窗"]
+  Directory --> GroupFilter["ConfigGroup 分组筛选"]
   Directory --> ConfigApi["configApi.list/upsert/remove"]
   FormDialog --> RichText["RichTextEditor 按需加载"]
   Directory --> Sanitize["sanitizeHtml 富文本预览净化"]

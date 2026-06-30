@@ -2,6 +2,7 @@
 import { PERMS } from '@app/contracts';
 import { ArrowRight, Delete, EditPen, FolderOpened, Plus, Refresh } from '@element-plus/icons-vue';
 import { computed, ref, watch } from 'vue';
+import AppPanel from '@/components/common/AppPanel.vue';
 import type { PermissionTreeNode } from '@/utils/permission-tree';
 import { PERMISSION_TYPE_META } from './permission-ui';
 
@@ -88,16 +89,13 @@ function nodeDetail(node: PermissionTreeNode): string {
 </script>
 
 <template>
-  <section
+  <app-panel
     v-loading="loading"
-    class="permission-panel"
+    title="权限目录"
+    eyebrow="Directory"
   >
-    <div class="permission-panel__head">
-      <div>
-        <span class="permission-eyebrow">Directory</span>
-        <h2>权限目录</h2>
-      </div>
-      <div class="permission-panel__actions">
+    <template #actions>
+      <div class="admin-actions">
         <el-button
           :icon="Refresh"
           @click="emit('refresh')"
@@ -113,7 +111,7 @@ function nodeDetail(node: PermissionTreeNode): string {
           新增权限
         </el-button>
       </div>
-    </div>
+    </template>
 
     <div class="permission-tree-shell">
       <div
@@ -208,5 +206,5 @@ function nodeDetail(node: PermissionTreeNode): string {
         </div>
       </div>
     </div>
-  </section>
+  </app-panel>
 </template>

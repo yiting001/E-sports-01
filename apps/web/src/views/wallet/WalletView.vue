@@ -11,9 +11,7 @@ import {
 import { ElMessage } from 'element-plus';
 import QRCode from 'qrcode';
 import { storeToRefs } from 'pinia';
-import WalletActions from '@/components/wallet/WalletActions.vue';
 import WalletDirectory from '@/components/wallet/WalletDirectory.vue';
-import WalletHero from '@/components/wallet/WalletHero.vue';
 import WalletRechargeDialog, {
   type WalletRechargeForm,
 } from '@/components/wallet/WalletRechargeDialog.vue';
@@ -57,9 +55,6 @@ const txnTypeText: Record<WalletTxnType, string> = {
 
 const walletStatusLabel = computed(() =>
   wallet.value?.status === WalletStatus.Frozen ? '冻结' : '正常',
-);
-const walletStatusClass = computed(() =>
-  wallet.value?.status === WalletStatus.Frozen ? 'is-frozen' : 'is-active',
 );
 const latestTransactionText = computed(() => {
   const first = transactions.value[0];
@@ -154,16 +149,8 @@ onMounted(() => {
 <template>
   <section
     v-loading="loading"
-    class="wallet-page"
+    class="admin-page wallet-page"
   >
-    <wallet-hero
-      :balance-yuan="balanceYuan"
-      :status-label="walletStatusLabel"
-      :status-class="walletStatusClass"
-      @recharge="openRecharge"
-      @withdraw="openWithdraw"
-      @refresh="store.refresh"
-    />
     <wallet-stats
       :balance-yuan="balanceYuan"
       :status-label="walletStatusLabel"
@@ -182,12 +169,9 @@ onMounted(() => {
       :loading="loading"
       @refresh="store.refresh"
       @recharge="openRecharge"
-      @update:page="store.changePage"
-    />
-    <wallet-actions
-      @recharge="openRecharge"
       @withdraw="openWithdraw"
-      @refresh="store.refresh"
+      @update:page="store.changePage"
+      @update:page-size="store.changePageSize"
     />
     <wallet-recharge-dialog
       v-model="rechargeVisible"

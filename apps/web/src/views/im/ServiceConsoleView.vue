@@ -136,7 +136,7 @@ onBeforeUnmount(() => im.disconnect());
 </script>
 
 <template>
-  <section class="service-console-page">
+  <section class="admin-page service-console-page">
     <section class="service-workspace">
       <aside class="service-queue">
         <header class="service-queue__head">

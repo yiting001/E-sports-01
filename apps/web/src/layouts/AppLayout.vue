@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowDown, Fold, HomeFilled, Postcard, SwitchButton, User, UserFilled, Wallet } from '@element-plus/icons-vue';
+import {
+  ArrowDown,
+  Fold,
+  HomeFilled,
+  Postcard,
+  SwitchButton,
+  User,
+  UserFilled,
+  Wallet,
+} from '@element-plus/icons-vue';
+import AppMenu from './AppMenu.vue';
 import { useMenus } from '@/composables/use-menus';
 import { useAuthStore } from '@/stores/auth.store';
 import { useMenuStore } from '@/stores/menu.store';
@@ -63,47 +73,10 @@ function closeMobileMenu(): void {
         </div>
       </div>
 
-      <el-menu
-        :default-active="activePath"
-        class="app-menu"
-        router
-      >
-        <template
-          v-for="item in menus"
-          :key="item.key"
-        >
-          <el-sub-menu
-            v-if="item.children"
-            :index="item.key"
-          >
-            <template #title>
-              <el-icon v-if="item.icon">
-                <component :is="item.icon" />
-              </el-icon>
-              <span>{{ item.title }}</span>
-            </template>
-            <el-menu-item
-              v-for="child in item.children"
-              :key="child.key"
-              :index="child.path"
-            >
-              <el-icon v-if="child.icon">
-                <component :is="child.icon" />
-              </el-icon>
-              <span>{{ child.title }}</span>
-            </el-menu-item>
-          </el-sub-menu>
-          <el-menu-item
-            v-else
-            :index="item.path"
-          >
-            <el-icon v-if="item.icon">
-              <component :is="item.icon" />
-            </el-icon>
-            <span>{{ item.title }}</span>
-          </el-menu-item>
-        </template>
-      </el-menu>
+      <app-menu
+        :menus="menus"
+        :active-path="activePath"
+      />
 
       <div class="aside-user">
         <span class="aside-avatar">
@@ -133,7 +106,7 @@ function closeMobileMenu(): void {
           />
           <div>
             <p>{{ route.meta.title || '工作台' }}</p>
-            <span>统一管理入口</span>
+            <span>{{ branding.appName }}</span>
           </div>
         </div>
 
@@ -225,48 +198,12 @@ function closeMobileMenu(): void {
         </div>
       </div>
 
-      <el-menu
-        :default-active="activePath"
-        class="app-menu drawer-menu"
-        router
+      <app-menu
+        :menus="menus"
+        :active-path="activePath"
+        class="drawer-menu"
         @select="closeMobileMenu"
-      >
-        <template
-          v-for="item in menus"
-          :key="item.key"
-        >
-          <el-sub-menu
-            v-if="item.children"
-            :index="item.key"
-          >
-            <template #title>
-              <el-icon v-if="item.icon">
-                <component :is="item.icon" />
-              </el-icon>
-              <span>{{ item.title }}</span>
-            </template>
-            <el-menu-item
-              v-for="child in item.children"
-              :key="child.key"
-              :index="child.path"
-            >
-              <el-icon v-if="child.icon">
-                <component :is="child.icon" />
-              </el-icon>
-              <span>{{ child.title }}</span>
-            </el-menu-item>
-          </el-sub-menu>
-          <el-menu-item
-            v-else
-            :index="item.path"
-          >
-            <el-icon v-if="item.icon">
-              <component :is="item.icon" />
-            </el-icon>
-            <span>{{ item.title }}</span>
-          </el-menu-item>
-        </template>
-      </el-menu>
+      />
     </el-drawer>
   </el-container>
 </template>

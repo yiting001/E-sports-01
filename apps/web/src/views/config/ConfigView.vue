@@ -6,7 +6,6 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { configApi } from '@/api/config.api';
 import ConfigDirectory from '@/components/config/ConfigDirectory.vue';
 import ConfigFormDialog from '@/components/config/ConfigFormDialog.vue';
-import ConfigHero from '@/components/config/ConfigHero.vue';
 import ConfigStats from '@/components/config/ConfigStats.vue';
 import {
   CONFIG_GROUP_META,
@@ -16,11 +15,18 @@ import {
 import './ConfigView.css';
 import './ConfigView.responsive.css';
 
+interface ConfigGroupOption {
+  label: string;
+  value: ConfigGroup | '';
+  count: number;
+}
+
 const list = ref<ConfigItemView[]>([]);
 const loading = ref(false);
 const dialogVisible = ref(false);
 const isEdit = ref(false);
 const keyword = ref('');
+const activeGroup = ref<ConfigGroup | ''>(ConfigGroup.System);
 
 const groups = Object.values(ConfigGroup);
 const valueTypes = Object.values(ConfigValueType);
@@ -32,12 +38,26 @@ const secretCount = computed(() => list.value.filter((item) => item.secret).leng
 const richTextCount = computed(
   () => list.value.filter((item) => item.type === ConfigValueType.RichText).length,
 );
+const groupOptions = computed<ConfigGroupOption[]>(() => [
+  { label: '全部', value: '', count: list.value.length },
+  ...groups.map((group) => ({
+    label: CONFIG_GROUP_META[group].label,
+    value: group,
+    count: list.value.filter((item) => item.group === group).length,
+  })),
+]);
+const groupedList = computed(() => {
+  if (!activeGroup.value) {
+    return list.value;
+  }
+  return list.value.filter((item) => item.group === activeGroup.value);
+});
 const filteredList = computed(() => {
   const query = keyword.value.trim().toLowerCase();
   if (!query) {
-    return list.value;
+    return groupedList.value;
   }
-  return list.value.filter((item) =>
+  return groupedList.value.filter((item) =>
     getSearchFields(item).some((field) => field.toLowerCase().includes(query)),
   );
 });
@@ -67,6 +87,10 @@ function getSearchFields(item: ConfigItemView): string[] {
 
 function updateKeyword(value: string): void {
   keyword.value = value;
+}
+
+function updateGroup(value: ConfigGroup | ''): void {
+  activeGroup.value = value;
 }
 
 async function load(): Promise<void> {
@@ -123,8 +147,7 @@ onMounted(load);
 </script>
 
 <template>
-  <section class="config-page">
-    <config-hero />
+  <section class="admin-page config-page">
     <config-stats
       :total="list.length"
       :group-count="groupCount"
@@ -135,9 +158,12 @@ onMounted(load);
       :list="filteredList"
       :loading="loading"
       :keyword="keyword"
-      :total="list.length"
+      :group="activeGroup"
+      :group-options="groupOptions"
+      :total="groupedList.length"
       :matched-count="filteredList.length"
       @update:keyword="updateKeyword"
+      @update:group="updateGroup"
       @refresh="load"
       @create="openCreate"
       @edit="openEdit"

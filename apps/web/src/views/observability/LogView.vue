@@ -3,9 +3,12 @@ import type { ListLogsQuery, LogView, TraceDetailView } from '@app/contracts';
 import { LogLevel, LogType, PAGINATION_DEFAULTS, PERMS } from '@app/contracts';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Clock, Delete, Link, Monitor, Refresh, Search } from '@element-plus/icons-vue';
+import { Clock, Delete, Link, Refresh, Search } from '@element-plus/icons-vue';
 import { observabilityApi } from '@/api/observability.api';
 import AppDataTable from '@/components/common/AppDataTable.vue';
+import AppPanel from '@/components/common/AppPanel.vue';
+import AppStats from '@/components/common/AppStats.vue';
+import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import './LogView.css';
 import './LogView.drawer.css';
 import './LogView.responsive.css';
@@ -60,6 +63,12 @@ const averageDuration = computed(() => {
   }
   return Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length);
 });
+const statItems = computed(() => [
+  { label: '日志总数', value: total.value, helper: '当前筛选结果' },
+  { label: '异常日志', value: errorCount.value, helper: '当前页错误数' },
+  { label: '访问日志', value: accessCount.value, helper: '当前页请求数' },
+  { label: '平均耗时', value: formatDuration(averageDuration.value), helper: `${warnCount.value} 条警告` },
+]);
 
 function buildQuery(): ListLogsQuery {
   return {
@@ -100,6 +109,12 @@ function reset(): void {
 
 async function changePage(value: number): Promise<void> {
   page.value = value;
+  await load();
+}
+
+async function changePageSize(value: number): Promise<void> {
+  pageSize.value = value;
+  page.value = PAGINATION_DEFAULTS.page;
   await load();
 }
 
@@ -182,62 +197,15 @@ onMounted(load);
 </script>
 
 <template>
-  <section class="log-page">
-    <header class="log-hero">
-      <div class="log-hero__content">
-        <span class="log-eyebrow">Observability</span>
-        <h1>日志管理</h1>
-        <p>按级别、类型、链路与路径检索系统日志，快速还原请求上下文与异常现场。</p>
-      </div>
-      <div
-        class="log-hero__visual"
-        aria-hidden="true"
-      >
-        <div class="log-radar">
-          <span class="log-radar__ring ring-a" />
-          <span class="log-radar__ring ring-b" />
-          <span class="log-radar__line line-a" />
-          <span class="log-radar__line line-b" />
-          <span class="log-core">
-            <el-icon><Monitor /></el-icon>
-          </span>
-          <span class="log-pulse pulse-a" />
-          <span class="log-pulse pulse-b" />
-          <span class="log-pulse pulse-c" />
-        </div>
-      </div>
-    </header>
+  <section class="admin-page log-page">
+    <app-stats :items="statItems" />
 
-    <section class="log-stats">
-      <article class="log-stat">
-        <span>日志总数</span>
-        <strong>{{ total }}</strong>
-        <small>当前筛选结果</small>
-      </article>
-      <article class="log-stat">
-        <span>异常日志</span>
-        <strong>{{ errorCount }}</strong>
-        <small>当前页错误数</small>
-      </article>
-      <article class="log-stat">
-        <span>访问日志</span>
-        <strong>{{ accessCount }}</strong>
-        <small>当前页请求数</small>
-      </article>
-      <article class="log-stat">
-        <span>平均耗时</span>
-        <strong>{{ formatDuration(averageDuration) }}</strong>
-        <small>{{ warnCount }} 条警告</small>
-      </article>
-    </section>
-
-    <section class="log-panel">
-      <div class="log-panel__head">
-        <div>
-          <span class="log-eyebrow">Directory</span>
-          <h2>日志目录</h2>
-        </div>
-        <div class="log-panel__actions">
+    <app-panel
+      title="日志目录"
+      eyebrow="Directory"
+    >
+      <template #actions>
+        <div class="admin-actions">
           <el-button
             :icon="Refresh"
             @click="load"
@@ -253,79 +221,81 @@ onMounted(load);
             清理
           </el-button>
         </div>
-      </div>
+      </template>
 
-      <el-form class="log-filters">
-        <el-form-item label="级别">
-          <el-select
-            v-model="filter.level"
-            clearable
-            placeholder="全部级别"
-            class="log-filter-control"
-          >
-            <el-option
-              v-for="level in levelOptions"
-              :key="level"
-              :label="LEVEL_META[level].label"
-              :value="level"
+      <template #toolbar>
+        <el-form class="log-filters">
+          <el-form-item label="级别">
+            <el-select
+              v-model="filter.level"
+              clearable
+              placeholder="全部级别"
+              class="log-filter-control"
+            >
+              <el-option
+                v-for="level in levelOptions"
+                :key="level"
+                :label="LEVEL_META[level].label"
+                :value="level"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="类型">
+            <el-select
+              v-model="filter.type"
+              clearable
+              placeholder="全部类型"
+              class="log-filter-control"
+            >
+              <el-option
+                v-for="type in typeOptions"
+                :key="type"
+                :label="TYPE_META[type].label"
+                :value="type"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="TraceId">
+            <el-input
+              v-model="filter.traceId"
+              clearable
+              placeholder="链路 ID"
+              class="log-filter-control"
             />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="类型">
-          <el-select
-            v-model="filter.type"
-            clearable
-            placeholder="全部类型"
-            class="log-filter-control"
-          >
-            <el-option
-              v-for="type in typeOptions"
-              :key="type"
-              :label="TYPE_META[type].label"
-              :value="type"
+          </el-form-item>
+          <el-form-item label="路径">
+            <el-input
+              v-model="filter.path"
+              clearable
+              placeholder="包含匹配"
+              class="log-filter-control"
             />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="TraceId">
-          <el-input
-            v-model="filter.traceId"
-            clearable
-            placeholder="链路 ID"
-            class="log-filter-control"
-          />
-        </el-form-item>
-        <el-form-item label="路径">
-          <el-input
-            v-model="filter.path"
-            clearable
-            placeholder="包含匹配"
-            class="log-filter-control"
-          />
-        </el-form-item>
-        <el-form-item label="用户ID">
-          <el-input
-            v-model="filter.userId"
-            clearable
-            placeholder="用户 ID"
-            class="log-filter-control"
-          />
-        </el-form-item>
-        <el-form-item class="log-filter-actions">
-          <el-button
-            type="primary"
-            :icon="Search"
-            @click="search"
-          >
-            查询
-          </el-button>
-          <el-button
-            :icon="Refresh"
-            @click="reset"
-          >
-            重置
-          </el-button>
-        </el-form-item>
-      </el-form>
+          </el-form-item>
+          <el-form-item label="用户ID">
+            <el-input
+              v-model="filter.userId"
+              clearable
+              placeholder="用户 ID"
+              class="log-filter-control"
+            />
+          </el-form-item>
+          <el-form-item class="log-filter-actions">
+            <el-button
+              type="primary"
+              :icon="Search"
+              @click="search"
+            >
+              查询
+            </el-button>
+            <el-button
+              :icon="Refresh"
+              @click="reset"
+            >
+              重置
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </template>
 
       <app-data-table
         :data="list"
@@ -430,20 +400,22 @@ onMounted(load);
       </app-data-table>
 
       <el-pagination
-        class="log-pager"
-        layout="total, prev, pager, next"
+        class="admin-pager"
+        layout="total, sizes, prev, pager, next"
         :total="total"
         :current-page="page"
         :page-size="pageSize"
+        :page-sizes="[...PAGE_SIZE_OPTIONS]"
+        @size-change="changePageSize"
         @current-change="changePage"
       />
-    </section>
+    </app-panel>
 
     <el-drawer
       v-model="drawerVisible"
       title="链路详情"
       size="52%"
-      class="log-drawer"
+      class="admin-drawer log-drawer"
     >
       <section
         v-if="detail"
@@ -491,6 +463,13 @@ onMounted(load);
           </div>
         </el-timeline-item>
       </el-timeline>
+      <template #footer>
+        <div class="admin-drawer__footer">
+          <el-button @click="drawerVisible = false">
+            关闭
+          </el-button>
+        </div>
+      </template>
     </el-drawer>
   </section>
 </template>

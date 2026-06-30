@@ -27,11 +27,11 @@ function updateForm(patch: Partial<WalletRechargeForm>): void {
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     :model-value="modelValue"
     title="账户充值"
-    width="460px"
-    class="wallet-dialog"
+    size="460px"
+    class="admin-drawer wallet-dialog"
     @update:model-value="(value: boolean) => emit('update:modelValue', value)"
   >
     <template v-if="!qrCode">
@@ -84,24 +84,26 @@ function updateForm(patch: Partial<WalletRechargeForm>): void {
       <p>请使用{{ form.provider === PaymentProvider.Alipay ? '支付宝' : '微信' }}扫码支付</p>
     </div>
     <template #footer>
-      <el-button @click="emit('update:modelValue', false)">
-        关闭
-      </el-button>
-      <el-button
-        v-if="!qrCode"
-        type="primary"
-        :loading="submitting"
-        @click="emit('submit')"
-      >
-        生成支付二维码
-      </el-button>
-      <el-button
-        v-else
-        type="primary"
-        @click="emit('paid')"
-      >
-        我已支付
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="emit('update:modelValue', false)">
+          关闭
+        </el-button>
+        <el-button
+          v-if="!qrCode"
+          type="primary"
+          :loading="submitting"
+          @click="emit('submit')"
+        >
+          生成支付二维码
+        </el-button>
+        <el-button
+          v-else
+          type="primary"
+          @click="emit('paid')"
+        >
+          我已支付
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>

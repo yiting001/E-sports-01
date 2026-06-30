@@ -8,6 +8,7 @@ import {
 import { Check, Refresh, WarningFilled } from '@element-plus/icons-vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import ImageUploader from '@/components/common/ImageUploader.vue';
+import AppPanel from '@/components/common/AppPanel.vue';
 import { realnameApi } from '@/api/realname.api';
 import './RealnameMineView.css';
 import './RealnameMineView.responsive.css';
@@ -111,22 +112,21 @@ onMounted(load);
 <template>
   <section
     v-loading="loading"
-    class="realname-mine-page"
+    class="admin-page realname-mine-page"
   >
-    <header class="realname-mine-header">
-      <div>
-        <h1>实名认证</h1>
-        <p>{{ pageHint }}</p>
-      </div>
-      <el-button
-        :icon="Refresh"
-        @click="load"
-      >
-        刷新
-      </el-button>
-    </header>
-
-    <section class="realname-mine-panel">
+    <app-panel
+      class="realname-mine-panel"
+      title="实名认证"
+      :description="pageHint"
+    >
+      <template #actions>
+        <el-button
+          :icon="Refresh"
+          @click="load"
+        >
+          刷新
+        </el-button>
+      </template>
       <div
         class="realname-status"
         :class="statusMeta[status].className"
@@ -265,6 +265,6 @@ onMounted(load);
         v-else-if="status === RealnameStatus.Pending"
         description="认证信息审核中，请耐心等待"
       />
-    </section>
+    </app-panel>
   </section>
 </template>

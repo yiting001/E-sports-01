@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { RoleView, UserView } from '@app/contracts';
-import { UserStatusEnum } from '@app/contracts';
+import { PAGINATION_DEFAULTS, UserStatusEnum } from '@app/contracts';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { userApi, type CreateUserBody } from '@/api/user.api';
@@ -8,7 +8,6 @@ import { roleApi } from '@/api/role.api';
 import CreateUserDialog from '@/components/rbac/user/CreateUserDialog.vue';
 import EditUserDialog from '@/components/rbac/user/EditUserDialog.vue';
 import UserDirectory from '@/components/rbac/user/UserDirectory.vue';
-import UserHero from '@/components/rbac/user/UserHero.vue';
 import UserStats from '@/components/rbac/user/UserStats.vue';
 import type { EditUserForm } from '@/components/rbac/user/user-ui.types';
 import { useAuthStore } from '@/stores/auth.store';
@@ -19,8 +18,8 @@ const auth = useAuthStore();
 
 const list = ref<UserView[]>([]);
 const total = ref(0);
-const page = ref(1);
-const pageSize = ref(10);
+const page = ref<number>(PAGINATION_DEFAULTS.page);
+const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const loading = ref(false);
 
 const createVisible = ref(false);
@@ -85,6 +84,12 @@ async function load(): Promise<void> {
 
 async function changePage(value: number): Promise<void> {
   page.value = value;
+  await load();
+}
+
+async function changePageSize(value: number): Promise<void> {
+  pageSize.value = value;
+  page.value = PAGINATION_DEFAULTS.page;
   await load();
 }
 
@@ -158,8 +163,7 @@ onMounted(load);
 </script>
 
 <template>
-  <section class="user-page">
-    <user-hero />
+  <section class="admin-page user-page">
     <user-stats
       :total="total"
       :enabled-count="enabledCount"
@@ -180,6 +184,7 @@ onMounted(load);
       @edit="openEdit"
       @remove="remove"
       @update:page="changePage"
+      @update:page-size="changePageSize"
     />
     <create-user-dialog
       v-model="createVisible"

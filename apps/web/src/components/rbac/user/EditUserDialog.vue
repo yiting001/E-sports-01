@@ -25,11 +25,11 @@ function updateField<K extends keyof EditUserForm>(
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     :model-value="modelValue"
     title="编辑用户"
-    width="520px"
-    class="user-dialog"
+    size="560px"
+    class="admin-drawer user-dialog"
     @update:model-value="(value: boolean) => emit('update:modelValue', value)"
   >
     <div class="user-dialog__intro">
@@ -90,15 +90,17 @@ function updateField<K extends keyof EditUserForm>(
       </div>
     </el-form>
     <template #footer>
-      <el-button @click="emit('update:modelValue', false)">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        @click="emit('submit')"
-      >
-        保存
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="emit('update:modelValue', false)">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          @click="emit('submit')"
+        >
+          保存
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>

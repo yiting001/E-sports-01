@@ -228,7 +228,7 @@ onBeforeUnmount(() => im.disconnect());
 </script>
 
 <template>
-  <section class="im-page">
+  <section class="admin-page im-page">
     <section class="im-workspace">
       <im-conversation-list
         :conversations="conversations"

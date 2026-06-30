@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { RealnameStatus, type RealnameView, PERMS } from '@app/contracts';
+import {
+  RealnameStatus,
+  type RealnameView,
+  PERMS,
+} from '@app/contracts';
 import { CircleCheck, Close, Refresh, Search, UserFilled } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
+import AppPanel from '@/components/common/AppPanel.vue';
+import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 
 defineProps<{
   list: RealnameView[];
@@ -25,17 +31,17 @@ const emit = defineEmits<{
   approve: [row: RealnameView];
   reject: [row: RealnameView];
   'update:page': [value: number];
+  'update:pageSize': [value: number];
 }>();
 </script>
 
 <template>
-  <section class="realname-panel">
-    <div class="realname-panel__head">
-      <div>
-        <span class="realname-eyebrow">Review Queue</span>
-        <h2>实名审核</h2>
-      </div>
-      <div class="realname-panel__actions">
+  <app-panel
+    title="实名审核"
+    eyebrow="Review Queue"
+  >
+    <template #actions>
+      <div class="admin-actions">
         <el-select
           :model-value="statusFilter"
           class="realname-filter"
@@ -58,7 +64,7 @@ const emit = defineEmits<{
           刷新
         </el-button>
       </div>
-    </div>
+    </template>
 
     <app-data-table
       :data="list"
@@ -188,16 +194,18 @@ const emit = defineEmits<{
       </el-table-column>
     </app-data-table>
 
-    <div class="realname-pager">
+    <div class="admin-pager">
       <span class="realname-pager__summary">共 {{ total }} 条申请</span>
       <el-pagination
         class="realname-pagination"
-        layout="prev, pager, next"
+        layout="total, sizes, prev, pager, next"
         :total="total"
         :current-page="page"
         :page-size="pageSize"
+        :page-sizes="[...PAGE_SIZE_OPTIONS]"
+        @size-change="(value: number) => emit('update:pageSize', value)"
         @current-change="(value: number) => emit('update:page', value)"
       />
     </div>
-  </section>
+  </app-panel>
 </template>

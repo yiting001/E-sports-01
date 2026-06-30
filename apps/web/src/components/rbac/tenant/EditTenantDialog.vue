@@ -24,11 +24,11 @@ function updateField<K extends keyof EditTenantForm>(
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     :model-value="modelValue"
     title="编辑租户"
-    width="500px"
-    class="tenant-dialog"
+    size="520px"
+    class="admin-drawer tenant-dialog"
     @update:model-value="(value: boolean) => emit('update:modelValue', value)"
   >
     <div
@@ -73,15 +73,17 @@ function updateField<K extends keyof EditTenantForm>(
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="emit('update:modelValue', false)">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        @click="emit('submit')"
-      >
-        保存
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="emit('update:modelValue', false)">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          @click="emit('submit')"
+        >
+          保存
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>

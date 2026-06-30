@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { ArrowRight, Key, Menu, Monitor, Trophy, UserFilled } from '@element-plus/icons-vue';
+import { ArrowRight, Key, Menu, Monitor, UserFilled } from '@element-plus/icons-vue';
+import AppPanel from '@/components/common/AppPanel.vue';
+import AppStats from '@/components/common/AppStats.vue';
 import { useMenus, type MenuItem } from '@/composables/use-menus';
 import { useAuthStore } from '@/stores/auth.store';
 import './DashboardView.css';
@@ -104,55 +106,18 @@ function openModule(item: ModuleCard | MenuItem): void {
 </script>
 
 <template>
-  <section class="dashboard-page">
-    <header class="dashboard-hero">
-      <div class="hero-content">
-        <p>Operations Workspace</p>
-        <h1>工作台</h1>
-        <span>聚合当前账号的角色、权限与可见业务入口，快速进入日常管理流程。</span>
-      </div>
-      <div
-        class="hero-visual"
-        aria-hidden="true"
-      >
-        <div class="orbit orbit-a" />
-        <div class="orbit orbit-b" />
-        <div class="hero-core">
-          <el-icon><Trophy /></el-icon>
-        </div>
-        <span class="visual-node node-a" />
-        <span class="visual-node node-b" />
-        <span class="visual-node node-c" />
-      </div>
-    </header>
-
-    <section
-      class="metric-grid"
-      aria-label="账号概览"
-    >
-      <article
-        v-for="card in metrics"
-        :key="card.label"
-        class="metric-card"
-        :class="`metric-${card.tone}`"
-      >
-        <span>{{ card.label }}</span>
-        <strong>{{ card.value }}</strong>
-        <small>{{ card.helper }}</small>
-      </article>
-    </section>
+  <section class="admin-page dashboard-page">
+    <app-stats :items="metrics" />
 
     <section class="dashboard-layout">
       <div class="main-column">
-        <section class="panel module-panel">
-          <div class="panel-heading">
-            <div>
-              <p>Modules</p>
-              <h2>业务入口</h2>
-            </div>
-            <span>{{ leafMenus.length }} 个入口可用</span>
-          </div>
-
+        <app-panel
+          title="业务入口"
+          eyebrow="Modules"
+        >
+          <template #actions>
+            <span class="admin-muted">{{ leafMenus.length }} 个入口可用</span>
+          </template>
           <div class="module-grid">
             <button
               v-for="item in modules"
@@ -175,15 +140,12 @@ function openModule(item: ModuleCard | MenuItem): void {
               </el-icon>
             </button>
           </div>
-        </section>
+        </app-panel>
 
-        <section class="panel quick-panel">
-          <div class="panel-heading">
-            <div>
-              <p>Quick Access</p>
-              <h2>快捷访问</h2>
-            </div>
-          </div>
+        <app-panel
+          title="快捷访问"
+          eyebrow="Quick Access"
+        >
           <div class="quick-list">
             <button
               v-for="item in quickAccess"
@@ -202,11 +164,11 @@ function openModule(item: ModuleCard | MenuItem): void {
               暂无可见业务入口
             </div>
           </div>
-        </section>
+        </app-panel>
       </div>
 
       <aside class="side-column">
-        <section class="panel identity-panel">
+        <app-panel class="identity-panel">
           <div class="identity-avatar">
             <el-icon><UserFilled /></el-icon>
           </div>
@@ -220,16 +182,15 @@ function openModule(item: ModuleCard | MenuItem): void {
               {{ role }}
             </span>
           </div>
-        </section>
+        </app-panel>
 
-        <section class="panel permission-panel">
-          <div class="panel-heading compact">
-            <div>
-              <p>Permissions</p>
-              <h2>权限分布</h2>
-            </div>
+        <app-panel
+          title="权限分布"
+          eyebrow="Permissions"
+        >
+          <template #actions>
             <el-icon><Key /></el-icon>
-          </div>
+          </template>
           <div class="permission-list">
             <div
               v-for="group in permissionGroups"
@@ -246,16 +207,16 @@ function openModule(item: ModuleCard | MenuItem): void {
               暂无权限点
             </div>
           </div>
-        </section>
+        </app-panel>
 
-        <section class="panel health-panel">
+        <app-panel class="health-panel">
           <div>
             <el-icon><Monitor /></el-icon>
             <span>访问状态</span>
           </div>
           <strong>正常</strong>
           <p>菜单与按钮权限已按当前账号动态加载。</p>
-        </section>
+        </app-panel>
       </aside>
     </section>
   </section>

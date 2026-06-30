@@ -16,6 +16,9 @@
 
 ```text
 apps/web/src/
+├── components/common/
+│   ├── AppStats.vue            账号概览统计网格
+│   └── AppPanel.vue            业务入口、快捷访问、侧栏信息面板
 ├── views/
 │   ├── DashboardView.vue       工作台数据派生与模板结构
 │   └── DashboardView.css       工作台视觉、网格与响应式样式
@@ -34,16 +37,16 @@ apps/web/src/
 flowchart LR
   Auth[auth.store profile] --> Dashboard[DashboardView]
   Menus[useMenus menus] --> Dashboard
-  Dashboard --> Metrics[账号概览]
-  Dashboard --> Modules[业务入口]
-  Dashboard --> Quick[快捷访问]
-  Dashboard --> Permission[权限分布]
+  Dashboard --> Metrics[AppStats 账号概览]
+  Dashboard --> Modules[AppPanel 业务入口]
+  Dashboard --> Quick[AppPanel 快捷访问]
+  Dashboard --> Permission[AppPanel 权限分布]
   Dashboard --> Router[router.push]
 ```
 
 ## 设计约束
 
 - **只改 UI 与视图编排**：不新增后端接口，不改权限判断、不改菜单数据来源。
-- **低耦合高内聚**：工作台自身样式拆到 `DashboardView.css`，主布局响应式留在 `AppLayout.vue`。
+- **低耦合高内聚**：统计和面板复用 `components/common`，页面标题交给后台顶部栏，工作台 CSS 只保留模块卡片、快捷入口和侧栏摘要。
 - **真实数据展示**：统计值只从当前账号和动态菜单派生，不写死业务数量。
 - **响应式优先**：核心网格使用 `minmax(0, 1fr)` 与断点布局，避免移动端横向溢出。

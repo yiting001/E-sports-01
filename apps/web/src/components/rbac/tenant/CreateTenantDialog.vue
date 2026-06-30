@@ -22,11 +22,11 @@ function updateField<K extends keyof CreateTenantPayload>(
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     :model-value="modelValue"
     title="新建租户"
-    width="520px"
-    class="tenant-dialog"
+    size="560px"
+    class="admin-drawer tenant-dialog"
     @update:model-value="(value: boolean) => emit('update:modelValue', value)"
   >
     <div class="tenant-dialog__intro">
@@ -82,15 +82,17 @@ function updateField<K extends keyof CreateTenantPayload>(
       </div>
     </el-form>
     <template #footer>
-      <el-button @click="emit('update:modelValue', false)">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        @click="emit('submit')"
-      >
-        确定创建
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="emit('update:modelValue', false)">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          @click="emit('submit')"
+        >
+          确定创建
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>

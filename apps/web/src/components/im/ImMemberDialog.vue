@@ -33,11 +33,11 @@ function memberRoleLabel(role: ConversationMemberView['role']): string {
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     :model-value="modelValue"
     title="群成员管理"
-    width="520px"
-    class="im-dialog"
+    size="560px"
+    class="admin-drawer im-dialog"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div class="im-dialog__intro">
@@ -118,5 +118,12 @@ function memberRoleLabel(role: ConversationMemberView['role']): string {
         </template>
       </el-table-column>
     </el-table>
-  </el-dialog>
+    <template #footer>
+      <div class="admin-drawer__footer">
+        <el-button @click="emit('update:modelValue', false)">
+          关闭
+        </el-button>
+      </div>
+    </template>
+  </el-drawer>
 </template>

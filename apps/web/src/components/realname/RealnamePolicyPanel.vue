@@ -2,6 +2,7 @@
 import type { RoleView } from '@app/contracts';
 import { PERMS } from '@app/contracts';
 import { Lock, Refresh, Setting } from '@element-plus/icons-vue';
+import AppPanel from '@/components/common/AppPanel.vue';
 
 defineProps<{
   roles: RoleView[];
@@ -18,16 +19,13 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section
+  <app-panel
     v-loading="loading"
-    class="realname-panel realname-policy"
+    title="实名策略"
+    eyebrow="Policy"
   >
-    <div class="realname-panel__head">
-      <div>
-        <span class="realname-eyebrow">Policy</span>
-        <h2>实名策略</h2>
-      </div>
-      <div class="realname-panel__actions">
+    <template #actions>
+      <div class="admin-actions">
         <el-button
           :icon="Refresh"
           @click="emit('refresh')"
@@ -44,7 +42,7 @@ const emit = defineEmits<{
           保存策略
         </el-button>
       </div>
-    </div>
+    </template>
 
     <div class="realname-policy__body">
       <div class="realname-policy__intro">
@@ -78,5 +76,5 @@ const emit = defineEmits<{
         description="暂无可配置的角色"
       />
     </div>
-  </section>
+  </app-panel>
 </template>
