@@ -9,7 +9,7 @@
 .realname-stat {
   border: 1px solid #e5e7eb;
   background: #ffffff;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
 }
 
 .realname-hero {
@@ -22,8 +22,11 @@
   overflow: hidden;
   color: #f8fafc;
   border: 0;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(34, 197, 94, 0.24), transparent 28%),
+    radial-gradient(circle at 86% 68%, rgba(251, 191, 36, 0.22), transparent 30%),
+    linear-gradient(135deg, #111827, #1e3a3a 58%, #14532d);
 }
 
 .realname-hero::before {
@@ -31,7 +34,9 @@
   inset: 0;
   pointer-events: none;
   content: '';
-  background-image: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 36px 36px;
 }
 
@@ -64,7 +69,7 @@
 
 .realname-hero h1 {
   margin: 0;
-  font-size: 22px;
+  font-size: 38px;
   line-height: 1.12;
   letter-spacing: 0;
 }
@@ -91,7 +96,7 @@
 .realname-orbit__rail {
   position: absolute;
   height: 1px;
-  background: var(--color-border);
+  background: linear-gradient(90deg, transparent, rgba(254, 240, 138, 0.72), transparent);
   transform-origin: left center;
 }
 
@@ -124,9 +129,9 @@
   width: 78px;
   height: 78px;
   color: #0f172a;
-  font-size: 24px;
-  border-radius: var(--radius-lg);
-  background: var(--color-primary);
+  font-size: 32px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #f8fafc, #86efac);
   box-shadow: 0 24px 54px rgba(34, 197, 94, 0.3);
   place-items: center;
 }
@@ -138,7 +143,7 @@
   height: 36px;
   color: #0f172a;
   border: 4px solid rgba(248, 250, 252, 0.92);
-  border-radius: var(--radius);
+  border-radius: 14px;
   background: #fbbf24;
   box-shadow: 0 0 22px rgba(251, 191, 36, 0.5);
   place-items: center;
@@ -152,8 +157,8 @@
 .realname-node-b {
   right: 18px;
   bottom: 18px;
-  background: #2563eb;
-  box-shadow: 0 0 22px rgba(37, 99, 235, 0.48);
+  background: #2dd4bf;
+  box-shadow: 0 0 22px rgba(45, 212, 191, 0.48);
 }
 
 .realname-stats {
@@ -166,7 +171,7 @@
   min-width: 0;
   padding: 18px;
   overflow: hidden;
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
 }
 
 .realname-stat::before {
@@ -176,19 +181,19 @@
   width: 100%;
   height: 4px;
   content: '';
-  background: var(--color-primary);
+  background: linear-gradient(90deg, #22c55e, #f59e0b);
 }
 
 .realname-stat:nth-child(2)::before {
-  background: var(--color-primary);
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
 }
 
 .realname-stat:nth-child(3)::before {
-  background: var(--color-primary);
+  background: linear-gradient(90deg, #14b8a6, #22c55e);
 }
 
 .realname-stat:nth-child(4)::before {
-  background: var(--color-primary);
+  background: linear-gradient(90deg, #38bdf8, #6366f1);
 }
 
 .realname-stat span,
@@ -220,7 +225,7 @@
   margin-top: 10px;
   overflow: hidden;
   color: #111827;
-  font-size: 24px;
+  font-size: 30px;
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -237,7 +242,7 @@
 .realname-panel {
   min-width: 0;
   padding: 20px;
-  border-radius: var(--radius-lg);
+  border-radius: 18px;
 }
 
 .realname-panel__head,
@@ -258,7 +263,7 @@
 }
 
 .realname-panel__head .realname-eyebrow {
-  color: #1d4ed8;
+  color: #0f766e;
 }
 
 .realname-panel__head h2 {
@@ -292,10 +297,10 @@
   flex: 0 0 auto;
   width: 42px;
   height: 42px;
-  color: #1d4ed8;
+  color: #0f766e;
   font-size: 18px;
-  border-radius: var(--radius);
-  background: #eff4ff;
+  border-radius: 14px;
+  background: #ccfbf1;
   place-items: center;
 }
 
@@ -331,7 +336,7 @@
   width: 46px;
   height: 46px;
   border: 1px solid #e2e8f0;
-  border-radius: var(--radius);
+  border-radius: 12px;
   background: #f8fafc;
 }
 
@@ -364,7 +369,7 @@
   gap: 12px;
   padding: 14px;
   border: 1px solid #dbeafe;
-  border-radius: var(--radius);
+  border-radius: 14px;
   background: #eff6ff;
 }
 
@@ -375,7 +380,7 @@
   height: 40px;
   color: #1d4ed8;
   font-size: 18px;
-  border-radius: var(--radius);
+  border-radius: 14px;
   background: #dbeafe;
   place-items: center;
 }
@@ -403,13 +408,13 @@
   padding: 12px;
   margin: 0;
   border: 1px solid #e2e8f0;
-  border-radius: var(--radius);
+  border-radius: 14px;
   background: #f8fafc;
 }
 
 .realname-role:hover {
-  border-color: #2563eb;
-  background: #eff4ff;
+  border-color: #14b8a6;
+  background: #f0fdfa;
 }
 
 .realname-role .el-checkbox__label {
@@ -430,15 +435,3 @@
   color: #111827;
   font-weight: 800;
 }
-
-/* 简约企业级 hero 覆盖 */
-.realname-hero {
-  grid-template-columns: 1fr;
-  min-height: 0;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-.realname-hero__visual { display: none; }
-.realname-eyebrow { display: none; }
-.realname-hero h1 { font-size: 22px; font-weight: 600; color: var(--color-text); }
-.realname-hero p { margin-top: 8px; color: var(--color-text-muted); }

@@ -132,6 +132,7 @@ async function smsSubmit(): Promise<void> {
           <div class="form-icon">
             <el-icon><Platform /></el-icon>
           </div>
+          <p>统一身份入口</p>
           <h2>{{ tab === 'sms' ? '验证码登录' : mode === 'login' ? '欢迎回来' : '创建账号' }}</h2>
           <span>
             {{

@@ -22,7 +22,7 @@
   .config-hero,
   .config-panel,
   .config-stat {
-    border-radius: var(--radius);
+    border-radius: 14px;
   }
 
   .config-hero,
@@ -31,7 +31,7 @@
   }
 
   .config-hero h1 {
-    font-size: 24px;
+    font-size: 30px;
   }
 
   .config-panel__head {

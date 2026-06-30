@@ -9,7 +9,7 @@
 .tenant-stat {
   border: 1px solid #e5e7eb;
   background: #ffffff;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
 }
 
 .tenant-hero {
@@ -22,8 +22,11 @@
   overflow: hidden;
   color: #f8fafc;
   border: 0;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(45, 212, 191, 0.34), transparent 28%),
+    radial-gradient(circle at 86% 70%, rgba(251, 191, 36, 0.2), transparent 28%),
+    linear-gradient(135deg, #111827, #0f172a 58%, #164e63);
 }
 
 .tenant-hero::before {
@@ -31,7 +34,9 @@
   inset: 0;
   pointer-events: none;
   content: '';
-  background-image: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 36px 36px;
 }
 
@@ -54,7 +59,7 @@
 .tenant-eyebrow {
   display: inline-flex;
   margin-bottom: 8px;
-  color: #93b4f5;
+  color: #5eead4;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0;
@@ -63,7 +68,7 @@
 
 .tenant-hero h1 {
   margin: 0;
-  font-size: 22px;
+  font-size: 38px;
   line-height: 1.12;
   letter-spacing: 0;
 }
@@ -91,7 +96,7 @@
   position: absolute;
   display: grid;
   place-items: center;
-  border-radius: var(--radius-lg);
+  border-radius: 18px;
 }
 
 .node-primary {
@@ -100,9 +105,9 @@
   width: 76px;
   height: 76px;
   color: #0f172a;
-  font-size: 24px;
-  background: var(--color-primary);
-  box-shadow: 0 24px 54px rgba(37, 99, 235, 0.32);
+  font-size: 30px;
+  background: linear-gradient(135deg, #f8fafc, #5eead4);
+  box-shadow: 0 24px 54px rgba(20, 184, 166, 0.32);
 }
 
 .node-a,
@@ -123,21 +128,21 @@
 .node-b {
   right: 16px;
   top: 22px;
-  background: #2563eb;
-  box-shadow: 0 0 22px rgba(37, 99, 235, 0.55);
+  background: #2dd4bf;
+  box-shadow: 0 0 22px rgba(45, 212, 191, 0.55);
 }
 
 .node-c {
   right: 42px;
   bottom: 10px;
-  background: #2563eb;
-  box-shadow: 0 0 22px rgba(37, 99, 235, 0.48);
+  background: #38bdf8;
+  box-shadow: 0 0 22px rgba(56, 189, 248, 0.48);
 }
 
 .tenant-network__line {
   position: absolute;
   height: 1px;
-  background: var(--color-border);
+  background: linear-gradient(90deg, transparent, rgba(204, 251, 241, 0.72), transparent);
   transform-origin: left center;
 }
 
@@ -165,7 +170,7 @@
   min-width: 0;
   padding: 18px;
   overflow: hidden;
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
 }
 
 .tenant-stat::before {
@@ -175,7 +180,7 @@
   width: 100%;
   height: 4px;
   content: '';
-  background: var(--color-primary);
+  background: linear-gradient(90deg, #14b8a6, #f59e0b);
 }
 
 .tenant-stat span,
@@ -198,7 +203,7 @@
   display: block;
   margin-top: 10px;
   color: #111827;
-  font-size: 24px;
+  font-size: 30px;
   line-height: 1.15;
 }
 
@@ -210,7 +215,7 @@
 .tenant-panel {
   min-width: 0;
   padding: 20px;
-  border-radius: var(--radius-lg);
+  border-radius: 18px;
 }
 
 .tenant-panel__head,
@@ -243,7 +248,7 @@
   margin-bottom: 16px;
   padding: 12px;
   border: 1px solid #e2e8f0;
-  border-radius: var(--radius);
+  border-radius: 14px;
   background: #f8fafc;
 }
 
@@ -276,11 +281,11 @@
   place-items: center;
   width: 42px;
   height: 42px;
-  color: #1d4ed8;
+  color: #0f766e;
   font-size: 13px;
   font-weight: 900;
-  border-radius: var(--radius);
-  background: #eff4ff;
+  border-radius: 12px;
+  background: #ccfbf1;
 }
 
 .tenant-identity div {
@@ -338,7 +343,7 @@
 }
 
 .tenant-dialog .el-dialog {
-  border-radius: var(--radius-lg);
+  border-radius: 18px;
 }
 
 .tenant-dialog .el-dialog__header {
@@ -362,12 +367,12 @@
   gap: 8px;
   margin-bottom: 16px;
   padding: 12px;
-  color: #1d4ed8;
+  color: #0f766e;
   font-size: 13px;
   font-weight: 700;
-  border: 1px solid #93b4f5;
-  border-radius: var(--radius);
-  background: #eff4ff;
+  border: 1px solid #99f6e4;
+  border-radius: 12px;
+  background: #f0fdfa;
 }
 
 .tenant-dialog__intro.is-warning {
@@ -385,15 +390,3 @@
 .tenant-form__full {
   width: 100%;
 }
-
-/* 简约企业级 hero 覆盖 */
-.tenant-hero {
-  grid-template-columns: 1fr;
-  min-height: 0;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-.tenant-hero__visual { display: none; }
-.tenant-eyebrow { display: none; }
-.tenant-hero h1 { font-size: 22px; font-weight: 600; color: var(--color-text); }
-.tenant-hero p { margin-top: 8px; color: var(--color-text-muted); }

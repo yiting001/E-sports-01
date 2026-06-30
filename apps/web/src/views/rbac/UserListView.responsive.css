@@ -22,7 +22,7 @@
   .user-hero,
   .user-panel,
   .user-stat {
-    border-radius: var(--radius);
+    border-radius: 14px;
   }
 
   .user-hero,
@@ -31,7 +31,7 @@
   }
 
   .user-hero h1 {
-    font-size: 24px;
+    font-size: 30px;
   }
 
   .user-panel__head {

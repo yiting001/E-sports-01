@@ -20,7 +20,7 @@
   .tenant-hero,
   .tenant-panel,
   .tenant-stat {
-    border-radius: var(--radius);
+    border-radius: 14px;
   }
 
   .tenant-hero,
@@ -29,7 +29,7 @@
   }
 
   .tenant-hero h1 {
-    font-size: 24px;
+    font-size: 30px;
   }
 
   .tenant-panel__head,

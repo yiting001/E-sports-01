@@ -1,55 +1,3 @@
-:root {
-  /* 中性面板 */
-  --color-bg: #f4f5f7;
-  --color-surface: #ffffff;
-  --color-surface-2: #f9fafb;
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
-
-  /* 文本 */
-  --color-text: #1f2937;
-  --color-text-secondary: #4b5563;
-  --color-text-muted: #6b7280;
-
-  /* 语义色（单一企业主色 + 状态色） */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-soft: #eff4ff;
-  --color-success: #16a34a;
-  --color-success-soft: #ecfdf3;
-  --color-warning: #d97706;
-  --color-warning-soft: #fffbeb;
-  --color-danger: #dc2626;
-  --color-danger-soft: #fef2f2;
-
-  /* 圆角（收敛为小圆角） */
-  --radius-sm: 4px;
-  --radius: 6px;
-  --radius-lg: 8px;
-
-  /* 极轻阴影 */
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
-
-  /* 侧边栏（深色，纯色平面） */
-  --sidebar-bg: #1f2937;
-  --sidebar-text: #cbd5e1;
-  --sidebar-text-strong: #ffffff;
-  --sidebar-hover: rgba(255, 255, 255, 0.08);
-  --sidebar-active: #2563eb;
-
-  /* 覆盖 Element Plus 主题，使其与企业主色一致 */
-  --el-color-primary: #2563eb;
-  --el-color-primary-light-3: #5b8def;
-  --el-color-primary-light-5: #93b4f5;
-  --el-color-primary-light-7: #c2d4fa;
-  --el-color-primary-light-8: #d9e4fc;
-  --el-color-primary-light-9: #eff4ff;
-  --el-color-primary-dark-2: #1d4ed8;
-  --el-border-radius-base: 6px;
-  --el-border-radius-small: 4px;
-}
-
 * {
   box-sizing: border-box;
 }
@@ -62,8 +10,8 @@ body,
 }
 
 body {
-  color: var(--color-text);
-  background: var(--color-bg);
+  color: #111827;
+  background: #f5f7fb;
   font-family:
     Inter,
     ui-sans-serif,

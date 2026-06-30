@@ -140,6 +140,7 @@ onMounted(() => {
   <section class="wallet-admin">
     <header class="wallet-admin__head">
       <div>
+        <span class="wallet-admin__eyebrow">Wallet Management</span>
         <h1>钱包管理</h1>
         <p>分页查看所有用户钱包与余额，查看任意用户收支明细，并可人工调整余额（充/扣，自动记流水）。</p>
       </div>
@@ -413,6 +414,14 @@ onMounted(() => {
   justify-content: space-between;
 }
 
+.wallet-admin__eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #14b8a6;
+  text-transform: uppercase;
+}
+
 .wallet-admin__head h1 {
   margin: 6px 0 4px;
   font-size: 22px;
@@ -446,7 +455,7 @@ onMounted(() => {
 
 .wallet-admin__balance {
   font-weight: 800;
-  color: #1d4ed8;
+  color: #0f766e;
 }
 
 .wallet-admin__pager {

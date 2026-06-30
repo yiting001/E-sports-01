@@ -30,7 +30,7 @@
   .realname-mine-header,
   .realname-mine-panel {
     padding: 16px;
-    border-radius: var(--radius);
+    border-radius: 12px;
   }
 
   .realname-form-tip {
