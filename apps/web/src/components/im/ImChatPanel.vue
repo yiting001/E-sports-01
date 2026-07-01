@@ -42,8 +42,15 @@ const emit = defineEmits<{
 
 const listRef = ref<HTMLElement | null>(null);
 
+function waitForFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+}
+
 async function scrollToBottom(): Promise<void> {
   await nextTick();
+  await waitForFrame();
   if (listRef.value) {
     listRef.value.scrollTop = listRef.value.scrollHeight;
   }
@@ -148,12 +155,14 @@ watch(
                   :src="message.content"
                   class="im-media"
                   alt="聊天图片"
+                  @load="scrollToBottom"
                 >
                 <video
                   v-else
                   :src="message.content"
                   controls
                   class="im-media"
+                  @loadedmetadata="scrollToBottom"
                 />
               </div>
             </div>

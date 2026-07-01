@@ -97,6 +97,7 @@
 
 .service-message-stage {
   min-height: 0;
+  overflow: hidden;
 }
 
 .service-messages {

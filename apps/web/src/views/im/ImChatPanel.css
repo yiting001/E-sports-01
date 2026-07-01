@@ -73,6 +73,7 @@
 
 .im-message-stage {
   min-height: 0;
+  overflow: hidden;
   background: var(--app-muted-bg);
 }
 

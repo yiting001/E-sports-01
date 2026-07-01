@@ -40,8 +40,15 @@ const activeMessageCount = computed(
   () => messages.value.filter((message) => !isSystem(message)).length,
 );
 
+function waitForFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+}
+
 async function scrollToBottom(): Promise<void> {
   await nextTick();
+  await waitForFrame();
   if (listRef.value) {
     listRef.value.scrollTop = listRef.value.scrollHeight;
   }
@@ -282,12 +289,14 @@ onBeforeUnmount(() => im.disconnect());
                       :src="message.content"
                       class="service-media"
                       alt="客服会话图片"
+                      @load="scrollToBottom"
                     >
                     <video
                       v-else
                       :src="message.content"
                       controls
                       class="service-media"
+                      @loadedmetadata="scrollToBottom"
                     />
                   </div>
                 </div>

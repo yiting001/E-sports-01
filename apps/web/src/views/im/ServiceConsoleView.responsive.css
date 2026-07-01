@@ -6,24 +6,25 @@
 
 @media (max-width: 900px) {
   .service-console-page {
-    height: auto;
+    height: calc(100vh - 92px);
     min-height: 0;
   }
 
   .service-workspace {
     grid-template-columns: 1fr;
-    height: auto;
-    min-height: auto;
+    grid-template-rows: minmax(180px, 34%) minmax(0, 1fr);
+    height: 100%;
+    min-height: 0;
   }
 
   .service-queue {
-    min-height: 360px;
+    min-height: 0;
     border-right: 0;
     border-bottom: 1px solid #dfe7ef;
   }
 
   .service-panel {
-    min-height: 560px;
+    min-height: 0;
   }
 
   .service-panel__head {
