@@ -83,6 +83,10 @@ function openEdit(row: NoticeView): void {
   dialogVisible.value = true;
 }
 
+function updateForm(value: UpsertNoticePayload): void {
+  Object.assign(form, value);
+}
+
 async function submit(): Promise<void> {
   if (!form.title.trim()) {
     ElMessage.warning('标题必填');
@@ -236,9 +240,10 @@ onMounted(load);
 
     <notice-form-dialog
       v-model="dialogVisible"
-      v-model:form="form"
+      :form="form"
       :is-edit="Boolean(editingId)"
       :submitting="submitting"
+      @update:form="updateForm"
       @submit="submit"
     />
   </section>
