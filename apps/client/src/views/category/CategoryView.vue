@@ -18,17 +18,15 @@ const activeTab = ref(0);
 const categories = ref<CategoryPublicView[]>([]);
 const products = ref<ProductPublicView[]>([]);
 
-/** 综合：按分类聚合商品为分组网格，空分类不展示 */
+/** 综合：按分类聚合商品为分组网格，展示全部启用分类（暂无商品的分类也保留占位） */
 const groups = computed<CategoryGroup[]>(() =>
-  categories.value
-    .map((category) => ({
-      id: category.id,
-      title: category.name,
-      items: products.value
-        .filter((p) => p.categoryId === category.id)
-        .map((p) => ({ id: p.id, cover: p.coverTitle, name: p.title })),
-    }))
-    .filter((group) => group.items.length > 0),
+  categories.value.map((category) => ({
+    id: category.id,
+    title: category.name,
+    items: products.value
+      .filter((p) => p.categoryId === category.id)
+      .map((p) => ({ id: p.id, cover: p.coverTitle, name: p.title })),
+  })),
 );
 
 /** 排行榜：按销量降序，热度以榜首为 100 基准 */
@@ -74,7 +72,7 @@ onMounted(async () => {
         v-if="!groups.length"
         class="empty"
       >
-        暂无上架商品
+        暂无分类
       </p>
     </template>
 

@@ -15,7 +15,10 @@ const toast = useToast();
     <h2 class="sec-title">
       {{ group.title }}
     </h2>
-    <div class="grid">
+    <div
+      v-if="group.items.length"
+      class="grid"
+    >
       <button
         v-for="item in group.items"
         :key="item.id"
@@ -28,6 +31,12 @@ const toast = useToast();
         <span class="name">{{ item.name }}</span>
       </button>
     </div>
+    <p
+      v-else
+      class="group-empty"
+    >
+      该分类暂无上架商品
+    </p>
   </section>
 </template>
 
@@ -41,6 +50,12 @@ const toast = useToast();
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px 10px;
+}
+
+.group-empty {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--c-text-muted);
 }
 
 .item {
