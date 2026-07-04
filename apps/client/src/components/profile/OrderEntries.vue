@@ -1,12 +1,13 @@
 <script setup lang="ts">
 /**
  * 我的订单卡：切角金色角标 + 五个订单状态入口 + 「全部」跳转。
+ * 各入口统一进入我的订单页（状态筛选后续迭代支持）。
  */
+import { useRouter } from 'vue-router';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { ORDER_ENTRIES } from '@/config/profile.mock';
-import { useToast } from '@/composables/use-toast';
 
-const toast = useToast();
+const router = useRouter();
 </script>
 
 <template>
@@ -14,7 +15,7 @@ const toast = useToast();
     <span class="ribbon">我的订单</span>
     <button
       class="all"
-      @click="toast.show('全部订单即将上线')"
+      @click="router.push('/orders')"
     >
       全部 ›
     </button>
@@ -23,7 +24,7 @@ const toast = useToast();
         v-for="entry in ORDER_ENTRIES"
         :key="entry.id"
         class="entry"
-        @click="toast.show(`「${entry.label}」订单列表即将上线`)"
+        @click="router.push('/orders')"
       >
         <AppIcon
           :name="entry.icon"

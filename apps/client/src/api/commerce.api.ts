@@ -14,6 +14,10 @@ export const commerceApi = {
   listCategories(): Promise<CategoryPublicView[]> {
     return http.get('/commerce/public/categories');
   },
+  /** 单个上架商品详情（详情页/下单用） */
+  getProduct(id: string): Promise<ProductPublicView> {
+    return http.get(`/commerce/public/products/${id}`);
+  },
   /** 分页查询上架商品，可按分类过滤 */
   listProducts(params: {
     page: number;

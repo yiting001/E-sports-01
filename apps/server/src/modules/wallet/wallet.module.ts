@@ -129,5 +129,7 @@ import { WalletAdminAdjustController } from './interfaces/controllers/wallet.adm
     ListUserTransactionsUseCase,
     AdjustWalletUseCase,
   ],
+  // 导出支付渠道解析器，供订单等其他收款场景复用同一套支付宝/微信驱动
+  exports: [PaymentResolver],
 })
 export class WalletModule {}

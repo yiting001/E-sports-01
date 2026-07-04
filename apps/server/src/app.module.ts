@@ -13,6 +13,7 @@ import { RealnameModule } from './modules/realname/realname.module';
 import { CommerceModule } from './modules/commerce/commerce.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { NoticeModule } from './modules/notice/notice.module';
+import { OrderModule } from './modules/order/order.module';
 
 /**
  * 应用根模块。
@@ -34,6 +35,7 @@ import { NoticeModule } from './modules/notice/notice.module';
     CommerceModule,
     FeedbackModule,
     NoticeModule,
+    OrderModule,
   ],
 })
 export class AppModule {}
