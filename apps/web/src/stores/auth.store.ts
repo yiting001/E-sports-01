@@ -3,7 +3,6 @@ import type {
   LoginPayload,
   RegisterPayload,
   SmsLoginPayload,
-  SmsRegisterPayload,
 } from '@app/contracts';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
@@ -45,12 +44,6 @@ export const useAuthStore = defineStore('auth', () => {
     await loadProfile();
   }
 
-  async function smsRegister(payload: SmsRegisterPayload): Promise<void> {
-    const pair = await authApi.smsRegister(payload);
-    tokenStorage.save(pair);
-    await loadProfile();
-  }
-
   async function loadProfile(): Promise<AuthProfile> {
     const data = await authApi.profile();
     profile.value = data;
@@ -73,7 +66,6 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     smsLogin,
-    smsRegister,
     loadProfile,
     logout,
   };
