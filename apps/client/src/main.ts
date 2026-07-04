@@ -1,16 +1,13 @@
-import { createApp } from 'vue';
 import { createPinia } from 'pinia';
-import ElementPlus from 'element-plus';
-import zhCn from 'element-plus/es/locale/lang/zh-cn';
-import 'element-plus/dist/index.css';
+import { createApp } from 'vue';
 import App from './App.vue';
-import './global.css';
 import { router } from './router';
+import './styles/base.css';
 
+/**
+ * C 端商城前端入口：装配 Pinia 与路由后挂载根组件。
+ */
 const app = createApp(App);
-
 app.use(createPinia());
 app.use(router);
-app.use(ElementPlus, { locale: zhCn });
-
 app.mount('#app');
