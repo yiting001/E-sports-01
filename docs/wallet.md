@@ -236,3 +236,11 @@ sequenceDiagram
 - 充值/提现按钮以 `v-permission` 绑定 `wallet:recharge` / `wallet:withdraw`，无权时隐藏。
 - `stores/wallet.store.ts`：打开页面并发拉取钱包/统计/首页流水；收支成功后 `refresh`。
 - `views/wallet/WalletView.vue`：余额卡片、统计卡片、明细表格分页；充值弹窗（金额+渠道，下单后用 `qrcode` 渲染二维码，支付完成点「我已支付」刷新）；提现弹窗（金额+支付宝账号+姓名）。
+
+## C 端（apps/client）
+
+- `api/wallet.api.ts`：直连既有接口 `/wallet/mine`、`/wallet/transactions`、`/wallet/recharge`、`/wallet/withdrawal`。
+- `views/wallet/WalletView.vue`（路由 `/wallet`，需登录）：余额卡 + 充值/提现入口 + 分页流水明细（类型/方向/变更后余额）。
+- `components/wallet/RechargeDialog.vue`：金额（元）+ 支付宝/微信 → 生成扫码二维码，轮询余额高于基线即视为入账并自动刷新。
+- `components/wallet/WithdrawDialog.vue`：金额 + 支付宝账号/实名 → 发起提现，失败展示渠道原因。
+- 个人中心 `BalanceCards` 余额卡展示真实余额，点击进钱包页。
