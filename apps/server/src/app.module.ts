@@ -10,6 +10,7 @@ import { ImModule } from './modules/im/im.module';
 import { ObservabilityModule } from './modules/observability/observability.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { RealnameModule } from './modules/realname/realname.module';
+import { CommerceModule } from './modules/commerce/commerce.module';
 
 /**
  * 应用根模块。
@@ -28,6 +29,7 @@ import { RealnameModule } from './modules/realname/realname.module';
     ObservabilityModule,
     WalletModule,
     RealnameModule,
+    CommerceModule,
   ],
 })
 export class AppModule {}

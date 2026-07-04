@@ -47,6 +47,15 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.realname.list]: '实名-审核列表',
   [PERMS.realname.review]: '实名-审核',
   [PERMS.realname.policy]: '实名-策略配置',
+  [PERMS.category.list]: '分类-查询',
+  [PERMS.category.create]: '分类-创建',
+  [PERMS.category.update]: '分类-更新',
+  [PERMS.category.remove]: '分类-删除',
+  [PERMS.product.list]: '商品-查询',
+  [PERMS.product.create]: '商品-创建',
+  [PERMS.product.update]: '商品-更新',
+  [PERMS.product.remove]: '商品-删除',
+  [PERMS.product.publish]: '商品-上下架',
 };
 
 /**

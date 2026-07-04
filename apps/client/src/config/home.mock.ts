@@ -1,27 +1,8 @@
 /**
- * 首页 UI 演示数据（UI 先行阶段的占位数据，后续由后端接口替换）。
- * 集中在 config 目录统一维护，组件内禁止散落写死业务文案。
+ * 首页静态 UI 文案（横幅、公告、快捷入口）。
+ * 这些是运营展示位文案，非业务数据；商品与分类已改由后端公开接口下发。
  */
 import type { IconName } from './icon-paths';
-
-/** 商品卡片（陪玩单） */
-export interface ProductItem {
-  id: string;
-  /** 封面主标语（渲染在暗绿科技风封面上） */
-  coverTitle: string;
-  /** 封面副标语 */
-  coverSub: string;
-  /** 商品名 */
-  title: string;
-  /** 卖点描述 */
-  desc: string;
-  /** 现价（分） */
-  priceFen: number;
-  /** 划线原价（分） */
-  originPriceFen: number;
-  /** 已售数量 */
-  sold: number;
-}
 
 /** 快捷入口 */
 export interface QuickEntry {
@@ -53,59 +34,4 @@ export const QUICK_ENTRIES: QuickEntry[] = [
   { id: 'activity', icon: 'gift', banner: '老板消费活动', label: '老板消费活动入口' },
   { id: 'complaint', icon: 'shield', banner: '投诉客服/打手', label: '投诉客服/打手入口' },
   { id: 'app', icon: 'download', banner: '官方APP下载', label: '怪兽官方APP下载' },
-];
-
-/** 商品分类签 */
-export const CATEGORY_CHIPS = [
-  '电竞导师单',
-  '趣味单',
-  '清图单',
-  '单局带出单',
-  '出红单',
-  '大红单',
-  '护航单',
-];
-
-/** 首页商品列表 */
-export const HOME_PRODUCTS: ProductItem[] = [
-  {
-    id: 'p1',
-    coverTitle: '绝密保底500-1000万',
-    coverSub: '每人仅此一单',
-    title: '新人特购单',
-    desc: '新人特购单每人限购一单 保底500w~1000w 怪兽性价比之王',
-    priceFen: 4880,
-    originPriceFen: 12800,
-    sold: 200062,
-  },
-  {
-    id: 'p2',
-    coverTitle: '绝密体验单',
-    coverSub: '保底500W-1000W',
-    title: '绝密体验单',
-    desc: '打绝密局 保底最低500万~1000万最高保底无上限！绝对超值',
-    priceFen: 5900,
-    originPriceFen: 18888,
-    sold: 182447,
-  },
-  {
-    id: 'p3',
-    coverTitle: '怪兽卷死全网单',
-    coverSub: '性价比天花板',
-    title: '怪兽卷死全网单',
-    desc: '全网最低价 高强度带飞 不满意随时找客服售后',
-    priceFen: 6800,
-    originPriceFen: 16800,
-    sold: 143520,
-  },
-  {
-    id: 'p4',
-    coverTitle: '满金满红单',
-    coverSub: '限时特惠',
-    title: '满金满红单【限时单】',
-    desc: '满金色装备满红色收益 单局不达标直接补单',
-    priceFen: 8800,
-    originPriceFen: 26800,
-    sold: 98210,
-  },
 ];
