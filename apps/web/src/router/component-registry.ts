@@ -23,6 +23,7 @@ const COMPONENT_REGISTRY: Record<string, ComponentLoader> = {
   'im:service:menu': () => import('@/views/im/ServiceConsoleView.vue'),
   'observability:log:menu': () => import('@/views/observability/LogView.vue'),
   'realname:menu': () => import('@/views/realname/RealnameAdminView.vue'),
+  'feedback:menu': () => import('@/views/feedback/FeedbackAdminView.vue'),
 };
 
 /** 按菜单 code 解析其页面组件加载器；未登记返回 undefined（该菜单不可路由） */

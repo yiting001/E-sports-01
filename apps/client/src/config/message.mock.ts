@@ -1,5 +1,5 @@
 /**
- * 消息页 UI 演示数据（UI 先行阶段的占位数据，后续接入 IM 模块替换）。
+ * 消息页「官方消息」固定入口配置（会话消息已接入 IM 会话列表）。
  */
 import type { IconName } from './icon-paths';
 
@@ -36,5 +36,3 @@ export const OFFICIAL_MESSAGES: MessageEntry[] = [
   },
 ];
 
-/** 会话消息页签内容（暂无会话时展示空态） */
-export const CHAT_MESSAGES: MessageEntry[] = [];

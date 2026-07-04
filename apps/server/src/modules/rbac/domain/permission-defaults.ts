@@ -47,6 +47,8 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.realname.list]: '实名-审核列表',
   [PERMS.realname.review]: '实名-审核',
   [PERMS.realname.policy]: '实名-策略配置',
+  [PERMS.feedback.list]: '反馈-查询',
+  [PERMS.feedback.handle]: '反馈-处理',
   [PERMS.category.list]: '分类-查询',
   [PERMS.category.create]: '分类-创建',
   [PERMS.category.update]: '分类-更新',
