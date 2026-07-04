@@ -36,12 +36,38 @@ import { APP_VERSION_TEXT } from '@/config/profile.mock';
   padding: 8px 0 4px;
 }
 
-/* PC 端限宽居中，保持移动端排版观感 */
 @media (min-width: 768px) {
   .profile {
     max-width: 640px;
     margin: 0 auto;
     width: 100%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .profile {
+    max-width: var(--page-max-width);
+    display: grid;
+    grid-template-columns: 380px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .profile > :deep(.header),
+  .profile > :deep(.cards) {
+    grid-column: 1;
+  }
+
+  .profile > :deep(.orders),
+  .profile > :deep(.features) {
+    grid-column: 2;
+  }
+
+  .profile > :deep(.orders) {
+    grid-row: 1;
+  }
+
+  .version {
+    grid-column: 1 / -1;
   }
 }
 </style>

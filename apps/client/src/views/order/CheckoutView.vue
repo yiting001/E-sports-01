@@ -17,6 +17,7 @@ import PayDialog from '@/components/order/PayDialog.vue';
 import { commerceApi } from '@/api/commerce.api';
 import { orderApi } from '@/api/order.api';
 import { useToast } from '@/composables/use-toast';
+import './CheckoutView.responsive.css';
 
 /** 支付方式选项（渠道 → 展示文案） */
 const PROVIDERS = [
@@ -269,6 +270,11 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.summary,
+.form {
+  flex-shrink: 0;
 }
 
 .thumb {
