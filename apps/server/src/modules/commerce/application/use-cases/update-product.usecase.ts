@@ -47,6 +47,9 @@ export class UpdateProductUseCase {
     if (payload.title !== undefined) {
       entity.title = payload.title;
     }
+    if (payload.cover !== undefined) {
+      entity.cover = payload.cover;
+    }
     if (payload.coverTitle !== undefined) {
       entity.coverTitle = payload.coverTitle;
     }

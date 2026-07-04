@@ -19,6 +19,10 @@ export class ProductEntity extends TenantScopedEntity {
   @Column({ length: 128 })
   title!: string;
 
+  /** 封面图片 URL；未设置为空串 */
+  @Column({ length: 512, default: '' })
+  cover!: string;
+
   /** 封面主标语 */
   @Column({ name: 'cover_title', length: 128, default: '' })
   coverTitle!: string;

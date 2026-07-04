@@ -72,4 +72,28 @@ export class UserDirectory {
     }));
     return [list, total];
   }
+
+  /**
+   * 分页查询「拥有指定角色码」的用户展示资料（可按关键字过滤）。
+   * 供商品「关联负责客服」等按角色圈定候选人的场景复用。
+   */
+  async paginateProfilesByRole(
+    roleCode: string,
+    skip: number,
+    take: number,
+    keyword?: string,
+  ): Promise<[UserProfileItem[], number]> {
+    const [rows, total] = await this.users.paginateByRole(
+      roleCode,
+      skip,
+      take,
+      keyword,
+    );
+    const list = rows.map((u) => ({
+      id: u.id,
+      username: u.username,
+      nickname: u.nickname,
+    }));
+    return [list, total];
+  }
 }

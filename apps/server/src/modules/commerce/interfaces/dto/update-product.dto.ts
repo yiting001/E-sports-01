@@ -22,6 +22,11 @@ export class UpdateProductDto implements UpdateProductPayload {
 
   @IsOptional()
   @IsString()
+  @Length(0, 512)
+  cover?: string;
+
+  @IsOptional()
+  @IsString()
   @Length(1, 128)
   coverTitle?: string;
 
@@ -32,7 +37,7 @@ export class UpdateProductDto implements UpdateProductPayload {
 
   @IsOptional()
   @IsString()
-  @Length(0, 2000)
+  @Length(0, 20000)
   description?: string;
 
   @IsOptional()

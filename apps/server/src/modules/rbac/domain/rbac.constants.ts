@@ -15,3 +15,9 @@ export const TENANT_ADMIN_ROLE = 'tenant_admin';
  * 短信注册的自助用户默认分配该角色，仅有登录后可见的基础能力，无任何管理权限。
  */
 export const MEMBER_ROLE = 'member';
+
+/**
+ * 客服角色码。
+ * 管理员在用户管理中为客服人员分配该角色；创建商品时「关联负责客服」的候选列表仅取该角色用户。
+ */
+export const SERVICE_ROLE = 'service';

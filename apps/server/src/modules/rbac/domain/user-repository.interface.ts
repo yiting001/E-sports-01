@@ -18,6 +18,13 @@ export interface UserRepository {
   /** 校验手机号是否已被其他用户绑定（excludeUserId 用于编辑时排除自身） */
   existsByPhone(phone: string, excludeUserId?: string, tenantId?: string): Promise<boolean>;
   paginate(skip: number, take: number, keyword?: string): Promise<[User[], number]>;
+  /** 分页查询「拥有指定角色码」的用户（含角色关系），可按用户名/昵称关键字过滤 */
+  paginateByRole(
+    roleCode: string,
+    skip: number,
+    take: number,
+    keyword?: string,
+  ): Promise<[User[], number]>;
   create(data: Partial<User>): User;
   save(user: User): Promise<User>;
   remove(id: string): Promise<void>;
