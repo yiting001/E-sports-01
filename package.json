@@ -10,9 +10,11 @@
   "scripts": {
     "dev:server": "pnpm --filter @app/server start:dev",
     "dev:web": "pnpm --filter @app/web dev",
+    "dev:client": "pnpm --filter @app/client dev",
     "build": "pnpm -r build",
     "build:server": "pnpm --filter @app/server build",
     "build:web": "pnpm --filter @app/web build",
+    "build:client": "pnpm --filter @app/client build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
   },
