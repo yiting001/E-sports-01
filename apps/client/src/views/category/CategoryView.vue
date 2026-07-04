@@ -23,6 +23,8 @@ const groups = computed<CategoryGroup[]>(() =>
   categories.value.map((category) => ({
     id: category.id,
     title: category.name,
+    icon: category.icon,
+    iconText: category.cover,
     items: products.value
       .filter((p) => p.categoryId === category.id)
       .map((p) => ({ id: p.id, cover: p.coverTitle, name: p.title })),

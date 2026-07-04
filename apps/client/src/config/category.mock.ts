@@ -16,6 +16,10 @@ export interface CategoryItem {
 export interface CategoryGroup {
   id: string;
   title: string;
+  /** 图标图片 URL（有则以图片图标展示，可空） */
+  icon: string;
+  /** 文字图标（无图标图片时展示，可空） */
+  iconText: string;
   items: CategoryItem[];
 }
 

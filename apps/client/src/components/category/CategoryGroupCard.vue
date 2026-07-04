@@ -13,6 +13,16 @@ const toast = useToast();
 <template>
   <section class="group card">
     <h2 class="sec-title">
+      <img
+        v-if="group.icon"
+        :src="group.icon"
+        :alt="group.title"
+        class="cat-icon"
+      >
+      <span
+        v-else-if="group.iconText"
+        class="cat-icon-text"
+      >{{ group.iconText }}</span>
       {{ group.title }}
     </h2>
     <div
@@ -56,6 +66,24 @@ const toast = useToast();
   margin-top: 12px;
   font-size: 12px;
   color: var(--c-text-muted);
+}
+
+.cat-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
+.cat-icon-text {
+  padding: 1px 6px;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--c-neon);
+  border: 1px solid rgba(61, 255, 155, 0.45);
+  border-radius: 4px;
 }
 
 .item {

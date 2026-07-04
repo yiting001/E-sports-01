@@ -21,6 +21,7 @@ export class CreateCategoryUseCase {
     const entity = this.repo.create({
       name: payload.name,
       cover: payload.cover ?? '',
+      icon: payload.icon ?? '',
       sort: payload.sort ?? 0,
       enabled: payload.enabled ?? true,
     });

@@ -37,6 +37,9 @@ export class UpdateCategoryUseCase {
     if (payload.cover !== undefined) {
       entity.cover = payload.cover;
     }
+    if (payload.icon !== undefined) {
+      entity.icon = payload.icon;
+    }
     if (payload.sort !== undefined) {
       entity.sort = payload.sort;
     }
