@@ -62,5 +62,5 @@ flowchart LR
 
 本次同步打通了 C 端客服入口（不新增后端能力，全部复用既有 IM 模块）：
 
-- 「我的」页 **联系客服** 卡 → 在线客服聊天页 `/service`（既有 `ServiceChatView`，WebSocket `/im` 命名空间）。
+- 「我的」页 **联系客服** 卡 → 在线客服聊天页 `/service`（既有 `ServiceChatView`，WebSocket `/im` 命名空间），支持发送文字/图片/视频（媒体经 `POST /upload/self` 自助上传拿 URL 再发消息）。
 - **消息页「会话消息」** 页签接入真实 IM 会话列表（`GET /api/im/conversations`），展示最近消息摘要 / 时间 / 未读数，点击进入客服聊天。
