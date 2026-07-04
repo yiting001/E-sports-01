@@ -17,6 +17,12 @@ export const router = createRouter({
       meta: { title: '登录' },
     },
     {
+      path: '/service',
+      name: 'service',
+      component: () => import('@/views/message/ServiceChatView.vue'),
+      meta: { title: '在线客服', requiresAuth: true },
+    },
+    {
       path: '/',
       component: MainLayout,
       children: [

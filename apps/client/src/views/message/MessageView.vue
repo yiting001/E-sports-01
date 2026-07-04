@@ -4,18 +4,34 @@
  * 会话消息 UI 阶段为空态，后续接入 IM 模块的会话列表。
  */
 import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import AppIcon from '@/components/common/AppIcon.vue';
 import SegmentTabs from '@/components/common/SegmentTabs.vue';
-import { CHAT_MESSAGES, OFFICIAL_MESSAGES } from '@/config/message.mock';
+import {
+  CHAT_MESSAGES,
+  OFFICIAL_MESSAGES,
+  SERVICE_ENTRY_ID,
+  type MessageEntry,
+} from '@/config/message.mock';
 import { useToast } from '@/composables/use-toast';
 
 /** 页签文案（下标与 activeTab 对应） */
 const TABS = ['官方消息', '会话消息'];
 const activeTab = ref(0);
 const toast = useToast();
+const router = useRouter();
 
 /** 当前页签下的消息列表 */
 const messages = computed(() => (activeTab.value === 0 ? OFFICIAL_MESSAGES : CHAT_MESSAGES));
+
+/** 点击消息入口：客服入口进入在线客服聊天，其余暂为占位提示 */
+function openEntry(entry: MessageEntry): void {
+  if (entry.id === SERVICE_ENTRY_ID) {
+    router.push({ name: 'service' });
+    return;
+  }
+  toast.show(`「${entry.title}」会话即将上线`);
+}
 </script>
 
 <template>
@@ -33,7 +49,7 @@ const messages = computed(() => (activeTab.value === 0 ? OFFICIAL_MESSAGES : CHA
         v-for="entry in messages"
         :key="entry.id"
         class="entry"
-        @click="toast.show(`「${entry.title}」会话即将上线`)"
+        @click="openEntry(entry)"
       >
         <span class="avatar">
           <AppIcon
