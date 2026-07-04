@@ -1,56 +1,45 @@
 # 用户端（apps/client）
 
-面向 C 端玩家的独立前端应用，与管理端 `apps/web` 平级、互不耦合。当前只实现「短信验证码登录 / 注册」这一入口，注册用户由后端默认分配 `member`（普通会员）角色。
+面向 C 端玩家的独立商城前端（战术电竞风），与管理端 `apps/web` 平级、互不耦合。首页/分类可游客浏览，涉及个人身份的页面（我的、消息）需登录；登录/注册**只支持手机号验证码**方式，注册用户由后端默认分配 `member`（普通会员）角色。
 
 ## 实现了哪些功能
 
-- **短信登录**：手机号 + 验证码登录（要求手机号已注册），复用后端 `POST /auth/sms/code`、`POST /auth/sms/login`。
-- **短信注册**：手机号 + 验证码 + 可选昵称注册（要求手机号未注册），复用后端 `POST /auth/sms/register-code`、`POST /auth/sms/register`；注册成功后端直接签发令牌，前端即自动登录。
-- **登录守卫**：未登录访问受保护页自动重定向到 `/login` 并带 `redirect`；已登录访问登录页回首页。
-- **用户中心首页**：展示当前用户昵称、手机号、角色、所属租户，并提供退出登录。
+- **商城主框架**：底部 TabBar（移动端）/ 顶部导航（PC 端）承载首页、分类、消息、我的四个一级页；UI 演示数据见 `src/config/*.mock.ts`。
+- **短信登录**：手机号 + 验证码登录（要求手机号已注册），调用后端 `POST /auth/sms/code`、`POST /auth/sms/login`。
+- **短信注册**：手机号 + 验证码 + 可选昵称注册（要求手机号未注册），调用后端 `POST /auth/sms/register-code`、`POST /auth/sms/register`；注册成功后端直接签发令牌，前端即自动登录。
+- **登录守卫**：访问带 `meta.requiresAuth` 的页面（我的 / 消息）未登录时自动重定向到 `/login` 并带 `redirect` 回跳地址；已登录再访问登录页直接回首页。
+- **登录态展示**：「我的」页头部登录后展示昵称与用户 ID 并提供退出登录；未登录展示「立即登录」入口。
 
-> 说明：账号密码登录属于管理端 `apps/web` 的能力，用户端刻意不提供，保证 C 端只能走短信方式。
+> 说明：账号密码登录属于管理端 `apps/web` 的能力，用户端刻意不提供，保证 C 端只能走短信方式。令牌存储键使用 `client.*` 前缀，与管理端 `infra.*` 隔离，避免同域串号。
 
-## 目录结构导图
+## 目录结构导图（鉴权相关 · 在既有商城骨架上扩展）
 
 ```
-apps/client
-├─ index.html                 # 挂载点，标题「电竞用户中心」
-├─ vite.config.ts             # 端口 5174（与管理端 5173 并行）、@ 别名
-├─ .env.example               # VITE_API_BASE_URL（后端 /api 基址）
-└─ src
-   ├─ main.ts                 # 装配 Pinia / 路由 / Element Plus
-   ├─ App.vue                 # 仅承载 <router-view>
-   ├─ config/env.ts           # 运行时配置 + 令牌存储键（client.* 与管理端隔离）
-   ├─ api
-   │  ├─ http.ts              # Axios 实例：注入令牌 / 解包响应 / 401 静默刷新
-   │  ├─ token-storage.ts     # access/refresh 令牌读写
-   │  └─ auth.api.ts          # 短信登录/注册/发码 + 拉取档案
-   ├─ stores/auth.store.ts    # 鉴权状态：令牌生命周期 + 当前用户档案
-   ├─ router
-   │  ├─ routes.ts            # 登录页(public) + 用户首页
-   │  ├─ guard.ts             # 全局前置守卫（未登录拦截 / 档案补全）
-   │  └─ index.ts             # 路由实例装配
-   ├─ utils/http-error.ts     # 统一错误信息提取
-   ├─ components/auth
-   │  ├─ AuthHeroPanel.vue    # 登录页左侧品牌插画（C 端静态文案）
-   │  └─ AuthHeroPanel.css
-   └─ views
-      ├─ LoginView.vue        # 短信登录/注册（双 Tab，共用发码倒计时）
-      ├─ LoginView.css
-      ├─ HomeView.vue         # 登录后用户中心
-      └─ HomeView.css
+apps/client/src
+├─ config/env.ts           # 运行时配置 + 令牌存储键（client.* 与管理端隔离）
+├─ config/icon-paths.ts    # 图标注册表（本次新增 phone / shieldCheck / logout）
+├─ api
+│  ├─ http.ts              # Axios 实例：注入令牌 / 解包响应 / 401 静默刷新 / toast 报错
+│  ├─ token-storage.ts     # access/refresh 令牌读写清理
+│  └─ auth.api.ts          # 短信登录/注册/发码 + 拉取档案
+├─ utils/http-error.ts     # 统一错误信息提取
+├─ stores/auth.store.ts    # 鉴权状态：令牌生命周期 + 当前用户档案
+├─ router
+│  ├─ index.ts             # 路由表：新增 /login（全屏），我的/消息标记 requiresAuth
+│  └─ guard.ts             # 全局前置守卫（未登录拦截并带 redirect）
+├─ views/auth/LoginView.vue          # 短信登录/注册（SegmentTabs 双页签，共用发码倒计时）
+└─ components/profile/ProfileHeader.vue  # 登录入口 / 昵称展示 / 退出登录（在既有组件上扩展）
 ```
 
 ## 登录 / 注册时序
 
 ```
 用户 → LoginView：输入手机号，点击「发送验证码」
-     → authApi.sendSmsLoginCode / sendSmsRegisterCode（按当前 Tab 选择）
+     → authApi.sendLoginCode / sendRegisterCode（按当前页签选择）
      → 后端按配置中心 sms.provider 发码（log 驱动打到日志），返回 cooldown 用于倒计时
 用户 → 输入验证码，点击「登录 / 注册并登录」
      → authStore.smsLogin / smsRegister → 保存令牌 → loadProfile()
-     → 守卫放行，跳转 redirect 或用户首页
+     → 守卫放行，跳转 redirect 或首页
 ```
 
 ## 本地启动
