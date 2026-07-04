@@ -1,16 +1,59 @@
 <script setup lang="ts">
 /**
- * 我的页头部：切角头像框 + 登录入口 + 等级徽章 + 老板/打手身份切换 + 设置按钮。
+ * 我的页头部：切角头像框 + 登录入口/昵称 + 等级徽章 + 身份切换 + 设置/登出。
+ * 已登录时展示昵称与用户 ID 并提供登出；未登录时点击「立即登录」跳登录页。
+ * 登录态与资料统一取自 auth.store，本组件只做展示与交互编排。
  */
+import { computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { useToast } from '@/composables/use-toast';
+import { useAuthStore } from '@/stores/auth.store';
 
+const auth = useAuthStore();
 const toast = useToast();
+const router = useRouter();
+
+/** 头部展示的昵称：优先昵称，退化到用户名 */
+const displayName = computed(() => auth.profile?.nickname || auth.profile?.username || '');
+/** 用户 ID 文案：登录后展示真实 ID，否则占位 */
+const uidText = computed(() => (auth.isAuthenticated && auth.profile ? `用户ID: ${auth.profile.id}` : '用户ID: 未登陆'));
+
+/** 进入页面时若已登录但资料未加载则拉取一次 */
+onMounted(() => {
+  if (auth.isAuthenticated && !auth.profile) {
+    void auth.loadProfile();
+  }
+});
+
+/** 跳转登录页 */
+function goLogin(): void {
+  void router.push({ name: 'login' });
+}
+
+/** 登出后回到首页 */
+function onLogout(): void {
+  auth.logout();
+  toast.show('已退出登录');
+  void router.replace({ name: 'home' });
+}
 </script>
 
 <template>
   <div class="header">
     <button
+      v-if="auth.isAuthenticated"
+      class="settings"
+      title="退出登录"
+      @click="onLogout"
+    >
+      <AppIcon
+        name="logout"
+        :size="18"
+      />
+    </button>
+    <button
+      v-else
       class="settings"
       @click="toast.show('设置页即将上线')"
     >
@@ -29,11 +72,18 @@ const toast = useToast();
       <div class="meta">
         <div class="name-row">
           <button
+            v-if="!auth.isAuthenticated"
             class="login"
-            @click="toast.show('登录功能即将上线')"
+            @click="goLogin"
           >
             立即登录
           </button>
+          <span
+            v-else
+            class="login"
+          >
+            {{ displayName }}
+          </span>
           <span class="level">
             <AppIcon
               name="gem"
@@ -43,7 +93,7 @@ const toast = useToast();
           </span>
         </div>
         <p class="uid">
-          用户ID: 未登陆
+          {{ uidText }}
         </p>
       </div>
       <button

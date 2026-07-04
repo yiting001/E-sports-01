@@ -1,13 +1,21 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import MainLayout from '@/layouts/MainLayout.vue';
+import { registerAuthGuard } from './guard';
 
 /**
- * 路由表：四个一级 Tab 页挂在主布局下。
+ * 路由表：登录页独立于主布局全屏展示；四个一级 Tab 页挂在主布局下。
  * 页面组件按需懒加载，避免首屏包体膨胀。
+ * 需登录的页面通过 meta.requiresAuth 声明，具体拦截逻辑见 guard.ts。
  */
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/auth/LoginView.vue'),
+      meta: { title: '登录' },
+    },
     {
       path: '/',
       component: MainLayout,
@@ -28,18 +36,20 @@ export const router = createRouter({
           path: 'messages',
           name: 'messages',
           component: () => import('@/views/message/MessageView.vue'),
-          meta: { title: '消息' },
+          meta: { title: '消息', requiresAuth: true },
         },
         {
           path: 'profile',
           name: 'profile',
           component: () => import('@/views/profile/ProfileView.vue'),
-          meta: { title: '我的' },
+          meta: { title: '我的', requiresAuth: true },
         },
       ],
     },
   ],
 });
+
+registerAuthGuard(router);
 
 /** 每次导航后同步页面标题，便于多标签页区分 */
 router.afterEach((to) => {
