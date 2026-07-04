@@ -1,15 +1,22 @@
 <script setup lang="ts">
 /**
- * 商品卡片：暗绿科技风封面（宝石徽标占位，后续换真实图片）+ 标题/卖点/价格/销量。
+ * 商品卡片：封面图片（无图时回退宝石徽标占位）+ 标题/卖点/价格/销量。
  * 金额从「分」转「元」展示，复用 contracts 工具，禁止前端自算浮点。
+ * 详情为富文本 HTML，卡片预览仅取纯文本摘要，避免渲染标签。
  */
+import { computed } from 'vue';
 import { fenToYuan, type ProductPublicView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { useToast } from '@/composables/use-toast';
 
-defineProps<{ product: ProductPublicView }>();
+const props = defineProps<{ product: ProductPublicView }>();
 
 const toast = useToast();
+
+/** 富文本详情去标签后的纯文本摘要（卡片两行预览用） */
+const summary = computed(() =>
+  props.product.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+);
 </script>
 
 <template>
@@ -17,8 +24,13 @@ const toast = useToast();
     class="product card"
     @click="toast.show(`「${product.title}」下单流程即将上线`)"
   >
-    <div class="cover">
+    <div
+      class="cover"
+      :class="{ 'cover--image': product.cover }"
+      :style="product.cover ? { backgroundImage: `url(${product.cover})` } : undefined"
+    >
       <AppIcon
+        v-if="!product.cover"
         name="gem"
         :size="64"
         class="emblem"
@@ -35,7 +47,7 @@ const toast = useToast();
         {{ product.title }}
       </h3>
       <p class="desc">
-        {{ product.description }}
+        {{ summary }}
       </p>
       <div class="meta">
         <span class="price">¥{{ fenToYuan(product.priceFen) }}</span>
@@ -67,6 +79,11 @@ const toast = useToast();
   padding-bottom: 12px;
   background: var(--c-cover-bg);
   border-bottom: 1px solid rgba(61, 255, 155, 0.35);
+}
+
+.cover--image {
+  background-size: cover;
+  background-position: center;
 }
 
 .emblem {

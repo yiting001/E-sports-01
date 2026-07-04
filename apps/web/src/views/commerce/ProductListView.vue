@@ -8,6 +8,8 @@ import {
   type ServiceAgentOption,
 } from '@app/contracts';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import ImageUploader from '@/components/common/ImageUploader.vue';
+import RichTextEditor from '@/components/common/RichTextEditor.vue';
 import { commerceApi } from '@/api/commerce.api';
 
 const list = ref<ProductView[]>([]);
@@ -34,6 +36,7 @@ const editingId = ref<string>('');
 const form = reactive({
   categoryId: '',
   title: '',
+  cover: '',
   coverTitle: '',
   coverSub: '',
   description: '',
@@ -114,6 +117,7 @@ function openCreate(): void {
   Object.assign(form, {
     categoryId: '',
     title: '',
+    cover: '',
     coverTitle: '',
     coverSub: '',
     description: '',
@@ -131,6 +135,7 @@ function openEdit(row: ProductView): void {
   Object.assign(form, {
     categoryId: row.categoryId,
     title: row.title,
+    cover: row.cover,
     coverTitle: row.coverTitle,
     coverSub: row.coverSub,
     description: row.description,
@@ -158,9 +163,10 @@ async function submit(): Promise<void> {
   const payload = {
     categoryId: form.categoryId,
     title: form.title.trim(),
+    cover: form.cover,
     coverTitle: form.coverTitle.trim(),
     coverSub: form.coverSub.trim(),
-    description: form.description.trim(),
+    description: form.description,
     priceFen: toFen(form.priceYuan),
     originPriceFen: toFen(form.originPriceYuan),
     serviceAgentId: form.serviceAgentId || '',
@@ -264,6 +270,23 @@ onMounted(async () => {
       stripe
     >
       <el-table-column
+        label="封面"
+        width="80"
+        align="center"
+      >
+        <template #default="{ row }">
+          <el-image
+            v-if="row.cover"
+            :src="row.cover"
+            :preview-src-list="[row.cover]"
+            preview-teleported
+            fit="cover"
+            class="cover-thumb"
+          />
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
+      <el-table-column
         prop="title"
         label="商品名"
         min-width="160"
@@ -360,7 +383,8 @@ onMounted(async () => {
     <el-dialog
       v-model="dialogVisible"
       :title="editingId ? '编辑商品' : '新增商品'"
-      width="560px"
+      width="720px"
+      top="6vh"
     >
       <el-form label-width="96px">
         <el-form-item
@@ -404,12 +428,13 @@ onMounted(async () => {
             maxlength="128"
           />
         </el-form-item>
-        <el-form-item label="卖点描述">
-          <el-input
+        <el-form-item label="封面图片">
+          <ImageUploader v-model="form.cover" />
+        </el-form-item>
+        <el-form-item label="商品详情">
+          <RichTextEditor
             v-model="form.description"
-            type="textarea"
-            :rows="2"
-            maxlength="2000"
+            placeholder="请输入商品详情，支持图文、视频"
           />
         </el-form-item>
         <el-form-item label="现价(元)">
@@ -497,5 +522,10 @@ onMounted(async () => {
 .origin-price {
   color: var(--el-text-color-secondary);
   text-decoration: line-through;
+}
+.cover-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
 }
 </style>

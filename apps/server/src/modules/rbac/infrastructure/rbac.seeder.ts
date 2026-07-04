@@ -12,7 +12,7 @@ import {
 } from '../domain/permission-repository.interface';
 import { DEFAULT_PERMISSIONS } from '../domain/permission-defaults';
 import { DEFAULT_MENU_PERMISSIONS } from '../domain/menu-defaults';
-import { MEMBER_ROLE, SUPER_ADMIN_ROLE } from '../domain/rbac.constants';
+import { MEMBER_ROLE, SERVICE_ROLE, SUPER_ADMIN_ROLE } from '../domain/rbac.constants';
 import {
   ROLE_REPOSITORY,
   RoleRepository,
@@ -58,6 +58,7 @@ export class RbacSeeder implements OnApplicationBootstrap {
     await this.pruneObsoleteMenus();
     const superRole = await this.ensureSuperRole();
     await this.ensureMemberRole();
+    await this.ensureServiceRole();
     await this.ensureAdminUser(superRole.id);
   }
 
@@ -129,6 +130,25 @@ export class RbacSeeder implements OnApplicationBootstrap {
     });
     await this.roleRepo.save(role);
     this.logger.log('已创建普通用户角色');
+  }
+
+  /**
+   * 确保默认租户下存在「客服」角色。
+   * 管理员在用户管理中为客服人员分配该角色；商品「关联负责客服」候选仅取该角色用户。
+   */
+  private async ensureServiceRole(): Promise<void> {
+    const existing = await this.roleRepo.findByCode(SERVICE_ROLE);
+    if (existing) {
+      return;
+    }
+    const role = this.roleRepo.create({
+      code: SERVICE_ROLE,
+      name: '客服',
+      remark: '内置角色，负责处理用户订单/拉群，可被商品关联为负责客服',
+      tenantId: DEFAULT_TENANT_ID,
+    });
+    await this.roleRepo.save(role);
+    this.logger.log('已创建客服角色');
   }
 
   private async ensureAdminUser(superRoleId: string): Promise<void> {

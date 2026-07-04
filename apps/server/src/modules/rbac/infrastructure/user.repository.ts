@@ -97,6 +97,30 @@ export class TypeormUserRepository implements UserRepository {
     });
   }
 
+  async paginateByRole(
+    roleCode: string,
+    skip: number,
+    take: number,
+    keyword?: string,
+  ): Promise<[User[], number]> {
+    const qb = this.repo
+      .createQueryBuilder('u')
+      .innerJoinAndSelect('u.roles', 'role', 'role.code = :roleCode', { roleCode })
+      .orderBy('u.created_at', 'DESC')
+      .skip(skip)
+      .take(take);
+    const tenantId = this.tenant.scopeId();
+    if (tenantId) {
+      qb.andWhere('u.tenant_id = :tenantId', { tenantId });
+    }
+    if (keyword) {
+      qb.andWhere('(u.username ILIKE :kw OR u.nickname ILIKE :kw)', {
+        kw: `%${keyword}%`,
+      });
+    }
+    return qb.getManyAndCount();
+  }
+
   create(data: Partial<User>): User {
     return this.repo.create(data);
   }

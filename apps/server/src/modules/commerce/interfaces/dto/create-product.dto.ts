@@ -18,6 +18,11 @@ export class CreateProductDto implements CreateProductPayload {
   @Length(1, 128)
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  @Length(0, 512)
+  cover?: string;
+
   @IsString()
   @Length(1, 128)
   coverTitle!: string;
@@ -29,7 +34,7 @@ export class CreateProductDto implements CreateProductPayload {
 
   @IsOptional()
   @IsString()
-  @Length(0, 2000)
+  @Length(0, 20000)
   description?: string;
 
   @IsInt()

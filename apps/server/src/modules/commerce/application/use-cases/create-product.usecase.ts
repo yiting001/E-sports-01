@@ -37,6 +37,7 @@ export class CreateProductUseCase {
     const entity = this.repo.create({
       categoryId: payload.categoryId,
       title: payload.title,
+      cover: payload.cover ?? '',
       coverTitle: payload.coverTitle,
       coverSub: payload.coverSub ?? '',
       description: payload.description ?? '',

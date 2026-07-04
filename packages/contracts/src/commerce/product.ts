@@ -15,11 +15,13 @@ export interface ProductView {
   categoryName: string;
   /** 商品名 */
   title: string;
+  /** 封面图片 URL；未设置为空串 */
+  cover: string;
   /** 封面主标语 */
   coverTitle: string;
   /** 封面副标语 */
   coverSub: string;
-  /** 卖点描述 */
+  /** 商品详情（富文本 HTML） */
   description: string;
   /** 现价（分） */
   priceFen: number;
@@ -45,8 +47,11 @@ export interface ProductPublicView {
   categoryId: string;
   categoryName: string;
   title: string;
+  /** 封面图片 URL；未设置为空串 */
+  cover: string;
   coverTitle: string;
   coverSub: string;
+  /** 商品详情（富文本 HTML） */
   description: string;
   priceFen: number;
   originPriceFen: number;
@@ -57,8 +62,11 @@ export interface ProductPublicView {
 export interface CreateProductPayload {
   categoryId: string;
   title: string;
+  /** 封面图片 URL（选填） */
+  cover?: string;
   coverTitle: string;
   coverSub?: string;
+  /** 商品详情（富文本 HTML，选填） */
   description?: string;
   priceFen: number;
   originPriceFen: number;
@@ -71,6 +79,7 @@ export interface CreateProductPayload {
 export interface UpdateProductPayload {
   categoryId?: string;
   title?: string;
+  cover?: string;
   coverTitle?: string;
   coverSub?: string;
   description?: string;
