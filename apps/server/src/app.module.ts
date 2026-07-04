@@ -12,6 +12,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { RealnameModule } from './modules/realname/realname.module';
 import { CommerceModule } from './modules/commerce/commerce.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+import { NoticeModule } from './modules/notice/notice.module';
 
 /**
  * 应用根模块。
@@ -32,6 +33,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
     RealnameModule,
     CommerceModule,
     FeedbackModule,
+    NoticeModule,
   ],
 })
 export class AppModule {}

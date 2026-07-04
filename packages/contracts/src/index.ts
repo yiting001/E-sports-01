@@ -19,3 +19,4 @@ export * from './observability/log';
 export * from './wallet/wallet';
 export * from './realname/realname';
 export * from './feedback/feedback';
+export * from './notice/notice';

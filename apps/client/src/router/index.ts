@@ -29,6 +29,18 @@ export const router = createRouter({
       meta: { title: '投诉反馈', requiresAuth: true },
     },
     {
+      path: '/notices',
+      name: 'notices',
+      component: () => import('@/views/notice/NoticeListView.vue'),
+      meta: { title: '平台通知' },
+    },
+    {
+      path: '/notices/:id',
+      name: 'notice-detail',
+      component: () => import('@/views/notice/NoticeDetailView.vue'),
+      meta: { title: '通知详情' },
+    },
+    {
       path: '/',
       component: MainLayout,
       children: [

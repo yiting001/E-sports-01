@@ -23,6 +23,8 @@ export enum ConfigGroup {
   Observability = 'observability',
   Wallet = 'wallet',
   Realname = 'realname',
+  /** 运营展示位（首页横幅等） */
+  Portal = 'portal',
 }
 
 /** 配置项对外结构（敏感项的值在传输前会被脱敏） */
@@ -57,6 +59,10 @@ export const CONFIG_KEYS = {
     appName: 'system.appName',
     /** 软件图标 URL（上传图片后保存其访问地址，作 logo 与 favicon） */
     appLogo: 'system.appLogo',
+  },
+  portal: {
+    /** C 端首页运营横幅图片 URL（未配置为空，前端回退默认样式） */
+    homeBanner: 'portal.homeBanner',
   },
   auth: {
     accessTokenTtl: 'auth.accessTokenTtl',
