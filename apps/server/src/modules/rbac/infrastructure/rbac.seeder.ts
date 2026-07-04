@@ -12,7 +12,7 @@ import {
 } from '../domain/permission-repository.interface';
 import { DEFAULT_PERMISSIONS } from '../domain/permission-defaults';
 import { DEFAULT_MENU_PERMISSIONS } from '../domain/menu-defaults';
-import { SUPER_ADMIN_ROLE } from '../domain/rbac.constants';
+import { MEMBER_ROLE, SUPER_ADMIN_ROLE } from '../domain/rbac.constants';
 import {
   ROLE_REPOSITORY,
   RoleRepository,
@@ -57,6 +57,7 @@ export class RbacSeeder implements OnApplicationBootstrap {
     }
     await this.pruneObsoleteMenus();
     const superRole = await this.ensureSuperRole();
+    await this.ensureMemberRole();
     await this.ensureAdminUser(superRole.id);
   }
 
@@ -109,6 +110,25 @@ export class RbacSeeder implements OnApplicationBootstrap {
     });
     this.logger.log('已创建超级管理员角色');
     return this.roleRepo.save(role);
+  }
+
+  /**
+   * 确保默认租户下存在普通用户（会员）角色。
+   * 短信注册的自助用户默认分配该角色；初始无任何权限，管理员可按需在角色管理中授予。
+   */
+  private async ensureMemberRole(): Promise<void> {
+    const existing = await this.roleRepo.findByCode(MEMBER_ROLE);
+    if (existing) {
+      return;
+    }
+    const role = this.roleRepo.create({
+      code: MEMBER_ROLE,
+      name: '普通用户',
+      remark: '内置角色，短信自助注册用户默认角色',
+      tenantId: DEFAULT_TENANT_ID,
+    });
+    await this.roleRepo.save(role);
+    this.logger.log('已创建普通用户角色');
   }
 
   private async ensureAdminUser(superRoleId: string): Promise<void> {

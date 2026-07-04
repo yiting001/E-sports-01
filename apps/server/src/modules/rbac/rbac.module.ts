@@ -34,6 +34,8 @@ import { RemoveTenantUseCase } from './application/use-cases/remove-tenant.useca
 import { LoginUseCase } from './application/use-cases/login.usecase';
 import { SmsLoginUseCase } from './application/use-cases/sms-login.usecase';
 import { SendLoginSmsCodeUseCase } from './application/use-cases/send-login-sms-code.usecase';
+import { SendRegisterSmsCodeUseCase } from './application/use-cases/send-register-sms-code.usecase';
+import { SmsRegisterUseCase } from './application/use-cases/sms-register.usecase';
 import { RegisterUseCase } from './application/use-cases/register.usecase';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.usecase';
 import { GetProfileUseCase } from './application/use-cases/get-profile.usecase';
@@ -61,6 +63,8 @@ import { PermissionsGuard } from './interfaces/auth/permissions.guard';
 import { AuthLoginController } from './interfaces/controllers/auth.login.controller';
 import { AuthSmsCodeController } from './interfaces/controllers/auth.sms-code.controller';
 import { AuthSmsLoginController } from './interfaces/controllers/auth.sms-login.controller';
+import { AuthSmsRegisterCodeController } from './interfaces/controllers/auth.sms-register-code.controller';
+import { AuthSmsRegisterController } from './interfaces/controllers/auth.sms-register.controller';
 import { AuthRegisterController } from './interfaces/controllers/auth.register.controller';
 import { AuthRefreshController } from './interfaces/controllers/auth.refresh.controller';
 import { AuthProfileController } from './interfaces/controllers/auth.profile.controller';
@@ -102,6 +106,8 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     AuthLoginController,
     AuthSmsCodeController,
     AuthSmsLoginController,
+    AuthSmsRegisterCodeController,
+    AuthSmsRegisterController,
     AuthRegisterController,
     AuthRefreshController,
     AuthProfileController,
@@ -143,6 +149,8 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     LoginUseCase,
     SmsLoginUseCase,
     SendLoginSmsCodeUseCase,
+    SendRegisterSmsCodeUseCase,
+    SmsRegisterUseCase,
     RegisterUseCase,
     RefreshTokenUseCase,
     GetProfileUseCase,

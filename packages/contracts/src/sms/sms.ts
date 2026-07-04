@@ -29,6 +29,17 @@ export interface SmsLoginPayload {
   tenantCode?: string;
 }
 
+/** 短信验证码注册入参：通过短信验证码注册新账号，注册用户默认分配 member 角色 */
+export interface SmsRegisterPayload {
+  phone: string;
+  /** 收到的验证码 */
+  code: string;
+  /** 昵称（选填）：缺省按手机号生成 */
+  nickname?: string;
+  /** 注册到的租户编码（选填）：空表示注册到默认租户 */
+  tenantCode?: string;
+}
+
 /** 发送验证码后的返回：仅回传必要的限流信息，绝不回传验证码本身 */
 export interface SendSmsCodeResult {
   /** 距离可再次发送的冷却秒数，前端据此做倒计时 */
