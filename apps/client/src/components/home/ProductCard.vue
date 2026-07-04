@@ -3,12 +3,11 @@
  * 商品卡片：暗绿科技风封面（宝石徽标占位，后续换真实图片）+ 标题/卖点/价格/销量。
  * 金额从「分」转「元」展示，复用 contracts 工具，禁止前端自算浮点。
  */
-import { fenToYuan } from '@app/contracts';
+import { fenToYuan, type ProductPublicView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
-import type { ProductItem } from '@/config/home.mock';
 import { useToast } from '@/composables/use-toast';
 
-defineProps<{ product: ProductItem }>();
+defineProps<{ product: ProductPublicView }>();
 
 const toast = useToast();
 </script>
@@ -36,7 +35,7 @@ const toast = useToast();
         {{ product.title }}
       </h3>
       <p class="desc">
-        {{ product.desc }}
+        {{ product.description }}
       </p>
       <div class="meta">
         <span class="price">¥{{ fenToYuan(product.priceFen) }}</span>

@@ -34,6 +34,7 @@ export interface MenuDefinition {
 
 /** 侧边栏菜单分组清单（收纳父节点，单一来源） */
 export const MENU_GROUPS: MenuGroup[] = [
+  { code: 'commerce', title: '电竞运营', icon: 'Goods', sort: 5 },
   { code: 'system', title: '系统管理', icon: 'Menu', sort: 10 },
   { code: 'communication', title: '在线沟通', icon: 'ChatLineRound', sort: 20 },
 ];
@@ -53,6 +54,22 @@ export interface MenuView {
  * 后端播种为 menu 权限、用户分配后方可见；前端路由 meta.permission 取同名 code。
  */
 export const MENU_DEFINITIONS: MenuDefinition[] = [
+  {
+    code: 'commerce:category:menu',
+    title: '分类管理',
+    path: 'commerce/categories',
+    icon: 'Files',
+    sort: 1,
+    group: 'commerce',
+  },
+  {
+    code: 'commerce:product:menu',
+    title: '商品管理',
+    path: 'commerce/products',
+    icon: 'Goods',
+    sort: 2,
+    group: 'commerce',
+  },
   {
     code: 'rbac:tenant:menu',
     title: '租户管理',

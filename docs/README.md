@@ -16,6 +16,7 @@
 | 钱包 | [wallet.md](./wallet.md) | RBAC 门控的钱包，支付宝/微信扫码充值 + 支付宝转账提现 + 明细统计，金额以分整数 |
 | 用户资料自助 | [user-profile.md](./user-profile.md) | 登录用户自助改头像/昵称/手机号，免授权自助上传，个人中心页 |
 | 实名认证 | [realname.md](./realname.md) | 证件提交 + 人工审核状态机，身份证 AES-256-GCM 加密脱敏，超管按角色配置需实名 |
+| 商品管理 | [commerce.md](./commerce.md) | 分类 + 商品 CRUD 与上下架，商品可关联负责客服，C 端免登录只读上架商品，金额以分整数 |
 | 前端基座 | [frontend.md](./frontend.md) | Vue3 + Pinia，鉴权 store、动态路由守卫、v-permission 指令 |
 | 登录注册 UI | [auth-ui.md](./auth-ui.md) | 企业级电竞风格登录/注册/短信验证码入口，仅重做 UI 不改鉴权逻辑 |
 | 工作台 UI | [dashboard-ui.md](./dashboard-ui.md) | 响应式账号概览、业务入口、快捷访问和权限摘要 |
