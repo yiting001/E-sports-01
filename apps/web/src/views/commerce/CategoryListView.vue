@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue';
 import { PAGINATION_DEFAULTS, type CategoryView } from '@app/contracts';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import ImageUploader from '@/components/common/ImageUploader.vue';
 import { commerceApi } from '@/api/commerce.api';
 
 const list = ref<CategoryView[]>([]);
@@ -12,7 +13,7 @@ const loading = ref(false);
 
 const dialogVisible = ref(false);
 const editingId = ref<string>('');
-const form = reactive({ name: '', cover: '', sort: 0, enabled: true });
+const form = reactive({ name: '', cover: '', icon: '', sort: 0, enabled: true });
 
 function formatDate(value: string): string {
   if (!value) {
@@ -51,7 +52,7 @@ async function changePageSize(value: number): Promise<void> {
 
 function openCreate(): void {
   editingId.value = '';
-  Object.assign(form, { name: '', cover: '', sort: 0, enabled: true });
+  Object.assign(form, { name: '', cover: '', icon: '', sort: 0, enabled: true });
   dialogVisible.value = true;
 }
 
@@ -60,6 +61,7 @@ function openEdit(row: CategoryView): void {
   Object.assign(form, {
     name: row.name,
     cover: row.cover,
+    icon: row.icon,
     sort: row.sort,
     enabled: row.enabled,
   });
@@ -74,6 +76,7 @@ async function submit(): Promise<void> {
   const payload = {
     name: form.name.trim(),
     cover: form.cover.trim(),
+    icon: form.icon,
     sort: form.sort,
     enabled: form.enabled,
   };
@@ -121,13 +124,30 @@ onMounted(load);
       stripe
     >
       <el-table-column
+        label="图标"
+        width="80"
+        align="center"
+      >
+        <template #default="{ row }">
+          <el-image
+            v-if="row.icon"
+            :src="row.icon"
+            :preview-src-list="[row.icon]"
+            preview-teleported
+            fit="cover"
+            class="icon-thumb"
+          />
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
+      <el-table-column
         prop="name"
         label="分类名"
         min-width="140"
       />
       <el-table-column
         prop="cover"
-        label="封面标语"
+        label="文字图标"
         min-width="140"
       />
       <el-table-column
@@ -213,11 +233,15 @@ onMounted(load);
             placeholder="如：大红单"
           />
         </el-form-item>
-        <el-form-item label="封面标语">
+        <el-form-item label="图标图片">
+          <ImageUploader v-model="form.icon" />
+          <span class="form-hint">设置后 C 端分类以图片展示；留空则用下方文字图标</span>
+        </el-form-item>
+        <el-form-item label="文字图标">
           <el-input
             v-model="form.cover"
             maxlength="64"
-            placeholder="C 端分类块展示文案"
+            placeholder="无图标图片时以此文字展示（留空则用分类名）"
           />
         </el-form-item>
         <el-form-item label="排序">
@@ -261,5 +285,15 @@ onMounted(load);
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+.icon-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+}
+.form-hint {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 </style>

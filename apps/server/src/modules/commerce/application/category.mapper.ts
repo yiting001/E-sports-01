@@ -10,6 +10,7 @@ export function toCategoryView(
     id: entity.id,
     name: entity.name,
     cover: entity.cover,
+    icon: entity.icon,
     sort: entity.sort,
     enabled: entity.enabled,
     productCount,
@@ -24,5 +25,6 @@ export function toCategoryPublicView(entity: CategoryEntity): CategoryPublicView
     id: entity.id,
     name: entity.name,
     cover: entity.cover,
+    icon: entity.icon,
   };
 }

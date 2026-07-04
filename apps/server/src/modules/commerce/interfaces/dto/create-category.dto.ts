@@ -13,6 +13,11 @@ export class CreateCategoryDto implements CreateCategoryPayload {
   cover?: string;
 
   @IsOptional()
+  @IsString()
+  @Length(0, 512)
+  icon?: string;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   sort?: number;

@@ -13,9 +13,13 @@ export class CategoryEntity extends TenantScopedEntity {
   @Column({ length: 64 })
   name!: string;
 
-  /** 封面短标语（C 端分类块展示），可空 */
+  /** 封面短标语（无图标图片时作为「文字图标」展示），可空 */
   @Column({ length: 64, default: '' })
   cover!: string;
+
+  /** 图标图片 URL（设置后 C 端以「图片图标」展示），可空 */
+  @Column({ length: 512, default: '' })
+  icon!: string;
 
   /** 排序值，越小越靠前 */
   @Column({ type: 'int', default: 0 })
