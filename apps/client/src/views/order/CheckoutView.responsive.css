@@ -1,0 +1,89 @@
+/**
+ * 结算页响应式布局：移动端沿用全屏单列和底部确认栏；
+ * PC 端切为左侧表单、右侧合计卡片，避免把移动端底部栏拉满桌面。
+ */
+@media (min-width: 768px) {
+  .checkout.checkout.checkout {
+    position: static;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 720px) 320px;
+    grid-template-rows: auto 1fr;
+    justify-content: center;
+    align-items: start;
+    gap: 0 16px;
+    background: transparent;
+  }
+
+  .checkout > .bar.bar {
+    grid-column: 1 / -1;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 16px 24px;
+  }
+
+  .checkout .name.name {
+    font-size: 18px;
+  }
+
+  .checkout > .scroll.scroll {
+    grid-column: 1;
+    grid-row: 2;
+    padding: 24px 0 48px;
+    overflow: visible;
+  }
+
+  .checkout .summary.summary {
+    padding: 16px;
+  }
+
+  .checkout .thumb.thumb {
+    width: 96px;
+    height: 96px;
+  }
+
+  .checkout .title.title {
+    font-size: 18px;
+    white-space: normal;
+  }
+
+  .checkout .price.price {
+    font-size: 22px;
+  }
+
+  .checkout .form.form {
+    padding: 20px;
+    gap: 18px;
+  }
+
+  .checkout > .footer.footer {
+    grid-column: 2;
+    grid-row: 2;
+    position: sticky;
+    top: 88px;
+    align-self: start;
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: 24px;
+    padding: 20px;
+    border: 1px solid var(--c-border);
+    background: linear-gradient(180deg, var(--c-surface-2), var(--c-surface));
+    clip-path: polygon(
+      var(--chamfer) 0,
+      100% 0,
+      100% calc(100% - var(--chamfer)),
+      calc(100% - var(--chamfer)) 100%,
+      0 100%,
+      0 var(--chamfer)
+    );
+  }
+
+  .checkout .total.total {
+    justify-content: space-between;
+  }
+
+  .checkout .buy.buy {
+    width: 100%;
+  }
+}

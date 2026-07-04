@@ -98,6 +98,12 @@ onMounted(async () => {
             <span class="sold">已售 {{ product.sold }}</span>
           </div>
           <span class="category">{{ product.categoryName }}</span>
+          <button
+            class="buy desktop-buy"
+            @click="goCheckout"
+          >
+            立即下单
+          </button>
         </section>
 
         <section
@@ -199,6 +205,12 @@ onMounted(async () => {
   overflow: hidden;
 }
 
+.cover,
+.info,
+.desc {
+  flex-shrink: 0;
+}
+
 .cover--image {
   background-size: cover;
   background-position: center;
@@ -297,8 +309,11 @@ onMounted(async () => {
 
 .desc-body :deep(img),
 .desc-body :deep(video) {
+  display: block;
   max-width: 100%;
+  height: auto;
   border-radius: var(--radius-sm);
+  background: var(--c-bg);
 }
 
 .footer {
@@ -338,5 +353,99 @@ onMounted(async () => {
   color: var(--c-bg);
   background: var(--c-accent);
   border-radius: var(--radius-sm);
+}
+
+.desktop-buy {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .detail {
+    position: static;
+    min-height: 100vh;
+    background: transparent;
+  }
+
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 16px 24px;
+  }
+
+  .name {
+    font-size: 18px;
+  }
+
+  .scroll {
+    width: 100%;
+    max-width: var(--page-max-width);
+    margin: 0 auto;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 16px;
+    align-items: start;
+    overflow: visible;
+  }
+
+  .cover {
+    grid-column: 1;
+    min-height: 300px;
+  }
+
+  .info {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    position: sticky;
+    top: 88px;
+    padding: 20px;
+  }
+
+  .title {
+    font-size: 22px;
+    line-height: 1.35;
+  }
+
+  .meta {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+  }
+
+  .price {
+    font-size: 26px;
+  }
+
+  .sold {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .category {
+    margin-top: 12px;
+  }
+
+  .desc {
+    grid-column: 1;
+    padding: 20px;
+  }
+
+  .sec-title {
+    font-size: 16px;
+  }
+
+  .desc-body {
+    font-size: 14px;
+  }
+
+  .footer {
+    display: none;
+  }
+
+  .desktop-buy {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+  }
 }
 </style>
