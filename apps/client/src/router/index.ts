@@ -41,6 +41,18 @@ export const router = createRouter({
       meta: { title: '通知详情' },
     },
     {
+      path: '/products/:id',
+      name: 'product-detail',
+      component: () => import('@/views/product/ProductDetailView.vue'),
+      meta: { title: '商品详情' },
+    },
+    {
+      path: '/orders',
+      name: 'orders',
+      component: () => import('@/views/order/MyOrdersView.vue'),
+      meta: { title: '我的订单', requiresAuth: true },
+    },
+    {
       path: '/',
       component: MainLayout,
       children: [

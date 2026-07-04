@@ -3,15 +3,16 @@
  * 商品卡片：封面图片（无图时回退宝石徽标占位）+ 标题/卖点/价格/销量。
  * 金额从「分」转「元」展示，复用 contracts 工具，禁止前端自算浮点。
  * 详情为富文本 HTML，卡片预览仅取纯文本摘要，避免渲染标签。
+ * 点击进入商品详情页下单。
  */
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { fenToYuan, type ProductPublicView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { useToast } from '@/composables/use-toast';
 
 const props = defineProps<{ product: ProductPublicView }>();
 
-const toast = useToast();
+const router = useRouter();
 
 /** 富文本详情去标签后的纯文本摘要（卡片两行预览用） */
 const summary = computed(() =>
@@ -22,7 +23,7 @@ const summary = computed(() =>
 <template>
   <article
     class="product card"
-    @click="toast.show(`「${product.title}」下单流程即将上线`)"
+    @click="router.push(`/products/${product.id}`)"
   >
     <div
       class="cover"

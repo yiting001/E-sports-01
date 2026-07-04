@@ -23,6 +23,7 @@ import { UpdateProductUseCase } from './application/use-cases/update-product.use
 import { RemoveProductUseCase } from './application/use-cases/remove-product.usecase';
 import { PublishProductUseCase } from './application/use-cases/publish-product.usecase';
 import { ListPublicProductsUseCase } from './application/use-cases/list-public-products.usecase';
+import { GetPublicProductUseCase } from './application/use-cases/get-public-product.usecase';
 import { ListServiceAgentsUseCase } from './application/use-cases/list-service-agents.usecase';
 
 import { CategoryListController } from './interfaces/controllers/category.list.controller';
@@ -36,6 +37,7 @@ import { ProductUpdateController } from './interfaces/controllers/product.update
 import { ProductRemoveController } from './interfaces/controllers/product.remove.controller';
 import { ProductPublishController } from './interfaces/controllers/product.publish.controller';
 import { ProductPublicListController } from './interfaces/controllers/product.public-list.controller';
+import { ProductPublicDetailController } from './interfaces/controllers/product.public-detail.controller';
 import { ServiceAgentListController } from './interfaces/controllers/service-agent.list.controller';
 
 /**
@@ -61,6 +63,7 @@ import { ServiceAgentListController } from './interfaces/controllers/service-age
     ProductRemoveController,
     ProductPublishController,
     ProductPublicListController,
+    ProductPublicDetailController,
     ServiceAgentListController,
   ],
   providers: [
@@ -78,7 +81,10 @@ import { ServiceAgentListController } from './interfaces/controllers/service-age
     RemoveProductUseCase,
     PublishProductUseCase,
     ListPublicProductsUseCase,
+    GetPublicProductUseCase,
     ListServiceAgentsUseCase,
   ],
+  // 导出商品仓储供订单模块下单时校验商品/固化快照
+  exports: [PRODUCT_REPOSITORY],
 })
 export class CommerceModule {}
