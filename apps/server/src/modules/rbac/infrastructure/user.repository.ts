@@ -106,12 +106,12 @@ export class TypeormUserRepository implements UserRepository {
     const qb = this.repo
       .createQueryBuilder('u')
       .innerJoinAndSelect('u.roles', 'role', 'role.code = :roleCode', { roleCode })
-      .orderBy('u.created_at', 'DESC')
+      .orderBy('u.createdAt', 'DESC')
       .skip(skip)
       .take(take);
     const tenantId = this.tenant.scopeId();
     if (tenantId) {
-      qb.andWhere('u.tenant_id = :tenantId', { tenantId });
+      qb.andWhere('u.tenantId = :tenantId', { tenantId });
     }
     if (keyword) {
       qb.andWhere('(u.username ILIKE :kw OR u.nickname ILIKE :kw)', {
