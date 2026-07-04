@@ -17,6 +17,7 @@
 | 用户资料自助 | [user-profile.md](./user-profile.md) | 登录用户自助改头像/昵称/手机号，免授权自助上传，个人中心页 |
 | 实名认证 | [realname.md](./realname.md) | 证件提交 + 人工审核状态机，身份证 AES-256-GCM 加密脱敏，超管按角色配置需实名 |
 | 反馈管理 | [feedback.md](./feedback.md) | 投诉客服/打手反馈提交 + 管理端受理回复，状态机闭环，C 端联系客服打通既有 IM |
+| 运营通知 | [notice.md](./notice.md) | 首页横幅后台换图（配置中心存储）+ 通知公告 CRUD，C 端公告条滚动展示、点击查看详情 |
 | 商品管理 | [commerce.md](./commerce.md) | 分类 + 商品 CRUD 与上下架，商品可关联负责客服，C 端免登录只读上架商品，金额以分整数 |
 | 前端基座 | [frontend.md](./frontend.md) | Vue3 + Pinia，鉴权 store、动态路由守卫、v-permission 指令 |
 | 登录注册 UI | [auth-ui.md](./auth-ui.md) | 企业级电竞风格登录/注册/短信验证码入口，仅重做 UI 不改鉴权逻辑 |

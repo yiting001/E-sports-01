@@ -200,6 +200,19 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
   "status": "pending", "replyContent": "", "handledBy": "", "handledAt": "" }
 ```
 
+## 运营通知与首页横幅
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/notice/banner` | 公开 | 首页横幅图片 `{ image }`（未配置为空串，C 端回退默认样式） |
+| PUT | `/api/notice/banner` | `notice:banner` | 更新横幅 `{ image }`，传空串即撤下 |
+| GET | `/api/notice/public` | 公开 | 启用中的通知列表（sort 升序 + 创建时间倒序） |
+| GET | `/api/notice/public/:id` | 公开 | 单条通知详情（仅启用中的可见） |
+| GET | `/api/notice` | `notice:list` | 管理端分页列表 `?page&pageSize` |
+| POST | `/api/notice` | `notice:save` | 新建通知 `{ title, content, enabled, sort }` → `NoticeView` |
+| PUT | `/api/notice/:id` | `notice:save` | 编辑通知 |
+| DELETE | `/api/notice/:id` | `notice:remove` | 删除通知 |
+
 ## 权限码一览（contracts `PERMS`）
 
 | 模块 | 权限码 |
@@ -214,6 +227,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | 钱包管理 | `wallet:admin:list` `wallet:admin:transaction` `wallet:admin:adjust` |
 | 实名 | `realname:list` `realname:review` `realname:policy` |
 | 反馈 | `feedback:list` `feedback:handle` |
+| 通知 | `notice:list` `notice:save` `notice:remove` `notice:banner` |
 
 ## 业务状态码（`BizCode`）
 

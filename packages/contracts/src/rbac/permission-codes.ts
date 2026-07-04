@@ -65,6 +65,12 @@ export const PERMS = {
     list: 'feedback:list',
     handle: 'feedback:handle',
   },
+  notice: {
+    list: 'notice:list',
+    save: 'notice:save',
+    remove: 'notice:remove',
+    banner: 'notice:banner',
+  },
   category: {
     list: 'commerce:category:list',
     create: 'commerce:category:create',

@@ -1,17 +1,40 @@
 <script setup lang="ts">
 /**
- * 首页推广横幅：深色碳纤面板 + 战术金斜体标语 + 右侧金框二维码位，
- * 右上角斜纹装饰呼应「战术胶带」意象。
+ * 首页运营横幅：后台配置了横幅图则直接展示该图片（可在管理端随时更换）；
+ * 未配置时回退默认样式：深色碳纤面板 + 战术金斜体标语 + 右侧金框二维码位。
  */
+import { onMounted, ref } from 'vue';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { HOME_BANNER } from '@/config/home.mock';
+import { noticeApi } from '@/api/notice.api';
 import { useToast } from '@/composables/use-toast';
 
 const toast = useToast();
+
+/** 后台配置的横幅图 URL；空串表示未配置，回退默认样式 */
+const image = ref('');
+
+onMounted(async () => {
+  try {
+    image.value = (await noticeApi.getBanner()).image;
+  } catch {
+    // 拉取失败时静默回退默认样式，不阻断首页渲染
+  }
+});
 </script>
 
 <template>
   <div
+    v-if="image"
+    class="banner-image card"
+  >
+    <img
+      :src="image"
+      alt="运营横幅"
+    >
+  </div>
+  <div
+    v-else
     class="banner card"
     @click="toast.show('推广详情即将上线')"
   >
@@ -44,6 +67,17 @@ const toast = useToast();
 </template>
 
 <style scoped>
+.banner-image {
+  overflow: hidden;
+  line-height: 0;
+}
+
+.banner-image img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+}
+
 .banner {
   position: relative;
   display: flex;

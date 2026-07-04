@@ -27,4 +27,5 @@ export const CONFIG_GROUP_META: Record<ConfigGroup, { label: string }> = {
   [ConfigGroup.Upload]: { label: '上传' },
   [ConfigGroup.Wallet]: { label: '钱包' },
   [ConfigGroup.Realname]: { label: '实名' },
+  [ConfigGroup.Portal]: { label: '运营' },
 };

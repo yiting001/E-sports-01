@@ -69,6 +69,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: '软件图标（上传图片，作 logo 与 favicon）',
   },
   {
+    key: CONFIG_KEYS.portal.homeBanner,
+    value: '',
+    type: ConfigValueType.Image,
+    group: ConfigGroup.Portal,
+    remark: 'C 端首页运营横幅图片（建议在「运营通知」页维护）',
+  },
+  {
     key: CONFIG_KEYS.auth.accessTokenTtl,
     value: '3600',
     type: ConfigValueType.Number,
