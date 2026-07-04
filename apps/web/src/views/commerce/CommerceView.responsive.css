@@ -1,0 +1,18 @@
+@media (max-width: 920px) {
+  .commerce-toolbar .commerce-filter,
+  .commerce-toolbar .commerce-status-filter,
+  .commerce-toolbar .commerce-search {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .commerce-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .commerce-pager__summary {
+    width: 100%;
+    margin-right: 0;
+  }
+}

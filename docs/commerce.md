@@ -40,7 +40,11 @@ modules/commerce/
 ```
 
 前端：
-- 管理端 `apps/web/src/views/commerce/CategoryListView.vue`（菜单 `commerce:category:menu`）、`ProductListView.vue`（菜单 `commerce:product:menu`），API 门面 `apps/web/src/api/commerce.api.ts`。
+- 管理端 `apps/web/src/views/commerce/CategoryListView.vue`（菜单 `commerce:category:menu`）、`ProductListView.vue`（菜单 `commerce:product:menu`）只负责数据加载、提交、删除、上下架等业务编排；UI 拆到 `apps/web/src/components/commerce/`：
+  - `category/CategoryStats.vue`、`CategoryDirectory.vue`、`CategoryFormDrawer.vue`
+  - `product/ProductStats.vue`、`ProductDirectory.vue`、`ProductFormDrawer.vue`
+  - `commerce-ui.types.ts` 收口分类/商品表单与筛选模型
+- 管理端 API 门面：`apps/web/src/api/commerce.api.ts`。
 - 用户端 `apps/client`：`views/home/HomeView.vue`（分类签 + 商品网格）、`views/category/CategoryView.vue`（分组 + 排行榜）接入公开接口，API 门面 `apps/client/src/api/commerce.api.ts`。
 
 ## 权限（RBAC）
