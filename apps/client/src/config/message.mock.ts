@@ -16,10 +16,13 @@ export interface MessageEntry {
   action?: string;
 }
 
+/** 客服入口条目 id，点击进入在线客服聊天 */
+export const SERVICE_ENTRY_ID = 'service';
+
 /** 官方消息页签内容 */
 export const OFFICIAL_MESSAGES: MessageEntry[] = [
   {
-    id: 'service',
+    id: SERVICE_ENTRY_ID,
     icon: 'headset',
     title: '三角洲客服',
     subtitle: '三角洲在线客服',

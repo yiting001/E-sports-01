@@ -1,3 +1,5 @@
+import { PERMS } from '@app/contracts';
+
 /**
  * 超级管理员角色码。
  * 拥有该角色的用户跳过权限校验（拥有全部权限）。
@@ -21,3 +23,14 @@ export const MEMBER_ROLE = 'member';
  * 管理员在用户管理中为客服人员分配该角色；创建商品时「关联负责客服」的候选列表仅取该角色用户。
  */
 export const SERVICE_ROLE = 'service';
+
+/**
+ * 客服角色默认权限码：管理端「即时通讯 / 客服工作台」菜单 + 消息历史 + 坐席接口。
+ * 由播种器幂等补齐，使客服账号登录管理端即可接待访客。
+ */
+export const SERVICE_ROLE_PERMISSION_CODES: string[] = [
+  'im:menu',
+  'im:service:menu',
+  PERMS.im.history,
+  PERMS.im.serviceAgent,
+];

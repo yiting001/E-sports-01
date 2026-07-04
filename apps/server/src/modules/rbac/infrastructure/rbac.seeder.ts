@@ -12,7 +12,14 @@ import {
 } from '../domain/permission-repository.interface';
 import { DEFAULT_PERMISSIONS } from '../domain/permission-defaults';
 import { DEFAULT_MENU_PERMISSIONS } from '../domain/menu-defaults';
-import { MEMBER_ROLE, SERVICE_ROLE, SUPER_ADMIN_ROLE } from '../domain/rbac.constants';
+import {
+  MEMBER_ROLE,
+  SERVICE_ROLE,
+  SERVICE_ROLE_PERMISSION_CODES,
+  SUPER_ADMIN_ROLE,
+} from '../domain/rbac.constants';
+import { Permission } from '../domain/permission.entity';
+import { Role } from '../domain/role.entity';
 import {
   ROLE_REPOSITORY,
   RoleRepository,
@@ -133,22 +140,45 @@ export class RbacSeeder implements OnApplicationBootstrap {
   }
 
   /**
-   * 确保默认租户下存在「客服」角色。
+   * 确保默认租户下存在「客服」角色，并幂等补齐坐席工作台所需权限。
    * 管理员在用户管理中为客服人员分配该角色；商品「关联负责客服」候选仅取该角色用户。
+   * 客服需能进入管理端「即时通讯 / 客服工作台」并接待访客，故授予对应菜单与坐席接口权限。
    */
   private async ensureServiceRole(): Promise<void> {
-    const existing = await this.roleRepo.findByCode(SERVICE_ROLE);
-    if (existing) {
+    let role = await this.roleRepo.findByCode(SERVICE_ROLE);
+    if (!role) {
+      role = this.roleRepo.create({
+        code: SERVICE_ROLE,
+        name: '客服',
+        remark: '内置角色，负责接待用户咨询/处理订单，可被商品关联为负责客服',
+        tenantId: DEFAULT_TENANT_ID,
+      });
+      role = await this.roleRepo.save(role);
+      this.logger.log('已创建客服角色');
+    }
+    await this.ensureRolePermissions(role, SERVICE_ROLE_PERMISSION_CODES);
+  }
+
+  /** 幂等地为角色补齐给定权限码（仅新增缺失项，保留管理员后续手动授予的权限） */
+  private async ensureRolePermissions(role: Role, codes: string[]): Promise<void> {
+    const owned = new Set((role.permissions ?? []).map((p) => p.code));
+    const missing = codes.filter((code) => !owned.has(code));
+    if (missing.length === 0) {
       return;
     }
-    const role = this.roleRepo.create({
-      code: SERVICE_ROLE,
-      name: '客服',
-      remark: '内置角色，负责处理用户订单/拉群，可被商品关联为负责客服',
-      tenantId: DEFAULT_TENANT_ID,
-    });
+    const granted: Permission[] = [];
+    for (const code of missing) {
+      const perm = await this.permRepo.findByCode(code);
+      if (perm) {
+        granted.push(perm);
+      }
+    }
+    if (granted.length === 0) {
+      return;
+    }
+    role.permissions = [...(role.permissions ?? []), ...granted];
     await this.roleRepo.save(role);
-    this.logger.log('已创建客服角色');
+    this.logger.log(`客服角色补齐 ${granted.length} 项权限`);
   }
 
   private async ensureAdminUser(superRoleId: string): Promise<void> {
