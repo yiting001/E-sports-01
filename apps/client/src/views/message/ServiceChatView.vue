@@ -2,7 +2,8 @@
 /**
  * 在线客服聊天页（全屏）。
  * 复用后端 IM 客服能力：进入时复用进行中的客服会话或新发起，经 WebSocket 拉历史并实时收发。
- * 用户端仅需文字咨询；系统消息（客服接入/欢迎语，富文本）经 DOMPurify 净化后渲染。
+ * 支持发送文字/图片/视频（媒体先经自助上传拿 URL 再作为消息发送）；
+ * 系统消息（客服接入/欢迎语，富文本）经 DOMPurify 净化后渲染。
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -17,6 +18,7 @@ import {
 import DOMPurify from 'dompurify';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { imApi } from '@/api/im.api';
+import { uploadApi } from '@/api/upload.api';
 import { createImSocket } from '@/composables/use-im-socket';
 import { useAuthStore } from '@/stores/auth.store';
 import { useToast } from '@/composables/use-toast';
@@ -30,7 +32,10 @@ const conversation = ref<ConversationView | null>(null);
 const messages = ref<ChatMessage[]>([]);
 const draft = ref('');
 const loading = ref(true);
+const uploading = ref(false);
 const scrollArea = ref<HTMLElement | null>(null);
+const imageInput = ref<HTMLInputElement | null>(null);
+const videoInput = ref<HTMLInputElement | null>(null);
 
 /** 会话状态文案：待接入 / 服务中 / 已结束 */
 const statusText = computed(() => {
@@ -99,6 +104,30 @@ function send(): void {
     content,
   });
   draft.value = '';
+}
+
+/** 选中图片/视频后：自助上传拿 URL，再作为对应类型的消息发送 */
+async function sendMedia(
+  event: Event,
+  type: MessageType.Image | MessageType.Video,
+): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file || !conversation.value || !canSend.value) {
+    return;
+  }
+  uploading.value = true;
+  try {
+    const { url } = await uploadApi.uploadSelf(file);
+    socket.send({
+      conversationId: conversation.value.id,
+      type,
+      content: url,
+    });
+  } finally {
+    uploading.value = false;
+  }
 }
 
 function goBack(): void {
@@ -212,11 +241,47 @@ onBeforeUnmount(() => socket.disconnect());
 
     <footer class="compose card">
       <input
+        ref="imageInput"
+        class="file-input"
+        type="file"
+        accept="image/*"
+        @change="sendMedia($event, MessageType.Image)"
+      >
+      <input
+        ref="videoInput"
+        class="file-input"
+        type="file"
+        accept="video/*"
+        @change="sendMedia($event, MessageType.Video)"
+      >
+      <button
+        class="tool"
+        aria-label="发送图片"
+        :disabled="!canSend || uploading"
+        @click="imageInput?.click()"
+      >
+        <AppIcon
+          name="image"
+          :size="20"
+        />
+      </button>
+      <button
+        class="tool"
+        aria-label="发送视频"
+        :disabled="!canSend || uploading"
+        @click="videoInput?.click()"
+      >
+        <AppIcon
+          name="video"
+          :size="20"
+        />
+      </button>
+      <input
         v-model="draft"
         class="input"
         type="text"
         :disabled="!canSend"
-        :placeholder="canSend ? '输入消息…' : '会话已结束'"
+        :placeholder="canSend ? (uploading ? '发送中…' : '输入消息…') : '会话已结束'"
         @keyup.enter="send"
       >
       <button
@@ -363,6 +428,27 @@ onBeforeUnmount(() => socket.disconnect());
   align-items: center;
   margin: 12px;
   padding: 10px 12px;
+}
+
+.file-input {
+  display: none;
+}
+
+.tool {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--c-accent);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+}
+
+.tool:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .input {
