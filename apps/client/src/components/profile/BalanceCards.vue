@@ -1,28 +1,35 @@
 <script setup lang="ts">
 /**
- * 余额与客服双卡：暗面金字余额卡（分转元、计分板字体）+ 战术金联系客服卡。
+ * 余额与客服双卡：暗面金字余额卡（真实钱包余额，点击进钱包页）+ 战术金联系客服卡。
  * 联系客服卡进入在线客服聊天页。
  */
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { fenToYuan } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { useToast } from '@/composables/use-toast';
+import { walletApi } from '@/api/wallet.api';
 
-/** 余额（分）。UI 阶段未登录固定为 0，后续接钱包接口 */
-const BALANCE_FEN = 0;
-
-const toast = useToast();
 const router = useRouter();
+
+/** 钱包余额（元展示串）；拉取失败静默按 0 展示，不阻断个人中心渲染 */
+const balanceYuan = ref('0.00');
+
+onMounted(async () => {
+  try {
+    balanceYuan.value = (await walletApi.mine()).balanceYuan;
+  } catch {
+    // 静默回退
+  }
+});
 </script>
 
 <template>
   <div class="cards">
     <button
       class="balance card"
-      @click="toast.show('余额明细即将上线')"
+      @click="router.push({ name: 'wallet' })"
     >
       <span class="label">我的余额 ›</span>
-      <span class="amount">{{ fenToYuan(BALANCE_FEN) }}</span>
+      <span class="amount">{{ balanceYuan }}</span>
     </button>
     <button
       class="service"

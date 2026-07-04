@@ -53,6 +53,12 @@ export const router = createRouter({
       meta: { title: '确认下单', requiresAuth: true },
     },
     {
+      path: '/wallet',
+      name: 'wallet',
+      component: () => import('@/views/wallet/WalletView.vue'),
+      meta: { title: '我的钱包', requiresAuth: true },
+    },
+    {
       path: '/orders',
       name: 'orders',
       component: () => import('@/views/order/MyOrdersView.vue'),
