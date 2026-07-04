@@ -54,7 +54,8 @@ apps/server/src/modules/order/
 
 apps/client/src/
 ├── api/order.api.ts                         # 下单/详情/我的订单/取消
-├── views/product/ProductDetailView.vue      # 商品详情 + 下单表单
+├── views/product/ProductDetailView.vue      # 商品详情（纯展示，立即下单进下单页）
+├── views/order/CheckoutView.vue             # 下单页（数量/备注/支付方式 → 扫码支付）
 ├── views/order/MyOrdersView.vue             # 我的订单列表
 └── components/order/PayDialog.vue           # 扫码支付弹层（轮询支付结果）
 ```

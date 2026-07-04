@@ -17,6 +17,7 @@ import {
 } from '@app/contracts';
 import DOMPurify from 'dompurify';
 import AppIcon from '@/components/common/AppIcon.vue';
+import ChatMedia from '@/components/message/ChatMedia.vue';
 import { imApi } from '@/api/im.api';
 import { uploadApi } from '@/api/upload.api';
 import { createImSocket } from '@/composables/use-im-socket';
@@ -136,6 +137,10 @@ function goBack(): void {
 
 onMounted(async () => {
   try {
+    // 刷新后内存资料为空会导致无法识别自己的消息，先补拉
+    if (!auth.profile) {
+      await auth.loadProfile();
+    }
     const conv = await resolveConversation();
     conversation.value = conv;
     socket.connect();
@@ -214,26 +219,27 @@ onBeforeUnmount(() => socket.disconnect());
           class="row"
           :class="{ 'row--self': isSelf(msg) }"
         >
-          <div class="bubble">
-            <p
-              v-if="msg.type === MessageType.Text"
-              class="text"
-            >
-              {{ msg.content }}
-            </p>
-            <img
-              v-else-if="msg.type === MessageType.Image"
-              :src="msg.content"
-              class="media"
-              alt="图片消息"
-            >
-            <video
-              v-else-if="msg.type === MessageType.Video"
-              :src="msg.content"
-              class="media"
-              controls
-            />
-            <span class="time">{{ formatTime(msg.createdAt) }}</span>
+          <div class="col">
+            <span class="sender">{{ isSelf(msg) ? '我' : '客服' }}</span>
+            <div class="bubble">
+              <p
+                v-if="msg.type === MessageType.Text"
+                class="text"
+              >
+                {{ msg.content }}
+              </p>
+              <ChatMedia
+                v-else-if="msg.type === MessageType.Image"
+                type="image"
+                :url="msg.content"
+              />
+              <ChatMedia
+                v-else-if="msg.type === MessageType.Video"
+                type="video"
+                :url="msg.content"
+              />
+              <span class="time">{{ formatTime(msg.createdAt) }}</span>
+            </div>
           </div>
         </div>
       </template>
@@ -387,8 +393,25 @@ onBeforeUnmount(() => socket.disconnect());
   justify-content: flex-end;
 }
 
-.bubble {
+.col {
   max-width: 76%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sender {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  padding: 0 2px;
+}
+
+.row--self .sender {
+  text-align: right;
+  color: var(--c-accent);
+}
+
+.bubble {
   padding: 10px 12px;
   background: var(--c-surface-2);
   border: 1px solid var(--c-border);
@@ -405,12 +428,6 @@ onBeforeUnmount(() => socket.disconnect());
   line-height: 1.5;
   word-break: break-word;
   white-space: pre-wrap;
-}
-
-.media {
-  display: block;
-  max-width: 100%;
-  border-radius: var(--radius-sm);
 }
 
 .time {

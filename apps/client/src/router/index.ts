@@ -47,6 +47,12 @@ export const router = createRouter({
       meta: { title: '商品详情' },
     },
     {
+      path: '/checkout/:productId',
+      name: 'checkout',
+      component: () => import('@/views/order/CheckoutView.vue'),
+      meta: { title: '确认下单', requiresAuth: true },
+    },
+    {
       path: '/orders',
       name: 'orders',
       component: () => import('@/views/order/MyOrdersView.vue'),
