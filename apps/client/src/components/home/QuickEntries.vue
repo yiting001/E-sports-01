@@ -1,12 +1,23 @@
 <script setup lang="ts">
 /**
  * 首页三个运营快捷入口：切角深色卡 + 金色图标与标语 + 下方说明文字。
+ * 投诉入口进入投诉反馈页，其余入口暂为占位提示。
  */
+import { useRouter } from 'vue-router';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { QUICK_ENTRIES } from '@/config/home.mock';
+import { COMPLAINT_ENTRY_ID, QUICK_ENTRIES, type QuickEntry } from '@/config/home.mock';
 import { useToast } from '@/composables/use-toast';
 
 const toast = useToast();
+const router = useRouter();
+
+function openEntry(entry: QuickEntry): void {
+  if (entry.id === COMPLAINT_ENTRY_ID) {
+    router.push({ name: 'feedback' });
+    return;
+  }
+  toast.show(`「${entry.label}」即将上线`);
+}
 </script>
 
 <template>
@@ -15,7 +26,7 @@ const toast = useToast();
       v-for="entry in QUICK_ENTRIES"
       :key="entry.id"
       class="entry"
-      @click="toast.show(`「${entry.label}」即将上线`)"
+      @click="openEntry(entry)"
     >
       <div class="banner card">
         <AppIcon

@@ -61,6 +61,10 @@ export const PERMS = {
     review: 'realname:review',
     policy: 'realname:policy',
   },
+  feedback: {
+    list: 'feedback:list',
+    handle: 'feedback:handle',
+  },
   category: {
     list: 'commerce:category:list',
     create: 'commerce:category:create',

@@ -23,6 +23,12 @@ export const router = createRouter({
       meta: { title: '在线客服', requiresAuth: true },
     },
     {
+      path: '/feedback',
+      name: 'feedback',
+      component: () => import('@/views/feedback/FeedbackView.vue'),
+      meta: { title: '投诉反馈', requiresAuth: true },
+    },
+    {
       path: '/',
       component: MainLayout,
       children: [

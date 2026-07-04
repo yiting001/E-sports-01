@@ -1,7 +1,9 @@
 <script setup lang="ts">
 /**
  * 余额与客服双卡：暗面金字余额卡（分转元、计分板字体）+ 战术金联系客服卡。
+ * 联系客服卡进入在线客服聊天页。
  */
+import { useRouter } from 'vue-router';
 import { fenToYuan } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { useToast } from '@/composables/use-toast';
@@ -10,6 +12,7 @@ import { useToast } from '@/composables/use-toast';
 const BALANCE_FEN = 0;
 
 const toast = useToast();
+const router = useRouter();
 </script>
 
 <template>
@@ -23,7 +26,7 @@ const toast = useToast();
     </button>
     <button
       class="service"
-      @click="toast.show('在线客服即将上线')"
+      @click="router.push({ name: 'service' })"
     >
       <span class="badge">实时在线</span>
       <span class="text">

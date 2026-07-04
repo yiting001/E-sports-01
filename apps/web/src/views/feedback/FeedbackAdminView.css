@@ -1,0 +1,58 @@
+.feedback-filter {
+  width: 150px;
+}
+
+.feedback-user {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.feedback-user__avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  color: var(--el-color-warning);
+  font-size: 18px;
+  border-radius: 4px;
+  background: var(--el-color-warning-light-9);
+  place-items: center;
+}
+
+.feedback-user div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.feedback-user strong,
+.feedback-user small,
+.feedback-muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feedback-user strong {
+  color: var(--app-text-color);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.feedback-user small,
+.feedback-muted,
+.feedback-pager__summary {
+  color: var(--app-text-color-secondary);
+  font-size: 12px;
+}
+
+.feedback-content {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.5;
+  word-break: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}

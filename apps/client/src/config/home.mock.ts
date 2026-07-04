@@ -29,9 +29,12 @@ export const HOME_BANNER = {
 export const HOME_NOTICE =
   '单！如果打手服务不好联系客服免单！如果打手有私加直接联系客服举报！';
 
+/** 投诉入口条目 id，点击进入投诉反馈页 */
+export const COMPLAINT_ENTRY_ID = 'complaint';
+
 /** 三个运营快捷入口 */
 export const QUICK_ENTRIES: QuickEntry[] = [
   { id: 'activity', icon: 'gift', banner: '老板消费活动', label: '老板消费活动入口' },
-  { id: 'complaint', icon: 'shield', banner: '投诉客服/打手', label: '投诉客服/打手入口' },
+  { id: COMPLAINT_ENTRY_ID, icon: 'shield', banner: '投诉客服/打手', label: '投诉客服/打手入口' },
   { id: 'app', icon: 'download', banner: '官方APP下载', label: '怪兽官方APP下载' },
 ];

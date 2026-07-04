@@ -183,6 +183,23 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 > 身份证号以密文存储（密钥首次启动随机生成并存于配置中心 `realname.idCipherKey`，secret），对外一律返回脱敏串。「需实名的角色」存于配置中心 `realname.requiredRoleCodes`（实名组），建议在「实名管理」页维护。
 
+## 反馈管理
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| POST | `/api/feedback` | 登录 | 提交投诉反馈 `{ type, target?, content }`（type：`booster` 投诉打手 / `service` 投诉客服 / `other` 其他）→ `FeedbackView` |
+| GET | `/api/feedback/mine` | 登录 | 分页查询我的反馈 `?page&pageSize`，按提交时间倒序 |
+| GET | `/api/feedback` | `feedback:list` | 管理端分页列表 `?page&pageSize&status&type`，按提交时间倒序 |
+| POST | `/api/feedback/:id/handle` | `feedback:handle` | 处理反馈 `{ replyContent }`（仅待处理记录可处理，处理后不可重复处理） |
+
+```jsonc
+// POST /api/feedback  请求
+{ "type": "booster", "target": "打手小王", "content": "态度恶劣，拒绝沟通" }
+// data
+{ "id": "...", "type": "booster", "target": "打手小王", "content": "...",
+  "status": "pending", "replyContent": "", "handledBy": "", "handledAt": "" }
+```
+
 ## 权限码一览（contracts `PERMS`）
 
 | 模块 | 权限码 |
@@ -196,6 +213,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | 日志 | `observability:log:list` `observability:log:detail` `observability:log:purge` |
 | 钱包管理 | `wallet:admin:list` `wallet:admin:transaction` `wallet:admin:adjust` |
 | 实名 | `realname:list` `realname:review` `realname:policy` |
+| 反馈 | `feedback:list` `feedback:handle` |
 
 ## 业务状态码（`BizCode`）
 

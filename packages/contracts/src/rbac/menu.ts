@@ -107,6 +107,14 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     sort: 65,
     group: 'system',
   },
+  {
+    code: 'feedback:menu',
+    title: '反馈管理',
+    path: 'feedback',
+    icon: 'ChatLineSquare',
+    sort: 66,
+    group: 'system',
+  },
   { code: 'im:menu', title: '即时通讯', path: 'im', icon: 'ChatDotRound', sort: 70, group: 'communication' },
   { code: 'im:service:menu', title: '客服工作台', path: 'im/service', icon: 'Service', sort: 80, group: 'communication' },
 ];
