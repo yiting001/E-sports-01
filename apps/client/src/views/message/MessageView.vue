@@ -78,79 +78,93 @@ onMounted(async () => {
     <SegmentTabs
       v-model="activeTab"
       :tabs="TABS"
+      class="mobile-tabs"
     />
 
-    <div
-      v-if="activeTab === 0"
-      class="list card"
+    <section
+      class="panel panel--official"
+      :class="{ 'panel--active': activeTab === 0 }"
     >
-      <button
-        v-for="entry in OFFICIAL_MESSAGES"
-        :key="entry.id"
-        class="entry"
-        @click="openEntry(entry)"
-      >
-        <span class="avatar">
-          <AppIcon
-            :name="entry.icon"
-            :size="20"
-          />
-        </span>
-        <span class="body">
-          <span class="title">{{ entry.title }}</span>
-          <span class="subtitle">{{ entry.subtitle }}</span>
-        </span>
-        <span
-          v-if="entry.action"
-          class="action"
-        >{{ entry.action }}</span>
-      </button>
-    </div>
-
-    <div
-      v-else-if="conversations.length"
-      class="list card"
-    >
-      <button
-        v-for="conv in conversations"
-        :key="conv.id"
-        class="entry"
-        @click="openConversation()"
-      >
-        <span class="avatar">
-          <AppIcon
-            name="headset"
-            :size="20"
-          />
-        </span>
-        <span class="body">
-          <span class="title">{{ conv.title || '在线客服' }}</span>
-          <span class="subtitle">{{ lastMessageText(conv.lastMessage) }}</span>
-        </span>
-        <span class="meta">
+      <h2 class="panel-title sec-title">
+        {{ TABS[0] }}
+      </h2>
+      <div class="list card">
+        <button
+          v-for="entry in OFFICIAL_MESSAGES"
+          :key="entry.id"
+          class="entry"
+          @click="openEntry(entry)"
+        >
+          <span class="avatar">
+            <AppIcon
+              :name="entry.icon"
+              :size="20"
+            />
+          </span>
+          <span class="body">
+            <span class="title">{{ entry.title }}</span>
+            <span class="subtitle">{{ entry.subtitle }}</span>
+          </span>
           <span
-            v-if="conv.lastMessage"
-            class="time"
-          >{{ formatTime(conv.lastMessage.createdAt) }}</span>
-          <span
-            v-if="conv.unread"
-            class="unread"
-          >{{ conv.unread }}</span>
-        </span>
-      </button>
-    </div>
+            v-if="entry.action"
+            class="action"
+          >{{ entry.action }}</span>
+        </button>
+      </div>
+    </section>
 
-    <div
-      v-else
-      class="empty card"
+    <section
+      class="panel panel--conversation"
+      :class="{ 'panel--active': activeTab === 1 }"
     >
-      <AppIcon
-        name="chat"
-        :size="36"
-        class="empty-icon"
-      />
-      <p>{{ loading ? '加载中…' : '暂无会话消息' }}</p>
-    </div>
+      <h2 class="panel-title sec-title">
+        {{ TABS[1] }}
+      </h2>
+      <div
+        v-if="conversations.length"
+        class="list card"
+      >
+        <button
+          v-for="conv in conversations"
+          :key="conv.id"
+          class="entry"
+          @click="openConversation()"
+        >
+          <span class="avatar">
+            <AppIcon
+              name="headset"
+              :size="20"
+            />
+          </span>
+          <span class="body">
+            <span class="title">{{ conv.title || '在线客服' }}</span>
+            <span class="subtitle">{{ lastMessageText(conv.lastMessage) }}</span>
+          </span>
+          <span class="meta">
+            <span
+              v-if="conv.lastMessage"
+              class="time"
+            >{{ formatTime(conv.lastMessage.createdAt) }}</span>
+            <span
+              v-if="conv.unread"
+              class="unread"
+            >{{ conv.unread }}</span>
+          </span>
+        </button>
+      </div>
+
+      <div
+        v-else
+        class="empty card"
+      >
+        <AppIcon
+          name="chat"
+          :size="36"
+          class="empty-icon"
+        />
+        <p>{{ loading ? '加载中…' : '暂无会话消息' }}</p>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -159,6 +173,19 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.panel {
+  display: none;
+}
+
+.panel--active {
+  display: block;
+}
+
+.panel-title {
+  display: none;
+  margin-bottom: 12px;
 }
 
 .list {
@@ -251,5 +278,33 @@ onMounted(async () => {
 
 .empty-icon {
   opacity: 0.5;
+}
+
+@media (min-width: 768px) {
+  .message {
+    display: grid;
+    grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+  }
+
+  .mobile-tabs {
+    display: none;
+  }
+
+  .panel,
+  .panel--active {
+    display: block;
+    min-width: 0;
+  }
+
+  .panel-title {
+    display: flex;
+  }
+
+  .list,
+  .empty {
+    min-height: 180px;
+  }
 }
 </style>
