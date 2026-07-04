@@ -74,6 +74,9 @@ onMounted(async () => {
 
 .banner-image img {
   width: 100%;
+  /* 固定横幅比例，超出裁剪，避免原图过大撑开首页 */
+  aspect-ratio: 21 / 9;
+  max-height: 160px;
   display: block;
   object-fit: cover;
 }
