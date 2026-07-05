@@ -1,0 +1,57 @@
+.booster-filter {
+  width: 150px;
+}
+
+.booster-user {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.booster-user__avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  color: var(--el-color-warning);
+  font-size: 18px;
+  border-radius: 4px;
+  background: var(--el-color-warning-light-9);
+  place-items: center;
+}
+
+.booster-user div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.booster-user strong,
+.booster-user small,
+.booster-muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.booster-user strong {
+  color: var(--app-text-color);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.booster-user small,
+.booster-muted {
+  color: var(--app-text-color-secondary);
+  font-size: 12px;
+}
+
+.booster-content {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.5;
+  word-break: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}

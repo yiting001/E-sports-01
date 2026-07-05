@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import {
+  BOOSTER_ROLE_CODE,
   DEFAULT_TENANT_CODE,
   DEFAULT_TENANT_ID,
   PermissionType,
@@ -66,6 +67,7 @@ export class RbacSeeder implements OnApplicationBootstrap {
     const superRole = await this.ensureSuperRole();
     await this.ensureMemberRole();
     await this.ensureServiceRole();
+    await this.ensureBoosterRole();
     await this.ensureAdminUser(superRole.id);
   }
 
@@ -157,6 +159,25 @@ export class RbacSeeder implements OnApplicationBootstrap {
       this.logger.log('已创建客服角色');
     }
     await this.ensureRolePermissions(role, SERVICE_ROLE_PERMISSION_CODES);
+  }
+
+  /**
+   * 确保默认租户下存在「打手」角色。
+   * 用户在个人中心提交入驻申请、管理员审核通过后自动授予该角色；初始无管理权限。
+   */
+  private async ensureBoosterRole(): Promise<void> {
+    const existing = await this.roleRepo.findByCode(BOOSTER_ROLE_CODE);
+    if (existing) {
+      return;
+    }
+    const role = this.roleRepo.create({
+      code: BOOSTER_ROLE_CODE,
+      name: '打手',
+      remark: '内置角色，打手入驻申请审核通过后自动授予',
+      tenantId: DEFAULT_TENANT_ID,
+    });
+    await this.roleRepo.save(role);
+    this.logger.log('已创建打手角色');
   }
 
   /** 幂等地为角色补齐给定权限码（仅新增缺失项，保留管理员后续手动授予的权限） */

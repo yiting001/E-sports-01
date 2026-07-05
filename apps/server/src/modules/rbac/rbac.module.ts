@@ -27,6 +27,7 @@ import { TokenService } from './application/token.service';
 import { PermissionResolver } from './application/permission-resolver.service';
 import { TenantResolver } from './application/tenant-resolver.service';
 import { UserDirectory } from './application/user-directory.service';
+import { RoleGranter } from './application/role-granter.service';
 import { ListTenantsUseCase } from './application/use-cases/list-tenants.usecase';
 import { CreateTenantUseCase } from './application/use-cases/create-tenant.usecase';
 import { UpdateTenantUseCase } from './application/use-cases/update-tenant.usecase';
@@ -142,6 +143,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     PermissionResolver,
     TenantResolver,
     UserDirectory,
+    RoleGranter,
     JwtStrategy,
     RbacSeeder,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
@@ -175,6 +177,6 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     UpdateTenantUseCase,
     RemoveTenantUseCase,
   ],
-  exports: [TokenService, PermissionResolver, UserDirectory],
+  exports: [TokenService, PermissionResolver, UserDirectory, RoleGranter],
 })
 export class RbacModule {}

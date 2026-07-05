@@ -1,12 +1,23 @@
 <script setup lang="ts">
 /**
  * 更多功能网格：4 列图标入口（领券中心/会员等级/打手入驻等），金色线性图标。
+ * 「打手入驻」跳转入驻申请页，其余入口暂为占位提示。
  */
+import { useRouter } from 'vue-router';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { FEATURE_ENTRIES } from '@/config/profile.mock';
+import { FEATURE_ENTRIES, type IconEntry } from '@/config/profile.mock';
 import { useToast } from '@/composables/use-toast';
 
+const router = useRouter();
 const toast = useToast();
+
+function onEntry(entry: IconEntry): void {
+  if (entry.id === 'join') {
+    void router.push({ name: 'booster-apply' });
+    return;
+  }
+  toast.show(`「${entry.label}」即将上线`);
+}
 </script>
 
 <template>
@@ -19,7 +30,7 @@ const toast = useToast();
         v-for="entry in FEATURE_ENTRIES"
         :key="entry.id"
         class="entry"
-        @click="toast.show(`「${entry.label}」即将上线`)"
+        @click="onEntry(entry)"
       >
         <span class="icon-box">
           <AppIcon

@@ -19,6 +19,7 @@ export * from './observability/log';
 export * from './wallet/wallet';
 export * from './realname/realname';
 export * from './feedback/feedback';
+export * from './booster/booster';
 export * from './notice/notice';
 export * from './order/order';
 export * from './review/review';
