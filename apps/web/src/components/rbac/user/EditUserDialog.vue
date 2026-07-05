@@ -34,7 +34,7 @@ function updateField<K extends keyof EditUserForm>(
   >
     <div class="user-dialog__intro">
       <el-icon><Connection /></el-icon>
-      <span>{{ form.username }} 当前仅支持绑定一个角色，可清空后保存为未分配。</span>
+      <span>{{ form.username }} 支持绑定多个角色（如同时为用户与打手），可清空后保存为未分配。</span>
     </div>
     <el-form
       label-position="top"
@@ -73,11 +73,14 @@ function updateField<K extends keyof EditUserForm>(
         </el-form-item>
         <el-form-item label="角色">
           <el-select
-            :model-value="form.roleId"
+            :model-value="form.roleIds"
+            multiple
             clearable
-            placeholder="单选一个角色（可清空）"
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="可多选角色（可清空）"
             class="user-form__full"
-            @update:model-value="(value: string) => updateField('roleId', value)"
+            @update:model-value="(value: string[]) => updateField('roleIds', value)"
           >
             <el-option
               v-for="role in roles"

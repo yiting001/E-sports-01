@@ -1,3 +1,6 @@
+/** 单个用户可绑定的角色数量上限（支持多角色，如同时为用户与打手） */
+export const USER_ROLES_MAX = 20;
+
 /** 角色对外视图 */
 export interface RoleView {
   id: string;
