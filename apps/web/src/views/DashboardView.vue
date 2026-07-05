@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ArrowRight, Key, Menu, Monitor, UserFilled } from '@element-plus/icons-vue';
+import { PERMS, STATS_RANGE_TEXT, StatsRange } from '@app/contracts';
 import AppPanel from '@/components/common/AppPanel.vue';
 import AppStats from '@/components/common/AppStats.vue';
+import OrderStatsPanel from '@/components/dashboard/OrderStatsPanel.vue';
+import FinanceStatsPanel from '@/components/dashboard/FinanceStatsPanel.vue';
+import UserStatsPanel from '@/components/dashboard/UserStatsPanel.vue';
+import BoosterStatsPanel from '@/components/dashboard/BoosterStatsPanel.vue';
 import { useMenus, type MenuItem } from '@/composables/use-menus';
 import { useAuthStore } from '@/stores/auth.store';
 import './DashboardView.css';
@@ -27,6 +32,19 @@ interface ModuleCard {
 const router = useRouter();
 const auth = useAuthStore();
 const { menus } = useMenus();
+
+/** 统计时间范围（日/月/年），各统计块共用 */
+const statsRange = ref(StatsRange.Day);
+const rangeOptions = Object.values(StatsRange);
+
+/** 按当前账号权限决定可见的统计块 */
+const statsBlocks = computed(() => ({
+  orders: auth.hasPermission(PERMS.dashboard.orders),
+  finance: auth.hasPermission(PERMS.dashboard.finance),
+  users: auth.hasPermission(PERMS.dashboard.users),
+  boosters: auth.hasPermission(PERMS.dashboard.boosters),
+}));
+const hasStats = computed(() => Object.values(statsBlocks.value).some(Boolean));
 
 const profileName = computed(() => auth.profile?.nickname || auth.profile?.username || '-');
 const roleNames = computed(() => auth.profile?.roles ?? []);
@@ -108,6 +126,38 @@ function openModule(item: ModuleCard | MenuItem): void {
 <template>
   <section class="admin-page dashboard-page">
     <app-stats :items="metrics" />
+
+    <template v-if="hasStats">
+      <div class="stats-toolbar">
+        <el-radio-group v-model="statsRange">
+          <el-radio-button
+            v-for="option in rangeOptions"
+            :key="option"
+            :value="option"
+          >
+            {{ STATS_RANGE_TEXT[option] }}
+          </el-radio-button>
+        </el-radio-group>
+      </div>
+      <order-stats-panel
+        v-if="statsBlocks.orders"
+        :range="statsRange"
+      />
+      <finance-stats-panel
+        v-if="statsBlocks.finance"
+        :range="statsRange"
+      />
+      <div class="stats-row">
+        <user-stats-panel
+          v-if="statsBlocks.users"
+          :range="statsRange"
+        />
+        <booster-stats-panel
+          v-if="statsBlocks.boosters"
+          :range="statsRange"
+        />
+      </div>
+    </template>
 
     <section class="dashboard-layout">
       <div class="main-column">

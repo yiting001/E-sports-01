@@ -188,3 +188,21 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* 统计块：时间范围切换工具条与双列布局 */
+.stats-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+}

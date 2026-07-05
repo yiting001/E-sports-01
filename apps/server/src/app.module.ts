@@ -17,6 +17,7 @@ import { MemberModule } from './modules/member/member.module';
 import { NoticeModule } from './modules/notice/notice.module';
 import { OrderModule } from './modules/order/order.module';
 import { ReviewModule } from './modules/review/review.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 /**
  * 应用根模块。
@@ -42,6 +43,7 @@ import { ReviewModule } from './modules/review/review.module';
     NoticeModule,
     OrderModule,
     ReviewModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

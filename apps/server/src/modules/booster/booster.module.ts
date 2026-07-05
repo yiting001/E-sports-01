@@ -92,6 +92,6 @@ import { PenaltyListController } from './interfaces/controllers/penalty.list.con
     ListPenaltiesUseCase,
   ],
   // 供订单模块：完成结算时定级取费率、接单时校验押金
-  exports: [BoosterProgressService, BoosterDepositGuard],
+  exports: [BoosterProgressService, BoosterDepositGuard, BoosterPolicyService],
 })
 export class BoosterModule {}

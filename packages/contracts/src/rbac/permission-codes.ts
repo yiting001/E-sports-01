@@ -98,6 +98,16 @@ export const PERMS = {
     /** 对打手创建罚款 */
     penaltyCreate: 'finance:penalty:create',
   },
+  dashboard: {
+    /** 仪表盘-订单运营统计 */
+    orders: 'dashboard:orders',
+    /** 仪表盘-财务资金统计 */
+    finance: 'dashboard:finance',
+    /** 仪表盘-用户增长统计 */
+    users: 'dashboard:users',
+    /** 仪表盘-打手生态统计 */
+    boosters: 'dashboard:boosters',
+  },
   notice: {
     list: 'notice:list',
     save: 'notice:save',
