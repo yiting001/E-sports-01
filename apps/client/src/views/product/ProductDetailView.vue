@@ -18,6 +18,7 @@ const router = useRouter();
 const product = ref<ProductPublicView | null>(null);
 const loading = ref(true);
 const missing = ref(false);
+const descExpanded = ref(false);
 
 const safeDescription = computed(() =>
   product.value ? DOMPurify.sanitize(product.value.description) : '',
@@ -48,10 +49,7 @@ onMounted(async () => {
         aria-label="返回"
         @click="router.back()"
       >
-        <AppIcon
-          name="chevron"
-          :size="20"
-        />
+        <AppIcon name="chevron" :size="20" />
       </button>
       <span class="name">商品详情</span>
     </header>
@@ -75,34 +73,20 @@ onMounted(async () => {
           :class="{ 'cover--image': product.cover }"
           :style="product.cover ? { backgroundImage: `url(${product.cover})` } : undefined"
         >
-          <AppIcon
-            v-if="!product.cover"
-            name="gem"
-            :size="72"
-            class="emblem"
-          />
-          <p class="cover-title">
-            {{ product.coverTitle }}
-          </p>
-          <p class="cover-sub">
-            {{ product.coverSub }}
-          </p>
+          <AppIcon v-if="!product.cover" name="gem" :size="72" class="emblem" />
+          <p class="cover-title">{{ product.coverTitle }}</p>
+          <p class="cover-sub">{{ product.coverSub }}</p>
         </div>
 
         <section class="card info">
-          <h1 class="title">
-            {{ product.title }}
-          </h1>
+          <h1 class="title">{{ product.title }}</h1>
           <div class="meta">
             <span class="price">¥{{ fenToYuan(product.priceFen) }}</span>
             <span class="origin">{{ fenToYuan(product.originPriceFen) }}</span>
             <span class="sold">已售 {{ product.sold }}</span>
           </div>
           <span class="category">{{ product.categoryName }}</span>
-          <button
-            class="buy desktop-buy"
-            @click="goCheckout"
-          >
+          <button class="buy desktop-buy" @click="goCheckout">
             立即下单
           </button>
         </section>
@@ -110,16 +94,24 @@ onMounted(async () => {
         <section
           v-if="safeDescription"
           class="card desc"
+          :class="{ 'desc--expanded': descExpanded }"
         >
-          <h2 class="sec-title">
-            服务详情
-          </h2>
+          <h2 class="sec-title">服务详情</h2>
           <!-- eslint-disable vue/no-v-html -->
-          <div
-            class="desc-body"
-            v-html="safeDescription"
-          />
+          <div class="desc-content">
+            <div
+              class="desc-body"
+              v-html="safeDescription"
+            />
+          </div>
           <!-- eslint-enable vue/no-v-html -->
+          <button
+            class="desc-toggle"
+            :aria-expanded="descExpanded"
+            @click="descExpanded = !descExpanded"
+          >
+            {{ descExpanded ? '收起详情' : '展开详情' }}
+          </button>
         </section>
 
         <ProductReviews :product-id="product.id" />
@@ -134,10 +126,7 @@ onMounted(async () => {
         <span class="total-label">价格</span>
         <span class="total-value">¥{{ fenToYuan(product.priceFen) }}</span>
       </div>
-      <button
-        class="buy"
-        @click="goCheckout"
-      >
+      <button class="buy" @click="goCheckout">
         立即下单
       </button>
     </footer>
@@ -294,6 +283,7 @@ onMounted(async () => {
 }
 
 .desc {
+  position: relative;
   padding: 14px 16px;
 }
 
@@ -311,6 +301,31 @@ onMounted(async () => {
   word-break: break-word;
 }
 
+.desc-content {
+  position: relative;
+  max-height: 170px;
+  overflow: hidden;
+}
+
+.desc-content::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 58px;
+  background: linear-gradient(180deg, transparent, var(--c-surface));
+  pointer-events: none;
+}
+
+.desc--expanded .desc-content {
+  max-height: none;
+}
+
+.desc--expanded .desc-content::after {
+  display: none;
+}
+
 .desc-body :deep(img),
 .desc-body :deep(video) {
   display: block;
@@ -318,6 +333,17 @@ onMounted(async () => {
   height: auto;
   border-radius: var(--radius-sm);
   background: var(--c-bg);
+}
+
+.desc-toggle {
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--c-accent);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
 }
 
 .footer {
@@ -444,6 +470,10 @@ onMounted(async () => {
 
   .desc-body {
     font-size: 14px;
+  }
+
+  .desc-content {
+    max-height: 240px;
   }
 
   .footer {

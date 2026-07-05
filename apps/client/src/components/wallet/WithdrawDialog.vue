@@ -189,7 +189,9 @@ async function submit(): Promise<void> {
 }
 
 .close {
-  padding: 8px 22px;
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 0;
   font-size: 13px;
   color: var(--c-text-secondary);
   border: 1px solid var(--c-border);

@@ -5,11 +5,7 @@
  */
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import {
-  ORDER_STATUS_TEXT,
-  OrderStatus,
-  type OrderView,
-} from '@app/contracts';
+import { ORDER_STATUS_TEXT, OrderStatus, type OrderView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import ReviewDialog from '@/components/review/ReviewDialog.vue';
 import { orderApi } from '@/api/order.api';
@@ -104,101 +100,106 @@ onMounted(() => void load(true));
 <template>
   <div class="orders-page">
     <header class="bar">
-      <button
-        class="back"
-        aria-label="返回"
-        @click="router.back()"
-      >
-        <AppIcon
-          name="chevron"
-          :size="20"
-        />
-      </button>
-      <span class="name">我的订单</span>
+      <div class="bar-inner">
+        <button
+          class="back"
+          aria-label="返回"
+          @click="router.back()"
+        >
+          <AppIcon name="chevron" :size="20" />
+        </button>
+        <span class="name">我的订单</span>
+        <span v-if="total > 0" class="count">共 {{ total }} 笔</span>
+      </div>
     </header>
 
     <div class="scroll">
-      <p
-        v-if="!loading && orders.length === 0"
-        class="hint"
-      >
-        暂无订单，去首页选购陪玩服务吧
-      </p>
+      <div class="content">
+        <p
+          v-if="!loading && orders.length === 0"
+          class="hint card"
+        >
+          暂无订单，去首页选购陪玩服务吧
+        </p>
 
-      <article
-        v-for="order in orders"
-        :key="order.id"
-        class="order card"
-      >
-        <div class="head">
-          <span class="no">{{ order.orderNo }}</span>
-          <span
-            class="tag"
-            :class="statusClass(order.status)"
-          >
-            {{ ORDER_STATUS_TEXT[order.status] }}
-          </span>
-        </div>
-        <div class="body">
+        <article
+          v-for="order in orders"
+          :key="order.id"
+          class="order card"
+        >
+          <div class="head">
+            <span class="no">订单号 {{ order.orderNo }}</span>
+            <span
+              class="tag"
+              :class="statusClass(order.status)"
+            >
+              {{ ORDER_STATUS_TEXT[order.status] }}
+            </span>
+          </div>
+          <div class="body">
+            <div
+              class="thumb"
+              :class="{ 'thumb--image': order.productCover }"
+              :style="order.productCover ? { backgroundImage: `url(${order.productCover})` } : undefined"
+            >
+              <AppIcon
+                v-if="!order.productCover"
+                name="gem"
+                :size="26"
+                class="thumb-icon"
+              />
+            </div>
+            <div class="mid">
+              <p class="title">{{ order.productTitle }}</p>
+              <p class="sub">
+                <span>数量 ×{{ order.quantity }}</span>
+                <span>{{ formatTime(order.createdAt) }}</span>
+              </p>
+            </div>
+            <span class="amount">¥{{ order.amountYuan }}</span>
+          </div>
           <div
-            class="thumb"
-            :class="{ 'thumb--image': order.productCover }"
-            :style="order.productCover ? { backgroundImage: `url(${order.productCover})` } : undefined"
+            v-if="order.status === OrderStatus.PendingPayment"
+            class="actions"
           >
-            <AppIcon
-              v-if="!order.productCover"
-              name="gem"
-              :size="26"
-              class="thumb-icon"
-            />
+            <button
+              class="cancel"
+              @click="cancel(order)"
+            >
+              取消订单
+            </button>
           </div>
-          <div class="mid">
-            <p class="title">
-              {{ order.productTitle }}
-            </p>
-            <p class="sub">
-              数量 ×{{ order.quantity }} · {{ formatTime(order.createdAt) }}
-            </p>
+          <div
+            v-else-if="order.status === OrderStatus.Completed"
+            class="actions"
+          >
+            <span
+              v-if="reviewedIds.has(order.id)"
+              class="reviewed"
+            >已评价</span>
+            <button
+              v-else
+              class="review"
+              @click="reviewingOrder = order"
+            >
+              评价
+            </button>
           </div>
-          <span class="amount">¥{{ order.amountYuan }}</span>
-        </div>
-        <div
-          v-if="order.status === OrderStatus.PendingPayment"
-          class="actions"
-        >
-          <button
-            class="cancel"
-            @click="cancel(order)"
-          >
-            取消订单
-          </button>
-        </div>
-        <div
-          v-else-if="order.status === OrderStatus.Completed"
-          class="actions"
-        >
-          <span
-            v-if="reviewedIds.has(order.id)"
-            class="reviewed"
-          >已评价</span>
-          <button
-            v-else
-            class="review"
-            @click="reviewingOrder = order"
-          >
-            评价
-          </button>
-        </div>
-      </article>
+        </article>
 
-      <button
-        v-if="orders.length < total"
-        class="more"
-        :disabled="loading"
-        @click="loadMore"
-      >
-        {{ loading ? '加载中…' : '加载更多' }}
-      </button>
+        <div
+          v-if="orders.length < total"
+          class="more-wrap"
+        >
+          <button
+            class="more"
+            :disabled="loading"
+            @click="loadMore"
+          >
+            {{ loading ? '加载中…' : '加载更多' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <ReviewDialog
@@ -221,12 +222,18 @@ onMounted(() => void load(true));
 
 .bar {
   flex-shrink: 0;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+.bar-inner {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--c-border);
-  background: var(--c-surface);
 }
 
 .back {
@@ -244,10 +251,20 @@ onMounted(() => void load(true));
   font-style: italic;
 }
 
+.count {
+  margin-left: auto;
+  font-family: var(--font-num);
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
 .scroll {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+}
+
+.content {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -257,7 +274,7 @@ onMounted(() => void load(true));
   text-align: center;
   font-size: 13px;
   color: var(--c-text-secondary);
-  padding: 32px 0;
+  padding: 32px 16px;
 }
 
 .order {
@@ -275,6 +292,9 @@ onMounted(() => void load(true));
   font-family: var(--font-num);
   font-size: 11px;
   color: var(--c-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tag {
@@ -339,6 +359,9 @@ onMounted(() => void load(true));
 
 .sub {
   margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   font-size: 12px;
   color: var(--c-text-secondary);
 }
@@ -380,11 +403,96 @@ onMounted(() => void load(true));
 }
 
 .more {
-  align-self: center;
   padding: 8px 22px;
   font-size: 13px;
   color: var(--c-text-secondary);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
+}
+
+.more-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+@media (min-width: 768px) {
+  .orders-page {
+    position: static;
+    min-height: 100vh;
+    background: transparent;
+  }
+
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 16px 24px;
+  }
+
+  .bar-inner,
+  .content {
+    width: 100%;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .name {
+    font-size: 18px;
+  }
+
+  .scroll {
+    padding: 24px 0 48px;
+    overflow: visible;
+  }
+
+  .content {
+    gap: 14px;
+  }
+
+  .order {
+    padding: 16px;
+  }
+
+  .head {
+    gap: 16px;
+  }
+
+  .no {
+    font-size: 12px;
+  }
+
+  .body {
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .thumb {
+    width: 72px;
+    height: 72px;
+  }
+
+  .title {
+    font-size: 16px;
+    white-space: normal;
+    line-height: 1.45;
+  }
+
+  .amount {
+    min-width: 108px;
+    padding-top: 2px;
+    text-align: right;
+    font-size: 20px;
+  }
+
+  .actions {
+    padding-left: 88px;
+  }
+
+  .cancel,
+  .review,
+  .more {
+    padding: 8px 18px;
+    font-size: 13px;
+  }
 }
 </style>
