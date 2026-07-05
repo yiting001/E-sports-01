@@ -35,6 +35,17 @@ export class TypeormWalletRepository implements WalletRepository {
     });
   }
 
+  findByIds(ids: string[]): Promise<WalletEntity[]> {
+    if (ids.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.repo.find({
+      where: withTenant<WalletEntity>(this.tenant, {
+        id: In(ids),
+      }) as FindOptionsWhere<WalletEntity>,
+    });
+  }
+
   create(userId: string): WalletEntity {
     return this.repo.create({ userId });
   }

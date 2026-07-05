@@ -9,6 +9,8 @@ export interface WalletRepository {
   findByUserId(userId: string): Promise<WalletEntity | null>;
   /** 批量按用户查钱包（管理端列表用），仅返回已开通钱包的记录 */
   findByUserIds(userIds: string[]): Promise<WalletEntity[]>;
+  /** 批量按钱包 id 查询（提现管理列表反查归属用户用） */
+  findByIds(ids: string[]): Promise<WalletEntity[]>;
   /** 构造一个归属指定用户的新钱包实体（未持久化） */
   create(userId: string): WalletEntity;
   save(wallet: WalletEntity): Promise<WalletEntity>;

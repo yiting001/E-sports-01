@@ -54,7 +54,7 @@ const auth = useAuthStore();
 const toast = useToast();
 let socket = createImSocket();
 
-const conversation = ref<ConversationView | null>(null);
+const activeConversation = ref<ConversationView | null>(null);
 const activeConversationId = ref('');
 const messages = ref<ChatMessage[]>([]);
 const draft = ref('');
@@ -66,10 +66,10 @@ const videoInput = ref<HTMLInputElement | null>(null);
 
 /** 会话状态文案：待接入 / 服务中 / 已结束 */
 const statusText = computed(() => {
-  if (!conversation.value) {
+  if (!activeConversation.value) {
     return '等待选择会话';
   }
-  switch (conversation.value.status) {
+  switch (activeConversation.value.status) {
     case ConversationStatus.Active:
       return '客服服务中';
     case ConversationStatus.Closed:
@@ -82,11 +82,11 @@ const statusText = computed(() => {
 /** 会话已结束或未选择会话时禁止继续发送 */
 const canSend = computed(
   () =>
-    Boolean(conversation.value) &&
-    conversation.value?.status !== ConversationStatus.Closed,
+    Boolean(activeConversation.value) &&
+    activeConversation.value?.status !== ConversationStatus.Closed,
 );
 
-const titleText = computed(() => conversation.value?.title || '三角洲客服');
+const titleText = computed(() => activeConversation.value?.title || '三角洲客服');
 
 function isSelf(message: ChatMessage): boolean {
   return message.senderId === auth.profile?.id;
@@ -134,13 +134,13 @@ async function joinConversation(target: ConversationView | null): Promise<void> 
   if (!target) {
     socket.disconnect();
     activeConversationId.value = '';
-    conversation.value = null;
+    activeConversation.value = null;
     messages.value = [];
     loading.value = false;
     return;
   }
   if (target.id === activeConversationId.value) {
-    conversation.value = target;
+    activeConversation.value = target;
     loading.value = false;
     return;
   }
@@ -148,10 +148,10 @@ async function joinConversation(target: ConversationView | null): Promise<void> 
   loading.value = true;
   resetSocket();
   try {
-    conversation.value = target;
+    activeConversation.value = target;
     socket.connect();
     socket.onReceive(async (message) => {
-      if (message.conversationId === conversation.value?.id) {
+      if (message.conversationId === activeConversation.value?.id) {
         messages.value.push(message);
         emit('message', message);
         await scrollToBottom();
@@ -184,11 +184,11 @@ async function setupConversation(): Promise<void> {
 
 function send(): void {
   const content = draft.value.trim();
-  if (!content || !conversation.value || !canSend.value) {
+  if (!content || !activeConversation.value || !canSend.value) {
     return;
   }
   socket.send({
-    conversationId: conversation.value.id,
+    conversationId: activeConversation.value.id,
     type: MessageType.Text,
     content,
   });
@@ -203,14 +203,14 @@ async function sendMedia(
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = '';
-  if (!file || !conversation.value || !canSend.value) {
+  if (!file || !activeConversation.value || !canSend.value) {
     return;
   }
   uploading.value = true;
   try {
     const { url } = await uploadApi.uploadSelf(file);
     socket.send({
-      conversationId: conversation.value.id,
+      conversationId: activeConversation.value.id,
       type,
       content: url,
     });
@@ -272,7 +272,7 @@ onBeforeUnmount(() => socket.disconnect());
         接入中…
       </p>
       <p
-        v-else-if="!conversation"
+        v-else-if="!activeConversation"
         class="hint"
       >
         {{ emptyText }}

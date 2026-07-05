@@ -1,0 +1,81 @@
+.withdrawal-filter {
+  width: 150px;
+}
+
+.withdrawal-user {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.withdrawal-user__avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  color: var(--el-color-success);
+  font-size: 18px;
+  border-radius: 4px;
+  background: var(--el-color-success-light-9);
+  place-items: center;
+}
+
+.withdrawal-user div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.withdrawal-user strong,
+.withdrawal-user small,
+.withdrawal-muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.withdrawal-user strong {
+  color: var(--app-text-color);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.withdrawal-user small,
+.withdrawal-muted {
+  color: var(--app-text-color-secondary);
+  font-size: 12px;
+}
+
+.withdrawal-payee {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.withdrawal-payee strong {
+  overflow: hidden;
+  color: var(--app-text-color);
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.withdrawal-payee small {
+  overflow: hidden;
+  color: var(--app-text-color-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.withdrawal-amount {
+  color: var(--app-text-color);
+  font-weight: 600;
+}
+
+.withdrawal-arrive {
+  color: var(--el-color-success);
+  font-weight: 600;
+}

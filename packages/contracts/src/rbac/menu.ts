@@ -35,6 +35,7 @@ export interface MenuDefinition {
 /** 侧边栏菜单分组清单（收纳父节点，单一来源） */
 export const MENU_GROUPS: MenuGroup[] = [
   { code: 'commerce', title: '电竞运营', icon: 'Goods', sort: 5 },
+  { code: 'finance', title: '财务', icon: 'Money', sort: 8 },
   { code: 'system', title: '系统管理', icon: 'Menu', sort: 10 },
   { code: 'communication', title: '在线沟通', icon: 'ChatLineRound', sort: 20 },
 ];
@@ -93,6 +94,14 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     icon: 'Trophy',
     sort: 5,
     group: 'commerce',
+  },
+  {
+    code: 'finance:withdrawal:menu',
+    title: '提现管理',
+    path: 'finance/withdrawals',
+    icon: 'Money',
+    sort: 1,
+    group: 'finance',
   },
   {
     code: 'rbac:tenant:menu',

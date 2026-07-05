@@ -10,6 +10,7 @@ import {
   WALLET_DEFAULTS,
   WithdrawalResultView,
   WithdrawalStatus,
+  calcWithdrawFeeFen,
   fenToYuan,
 } from '@app/contracts';
 import { ConfigService } from '../../../config/application/config.service';
@@ -18,13 +19,10 @@ import { PayoutResolver } from '../payout.resolver';
 import { WalletService } from '../wallet.service';
 import { buildOrderNo } from '../order-no.util';
 
-/** 提现转账备注 */
-const WITHDRAW_REMARK = '钱包提现';
-
 /**
- * 用例：发起提现（方案A：申请即冻结扣减）。
- * 校验金额与渠道可用 → 冻结扣减并落处理中订单 → 调渠道转账；
- * 成功置 success，失败回滚余额并置 failed。余额一致性由账务单元事务保证。
+ * 用例：发起提现申请（审核制）。
+ * 校验金额与渠道可用 → 按配置费率计算手续费 → 冻结扣减并落待审核订单；
+ * 后续由财务在提现管理中审核，通过后才发起渠道转账。
  */
 @Injectable()
 export class CreateWithdrawalUseCase {
@@ -54,31 +52,31 @@ export class CreateWithdrawalUseCase {
       throw new NotImplementedException('该提现渠道暂未开通，请改用支付宝提现');
     }
 
+    const feeRateBp = await this.config.getNumber(
+      CONFIG_KEYS.wallet.withdrawFeeRateBp,
+      WALLET_DEFAULTS.withdrawFeeRateBp,
+    );
+    const feeFen = calcWithdrawFeeFen(body.amountFen, feeRateBp);
+    if (feeFen >= body.amountFen) {
+      throw new BadRequestException('提现金额过小，扣除手续费后无可到账金额');
+    }
+
     const wallet = await this.walletService.ensureWallet(userId);
-    const outBizNo = buildOrderNo('W');
     const order = await this.ledger.reserveWithdrawal({
       walletId: wallet.id,
       amountFen: body.amountFen,
+      feeFen,
       provider: body.provider,
       account: body.account,
       accountName: body.accountName,
-      outBizNo,
+      outBizNo: buildOrderNo('W'),
     });
-
-    try {
-      const { providerOrderId } = await port.transfer({
-        outBizNo,
-        amountFen: body.amountFen,
-        account: body.account,
-        accountName: body.accountName,
-        remark: WITHDRAW_REMARK,
-      });
-      await this.ledger.markWithdrawalSuccess(order.id, providerOrderId);
-      return { orderId: order.id, status: WithdrawalStatus.Success, failReason: null };
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : '转账失败';
-      await this.ledger.refundWithdrawal(order.id, reason);
-      return { orderId: order.id, status: WithdrawalStatus.Failed, failReason: reason };
-    }
+    return {
+      orderId: order.id,
+      status: WithdrawalStatus.Pending,
+      feeFen,
+      arriveFen: body.amountFen - feeFen,
+      failReason: null,
+    };
   }
 }

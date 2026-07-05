@@ -80,6 +80,12 @@ export const PERMS = {
     moderate: 'review:admin:moderate',
     remove: 'review:admin:remove',
   },
+  finance: {
+    /** 提现工单列表查看 */
+    withdrawalList: 'finance:withdrawal:list',
+    /** 提现审核（通过/驳回） */
+    withdrawalReview: 'finance:withdrawal:review',
+  },
   notice: {
     list: 'notice:list',
     save: 'notice:save',

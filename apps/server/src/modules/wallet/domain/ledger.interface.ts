@@ -1,4 +1,8 @@
-import { FundDirection, PayoutProvider } from '@app/contracts';
+import {
+  FundDirection,
+  PayoutProvider,
+  WithdrawalStatus,
+} from '@app/contracts';
 import { WalletEntity } from './wallet.entity';
 import { WithdrawalOrderEntity } from './withdrawal-order.entity';
 
@@ -13,6 +17,8 @@ export interface CreditRechargeInput {
 export interface ReserveWithdrawalInput {
   walletId: string;
   amountFen: number;
+  /** 手续费（分），申请时按配置费率计算 */
+  feeFen: number;
   provider: PayoutProvider;
   account: string;
   accountName: string;
@@ -47,12 +53,20 @@ export interface WalletLedger {
   creditRecharge(input: CreditRechargeInput): Promise<boolean>;
 
   /**
-   * 提现冻结扣减：校验余额充足后扣减、写出账流水、创建处理中提现订单。
+   * 提现冻结扣减：校验余额充足后扣减、写出账流水、创建待审核提现订单。
    * 余额不足或钱包冻结时抛异常。
    */
   reserveWithdrawal(
     input: ReserveWithdrawalInput,
   ): Promise<WithdrawalOrderEntity>;
+
+  /**
+   * 审核通过：待审核 → 处理中（占位防重复发起转账）。
+   * 订单不存在或非待审核状态返回 null。
+   */
+  beginWithdrawalTransfer(
+    orderId: string,
+  ): Promise<WithdrawalOrderEntity | null>;
 
   /** 转账成功：累计提现 + 置订单 success + 回填渠道单号 */
   markWithdrawalSuccess(
@@ -60,8 +74,15 @@ export interface WalletLedger {
     providerOrderId: string,
   ): Promise<void>;
 
-  /** 转账失败：回滚余额、写补偿入账流水、置订单 failed */
-  refundWithdrawal(orderId: string, reason: string): Promise<void>;
+  /**
+   * 提现回滚：回滚余额、写补偿入账流水，按场景置订单终态
+   * （转账失败 → failed；审核驳回 → rejected）。
+   */
+  refundWithdrawal(
+    orderId: string,
+    reason: string,
+    toStatus: WithdrawalStatus.Failed | WithdrawalStatus.Rejected,
+  ): Promise<void>;
 
   /**
    * 管理端人工调整余额（增加/扣减），写入一条 adjust 流水。

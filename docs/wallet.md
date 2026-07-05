@@ -14,7 +14,9 @@
   - 支付宝 `alipay.trade.precreate`（当面付/扫码），返回二维码内容供前端渲染。
   - 微信支付 v3 `Native 下单`，返回 `code_url` 供前端渲染二维码。
   - 用户支付后由渠道**异步回调**，经**验签**（支付宝公钥 / 微信平台证书）后**幂等入账**。
-- **提现（转账到账）**：默认方案 A——申请即校验余额并**冻结扣减**，调支付宝 `alipay.fund.trans.uni.transfer` 转账；成功置 `success`，失败**回滚余额**并置 `failed`。微信提现为**预留位**（调用即提示未开通）。
+- **提现（审核制 + 转账到账）**：用户填写支付宝账号/实名提交申请，申请即校验余额并**冻结扣减**、按配置费率计手续费后置 `pending`（待审核）；财务在「财务 → 提现管理」**审核**：通过即调支付宝 `alipay.fund.trans.uni.transfer` 向收款账号转账**到账金额 = 提现金额 - 手续费**（成功置 `success`，失败回滚余额置 `failed`）；驳回则全额退回余额置 `rejected` 并留存理由。微信提现为**预留位**（调用即提示未开通）。
+- **提现手续费**：费率万分比配置（`wallet.withdrawFeeRateBp`，如 100 = 1%，0 免费），前端提现弹层实时展示手续费与预计到账金额（费率随 `GET /wallet/mine` 下发），计算函数 `calcWithdrawFeeFen` 前后端共享。
+- **支付宝证书模式**：应用公钥证书/支付宝公钥证书/根证书三证齐全时自动启用证书签名（转账等资金接口必须证书模式），否则回退公钥模式；支付/转账共用同一 SDK 工厂。
 - **收支明细**：分页查询本人流水，按时间倒序，含金额、方向、变更后余额快照、备注。
 - **统计**：余额、累计充值/提现金额与成功笔数。
 - **金额一律以「分」整数存储与传输**，杜绝浮点误差；展示「元」由 `fenToYuan` 统一换算（前后端共享）。
@@ -32,6 +34,9 @@
 | `wallet:admin:list` | 钱包-用户列表 | 接口 | `GET /wallet/admin/wallets` |
 | `wallet:admin:transaction` | 钱包-明细查看 | 接口/按钮 | `GET /wallet/admin/wallets/:userId/transactions`（前端「明细」按钮 `v-permission`） |
 | `wallet:admin:adjust` | 钱包-余额调整 | 接口/按钮 | `POST /wallet/admin/wallets/:userId/adjust`（前端「调整余额」按钮 `v-permission`） |
+| `finance:withdrawal:menu` | 提现管理 | 菜单 | 侧边栏「财务 → 提现管理」动态路由 `/finance/withdrawals` |
+| `finance:withdrawal:list` | 财务-提现工单列表 | 接口 | `GET /wallet/admin/withdrawals` |
+| `finance:withdrawal:review` | 财务-提现审核 | 接口/按钮 | `POST /wallet/admin/withdrawals/:id/approve`、`POST /wallet/admin/withdrawals/:id/reject`（前端「通过/驳回」按钮 `v-permission`） |
 
 > 充值异步回调 `POST /wallet/recharge/callback/:provider` 为 `@Public()` 渠道回调端点，不受权限控制（靠验签保障）。
 >
@@ -41,7 +46,8 @@
 
 - **唯一余额写入口**：所有余额变更都经 `WalletLedger`（账务单元），在**同一数据库事务**内对钱包行加**悲观写锁**，并同步写流水与流转订单状态，杜绝并发脏写与「改了余额没记流水」。
 - **充值入账幂等**：以 `outTradeNo` 为幂等键；订单已支付则重复回调直接返回成功；金额不符则拒绝。
-- **提现资金安全**：先冻结扣减再转账，转账失败在事务内回滚余额并写补偿入账流水。
+- **提现资金安全**：申请即冻结扣减；审核通过时先在事务内「待审核 → 处理中」占位（防并发重复转账）再发起转账；转账失败/审核驳回在事务内全额回滚余额并写补偿入账流水。
+- **提现状态机**：`pending`（待审核）→ `processing`（转账中）→ `success` / `failed`；`pending` → `rejected`（驳回）。
 
 ## 渠道策略（策略模式 + 配置驱动）
 
@@ -72,6 +78,7 @@ modules/wallet/
 │   ├── wallet.mapper.ts                  实体 → 钱包/统计视图
 │   ├── transaction.mapper.ts             实体 → 流水视图
 │   ├── wallet-admin.mapper.ts            用户 + 钱包 → 管理端列表视图（未开通按零值）
+│   ├── withdrawal-admin.mapper.ts        提现单 + 归属用户 → 财务列表视图
 │   ├── order-no.util.ts                  商户订单号生成（幂等键）
 │   └── use-cases/
 │       ├── get-my-wallet.usecase.ts
@@ -79,10 +86,13 @@ modules/wallet/
 │       ├── list-transactions.usecase.ts
 │       ├── create-recharge.usecase.ts
 │       ├── handle-recharge-callback.usecase.ts
-│       ├── create-withdrawal.usecase.ts
+│       ├── create-withdrawal.usecase.ts      提现申请（算手续费→冻结扣减→待审核）
 │       ├── list-wallets.usecase.ts          管理端：分页所有用户钱包
 │       ├── list-user-transactions.usecase.ts 管理端：任意用户明细
-│       └── adjust-wallet.usecase.ts          管理端：人工调整余额（记流水）
+│       ├── adjust-wallet.usecase.ts          管理端：人工调整余额（记流水）
+│       ├── list-withdrawals.usecase.ts       财务：分页提现工单（反查归属用户）
+│       ├── approve-withdrawal.usecase.ts     财务：审核通过→支付宝转账到账
+│       └── reject-withdrawal.usecase.ts      财务：驳回→全额退回余额
 ├── infrastructure/
 │   ├── wallet.repository.ts              TypeORM 仓储（按租户过滤）
 │   ├── transaction.repository.ts
@@ -90,7 +100,7 @@ modules/wallet/
 │   ├── withdrawal.repository.ts
 │   ├── wallet.ledger.ts                  账务单元实现（事务 + 悲观锁）
 │   └── drivers/
-│       ├── alipay-client.factory.ts      支付宝 SDK 工厂（凭证取自配置中心）
+│       ├── alipay-client.factory.ts      支付宝 SDK 工厂（证书/公钥双模式，凭证取自配置中心）
 │       ├── alipay-payment.driver.ts      支付宝扫码下单 + 回调验签
 │       ├── alipay-payout.driver.ts       支付宝转账提现
 │       ├── wechat-pay.config.ts          微信支付 v3 凭证工厂
@@ -100,7 +110,8 @@ modules/wallet/
     ├── dto/
     │   ├── create-recharge.dto.ts
     │   ├── create-withdrawal.dto.ts
-    │   └── adjust-wallet.dto.ts                管理端调整入参校验
+    │   ├── adjust-wallet.dto.ts                管理端调整入参校验
+    │   └── reject-withdrawal.dto.ts            驳回理由入参校验
     └── controllers/
         ├── wallet.mine.controller.ts         GET  /api/wallet/mine（登录态）
         ├── wallet.stats.controller.ts        GET  /api/wallet/stats（登录态）
@@ -110,7 +121,10 @@ modules/wallet/
         ├── withdrawal.create.controller.ts   POST /api/wallet/withdrawal（登录态）
         ├── wallet.admin.list.controller.ts         GET  /api/wallet/admin/wallets
         ├── wallet.admin.transactions.controller.ts GET  /api/wallet/admin/wallets/:userId/transactions
-        └── wallet.admin.adjust.controller.ts       POST /api/wallet/admin/wallets/:userId/adjust
+        ├── wallet.admin.adjust.controller.ts       POST /api/wallet/admin/wallets/:userId/adjust
+        ├── withdrawal.admin.list.controller.ts     GET  /api/wallet/admin/withdrawals
+        ├── withdrawal.admin.approve.controller.ts  POST /api/wallet/admin/withdrawals/:id/approve
+        └── withdrawal.admin.reject.controller.ts   POST /api/wallet/admin/withdrawals/:id/reject
 ```
 
 ## 结构与依赖
@@ -184,26 +198,31 @@ sequenceDiagram
   CB-->>PAY: 渠道要求的应答（success / SUCCESS）
 ```
 
-## 提现时序（方案 A）
+## 提现时序（审核制）
 
 ```mermaid
 sequenceDiagram
-  participant FE as 前端
+  participant FE as C 端用户
   participant API as withdrawal.create
   participant LED as WalletLedger
+  participant ADM as 财务（提现管理）
   participant DRV as 支付宝转账
 
   FE->>API: POST /wallet/withdrawal {amountFen, account, accountName}
-  API->>LED: reserveWithdrawal（校验余额→冻结扣减→建处理中订单）
-  API->>DRV: transfer（uni.transfer）
+  API->>LED: reserveWithdrawal（算手续费→冻结扣减→建 pending 订单）
+  API-->>FE: { status: pending, feeFen, arriveFen }
+  ADM->>LED: approve → beginWithdrawalTransfer（pending → processing 占位）
+  ADM->>DRV: transfer（uni.transfer，金额 = amount - fee）
   alt 转账成功
-    DRV-->>API: providerOrderId
-    API->>LED: markWithdrawalSuccess（置 success）
+    DRV-->>ADM: providerOrderId
+    ADM->>LED: markWithdrawalSuccess（置 success）
   else 转账失败
-    DRV-->>API: 抛异常
-    API->>LED: refundWithdrawal（回滚余额→置 failed）
+    DRV-->>ADM: 抛异常
+    ADM->>LED: refundWithdrawal（回滚余额→置 failed）
   end
-  API-->>FE: { status, failReason }
+  opt 审核驳回
+    ADM->>LED: reject → refundWithdrawal（全额退回→置 rejected，留存理由）
+  end
 ```
 
 ## 配置项（ConfigGroup.Wallet）
@@ -214,11 +233,15 @@ sequenceDiagram
 | `wallet.payout.provider` | 默认提现渠道（alipay） | |
 | `wallet.minRechargeFen` | 最小充值金额（分） | |
 | `wallet.minWithdrawFen` | 最小提现金额（分） | |
+| `wallet.withdrawFeeRateBp` | 提现手续费率（万分比，100 = 1%，0 免费） | |
 | `wallet.notifyBaseUrl` | 回调公网基础地址（拼接异步通知 URL） | |
 | `wallet.alipay.appId` | 支付宝应用 AppId | |
 | `wallet.alipay.privateKey` | 支付宝应用私钥（PEM） | ✓ |
 | `wallet.alipay.publicKey` | 支付宝公钥（PEM，回调验签） | ✓ |
 | `wallet.alipay.gateway` | 支付宝网关（留空用官方默认） | |
+| `wallet.alipay.appCert` | 证书模式：应用公钥证书 appCertPublicKey_xxx.crt 内容 | ✓ |
+| `wallet.alipay.publicCert` | 证书模式：支付宝公钥证书 alipayCertPublicKey_RSA2.crt 内容 | ✓ |
+| `wallet.alipay.rootCert` | 证书模式：支付宝根证书 alipayRootCert.crt 内容 | ✓ |
 | `wallet.wechat.appId` | 微信支付 AppId | |
 | `wallet.wechat.mchId` | 微信商户号 | |
 | `wallet.wechat.serialNo` | 商户证书序列号 | |
@@ -235,7 +258,8 @@ sequenceDiagram
 - 路由 `/wallet` 由后端按 `wallet:menu` 菜单权限动态下发（组件在 `component-registry` 以 code 登记），侧边菜单「我的钱包」仅对获授权角色可见。
 - 充值/提现按钮以 `v-permission` 绑定 `wallet:recharge` / `wallet:withdraw`，无权时隐藏。
 - `stores/wallet.store.ts`：打开页面并发拉取钱包/统计/首页流水；收支成功后 `refresh`。
-- `views/wallet/WalletView.vue`：余额卡片、统计卡片、明细表格分页；充值弹窗（金额+渠道，下单后用 `qrcode` 渲染二维码，支付完成点「我已支付」刷新）；提现弹窗（金额+支付宝账号+姓名）。
+- `views/wallet/WalletView.vue`：余额卡片、统计卡片、明细表格分页；充值弹窗（金额+渠道，下单后用 `qrcode` 渲染二维码，支付完成点「我已支付」刷新）；提现弹窗（金额+支付宝账号+姓名，提交后进入待审核）。
+- `views/finance/WithdrawalAdminView.vue`（菜单 `finance:withdrawal:menu`，财务分组）：提现工单分页（状态筛选），展示金额/手续费/到账额与收款支付宝账户；待审核工单可「通过」（二次确认后立即转账）/「驳回」（填写理由，退回余额）；`api/finance.api.ts` 封装列表/审核接口。
 
 ## C 端（apps/client）
 
@@ -243,5 +267,5 @@ sequenceDiagram
 - `views/wallet/WalletView.vue`（路由 `/wallet`，需登录）：余额卡 + 充值/提现入口 + 分页流水明细（类型/方向/变更后余额）。
 - `views/wallet/WalletView.responsive.css`：钱包页 PC 响应式布局，标题栏、余额卡与流水明细统一收敛到内容宽度，移动端保持全屏钱包。
 - `components/wallet/RechargeDialog.vue`：金额（元）+ 支付宝/微信 → 生成扫码二维码，轮询余额高于基线即视为入账并自动刷新。
-- `components/wallet/WithdrawDialog.vue`：金额 + 支付宝账号/实名 → 发起提现，失败展示渠道原因。
+- `components/wallet/WithdrawDialog.vue`：金额 + 支付宝账号/实名 → 提交提现申请；输入金额时按费率实时展示手续费与预计到账金额，提交后提示等待审核。
 - 个人中心 `BalanceCards` 余额卡展示真实余额，点击进钱包页。

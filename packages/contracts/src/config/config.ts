@@ -140,6 +140,8 @@ export const CONFIG_KEYS = {
     minRechargeFen: 'wallet.minRechargeFen',
     /** 最小提现金额（分） */
     minWithdrawFen: 'wallet.minWithdrawFen',
+    /** 提现手续费率（万分比，如 100 = 1%；0 表示免手续费） */
+    withdrawFeeRateBp: 'wallet.withdrawFeeRateBp',
     /** 支付回调可达的公网基础地址，用于拼接异步通知 URL，例如 https://api.example.com */
     notifyBaseUrl: 'wallet.notifyBaseUrl',
     /** 支付宝 */
@@ -147,6 +149,12 @@ export const CONFIG_KEYS = {
     alipayPrivateKey: 'wallet.alipay.privateKey',
     alipayPublicKey: 'wallet.alipay.publicKey',
     alipayGateway: 'wallet.alipay.gateway',
+    /** 支付宝证书模式：应用公钥证书（PEM，appCertPublicKey_xxx.crt 内容） */
+    alipayAppCert: 'wallet.alipay.appCert',
+    /** 支付宝证书模式：支付宝公钥证书（PEM，alipayCertPublicKey_RSA2.crt 内容） */
+    alipayPublicCert: 'wallet.alipay.publicCert',
+    /** 支付宝证书模式：支付宝根证书（PEM，alipayRootCert.crt 内容） */
+    alipayRootCert: 'wallet.alipay.rootCert',
     /** 微信支付 v3 */
     wechatAppId: 'wallet.wechat.appId',
     wechatMchId: 'wallet.wechat.mchId',
