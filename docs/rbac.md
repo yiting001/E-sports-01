@@ -154,7 +154,7 @@ flowchart LR
 - 目录表格复用 `AppDataTable`，统一 Element Plus 表格的横向滚动与最小宽度策略。
 - 分页使用 Element Plus `sizes`，支持选择每页 10/20/50/100 条并回到第一页重新查询。
 - 新建用户弹窗维护用户名、密码、昵称、手机号。
-- 编辑用户弹窗维护昵称、手机号、启停状态和单角色绑定。
+- 编辑用户弹窗维护昵称、手机号、启停状态和多角色绑定（一个账号可同时拥有多个角色，如用户 + 打手，上限见 contracts `USER_ROLES_MAX`）。
 - 按钮权限继续沿用 `v-permission`，接口调用仍复用 `userApi` 与 `roleApi`。
 
 ```mermaid

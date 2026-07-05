@@ -38,9 +38,9 @@ const editForm = reactive<EditUserForm>({
   nickname: '',
   phone: '',
   status: UserStatusEnum.Enabled,
-  roleId: '',
+  roleIds: [],
 });
-let originalRoleId = '';
+let originalRoleIds: string[] = [];
 
 const statusOptions = [
   { label: '启用', value: UserStatusEnum.Enabled },
@@ -129,13 +129,21 @@ async function openEdit(row: UserView): Promise<void> {
   editForm.nickname = row.nickname;
   editForm.phone = row.phone;
   editForm.status = row.status;
-  editForm.roleId = row.roles[0]?.id ?? '';
-  originalRoleId = editForm.roleId;
+  editForm.roleIds = row.roles.map((role) => role.id);
+  originalRoleIds = [...editForm.roleIds];
   editVisible.value = true;
 }
 
 function updateEditForm(value: EditUserForm): void {
   Object.assign(editForm, value);
+}
+
+function roleIdsChanged(current: string[], original: string[]): boolean {
+  if (current.length !== original.length) {
+    return true;
+  }
+  const originalSet = new Set(original);
+  return current.some((id) => !originalSet.has(id));
 }
 
 async function saveEdit(): Promise<void> {
@@ -144,8 +152,8 @@ async function saveEdit(): Promise<void> {
     phone: editForm.phone,
     status: editForm.status,
   });
-  if (editForm.roleId !== originalRoleId) {
-    await userApi.assignRoles(editForm.id, editForm.roleId ? [editForm.roleId] : []);
+  if (roleIdsChanged(editForm.roleIds, originalRoleIds)) {
+    await userApi.assignRoles(editForm.id, editForm.roleIds);
   }
   ElMessage.success('已保存');
   editVisible.value = false;

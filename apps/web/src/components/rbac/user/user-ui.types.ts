@@ -6,5 +6,5 @@ export interface EditUserForm {
   nickname: string;
   phone: string;
   status: UserStatusEnum;
-  roleId: string;
+  roleIds: string[];
 }
