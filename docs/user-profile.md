@@ -20,8 +20,11 @@
                                             → 复用 UploadFileUseCase（仅去掉权限门控）
 读取本人档案      GET  /auth/profile         rbac.application/GetProfileUseCase（+avatar/+phone）
 更新本人档案      PUT  /auth/profile         rbac.application/UpdateProfileUseCase
-前端              /profile（个人中心）        web/views/profile/ProfileView.vue
-入口              右上角头像下拉「个人中心」    web/layouts/AppLayout.vue
+前端(管理端)      /profile（个人中心）        web/views/profile/ProfileView.vue
+入口(管理端)      右上角头像下拉「个人中心」    web/layouts/AppLayout.vue
+前端(C 端)        /profile/edit（个人信息）   client/views/profile/ProfileEditView.vue
+入口(C 端)        我的页点头像/设置图标        client/components/profile/ProfileHeader.vue
+                  （编辑页页尾含「退出登录」二次确认）
 ```
 
 ## 设计要点
