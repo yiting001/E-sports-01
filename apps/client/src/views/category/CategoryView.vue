@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * 分类页（全部游戏）：顶部「综合 / 排行榜」分段页签。
+ * 分类页（全部游戏）：顶部标题/分段页签 + 综合分类网格 / 排行榜列表。
  * 数据来自后端公开接口：综合 → 按分类分组的上架商品网格；排行榜 → 按销量降序的热度榜。
+ * PC 端用多列卡片承载分类，移动端保持单列，避免大屏下一张分类卡铺满整行。
  */
 import { computed, onMounted, ref } from 'vue';
 import type { CategoryPublicView, ProductPublicView } from '@app/contracts';
@@ -55,16 +56,22 @@ onMounted(async () => {
 
 <template>
   <div class="category">
-    <h1 class="page-title">
-      全部游戏
-    </h1>
-    <SegmentTabs
-      v-model="activeTab"
-      :tabs="TABS"
-    />
+    <header class="category-head">
+      <h1 class="page-title">
+        全部游戏
+      </h1>
+      <SegmentTabs
+        v-model="activeTab"
+        :tabs="TABS"
+        class="category-tabs"
+      />
+    </header>
 
     <!-- 综合：分组网格 -->
-    <template v-if="activeTab === 0">
+    <section
+      v-if="activeTab === 0"
+      class="group-list"
+    >
       <CategoryGroupCard
         v-for="group in groups"
         :key="group.id"
@@ -76,10 +83,13 @@ onMounted(async () => {
       >
         暂无分类
       </p>
-    </template>
+    </section>
 
     <!-- 排行榜：热度榜单 -->
-    <template v-else>
+    <section
+      v-else
+      class="rank-list"
+    >
       <RankItemCard
         v-for="(item, index) in ranks"
         :key="item.id"
@@ -92,7 +102,7 @@ onMounted(async () => {
       >
         暂无上架商品
       </p>
-    </template>
+    </section>
   </div>
 </template>
 
@@ -101,6 +111,15 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.category-head,
+.group-list,
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
 }
 
 .page-title {
@@ -116,5 +135,35 @@ onMounted(async () => {
   text-align: center;
   color: var(--c-text-muted);
   font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  .category {
+    gap: 16px;
+  }
+
+  .category-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .category-tabs {
+    width: 280px;
+    flex-shrink: 0;
+  }
+
+  .group-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .rank-list {
+    width: 100%;
+    max-width: 880px;
+    margin: 0 auto;
+    gap: 14px;
+  }
 }
 </style>

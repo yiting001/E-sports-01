@@ -1,13 +1,14 @@
 <script setup lang="ts">
 /**
- * 分类分组卡：分组标题（金色斜切标记）+ 荧光绿小方块封面网格（综合页签用）。
+ * 分类分组卡：分组标题（金色斜切标记）+ 商品入口小卡网格（综合页签用）。
+ * 商品入口点击进入商品详情；无商品时显示紧凑空态，不撑满大屏。
  */
 import type { CategoryGroup } from '@/config/category.mock';
-import { useToast } from '@/composables/use-toast';
+import { useRouter } from 'vue-router';
 
 defineProps<{ group: CategoryGroup }>();
 
-const toast = useToast();
+const router = useRouter();
 </script>
 
 <template>
@@ -33,7 +34,7 @@ const toast = useToast();
         v-for="item in group.items"
         :key="item.id"
         class="item"
-        @click="toast.show(`「${item.name}」详情即将上线`)"
+        @click="router.push(`/products/${item.id}`)"
       >
         <div class="thumb">
           <span class="thumb-text">{{ item.cover }}</span>
@@ -52,6 +53,7 @@ const toast = useToast();
 
 <style scoped>
 .group {
+  min-height: 132px;
   padding: 14px;
 }
 
@@ -59,11 +61,14 @@ const toast = useToast();
   margin-top: 14px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px 10px;
+  gap: 10px;
 }
 
 .group-empty {
-  margin-top: 12px;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
   font-size: 12px;
   color: var(--c-text-muted);
 }
@@ -90,12 +95,24 @@ const toast = useToast();
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
+  min-height: 92px;
+  padding: 10px 8px;
+  border: 1px solid rgba(150, 165, 195, 0.14);
+  background: rgba(11, 14, 20, 0.24);
+  transition: border-color 0.2s ease, background 0.2s ease;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+.item:hover {
+  border-color: rgba(61, 255, 155, 0.45);
+  background: rgba(61, 255, 155, 0.06);
 }
 
 .thumb {
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   display: grid;
   place-items: center;
   padding: 4px;
@@ -128,7 +145,7 @@ const toast = useToast();
 
 @media (min-width: 768px) {
   .grid {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
   }
 }
 </style>

@@ -1,26 +1,15 @@
 <script setup lang="ts">
 /**
- * 消息页：顶部「官方消息 / 会话消息」分段页签。
- * 官方消息为固定入口列表；会话消息接入 IM 会话列表（含最近消息摘要与未读数），
- * 点击会话进入在线客服聊天页。
+ * 消息页：展示 IM 会话列表（含最近消息摘要与未读数）。
+ * 点击会话进入在线客服聊天页；页面只承载真实 IM 会话，不保留固定占位入口。
  */
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { MessageType, type ChatMessage, type ConversationView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
-import SegmentTabs from '@/components/common/SegmentTabs.vue';
 import { imApi } from '@/api/im.api';
-import {
-  OFFICIAL_MESSAGES,
-  SERVICE_ENTRY_ID,
-  type MessageEntry,
-} from '@/config/message.mock';
-import { useToast } from '@/composables/use-toast';
 
-/** 页签文案（下标与 activeTab 对应） */
-const TABS = ['官方消息', '会话消息'];
-const activeTab = ref(0);
-const toast = useToast();
+const MESSAGE_TITLE = '会话消息';
 const router = useRouter();
 
 const conversations = ref<ConversationView[]>([]);
@@ -50,15 +39,6 @@ function formatTime(ts: number): string {
   });
 }
 
-/** 点击消息入口：客服入口进入在线客服聊天，其余暂为占位提示 */
-function openEntry(entry: MessageEntry): void {
-  if (entry.id === SERVICE_ENTRY_ID) {
-    router.push({ name: 'service' });
-    return;
-  }
-  toast.show(`「${entry.title}」会话即将上线`);
-}
-
 /** 点击会话：C 端会话均为客服会话，进入在线客服聊天页 */
 function openConversation(): void {
   router.push({ name: 'service' });
@@ -75,50 +55,9 @@ onMounted(async () => {
 
 <template>
   <div class="message">
-    <SegmentTabs
-      v-model="activeTab"
-      :tabs="TABS"
-      class="mobile-tabs"
-    />
-
-    <section
-      class="panel panel--official"
-      :class="{ 'panel--active': activeTab === 0 }"
-    >
+    <section class="panel">
       <h2 class="panel-title sec-title">
-        {{ TABS[0] }}
-      </h2>
-      <div class="list card">
-        <button
-          v-for="entry in OFFICIAL_MESSAGES"
-          :key="entry.id"
-          class="entry"
-          @click="openEntry(entry)"
-        >
-          <span class="avatar">
-            <AppIcon
-              :name="entry.icon"
-              :size="20"
-            />
-          </span>
-          <span class="body">
-            <span class="title">{{ entry.title }}</span>
-            <span class="subtitle">{{ entry.subtitle }}</span>
-          </span>
-          <span
-            v-if="entry.action"
-            class="action"
-          >{{ entry.action }}</span>
-        </button>
-      </div>
-    </section>
-
-    <section
-      class="panel panel--conversation"
-      :class="{ 'panel--active': activeTab === 1 }"
-    >
-      <h2 class="panel-title sec-title">
-        {{ TABS[1] }}
+        {{ MESSAGE_TITLE }}
       </h2>
       <div
         v-if="conversations.length"
@@ -175,16 +114,7 @@ onMounted(async () => {
   gap: 12px;
 }
 
-.panel {
-  display: none;
-}
-
-.panel--active {
-  display: block;
-}
-
 .panel-title {
-  display: none;
   margin-bottom: 12px;
 }
 
@@ -234,12 +164,6 @@ onMounted(async () => {
   color: var(--c-text-muted);
 }
 
-.action {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: var(--c-accent);
-}
-
 .meta {
   flex-shrink: 0;
   display: flex;
@@ -282,27 +206,11 @@ onMounted(async () => {
 
 @media (min-width: 768px) {
   .message {
-    display: grid;
-    grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
-    align-items: start;
-    gap: 16px;
+    max-width: 760px;
+    margin: 0 auto;
+    width: 100%;
   }
 
-  .mobile-tabs {
-    display: none;
-  }
-
-  .panel,
-  .panel--active {
-    display: block;
-    min-width: 0;
-  }
-
-  .panel-title {
-    display: flex;
-  }
-
-  .list,
   .empty {
     min-height: 180px;
   }

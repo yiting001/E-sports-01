@@ -242,6 +242,11 @@ onMounted(() => {
   gap: 8px;
 }
 
+.hero,
+.txns {
+  flex-shrink: 0;
+}
+
 .hero-label {
   font-size: 12px;
   color: var(--c-text-secondary);
@@ -354,5 +359,69 @@ onMounted(() => {
   color: var(--c-text-secondary);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
+}
+
+@media (min-width: 768px) {
+  .wallet-page {
+    position: static;
+    min-height: 100vh;
+    background: transparent;
+  }
+
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 16px 24px;
+  }
+
+  .name {
+    font-size: 18px;
+  }
+
+  .scroll {
+    width: 100%;
+    max-width: var(--page-max-width);
+    margin: 0 auto;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    overflow: visible;
+  }
+
+  .hero {
+    position: sticky;
+    top: 88px;
+    min-height: 220px;
+    padding: 24px;
+  }
+
+  .hero-amount {
+    font-size: 44px;
+  }
+
+  .hero-actions {
+    margin-top: auto;
+    flex-direction: column;
+  }
+
+  .act {
+    padding: 12px 0;
+  }
+
+  .txns {
+    min-height: 260px;
+    padding: 20px;
+  }
+
+  .sec-title {
+    font-size: 16px;
+  }
+
+  .txn {
+    padding: 14px 0;
+  }
 }
 </style>
