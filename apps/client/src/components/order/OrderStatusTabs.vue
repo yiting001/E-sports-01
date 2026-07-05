@@ -15,7 +15,10 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <nav class="tabs" aria-label="订单状态筛选">
+  <nav
+    class="tabs"
+    aria-label="订单状态筛选"
+  >
     <button
       v-for="tab in tabs"
       :key="tab.value ?? 'all'"

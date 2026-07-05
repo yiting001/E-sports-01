@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * 我的页头部：切角头像框 + 登录入口/昵称 + 等级徽章 + 身份切换 + 设置/登出。
- * 已登录时展示昵称与用户 ID 并提供登出；未登录时点击「立即登录」跳登录页。
+ * 我的页头部：切角头像框（已设头像展示图片）+ 登录入口/昵称 + 等级徽章 + 身份切换。
+ * 已登录时点头像/设置进入个人信息编辑页（含退出登录）；未登录时点击「立即登录」跳登录页。
  * 登录态与资料统一取自 auth.store，本组件只做展示与交互编排。
  */
 import { computed, onMounted } from 'vue';
@@ -31,11 +31,9 @@ function goLogin(): void {
   void router.push({ name: 'login' });
 }
 
-/** 登出后回到首页 */
-function onLogout(): void {
-  auth.logout();
-  toast.show('已退出登录');
-  void router.replace({ name: 'home' });
+/** 进入个人信息编辑页（含退出登录） */
+function goEdit(): void {
+  void router.push({ name: 'profile-edit' });
 }
 </script>
 
@@ -44,11 +42,11 @@ function onLogout(): void {
     <button
       v-if="auth.isAuthenticated"
       class="settings"
-      title="退出登录"
-      @click="onLogout"
+      title="个人信息"
+      @click="goEdit"
     >
       <AppIcon
-        name="logout"
+        name="settings"
         :size="18"
       />
     </button>
@@ -63,12 +61,18 @@ function onLogout(): void {
       />
     </button>
     <div class="user">
-      <div class="avatar">
+      <component
+        :is="auth.isAuthenticated ? 'button' : 'div'"
+        class="avatar"
+        :style="auth.profile?.avatar ? { backgroundImage: `url(${auth.profile.avatar})` } : undefined"
+        @click="auth.isAuthenticated && goEdit()"
+      >
         <AppIcon
+          v-if="!auth.profile?.avatar"
           name="user"
           :size="34"
         />
-      </div>
+      </component>
       <div class="meta">
         <div class="name-row">
           <button
@@ -143,9 +147,12 @@ function onLogout(): void {
   display: grid;
   place-items: center;
   background: var(--c-surface-2);
+  background-size: cover;
+  background-position: center;
   border: 1px solid var(--c-accent-dim);
   color: var(--c-text-muted);
   clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  padding: 0;
 }
 
 .meta {
