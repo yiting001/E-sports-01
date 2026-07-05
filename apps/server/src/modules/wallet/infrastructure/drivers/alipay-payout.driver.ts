@@ -40,7 +40,7 @@ export class AlipayPayoutDriver implements PayoutPort {
     });
     if (result.code !== ALIPAY_SUCCESS_CODE) {
       throw new BadRequestException(
-        `支付宝转账失败：${result.sub_msg ?? result.msg}`,
+        `支付宝转账失败：${result.sub_msg ?? result.msg}（code=${result.code}${result.sub_code ? `, sub_code=${result.sub_code}` : ''}）`,
       );
     }
     return { providerOrderId: String(result.orderId) };

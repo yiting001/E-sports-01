@@ -29,7 +29,8 @@ export class AlipayPaymentDriver implements PaymentPort {
   ): Promise<RechargeCreateResult> {
     const alipay = await this.factory.create();
     const result = await alipay.exec('alipay.trade.precreate', {
-      notify_url: input.notifyUrl,
+      // notify_url 为空时不传（未配置回调域名时传空串会被网关拒为 Invalid Arguments）
+      ...(input.notifyUrl ? { notify_url: input.notifyUrl } : {}),
       bizContent: {
         out_trade_no: input.outTradeNo,
         total_amount: fenToYuan(input.amountFen),
@@ -38,7 +39,7 @@ export class AlipayPaymentDriver implements PaymentPort {
     });
     if (result.code !== ALIPAY_SUCCESS_CODE) {
       throw new BadRequestException(
-        `支付宝下单失败：${result.sub_msg ?? result.msg}`,
+        `支付宝下单失败：${result.sub_msg ?? result.msg}（code=${result.code}${result.sub_code ? `, sub_code=${result.sub_code}` : ''}）`,
       );
     }
     return { qrCode: String(result.qrCode) };
