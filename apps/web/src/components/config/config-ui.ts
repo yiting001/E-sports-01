@@ -28,4 +28,6 @@ export const CONFIG_GROUP_META: Record<ConfigGroup, { label: string }> = {
   [ConfigGroup.Wallet]: { label: '钱包' },
   [ConfigGroup.Realname]: { label: '实名' },
   [ConfigGroup.Portal]: { label: '运营' },
+  [ConfigGroup.Booster]: { label: '打手' },
+  [ConfigGroup.Member]: { label: '会员' },
 };

@@ -4,6 +4,8 @@ import { ConfigModule } from '../config/config.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { CommerceModule } from '../commerce/commerce.module';
 import { WalletModule } from '../wallet/wallet.module';
+import { BoosterModule } from '../booster/booster.module';
+import { MemberModule } from '../member/member.module';
 
 import { OrderEntity } from './domain/order.entity';
 import { ORDER_REPOSITORY } from './domain/order-repository.interface';
@@ -49,6 +51,8 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     RbacModule,
     CommerceModule,
     WalletModule,
+    BoosterModule,
+    MemberModule,
     TypeOrmModule.forFeature([OrderEntity]),
   ],
   controllers: [

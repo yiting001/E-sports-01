@@ -3,6 +3,7 @@
  * 打手入驻页（全屏，入口在「我的」页更多功能）。
  * 按当前申请状态分场景：未申请展示申请表单；待审核展示进度提示；
  * 已入驻展示资料卡；被驳回展示理由并允许修改后重新提交。
+ * 开启实名前置时，未通过实名认证不可提交（引导先去实名）。
  * 提交后由管理端审核，通过即授予 booster（打手）角色。
  */
 import { computed, onMounted, ref } from 'vue';
@@ -30,8 +31,13 @@ const status = computed(() => mine.value?.status ?? BoosterStatus.None);
 const showForm = computed(
   () => status.value === BoosterStatus.None || status.value === BoosterStatus.Rejected,
 );
+/** 开启实名前置且未通过实名时需先完成实名认证 */
+const realnameBlocked = computed(
+  () => (mine.value?.requireRealname ?? false) && !(mine.value?.realnameApproved ?? false),
+);
 const canSubmit = computed(
   () =>
+    !realnameBlocked.value &&
     gameNickname.value.trim() !== '' &&
     gameName.value.trim() !== '' &&
     rank.value.trim() !== '' &&
@@ -164,6 +170,17 @@ onMounted(() => {
         </section>
 
         <template v-if="showForm">
+          <section
+            v-if="realnameBlocked"
+            class="card state state--reject"
+          >
+            <h3 class="state-title state-title--reject">
+              需先完成实名认证
+            </h3>
+            <p class="state-tip">
+              平台要求打手实名入驻，请先在实名认证页完成认证后再提交申请。
+            </p>
+          </section>
           <section
             class="card form form--editable"
             :class="{ 'form--with-state': status === BoosterStatus.Rejected }"

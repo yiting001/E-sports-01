@@ -1,0 +1,9 @@
+.member-muted {
+  margin: 0 0 12px;
+  color: var(--app-text-color-secondary);
+  font-size: 12px;
+}
+
+.member-level-add {
+  margin-top: 12px;
+}

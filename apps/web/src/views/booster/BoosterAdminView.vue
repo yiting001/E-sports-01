@@ -2,7 +2,8 @@
 /**
  * 打手管理页（菜单 booster:menu）。
  * 分页展示入驻申请（可按状态过滤），支持审核通过（自动授予 booster 角色）/
- * 驳回（填写理由），以及对打手资料（游戏昵称/擅长游戏/段位/自我介绍）的编辑维护。
+ * 驳回（填写理由），以及对打手资料（游戏昵称/擅长游戏/段位/自我介绍）的编辑维护；
+ * 另支持等级档位配置（booster:level:set）与押金退还（booster:deposit:refund）。
  */
 import { onMounted, reactive, ref } from 'vue';
 import {
@@ -13,11 +14,12 @@ import {
   type BoosterView,
 } from '@app/contracts';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Check, Close, EditPen, Refresh, Search, Trophy } from '@element-plus/icons-vue';
+import { Check, Close, EditPen, Refresh, RefreshLeft, Search, Setting, Trophy } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { boosterApi } from '@/api/booster.api';
+import BoosterLevelDialog from './BoosterLevelDialog.vue';
 import './BoosterAdminView.css';
 
 const list = ref<BoosterView[]>([]);
@@ -106,6 +108,19 @@ async function reject(row: BoosterView): Promise<void> {
   await load();
 }
 
+const levelDialogVisible = ref(false);
+
+async function refundDeposit(row: BoosterView): Promise<void> {
+  await ElMessageBox.confirm(
+    `确认退还 ${row.nickname || row.username} 的押金？将全额退回其钱包余额。`,
+    '退还押金',
+    { type: 'warning' },
+  );
+  await boosterApi.refundDeposit(row.id);
+  ElMessage.success('押金已退还');
+  await load();
+}
+
 const editVisible = ref(false);
 const editSaving = ref(false);
 const editingId = ref('');
@@ -169,6 +184,13 @@ onMounted(() => {
             />
           </el-select>
           <el-button
+            v-permission="PERMS.booster.levelSet"
+            :icon="Setting"
+            @click="levelDialogVisible = true"
+          >
+            等级配置
+          </el-button>
+          <el-button
             :icon="Refresh"
             @click="load"
           >
@@ -230,6 +252,35 @@ onMounted(() => {
         >
           <template #default="{ row }">
             <span class="booster-content">{{ row.intro }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="等级"
+          width="110"
+        >
+          <template #default="{ row }">
+            <el-tag
+              round
+              effect="plain"
+            >
+              Lv.{{ row.level }} {{ row.levelName }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="完成单数"
+          width="90"
+        >
+          <template #default="{ row }">
+            {{ row.completedOrders }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="已缴押金"
+          width="100"
+        >
+          <template #default="{ row }">
+            <span class="booster-muted">¥{{ (row.depositFen / 100).toFixed(2) }}</span>
           </template>
         </el-table-column>
         <el-table-column
@@ -296,6 +347,16 @@ onMounted(() => {
               @click="openEdit(row)"
             >
               编辑
+            </el-button>
+            <el-button
+              v-if="row.depositFen > 0"
+              v-permission="PERMS.booster.depositRefund"
+              link
+              type="warning"
+              :icon="RefreshLeft"
+              @click="refundDeposit(row)"
+            >
+              退押金
             </el-button>
           </template>
         </el-table-column>
@@ -368,5 +429,7 @@ onMounted(() => {
         </el-button>
       </template>
     </el-dialog>
+
+    <booster-level-dialog v-model="levelDialogVisible" />
   </section>
 </template>

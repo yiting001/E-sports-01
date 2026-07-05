@@ -142,6 +142,6 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
     RejectWithdrawalUseCase,
   ],
   // 导出支付渠道解析器，供订单等其他收款场景复用同一套支付宝/微信驱动
-  exports: [PaymentResolver],
+  exports: [PaymentResolver, WalletService, WALLET_LEDGER],
 })
 export class WalletModule {}

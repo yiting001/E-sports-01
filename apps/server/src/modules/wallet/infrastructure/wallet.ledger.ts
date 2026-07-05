@@ -193,10 +193,10 @@ export class TypeormWalletLedger implements WalletLedger {
       const saved = await m.getRepository(WalletEntity).save(wallet);
       await this.appendTxn(m, {
         wallet: saved,
-        type: WalletTxnType.Adjust,
+        type: input.type ?? WalletTxnType.Adjust,
         direction: input.direction,
         amountFen: input.amountFen,
-        bizOrderId: null,
+        bizOrderId: input.bizOrderId ?? null,
         remark: input.remark,
       });
       return saved;

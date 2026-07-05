@@ -1,4 +1,4 @@
-import { BoosterView } from '@app/contracts';
+import { BoosterLevelTier, BoosterView, resolveBoosterLevel } from '@app/contracts';
 import { BoosterApplicationEntity } from '../domain/booster-application.entity';
 
 /** 用户简要信息（用于在管理列表上展示申请人） */
@@ -7,11 +7,13 @@ export interface BoosterUserBrief {
   nickname: string;
 }
 
-/** 领域实体 → 对外视图 */
+/** 领域实体 → 对外视图；等级按配置档位与累计完成单数实时解析 */
 export function toBoosterView(
   entity: BoosterApplicationEntity,
+  tiers: BoosterLevelTier[],
   user: BoosterUserBrief = { username: '', nickname: '' },
 ): BoosterView {
+  const tier = resolveBoosterLevel(tiers, entity.completedOrders);
   return {
     id: entity.id,
     userId: entity.userId,
@@ -27,5 +29,10 @@ export function toBoosterView(
     reviewedAt: entity.reviewedAt ? entity.reviewedAt.toISOString() : '',
     createdAt: entity.createdAt.toISOString(),
     updatedAt: entity.updatedAt.toISOString(),
+    completedOrders: entity.completedOrders,
+    level: tier.level,
+    levelName: tier.name,
+    commissionRateBp: tier.commissionRateBp,
+    depositFen: entity.depositFen,
   };
 }

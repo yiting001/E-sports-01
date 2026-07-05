@@ -1,6 +1,8 @@
 import type {
+  CreatePenaltyBody,
   PaginatedResult,
   PaginationQuery,
+  PenaltyView,
   RejectWithdrawalBody,
   WithdrawalAdminView,
   WithdrawalResultView,
@@ -13,7 +15,12 @@ export interface WithdrawalAdminListQuery extends PaginationQuery {
   status?: WithdrawalStatus;
 }
 
-/** 财务提现管理接口（RBAC 门控：finance:withdrawal:*） */
+/** 罚款记录列表查询入参（分页 + 打手过滤） */
+export interface PenaltyListQuery extends PaginationQuery {
+  boosterUserId?: string;
+}
+
+/** 财务管理接口（RBAC 门控：finance:withdrawal:* / finance:penalty:*） */
 export const financeApi = {
   /** 分页查询提现工单 */
   listWithdrawals(
@@ -28,5 +35,13 @@ export const financeApi = {
   /** 驳回：退回余额并留存驳回原因 */
   reject(id: string, body: RejectWithdrawalBody): Promise<WithdrawalResultView> {
     return http.post(`/wallet/admin/withdrawals/${id}/reject`, body);
+  },
+  /** 分页查询罚款记录 */
+  listPenalties(query: PenaltyListQuery): Promise<PaginatedResult<PenaltyView>> {
+    return http.get('/finance/penalties', { params: query });
+  },
+  /** 对打手创建罚款（从余额或押金扣除） */
+  createPenalty(body: CreatePenaltyBody): Promise<PenaltyView> {
+    return http.post('/finance/penalties', body);
   },
 };

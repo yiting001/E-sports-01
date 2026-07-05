@@ -5,6 +5,7 @@ import {
   BOOSTER_REPOSITORY,
   BoosterRepository,
 } from '../../domain/booster-repository.interface';
+import { BoosterPolicyService } from '../booster-policy.service';
 import { toBoosterView } from '../booster.mapper';
 
 /** 用例：管理端编辑打手资料（仅更新传入的字段，不改变审核状态） */
@@ -14,6 +15,7 @@ export class UpdateBoosterUseCase {
     @Inject(BOOSTER_REPOSITORY)
     private readonly repo: BoosterRepository,
     private readonly users: UserDirectory,
+    private readonly policy: BoosterPolicyService,
   ) {}
 
   async execute(id: string, payload: UpdateBoosterPayload): Promise<BoosterView> {
@@ -34,7 +36,10 @@ export class UpdateBoosterUseCase {
       record.intro = payload.intro.trim();
     }
     const saved = await this.repo.save(record);
-    const profiles = await this.users.resolveProfiles([saved.userId]);
-    return toBoosterView(saved, profiles.get(saved.userId));
+    const [profiles, tiers] = await Promise.all([
+      this.users.resolveProfiles([saved.userId]),
+      this.policy.getLevelTiers(),
+    ]);
+    return toBoosterView(saved, tiers, profiles.get(saved.userId));
   }
 }

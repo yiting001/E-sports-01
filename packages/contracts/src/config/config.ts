@@ -23,6 +23,10 @@ export enum ConfigGroup {
   Observability = 'observability',
   Wallet = 'wallet',
   Realname = 'realname',
+  /** 打手（等级档位/押金/实名前置） */
+  Booster = 'booster',
+  /** 用户会员等级（档位/折扣） */
+  Member = 'member',
   /** 运营展示位（首页横幅等） */
   Portal = 'portal',
 }
@@ -165,5 +169,17 @@ export const CONFIG_KEYS = {
     wechatPlatformPublicKey: 'wallet.wechat.platformPublicKey',
     /** 微信支付平台证书序列号，用于回调验签匹配 */
     wechatPlatformSerialNo: 'wallet.wechat.platformSerialNo',
+  },
+  booster: {
+    /** 打手等级档位（JSON 数组：等级/名称/完成单数门槛/提成万分比） */
+    levels: 'booster.levels',
+    /** 打手入驻押金（分） */
+    depositFen: 'booster.depositFen',
+    /** 提交入驻申请是否要求已通过实名认证 */
+    requireRealname: 'booster.requireRealname',
+  },
+  member: {
+    /** 会员等级档位（JSON 数组：等级/名称/累计消费门槛/折扣万分比） */
+    levels: 'member.levels',
   },
 } as const;

@@ -59,6 +59,10 @@ export interface CreateOrderResult {
   qrCode: string;
   amountFen: number;
   amountYuan: string;
+  /** 折前原价（分） */
+  originalAmountFen: number;
+  /** 会员折扣（万分比，10000 = 未打折） */
+  discountBp: number;
 }
 
 /** 管理端订单视图：在 C 端视图之上补充归属用户/客服快照/渠道交易号 */
@@ -85,6 +89,14 @@ export interface OrderView {
   quantity: number;
   amountFen: number;
   amountYuan: string;
+  /** 折前原价（分）= 下单时单价 × 数量 */
+  originalAmountFen: number;
+  /** 下单时会员折扣快照（万分比，10000 = 未打折） */
+  discountBp: number;
+  /** 打手提成金额（分，完成结算后回填；未结算为 0） */
+  commissionFen: number;
+  /** 打手提成费率快照（万分比，完成结算后回填；未结算为 0） */
+  commissionRateBp: number;
   provider: PaymentProvider;
   status: OrderStatus;
   remark: string;

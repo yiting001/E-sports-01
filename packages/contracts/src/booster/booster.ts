@@ -62,6 +62,16 @@ export interface ReviewBoosterPayload {
 
 /** 打手申请视图（管理端列表/用户本人查看共用） */
 export interface BoosterView {
+  /** 累计完成订单数（等级依据） */
+  completedOrders: number;
+  /** 当前等级序号 */
+  level: number;
+  /** 当前等级名称 */
+  levelName: string;
+  /** 当前等级提成比例（万分比） */
+  commissionRateBp: number;
+  /** 已缴押金（分） */
+  depositFen: number;
   id: string;
   userId: string;
   /** 用户名（管理端展示） */
@@ -88,4 +98,10 @@ export interface BoosterMineView {
   status: BoosterStatus;
   /** 已提交时返回申请记录，未提交为 null */
   record: BoosterView | null;
+  /** 提交入驻申请是否要求已通过实名认证（配置开关） */
+  requireRealname: boolean;
+  /** 当前用户实名认证是否已通过 */
+  realnameApproved: boolean;
+  /** 应缴押金总额（分，配置中心设定） */
+  depositRequiredFen: number;
 }

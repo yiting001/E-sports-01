@@ -9,6 +9,7 @@ import {
   BOOSTER_REPOSITORY,
   BoosterRepository,
 } from '../../domain/booster-repository.interface';
+import { BoosterPolicyService } from '../booster-policy.service';
 import { toBoosterView } from '../booster.mapper';
 
 /** 用例：分页查询打手入驻申请（管理端），可按状态过滤 */
@@ -18,6 +19,7 @@ export class ListBoosterUseCase {
     @Inject(BOOSTER_REPOSITORY)
     private readonly repo: BoosterRepository,
     private readonly users: UserDirectory,
+    private readonly policy: BoosterPolicyService,
   ) {}
 
   async execute(
@@ -27,10 +29,13 @@ export class ListBoosterUseCase {
     status?: BoosterStatus,
   ): Promise<PaginatedResult<BoosterView>> {
     const [rows, total] = await this.repo.paginate(skip, pageSize, status);
-    const profiles = await this.users.resolveProfiles(
-      rows.map((r) => r.userId),
+    const [profiles, tiers] = await Promise.all([
+      this.users.resolveProfiles(rows.map((r) => r.userId)),
+      this.policy.getLevelTiers(),
+    ]);
+    const list = rows.map((r) =>
+      toBoosterView(r, tiers, profiles.get(r.userId)),
     );
-    const list = rows.map((r) => toBoosterView(r, profiles.get(r.userId)));
     return { list, total, page, pageSize };
   }
 }

@@ -1,6 +1,7 @@
 import {
   FundDirection,
   PayoutProvider,
+  WalletTxnType,
   WithdrawalStatus,
 } from '@app/contracts';
 import { WalletEntity } from './wallet.entity';
@@ -25,7 +26,7 @@ export interface ReserveWithdrawalInput {
   outBizNo: string;
 }
 
-/** 管理端人工调整入参 */
+/** 余额直调入参（管理端人工调整 / 提成入账 / 押金缴退 / 罚款扣除共用） */
 export interface AdjustBalanceInput {
   walletId: string;
   /** 入账增加余额 / 出账扣减余额 */
@@ -34,6 +35,10 @@ export interface AdjustBalanceInput {
   amountFen: number;
   /** 调整备注（审计追溯用） */
   remark: string;
+  /** 流水类型，缺省为 adjust（人工调整） */
+  type?: WalletTxnType;
+  /** 关联业务单 id（如提成对应的服务订单） */
+  bizOrderId?: string | null;
 }
 
 /** 钱包账务单元（唯一余额写入口）注入令牌 */

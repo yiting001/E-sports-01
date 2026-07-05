@@ -17,6 +17,7 @@ import {
   BOOSTER_REPOSITORY,
   BoosterRepository,
 } from '../../domain/booster-repository.interface';
+import { BoosterPolicyService } from '../booster-policy.service';
 import { toBoosterView } from '../booster.mapper';
 
 /**
@@ -30,6 +31,7 @@ export class ReviewBoosterUseCase {
     private readonly repo: BoosterRepository,
     private readonly roleGranter: RoleGranter,
     private readonly users: UserDirectory,
+    private readonly policy: BoosterPolicyService,
   ) {}
 
   async execute(
@@ -59,7 +61,10 @@ export class ReviewBoosterUseCase {
     record.reviewedBy = reviewerId;
     record.reviewedAt = new Date();
     const saved = await this.repo.save(record);
-    const profiles = await this.users.resolveProfiles([saved.userId]);
-    return toBoosterView(saved, profiles.get(saved.userId));
+    const [profiles, tiers] = await Promise.all([
+      this.users.resolveProfiles([saved.userId]),
+      this.policy.getLevelTiers(),
+    ]);
+    return toBoosterView(saved, tiers, profiles.get(saved.userId));
   }
 }

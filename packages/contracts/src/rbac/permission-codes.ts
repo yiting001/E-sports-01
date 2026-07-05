@@ -69,6 +69,14 @@ export const PERMS = {
     list: 'booster:list',
     review: 'booster:review',
     update: 'booster:update',
+    /** 等级档位配置（提成费率） */
+    levelSet: 'booster:level:set',
+    /** 押金退还 */
+    depositRefund: 'booster:deposit:refund',
+  },
+  member: {
+    /** 会员等级档位配置（消费折扣） */
+    levelSet: 'member:level:set',
   },
   order: {
     list: 'order:admin:list',
@@ -85,6 +93,10 @@ export const PERMS = {
     withdrawalList: 'finance:withdrawal:list',
     /** 提现审核（通过/驳回） */
     withdrawalReview: 'finance:withdrawal:review',
+    /** 罚款记录查看 */
+    penaltyList: 'finance:penalty:list',
+    /** 对打手创建罚款 */
+    penaltyCreate: 'finance:penalty:create',
   },
   notice: {
     list: 'notice:list',

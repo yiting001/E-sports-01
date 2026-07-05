@@ -96,11 +96,27 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     group: 'commerce',
   },
   {
+    code: 'member:menu',
+    title: '会员等级',
+    path: 'member/levels',
+    icon: 'Medal',
+    sort: 6,
+    group: 'commerce',
+  },
+  {
     code: 'finance:withdrawal:menu',
     title: '提现管理',
     path: 'finance/withdrawals',
     icon: 'Money',
     sort: 1,
+    group: 'finance',
+  },
+  {
+    code: 'finance:penalty:menu',
+    title: '罚款管理',
+    path: 'finance/penalties',
+    icon: 'Warning',
+    sort: 2,
     group: 'finance',
   },
   {

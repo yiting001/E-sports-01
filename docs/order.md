@@ -8,13 +8,15 @@
 
 - C 端商品详情页：封面/标题/价格/富文本详情，PC 端导航与详情主体同轴收敛，选择数量、备注、支付方式后下单
 - 下单支付：复用钱包模块的支付宝/微信收款驱动（策略模式），返回扫码二维码，前端轮询支付结果
-- 支付回调：渠道异步回调验签解析，事务 + 行锁内幂等落账（待付款 → 待客服处理），并累加商品销量
+- 会员折扣：下单时按用户当前会员等级折扣（member 模块 `MemberLevelService`）计应付，订单固化 `originalAmountFen`/`discountBp` 快照
+- 支付回调：渠道异步回调验签解析，事务 + 行锁内幂等落账（待付款 → 待客服处理），并累加商品销量与用户会员累计消费（`MemberProgressService.recordSpend`）
 - 我的订单：分页列表（商品快照/数量/金额/状态），待付款订单可取消；PC 端标题、筛选 tabs、列表统一收敛到内容区宽度，移动端保持全屏滚动
 - 管理端订单管理：分页检索全量订单（状态/订单号过滤）+ 详情抽屉（商品快照/归属用户/关联客服/渠道交易号），
   权限码 `order:admin:list` / `order:admin:detail`，菜单「电竞运营 / 订单管理」由播种器幂等补齐
 - 支付渠道配置沿用配置中心既有 `wallet.*` 键（网关地址、商户密钥、回调基址 `wallet.notify.base-url`），无新增配置
 - 下发大厅：管理端「待客服处理」订单可下发接单大厅（权限码 `order:admin:dispatch`），订单进入「待接单」
-- 接单大厅（C 端打手身份）：分页浏览待接单订单，接单后回填 `boosterId` 并进入「服务中」；不能接自己的单
+- 接单大厅（C 端打手身份）：分页浏览待接单订单，接单后回填 `boosterId` 并进入「服务中」；不能接自己的单；接单前经 booster 模块 `BoosterDepositGuard` 校验押金已缴足
+- 完成结算：打手完成订单时按其当前等级费率（booster 模块 `BoosterProgressService`）计提成经 `WalletLedger` 入账（commission 流水），订单落 `commissionFen`/`commissionRateBp` 快照并累计完成单数
 - 打手订单中心（C 端打手身份）：分页查看本人接下的订单（全部/服务中/已完成），服务中可标记完成
 - C 端身份切换：拥有 booster 角色的账号可在「我的」页切换老板/打手身份（本地持久化），
   打手身份下一级导航变为「接单大厅/订单中心/消息/我的」；接单接口由后端 `BoosterAccess` 断言角色
@@ -55,7 +57,7 @@ apps/server/src/modules/order/
 │       ├── list-hall-orders.usecase.ts      # 接单大厅分页（仅打手）
 │       ├── accept-hall-order.usecase.ts     # 打手接单（待接单 → 服务中，回填 boosterId）
 │       ├── list-booster-orders.usecase.ts   # 打手订单中心分页（可按状态过滤）
-│       └── complete-booster-order.usecase.ts# 打手完成服务（服务中 → 已完成）
+│       └── complete-booster-order.usecase.ts# 打手完成服务（服务中 → 已完成，提成结算入账）
 ├── interfaces/
 │   ├── dto/create-order.dto.ts
 │   ├── dto/order-admin-list-query.dto.ts    # 分页 + 状态/订单号过滤
@@ -76,7 +78,9 @@ apps/server/src/modules/order/
 
 复用的既有能力：
 - commerce：GET /commerce/public/products/:id（本次新增公开商品详情）+ 商品仓储导出
-- wallet：PaymentResolver / PaymentPort 策略（支付宝/微信驱动、验签、应答报文）
+- wallet：PaymentResolver / PaymentPort 策略（支付宝/微信驱动、验签、应答报文）+ WalletLedger 提成入账
+- booster：BoosterDepositGuard（接单押金门控）/ BoosterProgressService（完成单数累计 + 等级费率解析）
+- member：MemberLevelService（下单折扣解析）/ MemberProgressService（支付成功累计消费）
 
 apps/client/src/
 ├── api/order.api.ts                         # 下单/详情/我的订单/取消/大厅/接单/打手订单/完成

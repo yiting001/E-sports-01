@@ -36,7 +36,26 @@ export enum WalletTxnType {
   Withdraw = 'withdraw',
   /** 平台调整（人工增减），预留 */
   Adjust = 'adjust',
+  /** 订单提成入账（打手完成订单按等级费率计提） */
+  Commission = 'commission',
+  /** 打手押金缴纳（从余额扣除，由平台代管） */
+  Deposit = 'deposit',
+  /** 打手押金退还（平台退回余额） */
+  DepositRefund = 'deposit_refund',
+  /** 罚款扣除（财务对打手罚款） */
+  Penalty = 'penalty',
 }
+
+/** 流水类型展示文案（前端明细列表共用单一来源） */
+export const WALLET_TXN_TYPE_TEXT: Record<WalletTxnType, string> = {
+  [WalletTxnType.Recharge]: '充值',
+  [WalletTxnType.Withdraw]: '提现',
+  [WalletTxnType.Adjust]: '平台调整',
+  [WalletTxnType.Commission]: '订单提成',
+  [WalletTxnType.Deposit]: '押金缴纳',
+  [WalletTxnType.DepositRefund]: '押金退还',
+  [WalletTxnType.Penalty]: '罚款',
+};
 
 /** 资金方向 */
 export enum FundDirection {

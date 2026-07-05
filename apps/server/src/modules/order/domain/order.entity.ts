@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentProvider } from '@app/contracts';
+import { FEE_RATE_BASE, OrderStatus, PaymentProvider } from '@app/contracts';
 import { Column, Entity, Index } from 'typeorm';
 import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 import { bigintTransformer } from '../../../shared/database/numeric.transformer';
@@ -46,9 +46,25 @@ export class OrderEntity extends TenantScopedEntity {
   @Column({ type: 'int', default: 1 })
   quantity!: number;
 
-  /** 订单金额（分）= 下单时单价 × 数量 */
+  /** 订单金额（分）= 下单时单价 × 数量，再按会员折扣后的实付额 */
   @Column({ name: 'amount_fen', type: 'bigint', transformer: bigintTransformer })
   amountFen!: number;
+
+  /** 折前原价（分）= 下单时单价 × 数量 */
+  @Column({ name: 'original_amount_fen', type: 'bigint', default: 0, transformer: bigintTransformer })
+  originalAmountFen!: number;
+
+  /** 下单时会员折扣快照（万分比，10000 = 未打折） */
+  @Column({ name: 'discount_bp', type: 'int', default: FEE_RATE_BASE })
+  discountBp!: number;
+
+  /** 打手提成金额（分，完成结算时回填） */
+  @Column({ name: 'commission_fen', type: 'bigint', default: 0, transformer: bigintTransformer })
+  commissionFen!: number;
+
+  /** 提成费率快照（万分比，完成结算时按打手当时等级回填） */
+  @Column({ name: 'commission_rate_bp', type: 'int', default: 0 })
+  commissionRateBp!: number;
 
   /** 支付渠道 */
   @Column({ type: 'varchar', length: 16 })

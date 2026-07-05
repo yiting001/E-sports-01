@@ -13,6 +13,7 @@ import { IdCardCipher } from './infrastructure/id-card.cipher';
 import { RealnameSeeder } from './infrastructure/realname.seeder';
 
 import { RealnamePolicyService } from './application/policy.service';
+import { RealnameChecker } from './application/realname-checker.service';
 import { GetMyRealnameUseCase } from './application/use-cases/get-my-realname.usecase';
 import { SubmitRealnameUseCase } from './application/use-cases/submit-realname.usecase';
 import { ListRealnameUseCase } from './application/use-cases/list-realname.usecase';
@@ -51,6 +52,7 @@ import { RealnamePolicySetController } from './interfaces/controllers/realname.p
     { provide: REALNAME_REPOSITORY, useClass: TypeormRealnameRepository },
     { provide: ID_CARD_CIPHER, useClass: IdCardCipher },
     RealnamePolicyService,
+    RealnameChecker,
     RealnameSeeder,
     GetMyRealnameUseCase,
     SubmitRealnameUseCase,
@@ -59,5 +61,7 @@ import { RealnamePolicySetController } from './interfaces/controllers/realname.p
     GetRealnamePolicyUseCase,
     SetRealnamePolicyUseCase,
   ],
+  // 对外只暴露实名结论只读查询，供打手入驻等业务做实名前置校验
+  exports: [RealnameChecker],
 })
 export class RealnameModule {}

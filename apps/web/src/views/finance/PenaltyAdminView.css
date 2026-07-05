@@ -1,0 +1,49 @@
+.penalty-user {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.penalty-user__avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  color: var(--el-color-danger);
+  font-size: 18px;
+  border-radius: 4px;
+  background: var(--el-color-danger-light-9);
+  place-items: center;
+}
+
+.penalty-user div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.penalty-user strong,
+.penalty-user small,
+.penalty-muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.penalty-user strong {
+  color: var(--app-text-color);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.penalty-user small,
+.penalty-muted {
+  color: var(--app-text-color-secondary);
+  font-size: 12px;
+}
+
+.penalty-amount {
+  color: var(--el-color-danger);
+  font-weight: 600;
+}

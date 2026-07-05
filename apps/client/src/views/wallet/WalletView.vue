@@ -25,6 +25,10 @@ const TXN_TEXT: Record<WalletTxnType, string> = {
   [WalletTxnType.Recharge]: '充值',
   [WalletTxnType.Withdraw]: '提现',
   [WalletTxnType.Adjust]: '平台调整',
+  [WalletTxnType.Commission]: '订单提成',
+  [WalletTxnType.Deposit]: '缴纳押金',
+  [WalletTxnType.DepositRefund]: '押金退还',
+  [WalletTxnType.Penalty]: '罚款',
 };
 
 const router = useRouter();
