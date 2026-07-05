@@ -18,6 +18,11 @@ defineProps<{
   formatDate: (value: string) => string;
 }>();
 
+const emit = defineEmits<{
+  /** 点击商品 → 由父页弹窗预览商品详情 */
+  'view-product': [productId: string];
+}>();
+
 const visible = defineModel<boolean>({ required: true });
 </script>
 
@@ -39,7 +44,13 @@ const visible = defineModel<boolean>({ required: true });
         {{ ORDER_STATUS_TEXT[order.status as OrderStatus] }}
       </el-descriptions-item>
       <el-descriptions-item label="商品">
-        {{ order.productTitle }}
+        <el-button
+          link
+          type="primary"
+          @click="emit('view-product', order.productId)"
+        >
+          {{ order.productTitle }}
+        </el-button>
       </el-descriptions-item>
       <el-descriptions-item label="数量">
         {{ order.quantity }}

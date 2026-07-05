@@ -3,6 +3,7 @@ import type {
   CreateCategoryPayload,
   CreateProductPayload,
   PaginatedResult,
+  ProductPublicView,
   ProductStatus,
   ProductView,
   PublishProductPayload,
@@ -56,6 +57,11 @@ export const commerceApi = {
   /** 删除商品 */
   removeProduct(id: string): Promise<void> {
     return http.delete(`/commerce/products/${id}`);
+  },
+
+  /** 商品公开详情（仅上架商品可见，已下架/删除返回 404） */
+  publicProductDetail(id: string): Promise<ProductPublicView> {
+    return http.get(`/commerce/public/products/${id}`);
   },
 
   /** 查询可关联为负责客服的候选用户 */
