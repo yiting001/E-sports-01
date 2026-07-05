@@ -70,12 +70,75 @@
   white-space: nowrap;
 }
 
-.withdrawal-amount {
+.withdrawal-money {
+  display: grid;
+  gap: 4px;
+}
+
+.withdrawal-money__main {
   color: var(--app-text-color);
   font-weight: 600;
 }
 
-.withdrawal-arrive {
+.withdrawal-money small {
+  overflow: hidden;
+  color: var(--app-text-color-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.withdrawal-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.withdrawal-row-actions .el-button + .el-button {
+  margin-left: 0;
+}
+
+.withdrawal-detail {
+  display: grid;
+  gap: 16px;
+}
+
+.withdrawal-detail__summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--app-border-color);
+  border-radius: 4px;
+  background: var(--app-muted-bg);
+}
+
+.withdrawal-detail__summary span {
+  color: var(--app-text-color-secondary);
+  font-size: 12px;
+}
+
+.withdrawal-detail__summary strong {
+  grid-column: 1 / 2;
   color: var(--el-color-success);
   font-weight: 600;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.withdrawal-detail__summary .el-tag {
+  grid-row: 1 / span 2;
+  grid-column: 2 / 3;
+}
+
+.withdrawal-detail__descriptions .el-descriptions__label {
+  width: 112px;
+  color: var(--app-text-color-secondary);
+  font-weight: 500;
+}
+
+.withdrawal-detail__descriptions .el-descriptions__content {
+  word-break: break-all;
 }

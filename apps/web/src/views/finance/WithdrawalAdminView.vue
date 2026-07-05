@@ -8,12 +8,13 @@ import { onMounted, ref } from 'vue';
 import {
   PAGINATION_DEFAULTS,
   PERMS,
+  PayoutProvider,
   WITHDRAWAL_STATUS_TEXT,
   WithdrawalStatus,
   type WithdrawalAdminView,
 } from '@app/contracts';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Check, Close, Money, Refresh, Search } from '@element-plus/icons-vue';
+import { Check, Close, Money, Refresh, Search, View } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
@@ -26,6 +27,13 @@ const page = ref(1);
 const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const statusFilter = ref<WithdrawalStatus | undefined>(undefined);
 const loading = ref(false);
+const detailVisible = ref(false);
+const currentWithdrawal = ref<WithdrawalAdminView | null>(null);
+
+const payoutProviderText: Record<PayoutProvider, string> = {
+  [PayoutProvider.Alipay]: '支付宝',
+  [PayoutProvider.Wechat]: '微信',
+};
 
 const statusTagType: Record<
   WithdrawalStatus,
@@ -90,6 +98,17 @@ async function onFilterChange(): Promise<void> {
   await load();
 }
 
+function openDetail(row: WithdrawalAdminView): void {
+  currentWithdrawal.value = row;
+  detailVisible.value = true;
+}
+
+function syncCurrentWithdrawal(id: string): void {
+  const latest = list.value.find((item) => item.id === id) ?? null;
+  currentWithdrawal.value = latest;
+  detailVisible.value = latest !== null;
+}
+
 async function approve(row: WithdrawalAdminView): Promise<void> {
   await ElMessageBox.confirm(
     `确认通过 ${row.nickname || row.username} 的提现申请？将立即向支付宝账号 ${row.account}（${row.accountName}）转账 ¥${row.arriveYuan}。`,
@@ -103,6 +122,7 @@ async function approve(row: WithdrawalAdminView): Promise<void> {
     ElMessage.error(`转账失败，余额已退回：${result.failReason ?? ''}`);
   }
   await load();
+  syncCurrentWithdrawal(row.id);
 }
 
 async function reject(row: WithdrawalAdminView): Promise<void> {
@@ -114,6 +134,7 @@ async function reject(row: WithdrawalAdminView): Promise<void> {
   await financeApi.reject(row.id, { reason: value });
   ElMessage.success('已驳回并退回余额');
   await load();
+  syncCurrentWithdrawal(row.id);
 }
 
 onMounted(() => {
@@ -155,7 +176,7 @@ onMounted(() => {
       <app-data-table
         :data="list"
         :loading="loading"
-        :min-width="1180"
+        :min-width="920"
         table-class="withdrawal-table"
         empty-text="暂无提现工单"
       >
@@ -176,32 +197,19 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column
-          label="提现金额"
-          width="110"
-        >
-          <template #default="{ row }">
-            <span class="withdrawal-amount">¥{{ row.amountYuan }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="手续费"
-          width="100"
-        >
-          <template #default="{ row }">
-            <span class="withdrawal-muted">¥{{ row.feeYuan }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="到账金额"
-          width="110"
-        >
-          <template #default="{ row }">
-            <span class="withdrawal-arrive">¥{{ row.arriveYuan }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="收款支付宝"
+          label="金额信息"
           min-width="170"
+        >
+          <template #default="{ row }">
+            <div class="withdrawal-money">
+              <span class="withdrawal-money__main">提现 ¥{{ row.amountYuan }}</span>
+              <small>到账 ¥{{ row.arriveYuan }} / 费 ¥{{ row.feeYuan }}</small>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="收款信息"
+          min-width="190"
         >
           <template #default="{ row }">
             <div class="withdrawal-payee">
@@ -225,14 +233,6 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column
-          label="失败/驳回原因"
-          min-width="150"
-        >
-          <template #default="{ row }">
-            <span class="withdrawal-muted">{{ row.failReason || '-' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column
           label="申请时间"
           width="150"
         >
@@ -242,34 +242,40 @@ onMounted(() => {
         </el-table-column>
         <el-table-column
           label="操作"
-          width="160"
+          width="210"
           fixed="right"
         >
           <template #default="{ row }">
-            <template v-if="row.status === WithdrawalStatus.Pending">
+            <div class="withdrawal-row-actions">
               <el-button
-                v-permission="PERMS.finance.withdrawalReview"
                 link
-                type="success"
-                :icon="Check"
-                @click="approve(row)"
+                type="primary"
+                :icon="View"
+                @click="openDetail(row)"
               >
-                通过
+                详情
               </el-button>
-              <el-button
-                v-permission="PERMS.finance.withdrawalReview"
-                link
-                type="danger"
-                :icon="Close"
-                @click="reject(row)"
-              >
-                驳回
-              </el-button>
-            </template>
-            <span
-              v-else
-              class="withdrawal-muted"
-            >-</span>
+              <template v-if="row.status === WithdrawalStatus.Pending">
+                <el-button
+                  v-permission="PERMS.finance.withdrawalReview"
+                  link
+                  type="success"
+                  :icon="Check"
+                  @click="approve(row)"
+                >
+                  通过
+                </el-button>
+                <el-button
+                  v-permission="PERMS.finance.withdrawalReview"
+                  link
+                  type="danger"
+                  :icon="Close"
+                  @click="reject(row)"
+                >
+                  驳回
+                </el-button>
+              </template>
+            </div>
           </template>
         </el-table-column>
       </app-data-table>
@@ -287,5 +293,93 @@ onMounted(() => {
         />
       </div>
     </app-panel>
+
+    <el-drawer
+      v-model="detailVisible"
+      title="提现工单详情"
+      size="460px"
+      class="admin-drawer withdrawal-detail-drawer"
+    >
+      <div
+        v-if="currentWithdrawal"
+        class="withdrawal-detail"
+      >
+        <div class="withdrawal-detail__summary">
+          <span>到账金额</span>
+          <strong>¥{{ currentWithdrawal.arriveYuan }}</strong>
+          <el-tag
+            round
+            effect="light"
+            :type="statusTagType[currentWithdrawal.status as WithdrawalStatus]"
+          >
+            {{ WITHDRAWAL_STATUS_TEXT[currentWithdrawal.status as WithdrawalStatus] }}
+          </el-tag>
+        </div>
+
+        <el-descriptions
+          :column="1"
+          border
+          class="withdrawal-detail__descriptions"
+        >
+          <el-descriptions-item label="申请用户">
+            {{ currentWithdrawal.nickname || currentWithdrawal.username }}
+            <span class="withdrawal-muted">（{{ currentWithdrawal.username }}）</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="提现金额">
+            ¥{{ currentWithdrawal.amountYuan }}
+          </el-descriptions-item>
+          <el-descriptions-item label="手续费">
+            ¥{{ currentWithdrawal.feeYuan }}
+          </el-descriptions-item>
+          <el-descriptions-item label="到账金额">
+            ¥{{ currentWithdrawal.arriveYuan }}
+          </el-descriptions-item>
+          <el-descriptions-item label="收款渠道">
+            {{ payoutProviderText[currentWithdrawal.provider as PayoutProvider] }}
+          </el-descriptions-item>
+          <el-descriptions-item label="收款账号">
+            {{ currentWithdrawal.account }}
+          </el-descriptions-item>
+          <el-descriptions-item label="收款姓名">
+            {{ currentWithdrawal.accountName }}
+          </el-descriptions-item>
+          <el-descriptions-item label="渠道单号">
+            {{ currentWithdrawal.providerOrderId || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="失败/驳回原因">
+            {{ currentWithdrawal.failReason || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="申请时间">
+            {{ formatDate(currentWithdrawal.createdAt) }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+
+      <template #footer>
+        <div class="admin-drawer__footer">
+          <el-button @click="detailVisible = false">
+            关闭
+          </el-button>
+          <template v-if="currentWithdrawal?.status === WithdrawalStatus.Pending">
+            <el-button
+              v-permission="PERMS.finance.withdrawalReview"
+              type="success"
+              :icon="Check"
+              @click="approve(currentWithdrawal)"
+            >
+              通过
+            </el-button>
+            <el-button
+              v-permission="PERMS.finance.withdrawalReview"
+              type="danger"
+              :icon="Close"
+              @click="reject(currentWithdrawal)"
+            >
+              驳回
+            </el-button>
+          </template>
+        </div>
+      </template>
+    </el-drawer>
   </section>
 </template>

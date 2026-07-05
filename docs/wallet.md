@@ -258,8 +258,18 @@ sequenceDiagram
 - 路由 `/wallet` 由后端按 `wallet:menu` 菜单权限动态下发（组件在 `component-registry` 以 code 登记），侧边菜单「我的钱包」仅对获授权角色可见。
 - 充值/提现按钮以 `v-permission` 绑定 `wallet:recharge` / `wallet:withdraw`，无权时隐藏。
 - `stores/wallet.store.ts`：打开页面并发拉取钱包/统计/首页流水；收支成功后 `refresh`。
+- 管理端 `/finance/withdrawals` 采用「轻量列表 + 右侧详情抽屉」：列表只展示申请用户、金额信息、收款信息、状态、申请时间与操作；详情抽屉完整展示提现金额、手续费、到账金额、收款渠道、收款账号、渠道单号、失败/驳回原因，并在底部固定审核按钮，便于财务扫描列表后再处理单笔工单。
+
+```mermaid
+flowchart LR
+  A["提现管理列表"] --> B["状态筛选/分页"]
+  A --> C["详情按钮"]
+  C --> D["右侧详情抽屉"]
+  D --> E["完整工单信息"]
+  D --> F["通过/驳回"]
+```
 - `views/wallet/WalletView.vue`：余额卡片、统计卡片、明细表格分页；充值弹窗（金额+渠道，下单后用 `qrcode` 渲染二维码，支付完成点「我已支付」刷新）；提现弹窗（金额+支付宝账号+姓名，提交后进入待审核）。
-- `views/finance/WithdrawalAdminView.vue`（菜单 `finance:withdrawal:menu`，财务分组）：提现工单分页（状态筛选），展示金额/手续费/到账额与收款支付宝账户；待审核工单可「通过」（二次确认后立即转账）/「驳回」（填写理由，退回余额）；`api/finance.api.ts` 封装列表/审核接口。
+- `views/finance/WithdrawalAdminView.vue`（菜单 `finance:withdrawal:menu`，财务分组）：提现工单分页（状态筛选），表格保留扫描所需的关键列，右侧详情抽屉展示完整金额、收款、渠道与失败信息；待审核工单可「通过」（二次确认后立即转账）/「驳回」（填写理由，退回余额）；`api/finance.api.ts` 封装列表/审核接口。
 
 ## C 端（apps/client）
 
