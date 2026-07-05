@@ -42,6 +42,10 @@ export class OrderEntity extends TenantScopedEntity {
   @Column({ name: 'booster_id', length: 36, default: '' })
   boosterId!: string;
 
+  /** 订单群会话 id（支付成功自动建群后回填；未建群为空串） */
+  @Column({ name: 'conversation_id', length: 36, default: '' })
+  conversationId!: string;
+
   /** 购买数量（局数/小时数） */
   @Column({ type: 'int', default: 1 })
   quantity!: number;

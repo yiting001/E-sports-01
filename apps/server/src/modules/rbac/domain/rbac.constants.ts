@@ -25,13 +25,18 @@ export const MEMBER_ROLE = 'member';
 export const SERVICE_ROLE = 'service';
 
 /**
- * 客服角色默认权限码：管理端「即时通讯 / 客服工作台」菜单 + 消息历史 + 坐席接口。
- * 由播种器幂等补齐，使客服账号登录管理端即可接待访客。
- * 订单管理暂为管理员权限；「客服仅见自己负责的订单」在后续客服处理迭代中实现。
+ * 客服角色默认权限码：管理端「即时通讯 / 客服工作台」菜单 + 消息历史 + 坐席接口，
+ * 以及「订单管理」菜单与订单处理接口（列表/详情/下发大厅/指派打手）。
+ * 由播种器幂等补齐；客服在订单列表仅能看到自己负责商品的订单（后端强制过滤）。
  */
 export const SERVICE_ROLE_PERMISSION_CODES: string[] = [
   'im:menu',
   'im:service:menu',
   PERMS.im.history,
   PERMS.im.serviceAgent,
+  'order:admin:menu',
+  PERMS.order.list,
+  PERMS.order.detail,
+  PERMS.order.dispatch,
+  PERMS.order.assign,
 ];

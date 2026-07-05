@@ -7,6 +7,8 @@ export interface AdminOrderFilter {
   status?: OrderStatus;
   /** 按商户订单号精确定位 */
   orderNo?: string;
+  /** 按负责客服过滤（客服角色强制限定为自身，仅见自己负责商品的订单） */
+  serviceAgentId?: string;
 }
 
 export const ORDER_REPOSITORY = Symbol('ORDER_REPOSITORY');
