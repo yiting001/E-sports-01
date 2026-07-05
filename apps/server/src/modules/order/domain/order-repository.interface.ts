@@ -17,11 +17,12 @@ export interface OrderRepository {
   findById(id: string): Promise<OrderEntity | null>;
   /** 按商户订单号取订单（支付回调幂等定位用） */
   findByOrderNo(orderNo: string): Promise<OrderEntity | null>;
-  /** 分页查询某用户的订单，按创建时间倒序 */
+  /** 分页查询某用户的订单（可按状态过滤），按创建时间倒序 */
   paginateByUser(
     userId: string,
     skip: number,
     take: number,
+    status?: OrderStatus,
   ): Promise<[OrderEntity[], number]>;
   /** 管理端分页检索全量订单（租户内），按创建时间倒序 */
   paginateAdmin(

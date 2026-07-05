@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { FindOptionsWhere, Repository } from 'typeorm';
+import type { OrderStatus } from '@app/contracts';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
 import { withTenant } from '../../../shared/tenant/tenant-scope.util';
 import { OrderEntity } from '../domain/order.entity';
@@ -36,9 +37,13 @@ export class TypeormOrderRepository implements OrderRepository {
     userId: string,
     skip: number,
     take: number,
+    status?: OrderStatus,
   ): Promise<[OrderEntity[], number]> {
     return this.repo.findAndCount({
-      where: withTenant<OrderEntity>(this.tenant, { userId }),
+      where: withTenant<OrderEntity>(this.tenant, {
+        userId,
+        ...(status ? { status } : {}),
+      }),
       order: { createdAt: 'DESC' },
       skip,
       take,
