@@ -12,6 +12,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { RealnameModule } from './modules/realname/realname.module';
 import { CommerceModule } from './modules/commerce/commerce.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+import { BoosterModule } from './modules/booster/booster.module';
 import { NoticeModule } from './modules/notice/notice.module';
 import { OrderModule } from './modules/order/order.module';
 import { ReviewModule } from './modules/review/review.module';
@@ -35,6 +36,7 @@ import { ReviewModule } from './modules/review/review.module';
     RealnameModule,
     CommerceModule,
     FeedbackModule,
+    BoosterModule,
     NoticeModule,
     OrderModule,
     ReviewModule,

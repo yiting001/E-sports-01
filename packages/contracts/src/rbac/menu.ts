@@ -87,6 +87,14 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     group: 'commerce',
   },
   {
+    code: 'booster:menu',
+    title: '打手管理',
+    path: 'booster',
+    icon: 'Trophy',
+    sort: 5,
+    group: 'commerce',
+  },
+  {
     code: 'rbac:tenant:menu',
     title: '租户管理',
     path: 'rbac/tenants',

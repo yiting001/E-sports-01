@@ -71,6 +71,12 @@ export const router = createRouter({
       meta: { title: '个人信息', requiresAuth: true },
     },
     {
+      path: '/profile/booster',
+      name: 'booster-apply',
+      component: () => import('@/views/profile/BoosterApplyView.vue'),
+      meta: { title: '打手入驻', requiresAuth: true },
+    },
+    {
       path: '/',
       component: MainLayout,
       children: [

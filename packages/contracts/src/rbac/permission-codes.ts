@@ -65,6 +65,11 @@ export const PERMS = {
     list: 'feedback:list',
     handle: 'feedback:handle',
   },
+  booster: {
+    list: 'booster:list',
+    review: 'booster:review',
+    update: 'booster:update',
+  },
   order: {
     list: 'order:admin:list',
     detail: 'order:admin:detail',
