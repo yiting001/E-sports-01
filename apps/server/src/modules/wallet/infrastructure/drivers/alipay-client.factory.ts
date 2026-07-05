@@ -2,6 +2,7 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { CONFIG_KEYS } from '@app/contracts';
 import { AlipaySdk } from 'alipay-sdk';
 import { ConfigService } from '../../../config/application/config.service';
+import { normalizePem } from './pem.util';
 
 /**
  * 支付宝 SDK 工厂。
@@ -51,9 +52,9 @@ export class AlipayClientFactory {
     if (appCert && alipayPublicCert && rootCert) {
       return new AlipaySdk({
         ...base,
-        appCertContent: appCert,
-        alipayPublicCertContent: alipayPublicCert,
-        alipayRootCertContent: rootCert,
+        appCertContent: normalizePem(appCert),
+        alipayPublicCertContent: normalizePem(alipayPublicCert),
+        alipayRootCertContent: normalizePem(rootCert),
       });
     }
 
