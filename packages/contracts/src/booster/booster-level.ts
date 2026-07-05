@@ -37,8 +37,10 @@ export const BOOSTER_LEVEL_DEFAULTS: BoosterLevelTier[] = [
 
 /** 打手默认参数（配置中心未设置时回退使用） */
 export const BOOSTER_DEFAULTS = {
-  /** 入驻押金（分） */
-  depositFen: 10000,
+  /** 押金最低交付额（分，接单门槛） */
+  depositMinFen: 10000,
+  /** 押金最高交付额（分，缴纳上限） */
+  depositMaxFen: 100000,
   /** 提交入驻申请是否要求已通过实名认证 */
   requireRealname: true,
 } as const;

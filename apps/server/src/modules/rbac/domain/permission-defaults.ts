@@ -58,6 +58,7 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.booster.update]: '打手-资料编辑',
   [PERMS.booster.levelSet]: '打手-等级档位配置',
   [PERMS.booster.depositRefund]: '打手-押金退还',
+  [PERMS.booster.depositPolicySet]: '打手-押金交付配置',
   [PERMS.member.levelSet]: '会员-等级档位配置',
   [PERMS.dashboard.orders]: '仪表盘-订单统计',
   [PERMS.dashboard.finance]: '仪表盘-财务统计',

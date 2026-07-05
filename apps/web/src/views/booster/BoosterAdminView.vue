@@ -3,7 +3,8 @@
  * 打手管理页（菜单 booster:menu）。
  * 分页展示入驻申请（可按状态过滤），支持审核通过（自动授予 booster 角色）/
  * 驳回（填写理由），以及对打手资料（游戏昵称/擅长游戏/段位/自我介绍）的编辑维护；
- * 另支持等级档位配置（booster:level:set）与押金退还（booster:deposit:refund）。
+ * 另支持等级档位配置（booster:level:set）、押金交付配置（booster:deposit:policy:set）
+ * 与押金退还（booster:deposit:refund）。
  */
 import { onMounted, reactive, ref } from 'vue';
 import {
@@ -14,12 +15,13 @@ import {
   type BoosterView,
 } from '@app/contracts';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Check, Close, EditPen, Refresh, RefreshLeft, Search, Setting, Trophy } from '@element-plus/icons-vue';
+import { Check, Close, Coin, EditPen, Refresh, RefreshLeft, Search, Setting, Trophy } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { boosterApi } from '@/api/booster.api';
 import BoosterLevelDialog from './BoosterLevelDialog.vue';
+import BoosterDepositPolicyDialog from './BoosterDepositPolicyDialog.vue';
 import './BoosterAdminView.css';
 
 const list = ref<BoosterView[]>([]);
@@ -109,6 +111,7 @@ async function reject(row: BoosterView): Promise<void> {
 }
 
 const levelDialogVisible = ref(false);
+const depositPolicyVisible = ref(false);
 
 async function refundDeposit(row: BoosterView): Promise<void> {
   await ElMessageBox.confirm(
@@ -189,6 +192,13 @@ onMounted(() => {
             @click="levelDialogVisible = true"
           >
             等级配置
+          </el-button>
+          <el-button
+            v-permission="PERMS.booster.depositPolicySet"
+            :icon="Coin"
+            @click="depositPolicyVisible = true"
+          >
+            押金配置
           </el-button>
           <el-button
             :icon="Refresh"
@@ -431,5 +441,6 @@ onMounted(() => {
     </el-dialog>
 
     <booster-level-dialog v-model="levelDialogVisible" />
+    <booster-deposit-policy-dialog v-model="depositPolicyVisible" />
   </section>
 </template>

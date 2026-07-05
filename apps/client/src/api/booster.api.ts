@@ -15,8 +15,8 @@ export const boosterApi = {
   apply(payload: SubmitBoosterPayload): Promise<BoosterView> {
     return http.post('/booster', payload);
   },
-  /** 从钱包余额缴纳剩余押金（仅限已入驻打手） */
-  payDeposit(): Promise<BoosterView> {
-    return http.post('/booster/deposit/pay');
+  /** 从钱包余额缴纳押金（区间内自选金额，仅限已入驻打手） */
+  payDeposit(amountFen: number): Promise<BoosterView> {
+    return http.post('/booster/deposit/pay', { amountFen });
   },
 };

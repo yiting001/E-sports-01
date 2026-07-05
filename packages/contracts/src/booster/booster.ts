@@ -92,6 +92,20 @@ export interface BoosterView {
   updatedAt: string;
 }
 
+/** 押金交付策略（管理端可配：最低交付额为接单门槛，最高交付额为缴纳上限） */
+export interface BoosterDepositPolicy {
+  /** 最低交付额（分）；0 表示不要求押金 */
+  minFen: number;
+  /** 最高交付额（分），不得低于最低交付额 */
+  maxFen: number;
+}
+
+/** 打手缴纳押金入参（区间内自选金额） */
+export interface PayDepositPayload {
+  /** 本次缴纳金额（分），缴后累计不得超过最高交付额 */
+  amountFen: number;
+}
+
 /** 当前用户打手入驻概览 */
 export interface BoosterMineView {
   /** 聚合状态：无记录为 none，否则取记录状态 */
@@ -102,6 +116,6 @@ export interface BoosterMineView {
   requireRealname: boolean;
   /** 当前用户实名认证是否已通过 */
   realnameApproved: boolean;
-  /** 应缴押金总额（分，配置中心设定） */
-  depositRequiredFen: number;
+  /** 押金交付策略（最低/最高交付额，配置中心设定） */
+  depositPolicy: BoosterDepositPolicy;
 }

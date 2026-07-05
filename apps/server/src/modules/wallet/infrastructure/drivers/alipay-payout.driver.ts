@@ -27,7 +27,7 @@ export class AlipayPayoutDriver implements PayoutPort {
       bizContent: {
         out_biz_no: input.outBizNo,
         trans_amount: fenToYuan(input.amountFen),
-        product_code: 'TRANS_ACCOUNT_NO_PScA',
+        product_code: 'TRANS_ACCOUNT_NO_PWD',
         biz_scene: 'DIRECT_TRANSFER',
         order_title: input.remark,
         payee_info: {

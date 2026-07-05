@@ -12,7 +12,7 @@
 - **资料维护**：管理端可编辑打手的游戏昵称/擅长游戏/段位/自我介绍（不改变审核状态）。
 - **实名前置**：配置开关 `booster.requireRealname`（默认开启），开启时未通过实名认证不可提交入驻申请（复用 realname 模块只读检查器 `RealnameChecker`）。
 - **打手等级**：等级档位（名称/完成单数门槛/提成万分比）存配置中心 `booster.levels`，按累计完成单数自动定级；订单完成时按当前等级费率计提成经 `WalletLedger` 入账（commission 流水）。
-- **打手押金**：应缴额存配置中心 `booster.depositFen`；已入驻打手从钱包余额缴纳（deposit 流水），接单前由 `BoosterDepositGuard` 校验缴足；管理端可全额退还（deposit_refund 流水）。
+- **打手押金**：交付策略存配置中心（最低 `booster.depositMinFen` / 最高 `booster.depositMaxFen`，管理端可配）；已入驻打手在区间内自选金额从钱包余额缴纳（deposit 流水，累计不超最高额），接单前由 `BoosterDepositGuard` 校验已达最低交付额；管理端可全额退还（deposit_refund 流水）。
 - **财务罚款**：财务可对打手按订单罚款（理由必填），从钱包余额（penalty 流水）或已缴押金中扣除，留存罚款记录供审计。
 
 ## 结构导图（DDD 四层）
@@ -26,20 +26,22 @@ modules/booster/
 │  └─ penalty-repository.interface.ts   罚款仓储端口
 ├─ application/
 │  ├─ booster.mapper.ts / penalty.mapper.ts   实体 → 视图（等级由档位+完成单数实时解析）
-│  ├─ booster-policy.service.ts         策略读写：等级档位 / 应缴押金 / 实名开关（配置中心）
+│  ├─ booster-policy.service.ts         策略读写：等级档位 / 押金交付策略（最低/最高）/ 实名开关（配置中心）
 │  ├─ booster-progress.service.ts       完成单数累计（供 order 模块完成结算调用，导出）
-│  ├─ booster-deposit.service.ts        BoosterDepositGuard 押金缴足门控（供 order 接单调用，导出）
+│  ├─ booster-deposit.service.ts        BoosterDepositGuard 押金最低交付额门控（供 order 接单调用，导出）
 │  └─ use-cases/                        get-my / submit / list / review / update
-│                                        / get·set-booster-levels / pay·refund-deposit
+│                                        / get·set-booster-levels / pay·refund-deposit / get·set-deposit-policy
 │                                        / create·list-penalties
 ├─ infrastructure/
 │  ├─ booster.repository.ts             TypeORM 实现（按租户过滤）
 │  └─ penalty.repository.ts             罚款仓储 TypeORM 实现
 └─ interfaces/
    ├─ dto/                              submit / review / update / list-query
-   │                                     / set-booster-levels / create-penalty / penalty-list-query
+   │                                     / set-booster-levels / pay-deposit / set-deposit-policy
+   │                                     / create-penalty / penalty-list-query
    └─ controllers/                      一路由一文件（mine/submit/list/review/update
                                         /levels.get/levels.set/deposit.pay/deposit.refund
+                                        /deposit.policy.get/deposit.policy.set
                                         /penalty.create/penalty.list）
 
 modules/rbac/
@@ -53,8 +55,9 @@ modules/rbac/
 - C 端 `client/views/profile/BoosterApplyView.responsive.css`：移动端保持全屏申请表单；PC 端标题栏、状态卡、资料表单与提交按钮同轴收敛，有审核状态时左侧提示、右侧展示资料或重提表单。
 - 管理端 `web/views/booster/BoosterAdminView.vue`（菜单 `booster:menu` 打手管理，电竞运营分组）：状态筛选 + 审核通过/驳回 + 资料编辑弹窗 + 等级/完成单数/押金展示 + 押金退还。
 - 管理端 `web/views/booster/BoosterLevelDialog.vue`：等级档位配置弹窗（增删行 + 保存，`booster:level:set`）。
+- 管理端 `web/views/booster/BoosterDepositPolicyDialog.vue`：押金交付配置弹窗（最低/最高交付额，`booster:deposit:policy:set`）。
 - 管理端 `web/views/finance/PenaltyAdminView.vue`（菜单 `finance:penalty:menu` 罚款管理，财务分组）：罚款记录列表 + 创建罚款弹窗（余额/押金二选一）。
-- C 端 `client/components/profile/BoosterLevelCard.vue`（「我的」页打手身份）：等级/提成/完成单数/押金进度展示与一键缴纳押金。
+- C 端 `client/components/profile/BoosterLevelCard.vue`（「我的」页打手身份）：等级/提成/完成单数/押金进度展示与区间内自选金额缴纳。
 
 ## 权限（RBAC）
 
@@ -66,6 +69,7 @@ modules/rbac/
 | `booster:update` | 打手-资料编辑 | `PUT /booster/:id` |
 | `booster:level:set` | 打手-等级配置 | `PUT /booster/levels` |
 | `booster:deposit:refund` | 打手-押金退还 | `POST /booster/:id/deposit/refund` |
+| `booster:deposit:policy:set` | 打手-押金交付配置 | `PUT /booster/deposit/policy` |
 | `finance:penalty:menu` | 罚款管理（菜单） | 前端动态路由 `/finance/penalties` |
 | `finance:penalty:list` | 财务-罚款查询 | `GET /finance/penalties` |
 | `finance:penalty:create` | 财务-罚款创建 | `POST /finance/penalties` |
@@ -83,7 +87,9 @@ modules/rbac/
 | PUT | `/booster/:id` | `booster:update` | 编辑资料（字段可选，仅更新传入项） |
 | GET | `/booster/levels` | 登录 | 等级档位列表 |
 | PUT | `/booster/levels` | `booster:level:set` | 保存等级档位 `{ tiers }` |
-| POST | `/booster/deposit/pay` | 登录 | 从钱包余额缴纳剩余押金（仅已入驻） |
+| GET | `/booster/deposit/policy` | 登录 | 押金交付策略（最低/最高交付额） |
+| PUT | `/booster/deposit/policy` | `booster:deposit:policy:set` | 保存押金交付策略 `{ minFen, maxFen }` |
+| POST | `/booster/deposit/pay` | 登录 | 区间内自选金额缴纳押金 `{ amountFen }`（仅已入驻，累计不超最高额） |
 | POST | `/booster/:id/deposit/refund` | `booster:deposit:refund` | 全额退还押金到钱包余额 |
 | GET | `/finance/penalties` | `finance:penalty:list` | 分页 `?page&pageSize&boosterUserId` |
 | POST | `/finance/penalties` | `finance:penalty:create` | `{ boosterUserId, amountFen, source, reason, orderNo? }` |

@@ -3,6 +3,7 @@ import {
   BOOSTER_DEFAULTS,
   BOOSTER_LEVEL_DEFAULTS,
   BOOSTER_LEVEL_LIMITS,
+  BoosterDepositPolicy,
   BoosterLevelTier,
   CONFIG_KEYS,
   FEE_RATE_BASE,
@@ -11,7 +12,7 @@ import { ConfigService } from '../../config/application/config.service';
 
 /**
  * 打手策略服务（配置读写收口）。
- * 等级档位 / 应缴押金 / 实名前置开关全部存配置中心，杜绝硬编码；
+ * 等级档位 / 押金交付策略（最低/最高）/ 实名前置开关全部存配置中心，杜绝硬编码；
  * 写入前做档位合法性校验，读取时缺省回退契约默认值。
  */
 @Injectable()
@@ -40,12 +41,42 @@ export class BoosterPolicyService {
     return sorted;
   }
 
-  /** 应缴押金总额（分） */
-  getDepositRequiredFen(): Promise<number> {
-    return this.config.getNumber(
-      CONFIG_KEYS.booster.depositFen,
-      BOOSTER_DEFAULTS.depositFen,
-    );
+  /** 押金交付策略（最低交付额为接单门槛，最高交付额为缴纳上限） */
+  async getDepositPolicy(): Promise<BoosterDepositPolicy> {
+    const [minFen, maxFen] = await Promise.all([
+      this.config.getNumber(
+        CONFIG_KEYS.booster.depositMinFen,
+        BOOSTER_DEFAULTS.depositMinFen,
+      ),
+      this.config.getNumber(
+        CONFIG_KEYS.booster.depositMaxFen,
+        BOOSTER_DEFAULTS.depositMaxFen,
+      ),
+    ]);
+    return { minFen, maxFen };
+  }
+
+  /** 保存押金交付策略（管理端），校验后写入配置中心 */
+  async setDepositPolicy(
+    policy: BoosterDepositPolicy,
+  ): Promise<BoosterDepositPolicy> {
+    if (policy.minFen < 0 || policy.maxFen < 0) {
+      throw new BadRequestException('押金金额不能为负数');
+    }
+    if (policy.maxFen < policy.minFen) {
+      throw new BadRequestException('最高交付额不得低于最低交付额');
+    }
+    await Promise.all([
+      this.config.setRaw(
+        CONFIG_KEYS.booster.depositMinFen,
+        String(policy.minFen),
+      ),
+      this.config.setRaw(
+        CONFIG_KEYS.booster.depositMaxFen,
+        String(policy.maxFen),
+      ),
+    ]);
+    return policy;
   }
 
   /** 提交入驻申请是否要求已通过实名认证 */

@@ -1,4 +1,5 @@
 import type {
+  BoosterDepositPolicy,
   BoosterLevelTier,
   BoosterStatus,
   BoosterView,
@@ -33,6 +34,14 @@ export const boosterApi = {
   /** 保存等级档位（booster:level:set） */
   setLevels(tiers: BoosterLevelTier[]): Promise<BoosterLevelTier[]> {
     return http.put('/booster/levels', { tiers });
+  },
+  /** 查询押金交付策略（最低/最高交付额） */
+  getDepositPolicy(): Promise<BoosterDepositPolicy> {
+    return http.get('/booster/deposit/policy');
+  },
+  /** 保存押金交付策略（booster:deposit:policy:set） */
+  setDepositPolicy(policy: BoosterDepositPolicy): Promise<BoosterDepositPolicy> {
+    return http.put('/booster/deposit/policy', policy);
   },
   /** 退还押金（booster:deposit:refund，全额退回打手钱包余额） */
   refundDeposit(id: string): Promise<BoosterView> {

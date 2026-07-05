@@ -2,13 +2,14 @@
 /**
  * 我的页 · 打手等级/押金卡（仅打手身份展示）。
  * 展示当前等级、完成单数、提成比例与押金缴纳进度；
- * 押金未缴足时可从钱包余额一键缴纳（缴足后方可接单）。
+ * 押金在配置的最低/最高交付额区间内自选金额缴纳（达最低额方可接单）。
  */
 import { computed, onMounted, ref } from 'vue';
 import {
   BoosterStatus,
   FEE_RATE_BASE,
   fenToYuan,
+  yuanToFen,
   type BoosterMineView,
 } from '@app/contracts';
 import { boosterApi } from '@/api/booster.api';
@@ -18,12 +19,17 @@ const toast = useToast();
 
 const mine = ref<BoosterMineView | null>(null);
 const paying = ref(false);
+const amountYuan = ref('');
 
 const record = computed(() => mine.value?.record ?? null);
 const approved = computed(() => mine.value?.status === BoosterStatus.Approved);
-const requiredFen = computed(() => mine.value?.depositRequiredFen ?? 0);
+const minFen = computed(() => mine.value?.depositPolicy.minFen ?? 0);
+const maxFen = computed(() => mine.value?.depositPolicy.maxFen ?? 0);
 const paidFen = computed(() => record.value?.depositFen ?? 0);
-const depositSettled = computed(() => paidFen.value >= requiredFen.value);
+/** 已达最低交付额（接单门槛） */
+const gateMet = computed(() => paidFen.value >= minFen.value);
+/** 仍可继续缴纳（未达最高交付额） */
+const canPayMore = computed(() => paidFen.value < maxFen.value);
 const commissionPercent = computed(() =>
   (((record.value?.commissionRateBp ?? 0) / FEE_RATE_BASE) * 100).toFixed(1),
 );
@@ -36,10 +42,20 @@ async function payDeposit(): Promise<void> {
   if (paying.value) {
     return;
   }
+  const amountFen = yuanToFen(amountYuan.value);
+  if (amountFen <= 0) {
+    toast.show('请输入本次缴纳金额');
+    return;
+  }
+  if (paidFen.value + amountFen > maxFen.value) {
+    toast.show(`缴后累计不得超过 ¥${fenToYuan(maxFen.value)}`);
+    return;
+  }
   paying.value = true;
   try {
-    await boosterApi.payDeposit();
+    await boosterApi.payDeposit(amountFen);
     toast.show('押金已缴纳');
+    amountYuan.value = '';
     await load();
   } finally {
     paying.value = false;
@@ -62,16 +78,28 @@ onMounted(() => {
     </div>
     <div class="meta">
       <span>累计完成 {{ record.completedOrders }} 单</span>
-      <span>押金 ¥{{ fenToYuan(paidFen) }} / ¥{{ fenToYuan(requiredFen) }}</span>
+      <span>已缴押金 ¥{{ fenToYuan(paidFen) }}（最低 ¥{{ fenToYuan(minFen) }} / 最高 ¥{{ fenToYuan(maxFen) }}）</span>
     </div>
-    <button
-      v-if="!depositSettled"
-      class="pay"
-      :disabled="paying"
-      @click="payDeposit"
+    <div
+      v-if="canPayMore"
+      class="deposit"
     >
-      {{ paying ? '缴纳中…' : '缴纳押金（缴足后可接单）' }}
-    </button>
+      <input
+        v-model="amountYuan"
+        class="amount"
+        type="number"
+        inputmode="decimal"
+        min="0"
+        placeholder="本次缴纳金额（元）"
+      >
+      <button
+        class="pay"
+        :disabled="paying"
+        @click="payDeposit"
+      >
+        {{ paying ? '缴纳中…' : gateMet ? '继续缴纳' : '缴纳押金（达最低额可接单）' }}
+      </button>
+    </div>
   </section>
 </template>
 
@@ -106,6 +134,21 @@ onMounted(() => {
   justify-content: space-between;
   font-size: 12px;
   color: var(--c-text-muted);
+}
+
+.deposit {
+  display: flex;
+  gap: 8px;
+}
+
+.amount {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  font-size: 14px;
+  color: var(--c-text);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
 }
 
 .pay {

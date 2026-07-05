@@ -73,6 +73,8 @@ export const PERMS = {
     levelSet: 'booster:level:set',
     /** 押金退还 */
     depositRefund: 'booster:deposit:refund',
+    /** 押金交付策略配置（最低/最高交付额） */
+    depositPolicySet: 'booster:deposit:policy:set',
   },
   member: {
     /** 会员等级档位配置（消费折扣） */

@@ -1,4 +1,9 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import {
   BoosterStatus,
   BoosterView,
@@ -20,9 +25,9 @@ import { BoosterPolicyService } from '../booster-policy.service';
 import { toBoosterView } from '../booster.mapper';
 
 /**
- * 用例：打手缴纳押金。
- * 仅已通过入驻审核的打手可缴；按配置应缴额补足差额，从钱包余额扣除，
- * 经 WalletLedger 记 deposit 出账流水（余额不足由账务单元拒绝）。
+ * 用例：打手缴纳押金（区间内自选金额）。
+ * 仅已通过入驻审核的打手可缴；缴后累计不得超过配置的最高交付额，
+ * 从钱包余额扣除，经 WalletLedger 记 deposit 出账流水（余额不足由账务单元拒绝）。
  */
 @Injectable()
 export class PayDepositUseCase {
@@ -36,25 +41,29 @@ export class PayDepositUseCase {
     private readonly policy: BoosterPolicyService,
   ) {}
 
-  async execute(userId: string): Promise<BoosterView> {
+  async execute(userId: string, amountFen: number): Promise<BoosterView> {
     const record = await this.repo.findByUserId(userId);
     if (!record || record.status !== BoosterStatus.Approved) {
       throw new ConflictException('请先通过打手入驻审核');
     }
-    const required = await this.policy.getDepositRequiredFen();
-    const remaining = required - record.depositFen;
-    if (remaining <= 0) {
-      throw new ConflictException('押金已缴足，无需重复缴纳');
+    const { maxFen } = await this.policy.getDepositPolicy();
+    if (record.depositFen >= maxFen) {
+      throw new ConflictException('押金已达最高交付额，无需继续缴纳');
+    }
+    if (record.depositFen + amountFen > maxFen) {
+      throw new BadRequestException(
+        `缴后累计不得超过最高交付额 ${fenToYuan(maxFen)} 元，本次最多可缴 ${fenToYuan(maxFen - record.depositFen)} 元`,
+      );
     }
     const wallet = await this.walletService.ensureWallet(userId);
     await this.ledger.adjustBalance({
       walletId: wallet.id,
       direction: FundDirection.Out,
-      amountFen: remaining,
+      amountFen,
       type: WalletTxnType.Deposit,
-      remark: `打手押金缴纳 ${fenToYuan(remaining)} 元`,
+      remark: `打手押金缴纳 ${fenToYuan(amountFen)} 元`,
     });
-    record.depositFen += remaining;
+    record.depositFen += amountFen;
     const saved = await this.repo.save(record);
     const [profiles, tiers] = await Promise.all([
       this.users.resolveProfiles([userId]),

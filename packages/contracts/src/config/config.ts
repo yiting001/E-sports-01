@@ -173,8 +173,10 @@ export const CONFIG_KEYS = {
   booster: {
     /** 打手等级档位（JSON 数组：等级/名称/完成单数门槛/提成万分比） */
     levels: 'booster.levels',
-    /** 打手入驻押金（分） */
-    depositFen: 'booster.depositFen',
+    /** 打手押金最低交付额（分，接单门槛） */
+    depositMinFen: 'booster.depositMinFen',
+    /** 打手押金最高交付额（分，缴纳上限） */
+    depositMaxFen: 'booster.depositMaxFen',
     /** 提交入驻申请是否要求已通过实名认证 */
     requireRealname: 'booster.requireRealname',
   },

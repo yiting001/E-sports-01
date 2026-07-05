@@ -25,6 +25,8 @@ import { UpdateBoosterUseCase } from './application/use-cases/update-booster.use
 import { GetBoosterLevelsUseCase } from './application/use-cases/get-booster-levels.usecase';
 import { SetBoosterLevelsUseCase } from './application/use-cases/set-booster-levels.usecase';
 import { PayDepositUseCase } from './application/use-cases/pay-deposit.usecase';
+import { GetDepositPolicyUseCase } from './application/use-cases/get-deposit-policy.usecase';
+import { SetDepositPolicyUseCase } from './application/use-cases/set-deposit-policy.usecase';
 import { RefundDepositUseCase } from './application/use-cases/refund-deposit.usecase';
 import { CreatePenaltyUseCase } from './application/use-cases/create-penalty.usecase';
 import { ListPenaltiesUseCase } from './application/use-cases/list-penalties.usecase';
@@ -37,6 +39,8 @@ import { BoosterUpdateController } from './interfaces/controllers/booster.update
 import { BoosterLevelsGetController } from './interfaces/controllers/booster.levels.get.controller';
 import { BoosterLevelsSetController } from './interfaces/controllers/booster.levels.set.controller';
 import { BoosterDepositPayController } from './interfaces/controllers/booster.deposit.pay.controller';
+import { BoosterDepositPolicyGetController } from './interfaces/controllers/booster.deposit.policy.get.controller';
+import { BoosterDepositPolicySetController } from './interfaces/controllers/booster.deposit.policy.set.controller';
 import { BoosterDepositRefundController } from './interfaces/controllers/booster.deposit.refund.controller';
 import { PenaltyCreateController } from './interfaces/controllers/penalty.create.controller';
 import { PenaltyListController } from './interfaces/controllers/penalty.list.controller';
@@ -45,7 +49,7 @@ import { PenaltyListController } from './interfaces/controllers/penalty.list.con
  * 打手模块。
  * DDD 四层：入驻申请与审核（实名前置校验，通过授予 booster 角色）、
  * 等级体系（档位存配置中心，按累计完成单数自动定级，等级越高提成越高）、
- * 押金（从钱包余额缴纳、管理端退还，经 WalletLedger 记流水）、
+ * 押金（管理端配最低/最高交付额，区间内自选金额从钱包余额缴纳、管理端退还，经 WalletLedger 记流水）、
  * 财务罚款（从余额或押金扣除，记录留档）。
  * 对外导出进度/押金门禁服务，供订单模块在完成结算与接单时调用。
  */
@@ -62,6 +66,8 @@ import { PenaltyListController } from './interfaces/controllers/penalty.list.con
     BoosterLevelsGetController,
     BoosterLevelsSetController,
     BoosterDepositPayController,
+    BoosterDepositPolicyGetController,
+    BoosterDepositPolicySetController,
     BoosterDepositRefundController,
     BoosterSubmitController,
     BoosterListController,
@@ -87,6 +93,8 @@ import { PenaltyListController } from './interfaces/controllers/penalty.list.con
     GetBoosterLevelsUseCase,
     SetBoosterLevelsUseCase,
     PayDepositUseCase,
+    GetDepositPolicyUseCase,
+    SetDepositPolicyUseCase,
     RefundDepositUseCase,
     CreatePenaltyUseCase,
     ListPenaltiesUseCase,

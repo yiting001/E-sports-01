@@ -11,7 +11,7 @@ import { toBoosterView } from '../booster.mapper';
 
 /**
  * 用例：获取当前用户打手入驻概览。
- * 返回申请记录（含等级与押金）以及实名前置要求 / 应缴押金等策略信息，
+ * 返回申请记录（含等级与押金）以及实名前置要求 / 押金交付策略等信息，
  * 供 C 端一次拉取即可渲染入驻页全部状态。
  */
 @Injectable()
@@ -25,12 +25,12 @@ export class GetMyBoosterUseCase {
   ) {}
 
   async execute(userId: string): Promise<BoosterMineView> {
-    const [record, requireRealname, realnameApproved, depositRequiredFen] =
+    const [record, requireRealname, realnameApproved, depositPolicy] =
       await Promise.all([
         this.repo.findByUserId(userId),
         this.policy.isRealnameRequired(),
         this.realname.isApproved(userId),
-        this.policy.getDepositRequiredFen(),
+        this.policy.getDepositPolicy(),
       ]);
     if (!record) {
       return {
@@ -38,7 +38,7 @@ export class GetMyBoosterUseCase {
         record: null,
         requireRealname,
         realnameApproved,
-        depositRequiredFen,
+        depositPolicy,
       };
     }
     const [profiles, tiers] = await Promise.all([
@@ -50,7 +50,7 @@ export class GetMyBoosterUseCase {
       record: toBoosterView(record, tiers, profiles.get(userId)),
       requireRealname,
       realnameApproved,
-      depositRequiredFen,
+      depositPolicy,
     };
   }
 }
