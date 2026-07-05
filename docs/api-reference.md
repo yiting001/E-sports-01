@@ -220,7 +220,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | GET | `/api/commerce/public/products/:id` | 公开 | 单个上架商品详情（下架/不存在均 404） |
 | POST | `/api/order` | 登录 | 创建订单并发起扫码支付 `{ productId, quantity, provider, remark? }` → `{ orderId, orderNo, qrCode, amountFen, amountYuan }` |
 | POST | `/api/order/pay/callback/:provider` | 公开 | 支付渠道异步回调（验签后幂等落账：待付款 → 待客服处理，并累加销量） |
-| GET | `/api/order/mine` | 登录 | 分页查询我的订单 `?page&pageSize`，按创建时间倒序 |
+| GET | `/api/order/mine` | 登录 | 分页查询我的订单 `?page&pageSize&status`（status 可选，tabs 按状态过滤），按创建时间倒序 |
 | GET | `/api/order/:id` | 登录 | 我的单笔订单（支付结果轮询/详情），仅本人可见 |
 | POST | `/api/order/:id/cancel` | 登录 | 取消待付款订单（已支付订单不可取消） |
 

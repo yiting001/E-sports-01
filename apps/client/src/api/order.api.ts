@@ -1,6 +1,7 @@
 import type {
   CreateOrderPayload,
   CreateOrderResult,
+  OrderStatus,
   OrderView,
   PaginatedResult,
 } from '@app/contracts';
@@ -16,9 +17,13 @@ export const orderApi = {
   detail(id: string): Promise<OrderView> {
     return http.get(`/order/${id}`);
   },
-  /** 分页查询我的订单 */
-  mine(page: number, pageSize: number): Promise<PaginatedResult<OrderView>> {
-    return http.get('/order/mine', { params: { page, pageSize } });
+  /** 分页查询我的订单（可按状态过滤） */
+  mine(
+    page: number,
+    pageSize: number,
+    status?: OrderStatus,
+  ): Promise<PaginatedResult<OrderView>> {
+    return http.get('/order/mine', { params: { page, pageSize, status } });
   },
   /** 取消待付款订单 */
   cancel(id: string): Promise<OrderView> {

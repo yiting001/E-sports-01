@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * 我的订单页（全屏）：分页列出本人订单（商品快照/数量/金额/状态），
- * 待付款订单可取消，已完成订单可评价（一单一评）；下拉到底加载更多。
+ * 我的订单页（全屏）：顶部状态 tabs 切换（全部/待付款/…），分页列出本人订单
+ * （商品快照/数量/金额/状态），待付款订单可取消，已完成订单可评价（一单一评）；
+ * 到底加载更多。
  */
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -29,6 +30,26 @@ const loading = ref(false);
 const reviewedIds = ref<Set<string>>(new Set());
 /** 当前正在评价的订单；非空时展示评价弹层 */
 const reviewingOrder = ref<OrderView | null>(null);
+/** 当前选中的状态 tab；undefined 为全部 */
+const activeStatus = ref<OrderStatus | undefined>(undefined);
+
+/** 状态 tabs：全部 + 各订单状态（文案复用 ORDER_STATUS_TEXT） */
+const STATUS_TABS: Array<{ label: string; value?: OrderStatus }> = [
+  { label: '全部', value: undefined },
+  ...(Object.keys(ORDER_STATUS_TEXT) as OrderStatus[]).map((status) => ({
+    label: ORDER_STATUS_TEXT[status],
+    value: status,
+  })),
+];
+
+function switchTab(status?: OrderStatus): void {
+  if (activeStatus.value === status) {
+    return;
+  }
+  activeStatus.value = status;
+  orders.value = [];
+  void load(true);
+}
 
 /** 状态 → 徽标风格（进行中金色/完成绿色/取消灰色） */
 function statusClass(status: OrderStatus): string {
@@ -63,7 +84,11 @@ async function load(reset = false): Promise<void> {
       page.value = 1;
       reviewedIds.value = new Set();
     }
-    const result = await orderApi.mine(page.value, PAGE_SIZE);
+    const result = await orderApi.mine(
+      page.value,
+      PAGE_SIZE,
+      activeStatus.value,
+    );
     orders.value = reset ? result.list : [...orders.value, ...result.list];
     total.value = result.total;
     await loadReviewed(result.list);
@@ -117,12 +142,24 @@ onMounted(() => void load(true));
       <span class="name">我的订单</span>
     </header>
 
+    <nav class="tabs">
+      <button
+        v-for="tab in STATUS_TABS"
+        :key="tab.value ?? 'all'"
+        class="tab"
+        :class="{ 'tab--active': activeStatus === tab.value }"
+        @click="switchTab(tab.value)"
+      >
+        {{ tab.label }}
+      </button>
+    </nav>
+
     <div class="scroll">
       <p
         v-if="!loading && orders.length === 0"
         class="hint"
       >
-        暂无订单，去首页选购陪玩服务吧
+        {{ activeStatus ? `暂无${ORDER_STATUS_TEXT[activeStatus]}的订单` : '暂无订单，去首页选购陪玩服务吧' }}
       </p>
 
       <article
@@ -242,6 +279,37 @@ onMounted(() => void load(true));
   font-size: 16px;
   font-weight: 800;
   font-style: italic;
+}
+
+.tabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  font-size: 13px;
+  color: var(--c-text-secondary);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.tab--active {
+  color: var(--c-accent);
+  font-weight: 800;
+  font-style: italic;
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
 }
 
 .scroll {
