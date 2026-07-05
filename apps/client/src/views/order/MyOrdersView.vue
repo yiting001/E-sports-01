@@ -8,6 +8,8 @@ import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ORDER_STATUS_TEXT, OrderStatus, type OrderView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
+import OrderCard from '@/components/order/OrderCard.vue';
+import OrderStatusTabs from '@/components/order/OrderStatusTabs.vue';
 import ReviewDialog from '@/components/review/ReviewDialog.vue';
 import { orderApi } from '@/api/order.api';
 import { reviewApi } from '@/api/review.api';
@@ -45,17 +47,6 @@ function switchTab(status?: OrderStatus): void {
   activeStatus.value = status;
   orders.value = [];
   void load(true);
-}
-
-/** 状态 → 徽标风格（进行中金色/完成绿色/取消灰色） */
-function statusClass(status: OrderStatus): string {
-  if (status === OrderStatus.Cancelled) {
-    return 'tag--muted';
-  }
-  if (status === OrderStatus.Completed) {
-    return 'tag--ok';
-  }
-  return 'tag--accent';
 }
 
 /** 同步已完成订单的评价状态 */
@@ -107,10 +98,6 @@ async function cancel(order: OrderView): Promise<void> {
   await load(true);
 }
 
-function formatTime(iso: string): string {
-  return iso ? iso.slice(0, 16).replace('T', ' ') : '';
-}
-
 /** 评价提交成功：标记已评价并关闭弹层 */
 function onReviewed(): void {
   if (reviewingOrder.value) {
@@ -144,17 +131,11 @@ onMounted(() => void load(true));
       </div>
     </header>
 
-    <nav class="tabs">
-      <button
-        v-for="tab in STATUS_TABS"
-        :key="tab.value ?? 'all'"
-        class="tab"
-        :class="{ 'tab--active': activeStatus === tab.value }"
-        @click="switchTab(tab.value)"
-      >
-        {{ tab.label }}
-      </button>
-    </nav>
+    <OrderStatusTabs
+      :tabs="STATUS_TABS"
+      :active-status="activeStatus"
+      @change="switchTab"
+    />
 
     <div class="scroll">
       <div class="content">
@@ -165,72 +146,14 @@ onMounted(() => void load(true));
           {{ activeStatus ? `暂无${ORDER_STATUS_TEXT[activeStatus]}的订单` : '暂无订单，去首页选购陪玩服务吧' }}
         </p>
 
-        <article
+        <OrderCard
           v-for="order in orders"
           :key="order.id"
-          class="order card"
-        >
-          <div class="head">
-            <span class="no">订单号 {{ order.orderNo }}</span>
-            <span
-              class="tag"
-              :class="statusClass(order.status)"
-            >
-              {{ ORDER_STATUS_TEXT[order.status] }}
-            </span>
-          </div>
-          <div class="body">
-            <div
-              class="thumb"
-              :class="{ 'thumb--image': order.productCover }"
-              :style="order.productCover ? { backgroundImage: `url(${order.productCover})` } : undefined"
-            >
-              <AppIcon
-                v-if="!order.productCover"
-                name="gem"
-                :size="26"
-                class="thumb-icon"
-              />
-            </div>
-            <div class="mid">
-              <p class="title">
-                {{ order.productTitle }}
-              </p>
-              <p class="sub">
-                <span>数量 ×{{ order.quantity }}</span>
-                <span>{{ formatTime(order.createdAt) }}</span>
-              </p>
-            </div>
-            <span class="amount">¥{{ order.amountYuan }}</span>
-          </div>
-          <div
-            v-if="order.status === OrderStatus.PendingPayment"
-            class="actions"
-          >
-            <button
-              class="cancel"
-              @click="cancel(order)"
-            >
-              取消订单
-            </button>
-          </div>
-          <div
-            v-else-if="order.status === OrderStatus.Completed"
-            class="actions"
-          >
-            <span
-              v-if="reviewedIds.has(order.id)"
-              class="reviewed"
-            >已评价</span>
-            <button
-              v-else
-              class="review"
-              @click="reviewingOrder = order"
-            >
-              评价
-            </button>
-          </div>
-        </article>
+          :order="order"
+          :reviewed="reviewedIds.has(order.id)"
+          @cancel="cancel"
+          @review="reviewingOrder = $event"
+        />
 
         <div
           v-if="orders.length < total"
@@ -262,7 +185,9 @@ onMounted(() => void load(true));
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: var(--c-bg);
+  background:
+    radial-gradient(70% 36% at 50% 0%, rgba(255, 176, 32, 0.07), transparent 70%),
+    var(--c-bg);
 }
 
 .bar {
@@ -303,37 +228,6 @@ onMounted(() => void load(true));
   color: var(--c-text-muted);
 }
 
-.tabs {
-  flex-shrink: 0;
-  display: flex;
-  gap: 4px;
-  padding: 8px 12px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--c-border);
-  background: var(--c-surface);
-  scrollbar-width: none;
-}
-
-.tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.tab {
-  flex-shrink: 0;
-  padding: 7px 14px;
-  font-size: 13px;
-  color: var(--c-text-secondary);
-  border-radius: var(--radius-sm);
-  white-space: nowrap;
-}
-
-.tab--active {
-  color: var(--c-accent);
-  font-weight: 800;
-  font-style: italic;
-  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
-}
-
 .scroll {
   flex: 1;
   overflow-y: auto;
@@ -353,131 +247,6 @@ onMounted(() => void load(true));
   padding: 32px 16px;
 }
 
-.order {
-  padding: 12px 14px;
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.no {
-  font-family: var(--font-num);
-  font-size: 11px;
-  color: var(--c-text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tag {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 10px;
-  border-radius: 999px;
-  border: 1px solid currentcolor;
-}
-
-.tag--accent {
-  color: var(--c-accent);
-}
-
-.tag--ok {
-  color: var(--c-neon);
-}
-
-.tag--muted {
-  color: var(--c-text-muted);
-}
-
-.body {
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.thumb {
-  width: 52px;
-  height: 52px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-sm);
-  background: var(--c-cover-bg);
-  overflow: hidden;
-}
-
-.thumb--image {
-  background-size: cover;
-  background-position: center;
-}
-
-.thumb-icon {
-  color: rgba(61, 255, 155, 0.55);
-}
-
-.mid {
-  flex: 1;
-  min-width: 0;
-}
-
-.title {
-  font-size: 14px;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sub {
-  margin-top: 4px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  font-size: 12px;
-  color: var(--c-text-secondary);
-}
-
-.amount {
-  font-family: var(--font-num);
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--c-accent);
-}
-
-.actions {
-  margin-top: 10px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.cancel {
-  padding: 6px 16px;
-  font-size: 12px;
-  color: var(--c-text-secondary);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-}
-
-.review {
-  padding: 6px 16px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--c-accent);
-  border: 1px solid var(--c-accent);
-  border-radius: var(--radius-sm);
-}
-
-.reviewed {
-  padding: 6px 4px;
-  font-size: 12px;
-  color: var(--c-text-muted);
-}
-
 .more {
   padding: 8px 22px;
   font-size: 13px;
@@ -495,14 +264,15 @@ onMounted(() => void load(true));
   .orders-page {
     position: static;
     min-height: 100vh;
+    display: block;
+    padding: 28px 24px 48px;
     background: transparent;
   }
 
   .bar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    padding: 16px 24px;
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
   }
 
   .bar-inner,
@@ -512,12 +282,31 @@ onMounted(() => void load(true));
     margin: 0 auto;
   }
 
+  .bar-inner {
+    min-height: 40px;
+  }
+
+  .back {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--c-border);
+    background: var(--c-surface);
+  }
+
   .name {
-    font-size: 18px;
+    font-size: 22px;
+    letter-spacing: 0;
+  }
+
+  .count {
+    padding: 4px 10px;
+    border: 1px solid var(--c-border);
+    background: var(--c-surface);
+    color: var(--c-text-secondary);
   }
 
   .scroll {
-    padding: 24px 0 48px;
+    padding: 18px 0 0;
     overflow: visible;
   }
 
@@ -525,47 +314,6 @@ onMounted(() => void load(true));
     gap: 14px;
   }
 
-  .order {
-    padding: 16px;
-  }
-
-  .head {
-    gap: 16px;
-  }
-
-  .no {
-    font-size: 12px;
-  }
-
-  .body {
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .thumb {
-    width: 72px;
-    height: 72px;
-  }
-
-  .title {
-    font-size: 16px;
-    white-space: normal;
-    line-height: 1.45;
-  }
-
-  .amount {
-    min-width: 108px;
-    padding-top: 2px;
-    text-align: right;
-    font-size: 20px;
-  }
-
-  .actions {
-    padding-left: 88px;
-  }
-
-  .cancel,
-  .review,
   .more {
     padding: 8px 18px;
     font-size: 13px;

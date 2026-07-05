@@ -1,0 +1,116 @@
+/**
+ * 商品详情页响应式布局：移动端保持全屏详情页和底部下单栏；
+ * PC 端将导航、详情主体统一收敛到内容宽度，避免移动端顶栏横向铺满桌面。
+ */
+@media (min-width: 768px) {
+  .detail.detail.detail {
+    position: static;
+    min-height: 100vh;
+    display: block;
+    padding: 28px 24px 48px;
+    background: transparent;
+  }
+
+  .detail > .bar.bar {
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
+  }
+
+  .detail .bar-inner.bar-inner {
+    max-width: var(--page-max-width);
+    min-height: 40px;
+    margin: 0 auto;
+  }
+
+  .detail .back.back {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--c-border);
+    background: var(--c-surface);
+  }
+
+  .detail .name.name {
+    font-size: 22px;
+    letter-spacing: 0;
+  }
+
+  .detail > .scroll.scroll {
+    width: 100%;
+    max-width: var(--page-max-width);
+    margin: 18px auto 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 16px;
+    align-items: start;
+    overflow: visible;
+  }
+
+  .detail .cover.cover {
+    grid-column: 1;
+    min-height: 300px;
+  }
+
+  .detail .info.info {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    position: sticky;
+    top: 24px;
+    padding: 20px;
+  }
+
+  .detail .title.title {
+    font-size: 22px;
+    line-height: 1.35;
+  }
+
+  .detail .meta.meta {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+  }
+
+  .detail .price.price {
+    font-size: 26px;
+  }
+
+  .detail .sold.sold {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .detail .category.category {
+    margin-top: 12px;
+  }
+
+  .detail .desc.desc {
+    grid-column: 1;
+    padding: 20px;
+  }
+
+  .detail .reviews.reviews {
+    grid-column: 1;
+  }
+
+  .detail .sec-title.sec-title {
+    font-size: 16px;
+  }
+
+  .detail .desc-body.desc-body {
+    font-size: 14px;
+  }
+
+  .detail .desc-content.desc-content {
+    max-height: 240px;
+  }
+
+  .detail > .footer.footer {
+    display: none;
+  }
+
+  .detail .desktop-buy.desktop-buy {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+  }
+}

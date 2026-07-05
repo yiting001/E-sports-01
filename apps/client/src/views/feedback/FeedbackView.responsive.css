@@ -1,0 +1,65 @@
+/**
+ * 投诉反馈页响应式布局：移动端保持全屏单列；
+ * PC 端将标题栏、提交表单与反馈历史统一收敛到内容宽度。
+ */
+@media (min-width: 768px) {
+  .feedback.feedback.feedback {
+    position: static;
+    min-height: 100vh;
+    display: block;
+    padding: 28px 24px 48px;
+    background: transparent;
+  }
+
+  .feedback > .bar.bar {
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
+  }
+
+  .feedback .bar-inner.bar-inner {
+    width: 100%;
+    max-width: var(--page-max-width);
+    min-height: 40px;
+    margin: 0 auto;
+  }
+
+  .feedback .back.back {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--c-border);
+    background: var(--c-surface);
+  }
+
+  .feedback .name.name {
+    font-size: 22px;
+    letter-spacing: 0;
+  }
+
+  .feedback > .scroll.scroll {
+    width: 100%;
+    max-width: var(--page-max-width);
+    margin: 18px auto 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 420px minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    overflow: visible;
+  }
+
+  .feedback .form.form {
+    position: sticky;
+    top: 24px;
+    padding: 20px;
+  }
+
+  .feedback .history.history {
+    min-height: 320px;
+    padding: 20px;
+  }
+
+  .feedback .textarea.textarea {
+    min-height: 150px;
+  }
+}

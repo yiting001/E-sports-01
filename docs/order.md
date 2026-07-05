@@ -5,10 +5,10 @@
 
 ## 实现的功能
 
-- C 端商品详情页：封面/标题/价格/富文本详情，选择数量、备注、支付方式后下单
+- C 端商品详情页：封面/标题/价格/富文本详情，PC 端导航与详情主体同轴收敛，选择数量、备注、支付方式后下单
 - 下单支付：复用钱包模块的支付宝/微信收款驱动（策略模式），返回扫码二维码，前端轮询支付结果
 - 支付回调：渠道异步回调验签解析，事务 + 行锁内幂等落账（待付款 → 待客服处理），并累加商品销量
-- 我的订单：分页列表（商品快照/数量/金额/状态），待付款订单可取消
+- 我的订单：分页列表（商品快照/数量/金额/状态），待付款订单可取消；PC 端标题、筛选 tabs、列表统一收敛到内容区宽度，移动端保持全屏滚动
 - 管理端订单管理：分页检索全量订单（状态/订单号过滤）+ 详情抽屉（商品快照/归属用户/关联客服/渠道交易号），
   权限码 `order:admin:list` / `order:admin:detail`，菜单「电竞运营 / 订单管理」由播种器幂等补齐
 - 支付渠道配置沿用配置中心既有 `wallet.*` 键（网关地址、商户密钥、回调基址 `wallet.notify.base-url`），无新增配置
@@ -62,9 +62,13 @@ apps/server/src/modules/order/
 apps/client/src/
 ├── api/order.api.ts                         # 下单/详情/我的订单/取消
 ├── views/product/ProductDetailView.vue      # 商品详情（纯展示，立即下单进下单页）
+├── views/product/ProductDetailView.responsive.css # 商品详情 PC 响应式布局
 ├── views/order/CheckoutView.vue             # 下单页（数量/备注/支付方式 → 扫码支付）
-├── views/order/MyOrdersView.vue             # 我的订单列表
-└── components/order/PayDialog.vue           # 扫码支付弹层（轮询支付结果）
+├── views/order/MyOrdersView.vue             # 我的订单页编排（筛选/分页/评价弹层）
+└── components/order/
+    ├── PayDialog.vue                        # 扫码支付弹层（轮询支付结果）
+    ├── OrderStatusTabs.vue                  # 订单状态筛选：移动横滑，PC 居中分段筛选
+    └── OrderCard.vue                        # 单条订单卡片：快照/金额/状态/取消/评价
 
 apps/web/src/
 ├── api/order.api.ts                         # 管理端订单列表/详情
@@ -80,3 +84,5 @@ apps/web/src/
   「待付款 + 金额一致」才落账，重复回调直接应答成功
 - **快照固化**：订单固化商品标题/封面/关联客服，商品后续改动不影响历史订单；
   `serviceAgentId` 快照为后续「客服拉群/指派打手」预留
+- **C 端 UI 分层**：`MyOrdersView` 只负责页面状态与接口编排，状态筛选和订单卡片分别下沉到
+  `OrderStatusTabs`、`OrderCard`，避免 PC/移动端样式互相污染，也让单文件保持在 500 行以内

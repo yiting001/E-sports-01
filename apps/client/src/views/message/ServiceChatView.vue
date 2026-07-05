@@ -23,6 +23,7 @@ import { uploadApi } from '@/api/upload.api';
 import { createImSocket } from '@/composables/use-im-socket';
 import { useAuthStore } from '@/stores/auth.store';
 import { useToast } from '@/composables/use-toast';
+import './ServiceChatView.layout.css';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -166,19 +167,21 @@ onBeforeUnmount(() => socket.disconnect());
 <template>
   <div class="service">
     <header class="bar">
-      <button
-        class="back"
-        aria-label="返回"
-        @click="goBack"
-      >
-        <AppIcon
-          name="chevron"
-          :size="20"
-        />
-      </button>
-      <div class="bar-title">
-        <span class="name">三角洲客服</span>
-        <span class="status">{{ statusText }}</span>
+      <div class="bar-inner">
+        <button
+          class="back"
+          aria-label="返回"
+          @click="goBack"
+        >
+          <AppIcon
+            name="chevron"
+            :size="20"
+          />
+        </button>
+        <div class="bar-title">
+          <span class="name">三角洲客服</span>
+          <span class="status">{{ statusText }}</span>
+        </div>
       </div>
     </header>
 
@@ -316,10 +319,16 @@ onBeforeUnmount(() => socket.disconnect());
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--c-border);
   background: var(--c-surface);
+}
+
+.bar-inner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .back {
@@ -438,64 +447,4 @@ onBeforeUnmount(() => socket.disconnect());
   text-align: right;
 }
 
-.compose {
-  flex-shrink: 0;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin: 12px;
-  padding: 10px 12px;
-}
-
-.file-input {
-  display: none;
-}
-
-.tool {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  color: var(--c-accent);
-  background: var(--c-bg);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-}
-
-.tool:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.input {
-  flex: 1;
-  min-width: 0;
-  height: 40px;
-  padding: 0 12px;
-  color: var(--c-text);
-  background: var(--c-bg);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-}
-
-.input:disabled {
-  opacity: 0.6;
-}
-
-.send {
-  flex-shrink: 0;
-  height: 40px;
-  padding: 0 18px;
-  font-weight: 700;
-  color: #0b0e14;
-  background: var(--c-accent);
-  border-radius: var(--radius-sm);
-}
-
-.send:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 </style>

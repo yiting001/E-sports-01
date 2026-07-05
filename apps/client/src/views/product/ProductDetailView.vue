@@ -11,6 +11,7 @@ import { fenToYuan, type ProductPublicView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import ProductReviews from '@/components/product/ProductReviews.vue';
 import { commerceApi } from '@/api/commerce.api';
+import './ProductDetailView.responsive.css';
 
 const route = useRoute();
 const router = useRouter();
@@ -44,17 +45,19 @@ onMounted(async () => {
 <template>
   <div class="detail">
     <header class="bar">
-      <button
-        class="back"
-        aria-label="返回"
-        @click="router.back()"
-      >
-        <AppIcon
-          name="chevron"
-          :size="20"
-        />
-      </button>
-      <span class="name">商品详情</span>
+      <div class="bar-inner">
+        <button
+          class="back"
+          aria-label="返回"
+          @click="router.back()"
+        >
+          <AppIcon
+            name="chevron"
+            :size="20"
+          />
+        </button>
+        <span class="name">商品详情</span>
+      </div>
     </header>
 
     <div class="scroll">
@@ -170,10 +173,16 @@ onMounted(async () => {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--c-border);
   background: var(--c-surface);
+}
+
+.bar-inner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .back {
@@ -409,103 +418,5 @@ onMounted(async () => {
 
 .desktop-buy {
   display: none;
-}
-
-@media (min-width: 768px) {
-  .detail {
-    position: static;
-    min-height: 100vh;
-    background: transparent;
-  }
-
-  .bar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    padding: 16px 24px;
-  }
-
-  .name {
-    font-size: 18px;
-  }
-
-  .scroll {
-    width: 100%;
-    max-width: var(--page-max-width);
-    margin: 0 auto;
-    padding: 24px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: 16px;
-    align-items: start;
-    overflow: visible;
-  }
-
-  .cover {
-    grid-column: 1;
-    min-height: 300px;
-  }
-
-  .info {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    position: sticky;
-    top: 88px;
-    padding: 20px;
-  }
-
-  .title {
-    font-size: 22px;
-    line-height: 1.35;
-  }
-
-  .meta {
-    flex-wrap: wrap;
-    gap: 8px 10px;
-  }
-
-  .price {
-    font-size: 26px;
-  }
-
-  .sold {
-    width: 100%;
-    margin-left: 0;
-  }
-
-  .category {
-    margin-top: 12px;
-  }
-
-  .desc {
-    grid-column: 1;
-    padding: 20px;
-  }
-
-  .reviews {
-    grid-column: 1;
-  }
-
-  .sec-title {
-    font-size: 16px;
-  }
-
-  .desc-body {
-    font-size: 14px;
-  }
-
-  .desc-content {
-    max-height: 240px;
-  }
-
-  .footer {
-    display: none;
-  }
-
-  .desktop-buy {
-    display: block;
-    width: 100%;
-    margin-top: 20px;
-  }
 }
 </style>

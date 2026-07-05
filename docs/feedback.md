@@ -32,6 +32,7 @@ modules/feedback/
 前端：
 
 - C 端 `client/views/feedback/FeedbackView.vue`（全屏提交页 + 我的反馈列表，首页「投诉客服/打手」入口 → 路由 `/feedback`，需登录）。
+- C 端 `client/views/feedback/FeedbackView.responsive.css`（移动端单列全屏；PC 端标题栏、提交表单、反馈历史同轴收敛，表单与历史双列展示）。
 - 管理端 `web/views/feedback/FeedbackAdminView.vue`（菜单 `feedback:menu`，统计 + 列表 + 处理回复），组件拆分 `FeedbackStats` / `FeedbackDirectory`。
 
 ## 处理流程

@@ -1,0 +1,83 @@
+/**
+ * 钱包页响应式布局：移动端保持全屏钱包；
+ * PC 端将标题栏、余额卡和流水明细统一收敛到内容宽度。
+ */
+@media (min-width: 768px) {
+  .wallet-page.wallet-page.wallet-page {
+    position: static;
+    min-height: 100vh;
+    display: block;
+    padding: 28px 24px 48px;
+    background: transparent;
+  }
+
+  .wallet-page > .bar.bar {
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
+  }
+
+  .wallet-page .bar-inner.bar-inner {
+    width: 100%;
+    max-width: var(--page-max-width);
+    min-height: 40px;
+    margin: 0 auto;
+  }
+
+  .wallet-page .back.back {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--c-border);
+    background: var(--c-surface);
+  }
+
+  .wallet-page .name.name {
+    font-size: 22px;
+    letter-spacing: 0;
+  }
+
+  .wallet-page > .scroll.scroll {
+    width: 100%;
+    max-width: var(--page-max-width);
+    margin: 18px auto 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    overflow: visible;
+  }
+
+  .wallet-page .hero.hero {
+    position: sticky;
+    top: 24px;
+    min-height: 220px;
+    padding: 24px;
+  }
+
+  .wallet-page .hero-amount.hero-amount {
+    font-size: 44px;
+  }
+
+  .wallet-page .hero-actions.hero-actions {
+    margin-top: auto;
+    flex-direction: column;
+  }
+
+  .wallet-page .act.act {
+    padding: 12px 0;
+  }
+
+  .wallet-page .txns.txns {
+    min-height: 260px;
+    padding: 20px;
+  }
+
+  .wallet-page .sec-title.sec-title {
+    font-size: 16px;
+  }
+
+  .wallet-page .txn.txn {
+    padding: 14px 0;
+  }
+}

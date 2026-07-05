@@ -17,6 +17,7 @@ import AppIcon from '@/components/common/AppIcon.vue';
 import SegmentTabs from '@/components/common/SegmentTabs.vue';
 import { feedbackApi } from '@/api/feedback.api';
 import { useToast } from '@/composables/use-toast';
+import './FeedbackView.responsive.css';
 
 /** 页签下标 → 反馈类型（与 SegmentTabs 的 tabs 顺序一致） */
 const TYPE_ORDER: FeedbackType[] = [
@@ -95,19 +96,21 @@ onMounted(loadRecords);
 <template>
   <div class="feedback">
     <header class="bar">
-      <button
-        class="back"
-        aria-label="返回"
-        @click="goBack"
-      >
-        <AppIcon
-          name="chevron"
-          :size="20"
-        />
-      </button>
-      <div class="bar-title">
-        <span class="name">投诉反馈</span>
-        <span class="tip">对客服/打手不满意？告诉我们</span>
+      <div class="bar-inner">
+        <button
+          class="back"
+          aria-label="返回"
+          @click="goBack"
+        >
+          <AppIcon
+            name="chevron"
+            :size="20"
+          />
+        </button>
+        <div class="bar-title">
+          <span class="name">投诉反馈</span>
+          <span class="tip">对客服/打手不满意？告诉我们</span>
+        </div>
       </div>
     </header>
 
@@ -208,10 +211,16 @@ onMounted(loadRecords);
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--c-border);
   background: var(--c-surface);
+}
+
+.bar-inner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .back {
@@ -350,13 +359,5 @@ onMounted(loadRecords);
   font-size: 11px;
   color: var(--c-text-muted);
   text-align: right;
-}
-
-@media (min-width: 768px) {
-  .scroll {
-    max-width: 640px;
-    margin: 0 auto;
-    width: 100%;
-  }
 }
 </style>

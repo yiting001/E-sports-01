@@ -16,6 +16,7 @@ import RechargeDialog from '@/components/wallet/RechargeDialog.vue';
 import WithdrawDialog from '@/components/wallet/WithdrawDialog.vue';
 import { walletApi } from '@/api/wallet.api';
 import { useToast } from '@/composables/use-toast';
+import './WalletView.responsive.css';
 
 const PAGE_SIZE = 10;
 
@@ -94,17 +95,19 @@ onMounted(() => {
 <template>
   <div class="wallet-page">
     <header class="bar">
-      <button
-        class="back"
-        aria-label="返回"
-        @click="router.back()"
-      >
-        <AppIcon
-          name="chevron"
-          :size="20"
-        />
-      </button>
-      <span class="name">我的钱包</span>
+      <div class="bar-inner">
+        <button
+          class="back"
+          aria-label="返回"
+          @click="router.back()"
+        >
+          <AppIcon
+            name="chevron"
+            :size="20"
+          />
+        </button>
+        <span class="name">我的钱包</span>
+      </div>
     </header>
 
     <div class="scroll">
@@ -205,10 +208,16 @@ onMounted(() => {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--c-border);
   background: var(--c-surface);
+}
+
+.bar-inner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .back {
@@ -359,69 +368,5 @@ onMounted(() => {
   color: var(--c-text-secondary);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
-}
-
-@media (min-width: 768px) {
-  .wallet-page {
-    position: static;
-    min-height: 100vh;
-    background: transparent;
-  }
-
-  .bar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    padding: 16px 24px;
-  }
-
-  .name {
-    font-size: 18px;
-  }
-
-  .scroll {
-    width: 100%;
-    max-width: var(--page-max-width);
-    margin: 0 auto;
-    padding: 24px;
-    display: grid;
-    grid-template-columns: 340px minmax(0, 1fr);
-    align-items: start;
-    gap: 16px;
-    overflow: visible;
-  }
-
-  .hero {
-    position: sticky;
-    top: 88px;
-    min-height: 220px;
-    padding: 24px;
-  }
-
-  .hero-amount {
-    font-size: 44px;
-  }
-
-  .hero-actions {
-    margin-top: auto;
-    flex-direction: column;
-  }
-
-  .act {
-    padding: 12px 0;
-  }
-
-  .txns {
-    min-height: 260px;
-    padding: 20px;
-  }
-
-  .sec-title {
-    font-size: 16px;
-  }
-
-  .txn {
-    padding: 14px 0;
-  }
 }
 </style>
