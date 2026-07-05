@@ -30,6 +30,7 @@ export function toAdminOrderView(entity: OrderEntity): AdminOrderView {
     ...toOrderView(entity),
     userId: entity.userId,
     serviceAgentId: entity.serviceAgentId,
+    boosterId: entity.boosterId,
     providerTradeNo: entity.providerTradeNo ?? '',
   };
 }

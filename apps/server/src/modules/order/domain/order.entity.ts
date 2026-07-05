@@ -37,6 +37,11 @@ export class OrderEntity extends TenantScopedEntity {
   @Column({ name: 'service_agent_id', length: 36, default: '' })
   serviceAgentId!: string;
 
+  /** 接单打手 id（接单后回填；未接单为空串） */
+  @Index()
+  @Column({ name: 'booster_id', length: 36, default: '' })
+  boosterId!: string;
+
   /** 购买数量（局数/小时数） */
   @Column({ type: 'int', default: 1 })
   quantity!: number;

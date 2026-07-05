@@ -1,15 +1,21 @@
 <script setup lang="ts">
 /**
  * 移动端底部导航条：切角深色面板，激活项战术金高亮 + 顶部指示线。
+ * 导航项随当前身份切换：打手身份展示接单大厅/订单中心/消息/我的。
  */
+import { computed } from 'vue';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { NAV_ITEMS } from '@/config/nav';
+import { BOOSTER_NAV_ITEMS, NAV_ITEMS } from '@/config/nav';
+import { useRoleStore } from '@/stores/role.store';
+
+const role = useRoleStore();
+const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS));
 </script>
 
 <template>
   <nav class="tabbar">
     <router-link
-      v-for="item in NAV_ITEMS"
+      v-for="item in items"
       :key="item.name"
       :to="{ name: item.name }"
       class="tab"

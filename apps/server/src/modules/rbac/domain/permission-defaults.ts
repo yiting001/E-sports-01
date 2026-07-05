@@ -54,6 +54,7 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.booster.update]: '打手-资料编辑',
   [PERMS.order.list]: '订单-查询',
   [PERMS.order.detail]: '订单-详情',
+  [PERMS.order.dispatch]: '订单-下发大厅',
   [PERMS.review.list]: '评论-查询',
   [PERMS.review.moderate]: '评论-显隐',
   [PERMS.review.remove]: '评论-删除',

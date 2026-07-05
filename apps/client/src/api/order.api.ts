@@ -29,4 +29,24 @@ export const orderApi = {
   cancel(id: string): Promise<OrderView> {
     return http.post(`/order/${id}/cancel`);
   },
+  /** 接单大厅：分页浏览待接单订单（仅打手） */
+  hall(page: number, pageSize: number): Promise<PaginatedResult<OrderView>> {
+    return http.get('/order/hall', { params: { page, pageSize } });
+  },
+  /** 接单大厅：接单（仅打手） */
+  accept(id: string): Promise<OrderView> {
+    return http.post(`/order/hall/${id}/accept`);
+  },
+  /** 打手订单中心：分页查询我接下的订单（可按状态过滤） */
+  boosterMine(
+    page: number,
+    pageSize: number,
+    status?: OrderStatus,
+  ): Promise<PaginatedResult<OrderView>> {
+    return http.get('/order/booster/mine', { params: { page, pageSize, status } });
+  },
+  /** 打手完成服务中的订单 */
+  complete(id: string): Promise<OrderView> {
+    return http.post(`/order/booster/${id}/complete`);
+  },
 };

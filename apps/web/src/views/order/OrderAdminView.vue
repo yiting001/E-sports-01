@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 订单管理页：分页检索全量订单（状态/订单号过滤）+ 查看单笔详情。
- * 只读检索本期实现；客服指派打手/下发接单大厅在后续迭代扩展。
+ * 「待客服处理」订单可下发接单大厅，由打手接单。
  */
 import { onMounted, ref } from 'vue';
 import {
@@ -9,9 +9,11 @@ import {
   OrderStatus,
   PAGINATION_DEFAULTS,
   PAYMENT_PROVIDER_TEXT,
+  PERMS,
   type AdminOrderView,
   type PaymentProvider,
 } from '@app/contracts';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { Refresh, Search } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
@@ -109,6 +111,18 @@ function openDetail(row: AdminOrderView): void {
   detailVisible.value = true;
 }
 
+/** 把「待客服处理」订单下发到接单大厅 */
+async function dispatch(row: AdminOrderView): Promise<void> {
+  await ElMessageBox.confirm(
+    `确认把订单 ${row.orderNo} 下发到接单大厅？下发后打手可在大厅接单。`,
+    '下发大厅',
+    { type: 'warning' },
+  );
+  await orderApi.dispatch(row.id);
+  ElMessage.success('已下发接单大厅');
+  await load();
+}
+
 onMounted(load);
 </script>
 
@@ -117,7 +131,7 @@ onMounted(load);
     <app-panel
       title="订单管理"
       eyebrow="Orders"
-      description="用户下单支付后进入「待客服处理」，客服指派打手/下发接单大厅在后续迭代开放"
+      description="用户下单支付后进入「待客服处理」，客服可下发接单大厅由打手接单"
     >
       <template #actions>
         <div class="admin-actions">
@@ -228,7 +242,7 @@ onMounted(load);
         </el-table-column>
         <el-table-column
           label="操作"
-          width="80"
+          width="150"
         >
           <template #default="{ row }">
             <el-button
@@ -237,6 +251,15 @@ onMounted(load);
               @click="openDetail(row)"
             >
               详情
+            </el-button>
+            <el-button
+              v-if="row.status === OrderStatus.PendingService"
+              v-permission="PERMS.order.dispatch"
+              link
+              type="warning"
+              @click="dispatch(row)"
+            >
+              下发大厅
             </el-button>
           </template>
         </el-table-column>

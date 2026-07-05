@@ -7,6 +7,7 @@ import {
   USER_REPOSITORY,
   UserRepository,
 } from '../domain/user-repository.interface';
+import { PermissionResolver } from './permission-resolver.service';
 
 /**
  * 角色授予服务（对外部模块暴露的最小角色写口）。
@@ -18,7 +19,14 @@ export class RoleGranter {
   constructor(
     @Inject(ROLE_REPOSITORY) private readonly roles: RoleRepository,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    private readonly resolver: PermissionResolver,
   ) {}
+
+  /** 判断用户是否拥有指定角色码（供业务模块做角色级访问断言） */
+  async has(userId: string, roleCode: string): Promise<boolean> {
+    const user = await this.users.findById(userId);
+    return (user?.roles ?? []).some((r) => r.code === roleCode);
+  }
 
   /** 幂等地为用户授予指定角色码（用户已拥有则跳过） */
   async grant(userId: string, roleCode: string): Promise<void> {
@@ -35,6 +43,7 @@ export class RoleGranter {
     }
     user.roles = [...(user.roles ?? []), role];
     await this.users.save(user);
+    await this.resolver.invalidate(userId);
   }
 
   /** 幂等地回收用户的指定角色码（用户未拥有则跳过） */
@@ -49,5 +58,6 @@ export class RoleGranter {
     }
     user.roles = owned.filter((r) => r.code !== roleCode);
     await this.users.save(user);
+    await this.resolver.invalidate(userId);
   }
 }

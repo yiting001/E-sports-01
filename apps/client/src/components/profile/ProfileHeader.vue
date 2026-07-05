@@ -2,15 +2,18 @@
 /**
  * 我的页头部：切角头像框（已设头像展示图片）+ 登录入口/昵称 + 等级徽章 + 身份切换。
  * 已登录时点头像/设置进入个人信息编辑页（含退出登录）；未登录时点击「立即登录」跳登录页。
- * 登录态与资料统一取自 auth.store，本组件只做展示与交互编排。
+ * 拥有打手角色时可在「老板/打手」身份间切换（导航随之变化），
+ * 未入驻时点切换引导去打手入驻。登录态与资料统一取自 auth.store。
  */
 import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { useToast } from '@/composables/use-toast';
 import { useAuthStore } from '@/stores/auth.store';
+import { useRoleStore } from '@/stores/role.store';
 
 const auth = useAuthStore();
+const role = useRoleStore();
 const toast = useToast();
 const router = useRouter();
 
@@ -34,6 +37,25 @@ function goLogin(): void {
 /** 进入个人信息编辑页（含退出登录） */
 function goEdit(): void {
   void router.push({ name: 'profile-edit' });
+}
+
+/** 切换按钮文案：展示当前身份 */
+const roleLabel = computed(() => (role.isBoosterMode ? '打手' : '老板'));
+
+/** 身份切换：已入驻在老板/打手间切换，未入驻引导去打手入驻 */
+function onSwitch(): void {
+  if (!auth.isAuthenticated) {
+    goLogin();
+    return;
+  }
+  if (!role.hasBoosterRole) {
+    toast.show('成为打手后可切换身份，先去入驻吧');
+    void router.push({ name: 'booster-apply' });
+    return;
+  }
+  const next = role.isBoosterMode ? 'user' : 'booster';
+  role.switchRole(next);
+  toast.show(next === 'booster' ? '已切换为打手身份' : '已切换为老板身份');
 }
 </script>
 
@@ -102,13 +124,13 @@ function goEdit(): void {
       </div>
       <button
         class="switch"
-        @click="toast.show('身份切换即将上线')"
+        @click="onSwitch"
       >
         <AppIcon
           name="swap"
           :size="15"
         />
-        老板
+        {{ roleLabel }}
       </button>
     </div>
   </div>

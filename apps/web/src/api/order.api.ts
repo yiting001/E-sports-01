@@ -22,4 +22,8 @@ export const orderApi = {
   detail(id: string): Promise<AdminOrderView> {
     return http.get(`/order/admin/${id}`);
   },
+  /** 把「待客服处理」订单下发到接单大厅 */
+  dispatch(id: string): Promise<AdminOrderView> {
+    return http.post(`/order/admin/${id}/dispatch`);
+  },
 };

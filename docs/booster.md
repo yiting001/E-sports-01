@@ -61,6 +61,6 @@ modules/rbac/
 ## 设计要点（无硬编码 / 最小化）
 
 - **角色码单一来源**：`BOOSTER_ROLE_CODE` 定义在 `@app/contracts`，播种器、审核用例共用；字段长度限制 `BOOSTER_LIMITS` 前后端共用同一校验规则。
-- **RBAC 边界收口**：业务模块不直接操作 RBAC 仓储，通过 RbacModule 导出的 `RoleGranter`（grant/revoke 均幂等）授予角色，供后续其他入驻类业务复用。
+- **RBAC 边界收口**：业务模块不直接操作 RBAC 仓储，通过 RbacModule 导出的 `RoleGranter`（grant/revoke 均幂等，且自动失效该用户的权限缓存）授予角色，供后续其他入驻类业务复用。
 - **复用既有模式**：状态机、仓储、控制器拆分与实名认证（realname）保持一致的结构与命名，降低维护成本。
 - **多租户**：实体继承 `TenantScopedEntity`，仓储经 `withTenant` 行级隔离。

@@ -1,9 +1,15 @@
 <script setup lang="ts">
 /**
- * PC 端顶部导航条：品牌切角徽标 + 四个一级页签（底部金色指示线），与移动端共用导航配置。
+ * PC 端顶部导航条：品牌切角徽标 + 一级页签（底部金色指示线），与移动端共用导航配置。
+ * 导航项随当前身份切换：打手身份展示接单大厅/订单中心/消息/我的。
  */
+import { computed } from 'vue';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { NAV_ITEMS } from '@/config/nav';
+import { BOOSTER_NAV_ITEMS, NAV_ITEMS } from '@/config/nav';
+import { useRoleStore } from '@/stores/role.store';
+
+const role = useRoleStore();
+const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS));
 </script>
 
 <template>
@@ -20,7 +26,7 @@ import { NAV_ITEMS } from '@/config/nav';
       </div>
       <nav class="links">
         <router-link
-          v-for="item in NAV_ITEMS"
+          v-for="item in items"
           :key="item.name"
           :to="{ name: item.name }"
           class="link"

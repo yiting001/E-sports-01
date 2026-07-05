@@ -93,6 +93,18 @@ export const router = createRouter({
           meta: { title: '分类' },
         },
         {
+          path: 'hall',
+          name: 'hall',
+          component: () => import('@/views/order/HallView.vue'),
+          meta: { title: '接单大厅', requiresAuth: true },
+        },
+        {
+          path: 'booster-orders',
+          name: 'booster-orders',
+          component: () => import('@/views/order/BoosterOrdersView.vue'),
+          meta: { title: '订单中心', requiresAuth: true },
+        },
+        {
           path: 'messages',
           name: 'messages',
           component: () => import('@/views/message/MessageView.vue'),
