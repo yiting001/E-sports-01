@@ -1,0 +1,117 @@
+/**
+ * 个人信息编辑页响应式布局：移动端保持全屏表单；
+ * PC 端将标题栏、资料表单和操作区统一收敛到内容宽度，并让头像与字段分栏。
+ */
+@media (min-width: 768px) {
+  .edit-page.edit-page.edit-page {
+    position: static;
+    min-height: 100vh;
+    display: block;
+    padding: 28px 24px 48px;
+    background: transparent;
+  }
+
+  .edit-page > .bar.bar {
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
+  }
+
+  .edit-page .bar-inner.bar-inner {
+    width: 100%;
+    max-width: 860px;
+    min-height: 40px;
+    margin: 0 auto;
+  }
+
+  .edit-page .back.back {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--c-border);
+    background: var(--c-surface);
+  }
+
+  .edit-page .name.name {
+    font-size: 22px;
+    letter-spacing: 0;
+  }
+
+  .edit-page > .scroll.scroll {
+    width: 100%;
+    max-width: 860px;
+    margin: 18px auto 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    overflow: visible;
+  }
+
+  .edit-page .form.form {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    padding: 0;
+  }
+
+  .edit-page .row.row {
+    min-height: 92px;
+    padding: 22px 24px;
+  }
+
+  .edit-page .row--avatar.row--avatar {
+    grid-row: 1 / span 2;
+    min-height: 208px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    border-right: 1px solid var(--c-border);
+    border-bottom: none;
+  }
+
+  .edit-page .label.label {
+    width: auto;
+    min-width: 56px;
+  }
+
+  .edit-page .row--avatar .label {
+    margin-bottom: 12px;
+  }
+
+  .edit-page .avatar.avatar {
+    width: 112px;
+    height: 112px;
+  }
+
+  .edit-page .avatar-tip.avatar-tip {
+    font-size: 11px;
+    padding: 4px 0;
+  }
+
+  .edit-page .input.input {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--c-border);
+    background: var(--c-bg);
+  }
+
+  .edit-page .edit-actions.edit-actions {
+    grid-column: 2;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  .edit-page .save.save,
+  .edit-page .logout.logout {
+    width: 136px;
+    min-height: 44px;
+    padding: 0 18px;
+  }
+
+  .edit-page .dialog.dialog {
+    width: 360px;
+    padding: 20px;
+  }
+}

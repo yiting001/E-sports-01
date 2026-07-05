@@ -11,6 +11,7 @@ import { authApi } from '@/api/auth.api';
 import { uploadApi } from '@/api/upload.api';
 import { useToast } from '@/composables/use-toast';
 import { useAuthStore } from '@/stores/auth.store';
+import './ProfileEditView.responsive.css';
 
 const router = useRouter();
 const toast = useToast();
@@ -105,17 +106,19 @@ function logout(): void {
 <template>
   <div class="edit-page">
     <header class="bar">
-      <button
-        class="back"
-        aria-label="返回"
-        @click="router.back()"
-      >
-        <AppIcon
-          name="chevron"
-          :size="20"
-        />
-      </button>
-      <span class="name">个人信息</span>
+      <div class="bar-inner">
+        <button
+          class="back"
+          aria-label="返回"
+          @click="router.back()"
+        >
+          <AppIcon
+            name="chevron"
+            :size="20"
+          />
+        </button>
+        <span class="name">个人信息</span>
+      </div>
     </header>
 
     <div class="scroll">
@@ -163,20 +166,22 @@ function logout(): void {
         </div>
       </section>
 
-      <button
-        class="save"
-        :disabled="!dirty || saving"
-        @click="save"
-      >
-        {{ saving ? '保存中…' : '保存' }}
-      </button>
+      <div class="edit-actions">
+        <button
+          class="save"
+          :disabled="!dirty || saving"
+          @click="save"
+        >
+          {{ saving ? '保存中…' : '保存' }}
+        </button>
 
-      <button
-        class="logout"
-        @click="confirmingLogout = true"
-      >
-        退出登录
-      </button>
+        <button
+          class="logout"
+          @click="confirmingLogout = true"
+        >
+          退出登录
+        </button>
+      </div>
     </div>
 
     <div
@@ -223,10 +228,16 @@ function logout(): void {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--c-border);
   background: var(--c-surface);
+}
+
+.bar-inner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .back {
@@ -258,6 +269,12 @@ function logout(): void {
 
 .form {
   padding: 4px 14px;
+}
+
+.edit-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .row {

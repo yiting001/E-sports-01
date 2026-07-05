@@ -23,6 +23,7 @@
 前端(管理端)      /profile（个人中心）        web/views/profile/ProfileView.vue
 入口(管理端)      右上角头像下拉「个人中心」    web/layouts/AppLayout.vue
 前端(C 端)        /profile/edit（个人信息）   client/views/profile/ProfileEditView.vue
+                  PC 响应式样式              client/views/profile/ProfileEditView.responsive.css
 入口(C 端)        我的页点头像/设置图标        client/components/profile/ProfileHeader.vue
                   （编辑页页尾含「退出登录」二次确认）
 ```
@@ -32,6 +33,7 @@
 - **最小授权**：`PUT /auth/profile` 与 `POST /upload/self` 仅需登录态（无 `@Permissions`），所有角色通用；管理端上传仍受 `upload:file:upload` 门控。
 - **职责单一**：`UpdateProfileUseCase` 只改 昵称/头像/手机号，与管理员的 `UpdateUserUseCase`（含状态/口令/角色）互不影响。
 - **契约单一来源**：`UpdateProfilePayload`、`UserView.avatar`、`AuthProfile.avatar/phone` 均在 `@app/contracts` 定义，前后端共享。
+- **前端响应式**：移动端保留全屏编辑体验；PC 端标题栏、表单卡片、操作区同轴收敛，头像上传区与昵称/手机号字段分栏，避免移动端表单在桌面被直接拉伸。
 
 ## 涉及接口
 
