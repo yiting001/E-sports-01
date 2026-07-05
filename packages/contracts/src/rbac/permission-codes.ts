@@ -69,6 +69,11 @@ export const PERMS = {
     list: 'order:admin:list',
     detail: 'order:admin:detail',
   },
+  review: {
+    list: 'review:admin:list',
+    moderate: 'review:admin:moderate',
+    remove: 'review:admin:remove',
+  },
   notice: {
     list: 'notice:list',
     save: 'notice:save',

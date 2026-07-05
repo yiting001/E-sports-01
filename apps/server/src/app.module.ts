@@ -14,6 +14,7 @@ import { CommerceModule } from './modules/commerce/commerce.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { NoticeModule } from './modules/notice/notice.module';
 import { OrderModule } from './modules/order/order.module';
+import { ReviewModule } from './modules/review/review.module';
 
 /**
  * 应用根模块。
@@ -36,6 +37,7 @@ import { OrderModule } from './modules/order/order.module';
     FeedbackModule,
     NoticeModule,
     OrderModule,
+    ReviewModule,
   ],
 })
 export class AppModule {}

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 商品详情页（全屏，纯展示）：封面/标题/价格/富文本详情，
+ * 商品详情页（全屏，纯展示）：封面/标题/价格/富文本详情/用户评价，
  * 底部「立即下单」进入独立的下单页（/checkout/:productId）。
  * 富文本经 DOMPurify 净化后渲染，防 XSS。
  */
@@ -9,6 +9,7 @@ import { useRoute, useRouter } from 'vue-router';
 import DOMPurify from 'dompurify';
 import { fenToYuan, type ProductPublicView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
+import ProductReviews from '@/components/product/ProductReviews.vue';
 import { commerceApi } from '@/api/commerce.api';
 
 const route = useRoute();
@@ -120,6 +121,8 @@ onMounted(async () => {
           />
           <!-- eslint-enable vue/no-v-html -->
         </section>
+
+        <ProductReviews :product-id="product.id" />
       </template>
     </div>
 
@@ -207,7 +210,8 @@ onMounted(async () => {
 
 .cover,
 .info,
-.desc {
+.desc,
+.reviews {
   flex-shrink: 0;
 }
 
@@ -428,6 +432,10 @@ onMounted(async () => {
   .desc {
     grid-column: 1;
     padding: 20px;
+  }
+
+  .reviews {
+    grid-column: 1;
   }
 
   .sec-title {

@@ -79,6 +79,14 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     group: 'commerce',
   },
   {
+    code: 'review:menu',
+    title: '评论管理',
+    path: 'review',
+    icon: 'ChatDotSquare',
+    sort: 4,
+    group: 'commerce',
+  },
+  {
     code: 'rbac:tenant:menu',
     title: '租户管理',
     path: 'rbac/tenants',

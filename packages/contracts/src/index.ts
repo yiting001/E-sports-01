@@ -21,3 +21,4 @@ export * from './realname/realname';
 export * from './feedback/feedback';
 export * from './notice/notice';
 export * from './order/order';
+export * from './review/review';

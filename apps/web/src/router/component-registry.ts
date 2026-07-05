@@ -13,6 +13,7 @@ const COMPONENT_REGISTRY: Record<string, ComponentLoader> = {
   'commerce:category:menu': () => import('@/views/commerce/CategoryListView.vue'),
   'commerce:product:menu': () => import('@/views/commerce/ProductListView.vue'),
   'order:admin:menu': () => import('@/views/order/OrderAdminView.vue'),
+  'review:menu': () => import('@/views/review/ReviewAdminView.vue'),
   'wallet:admin:menu': () => import('@/views/wallet/WalletAdminView.vue'),
   'rbac:tenant:menu': () => import('@/views/rbac/TenantListView.vue'),
   'rbac:user:menu': () => import('@/views/rbac/UserListView.vue'),
