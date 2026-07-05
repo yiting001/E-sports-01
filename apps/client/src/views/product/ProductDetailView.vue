@@ -18,6 +18,7 @@ const router = useRouter();
 const product = ref<ProductPublicView | null>(null);
 const loading = ref(true);
 const missing = ref(false);
+const descExpanded = ref(false);
 
 const safeDescription = computed(() =>
   product.value ? DOMPurify.sanitize(product.value.description) : '',
@@ -110,16 +111,26 @@ onMounted(async () => {
         <section
           v-if="safeDescription"
           class="card desc"
+          :class="{ 'desc--expanded': descExpanded }"
         >
           <h2 class="sec-title">
             服务详情
           </h2>
           <!-- eslint-disable vue/no-v-html -->
-          <div
-            class="desc-body"
-            v-html="safeDescription"
-          />
+          <div class="desc-content">
+            <div
+              class="desc-body"
+              v-html="safeDescription"
+            />
+          </div>
           <!-- eslint-enable vue/no-v-html -->
+          <button
+            class="desc-toggle"
+            :aria-expanded="descExpanded"
+            @click="descExpanded = !descExpanded"
+          >
+            {{ descExpanded ? '收起详情' : '展开详情' }}
+          </button>
         </section>
 
         <ProductReviews :product-id="product.id" />
@@ -294,6 +305,7 @@ onMounted(async () => {
 }
 
 .desc {
+  position: relative;
   padding: 14px 16px;
 }
 
@@ -311,6 +323,31 @@ onMounted(async () => {
   word-break: break-word;
 }
 
+.desc-content {
+  position: relative;
+  max-height: 170px;
+  overflow: hidden;
+}
+
+.desc-content::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 58px;
+  background: linear-gradient(180deg, transparent, var(--c-surface));
+  pointer-events: none;
+}
+
+.desc--expanded .desc-content {
+  max-height: none;
+}
+
+.desc--expanded .desc-content::after {
+  display: none;
+}
+
 .desc-body :deep(img),
 .desc-body :deep(video) {
   display: block;
@@ -318,6 +355,17 @@ onMounted(async () => {
   height: auto;
   border-radius: var(--radius-sm);
   background: var(--c-bg);
+}
+
+.desc-toggle {
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--c-accent);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
 }
 
 .footer {
@@ -444,6 +492,10 @@ onMounted(async () => {
 
   .desc-body {
     font-size: 14px;
+  }
+
+  .desc-content {
+    max-height: 240px;
   }
 
   .footer {
