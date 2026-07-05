@@ -16,6 +16,7 @@ import { Refresh, Search } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import OrderDetailDrawer from '@/components/order/OrderDetailDrawer.vue';
+import ProductPreviewDialog from '@/components/order/ProductPreviewDialog.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { orderApi } from '@/api/order.api';
 
@@ -30,6 +31,15 @@ const orderNoFilter = ref('');
 
 const detailVisible = ref(false);
 const current = ref<AdminOrderView | null>(null);
+
+const productVisible = ref(false);
+const productId = ref('');
+
+/** 点击订单中的商品 → 弹窗预览商品详情 */
+function openProduct(id: string): void {
+  productId.value = id;
+  productVisible.value = true;
+}
 
 /** 状态 → 标签颜色（与订单状态机阶段对应） */
 const STATUS_TAG: Record<
@@ -165,9 +175,18 @@ onMounted(load);
         <el-table-column
           label="商品"
           min-width="180"
-          prop="productTitle"
           show-overflow-tooltip
-        />
+        >
+          <template #default="{ row }">
+            <el-button
+              link
+              type="primary"
+              @click="openProduct(row.productId)"
+            >
+              {{ row.productTitle }}
+            </el-button>
+          </template>
+        </el-table-column>
         <el-table-column
           label="数量"
           width="70"
@@ -241,6 +260,12 @@ onMounted(load);
       v-model="detailVisible"
       :order="current"
       :format-date="formatDate"
+      @view-product="openProduct"
+    />
+
+    <product-preview-dialog
+      v-model="productVisible"
+      :product-id="productId"
     />
   </section>
 </template>
