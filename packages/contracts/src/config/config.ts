@@ -159,6 +159,12 @@ export const CONFIG_KEYS = {
     alipayPublicCert: 'wallet.alipay.publicCert',
     /** 支付宝证书模式：支付宝根证书（PEM，alipayRootCert.crt 内容） */
     alipayRootCert: 'wallet.alipay.rootCert',
+    /** 支付宝转账场景名称（商家平台-资金管理-转账场景 中声明，如「业务结算」） */
+    alipayTransferSceneName: 'wallet.alipay.transferSceneName',
+    /** 支付宝转账场景报备信息类型（固定值，如「结算款项名称」） */
+    alipayTransferReportInfoType: 'wallet.alipay.transferReportInfoType',
+    /** 支付宝转账场景报备信息内容（按实际业务填写，如「游戏账号租赁结算款」） */
+    alipayTransferReportInfoContent: 'wallet.alipay.transferReportInfoContent',
     /** 微信支付 v3 */
     wechatAppId: 'wallet.wechat.appId',
     wechatMchId: 'wallet.wechat.mchId',

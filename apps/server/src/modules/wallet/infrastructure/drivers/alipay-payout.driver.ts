@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { PayoutProvider, fenToYuan } from '@app/contracts';
+import { CONFIG_KEYS, PayoutProvider, fenToYuan } from '@app/contracts';
+import { ConfigService } from '../../../config/application/config.service';
 import {
   PayoutInput,
   PayoutPort,
@@ -13,16 +14,51 @@ const ALIPAY_SUCCESS_CODE = '10000';
 /**
  * 支付宝提现（转账到账）驱动：alipay.fund.trans.uni.transfer。
  * 向收款方支付宝登录号直接转账，成功返回渠道转账单号。
+ * 转账场景报备（transfer_scene_name / transfer_scene_report_info）取自配置中心，
+ * 已开通「商家转账」并要求报备的商户必须配置，否则渠道拒绝（40004）。
  */
 @Injectable()
 export class AlipayPayoutDriver implements PayoutPort {
   readonly provider = PayoutProvider.Alipay;
   readonly available = true;
 
-  constructor(private readonly factory: AlipayClientFactory) {}
+  constructor(
+    private readonly factory: AlipayClientFactory,
+    private readonly config: ConfigService,
+  ) {}
+
+  /** 组装转账场景报备参数（场景名称留空则不传，兼容未要求报备的商户） */
+  private async buildSceneParams(): Promise<Record<string, unknown>> {
+    const sceneName = await this.config.getString(
+      CONFIG_KEYS.wallet.alipayTransferSceneName,
+      '',
+    );
+    if (!sceneName) {
+      return {};
+    }
+    const infoType = await this.config.getString(
+      CONFIG_KEYS.wallet.alipayTransferReportInfoType,
+      '',
+    );
+    const infoContent = await this.config.getString(
+      CONFIG_KEYS.wallet.alipayTransferReportInfoContent,
+      '',
+    );
+    return {
+      transfer_scene_name: sceneName,
+      ...(infoType && infoContent
+        ? {
+            transfer_scene_report_info: [
+              { info_type: infoType, info_content: infoContent },
+            ],
+          }
+        : {}),
+    };
+  }
 
   async transfer(input: PayoutInput): Promise<PayoutResult> {
     const alipay = await this.factory.create();
+    const sceneParams = await this.buildSceneParams();
     const result = await alipay.exec('alipay.fund.trans.uni.transfer', {
       bizContent: {
         out_biz_no: input.outBizNo,
@@ -36,6 +72,7 @@ export class AlipayPayoutDriver implements PayoutPort {
           name: input.accountName,
         },
         remark: input.remark,
+        ...sceneParams,
       },
     });
     if (result.code !== ALIPAY_SUCCESS_CODE) {

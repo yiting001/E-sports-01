@@ -467,6 +467,27 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     secret: true,
   },
   {
+    key: CONFIG_KEYS.wallet.alipayTransferSceneName,
+    value: '',
+    type: ConfigValueType.String,
+    group: ConfigGroup.Wallet,
+    remark: '支付宝转账场景名称（商家平台-资金管理-转账场景 中声明的场景，如「业务结算」；留空则不传报备参数）',
+  },
+  {
+    key: CONFIG_KEYS.wallet.alipayTransferReportInfoType,
+    value: '',
+    type: ConfigValueType.String,
+    group: ConfigGroup.Wallet,
+    remark: '支付宝转账场景报备信息类型（固定值，随所选转账场景而定，如「结算款项名称」）',
+  },
+  {
+    key: CONFIG_KEYS.wallet.alipayTransferReportInfoContent,
+    value: '',
+    type: ConfigValueType.String,
+    group: ConfigGroup.Wallet,
+    remark: '支付宝转账场景报备信息内容（按实际业务填写，如「游戏账号租赁结算款」）',
+  },
+  {
     key: CONFIG_KEYS.wallet.wechatAppId,
     value: '',
     type: ConfigValueType.String,
