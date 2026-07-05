@@ -2,7 +2,6 @@
 import { ref, watch } from 'vue';
 import type { OrderStatsView, StatsRange } from '@app/contracts';
 import { dashboardApi } from '@/api/dashboard.api';
-import AppPanel from '@/components/common/AppPanel.vue';
 import AppStats from '@/components/common/AppStats.vue';
 import EChart from './EChart.vue';
 import {
@@ -34,10 +33,9 @@ watch(
 </script>
 
 <template>
-  <app-panel
+  <section
     v-loading="loading"
-    title="订单运营"
-    eyebrow="Orders"
+    class="dashboard-stat-panel"
   >
     <template v-if="stats">
       <app-stats
@@ -48,21 +46,36 @@ watch(
           { label: '折扣让利（元）', value: fenToYuanText(stats.discountFen), helper: '会员等级折扣' },
         ]"
       />
-      <div class="chart-grid">
-        <e-chart :option="lineTrendOption(stats.orderTrend, '下单量')" />
-        <e-chart :option="moneyTrendOption(stats.gmvTrend, 'GMV')" />
-        <e-chart :option="pieOption(stats.statusDistribution, '订单状态')" />
-        <e-chart :option="rankBarOption(stats.topProducts, '销量')" />
+      <div class="dashboard-chart-grid dashboard-chart-grid--quad">
+        <div class="dashboard-chart-card">
+          <div class="dashboard-chart-card__title">下单趋势</div>
+          <e-chart
+            :option="lineTrendOption(stats.orderTrend, '下单量')"
+            height="180px"
+          />
+        </div>
+        <div class="dashboard-chart-card">
+          <div class="dashboard-chart-card__title">GMV 趋势</div>
+          <e-chart
+            :option="moneyTrendOption(stats.gmvTrend, 'GMV')"
+            height="180px"
+          />
+        </div>
+        <div class="dashboard-chart-card">
+          <div class="dashboard-chart-card__title">订单状态</div>
+          <e-chart
+            :option="pieOption(stats.statusDistribution, '订单状态')"
+            height="180px"
+          />
+        </div>
+        <div class="dashboard-chart-card">
+          <div class="dashboard-chart-card__title">商品销量 Top</div>
+          <e-chart
+            :option="rankBarOption(stats.topProducts, '销量')"
+            height="180px"
+          />
+        </div>
       </div>
     </template>
-  </app-panel>
+  </section>
 </template>
-
-<style scoped>
-.chart-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-</style>

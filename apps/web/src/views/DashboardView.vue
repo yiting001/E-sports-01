@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ArrowRight, Key, Menu, Monitor, UserFilled } from '@element-plus/icons-vue';
 import { PERMS, STATS_RANGE_TEXT, StatsRange } from '@app/contracts';
@@ -29,6 +29,8 @@ interface ModuleCard {
   children?: MenuItem[];
 }
 
+type StatsTabKey = 'orders' | 'finance' | 'users' | 'boosters';
+
 const router = useRouter();
 const auth = useAuthStore();
 const { menus } = useMenus();
@@ -36,6 +38,7 @@ const { menus } = useMenus();
 /** 统计时间范围（日/月/年），各统计块共用 */
 const statsRange = ref(StatsRange.Day);
 const rangeOptions = Object.values(StatsRange);
+const activeStatsTab = ref<StatsTabKey>('orders');
 
 /** 按当前账号权限决定可见的统计块 */
 const statsBlocks = computed(() => ({
@@ -45,6 +48,14 @@ const statsBlocks = computed(() => ({
   boosters: auth.hasPermission(PERMS.dashboard.boosters),
 }));
 const hasStats = computed(() => Object.values(statsBlocks.value).some(Boolean));
+const visibleStatsTabs = computed(() =>
+  [
+    { name: 'orders' as const, label: '订单运营', visible: statsBlocks.value.orders },
+    { name: 'finance' as const, label: '财务资金', visible: statsBlocks.value.finance },
+    { name: 'users' as const, label: '用户增长', visible: statsBlocks.value.users },
+    { name: 'boosters' as const, label: '打手生态', visible: statsBlocks.value.boosters },
+  ].filter((item) => item.visible),
+);
 
 const profileName = computed(() => auth.profile?.nickname || auth.profile?.username || '-');
 const roleNames = computed(() => auth.profile?.roles ?? []);
@@ -67,7 +78,7 @@ const metrics = computed<MetricCard[]>(() => [
   },
   {
     label: '权限点',
-    value: permissionCount.value,
+    value: auth.profile?.isSuper ? '全部' : permissionCount.value,
     helper: auth.profile?.isSuper ? '内置全权限' : '来自角色授权',
     tone: 'rose',
   },
@@ -111,6 +122,16 @@ const roleSummary = computed(() => {
   return roleNames.value.slice(0, 4);
 });
 
+watch(
+  visibleStatsTabs,
+  (tabs) => {
+    if (!tabs.some((item) => item.name === activeStatsTab.value)) {
+      activeStatsTab.value = tabs[0]?.name ?? 'orders';
+    }
+  },
+  { immediate: true },
+);
+
 function flattenMenus(items: MenuItem[]): MenuItem[] {
   return items.flatMap((item) => (item.children?.length ? item.children : item.path ? [item] : []));
 }
@@ -125,11 +146,42 @@ function openModule(item: ModuleCard | MenuItem): void {
 
 <template>
   <section class="admin-page dashboard-page">
-    <app-stats :items="metrics" />
+    <section class="dashboard-overview">
+      <app-stats
+        class="dashboard-overview__stats"
+        :items="metrics"
+      />
 
-    <template v-if="hasStats">
-      <div class="stats-toolbar">
-        <el-radio-group v-model="statsRange">
+      <div class="dashboard-account">
+        <span class="dashboard-account__avatar">
+          <el-icon><UserFilled /></el-icon>
+        </span>
+        <div>
+          <strong>{{ profileName }}</strong>
+          <small>{{ auth.profile?.isSuper ? '超级管理员账号' : '授权账号' }}</small>
+        </div>
+        <el-tag
+          round
+          type="success"
+          effect="light"
+        >
+          正常
+        </el-tag>
+      </div>
+    </section>
+
+    <app-panel
+      v-if="hasStats"
+      class="dashboard-analytics"
+      title="经营数据"
+      eyebrow="Analytics"
+      description="按角色权限展示订单、财务、用户与打手统计，时间范围统一切换。"
+    >
+      <template #actions>
+        <el-radio-group
+          v-model="statsRange"
+          size="small"
+        >
           <el-radio-button
             v-for="option in rangeOptions"
             :key="option"
@@ -138,92 +190,121 @@ function openModule(item: ModuleCard | MenuItem): void {
             {{ STATS_RANGE_TEXT[option] }}
           </el-radio-button>
         </el-radio-group>
-      </div>
-      <order-stats-panel
-        v-if="statsBlocks.orders"
-        :range="statsRange"
-      />
-      <finance-stats-panel
-        v-if="statsBlocks.finance"
-        :range="statsRange"
-      />
-      <div class="stats-row">
-        <user-stats-panel
+      </template>
+
+      <el-tabs
+        v-model="activeStatsTab"
+        class="dashboard-tabs"
+      >
+        <el-tab-pane
+          v-if="statsBlocks.orders"
+          label="订单运营"
+          name="orders"
+        >
+          <order-stats-panel :range="statsRange" />
+        </el-tab-pane>
+        <el-tab-pane
+          v-if="statsBlocks.finance"
+          label="财务资金"
+          name="finance"
+        >
+          <finance-stats-panel :range="statsRange" />
+        </el-tab-pane>
+        <el-tab-pane
           v-if="statsBlocks.users"
-          :range="statsRange"
-        />
-        <booster-stats-panel
+          label="用户增长"
+          name="users"
+        >
+          <user-stats-panel :range="statsRange" />
+        </el-tab-pane>
+        <el-tab-pane
           v-if="statsBlocks.boosters"
-          :range="statsRange"
-        />
-      </div>
-    </template>
-
-    <section class="dashboard-layout">
-      <div class="main-column">
-        <app-panel
-          title="业务入口"
-          eyebrow="Modules"
+          label="打手生态"
+          name="boosters"
         >
-          <template #actions>
-            <span class="admin-muted">{{ leafMenus.length }} 个入口可用</span>
-          </template>
-          <div class="module-grid">
-            <button
-              v-for="item in modules"
-              :key="item.key"
-              class="module-card"
-              type="button"
-              @click="openModule(item)"
-            >
-              <span class="module-icon">
-                <el-icon><component :is="item.icon || Menu" /></el-icon>
-              </span>
-              <span class="module-info">
-                <strong>{{ item.title }}</strong>
-                <small>
-                  {{ item.count ? `${item.count} 个子入口` : '直接进入' }}
-                </small>
-              </span>
-              <el-icon class="module-arrow">
-                <ArrowRight />
-              </el-icon>
-            </button>
-          </div>
-        </app-panel>
+          <booster-stats-panel :range="statsRange" />
+        </el-tab-pane>
+      </el-tabs>
+    </app-panel>
 
-        <app-panel
-          title="快捷访问"
-          eyebrow="Quick Access"
-        >
-          <div class="quick-list">
-            <button
-              v-for="item in quickAccess"
-              :key="item.key"
-              type="button"
-              class="quick-item"
-              @click="openModule(item)"
-            >
-              <span>{{ item.title }}</span>
-              <el-icon><ArrowRight /></el-icon>
-            </button>
-            <div
-              v-if="!quickAccess.length"
-              class="empty-state"
-            >
-              暂无可见业务入口
-            </div>
-          </div>
-        </app-panel>
-      </div>
+    <app-panel
+      v-else
+      title="经营数据"
+      eyebrow="Analytics"
+    >
+      <div class="empty-state">当前账号暂无仪表盘统计权限</div>
+    </app-panel>
 
-      <aside class="side-column">
-        <app-panel class="identity-panel">
-          <div class="identity-avatar">
+    <section class="dashboard-workspace">
+      <app-panel
+        class="dashboard-module-panel"
+        title="业务入口"
+        eyebrow="Modules"
+      >
+        <template #actions>
+          <span class="admin-muted">{{ leafMenus.length }} 个入口</span>
+        </template>
+        <div class="module-list">
+          <button
+            v-for="item in modules"
+            :key="item.key"
+            class="module-row"
+            type="button"
+            @click="openModule(item)"
+          >
+            <span class="module-icon">
+              <el-icon><component :is="item.icon || Menu" /></el-icon>
+            </span>
+            <span class="module-info">
+              <strong>{{ item.title }}</strong>
+              <small>
+                {{ item.count ? `${item.count} 个子入口` : '直接进入' }}
+              </small>
+            </span>
+            <el-icon class="module-arrow">
+              <ArrowRight />
+            </el-icon>
+          </button>
+        </div>
+      </app-panel>
+
+      <app-panel
+        title="快捷访问"
+        eyebrow="Quick Access"
+      >
+        <div class="quick-list">
+          <button
+            v-for="item in quickAccess"
+            :key="item.key"
+            type="button"
+            class="quick-item"
+            @click="openModule(item)"
+          >
+            <span>{{ item.title }}</span>
+            <el-icon><ArrowRight /></el-icon>
+          </button>
+          <div
+            v-if="!quickAccess.length"
+            class="empty-state"
+          >
+            暂无可见业务入口
+          </div>
+        </div>
+      </app-panel>
+
+      <app-panel
+        class="access-panel"
+        title="访问概览"
+        eyebrow="Access"
+      >
+        <template #actions>
+          <el-icon><Key /></el-icon>
+        </template>
+        <div class="access-section">
+          <div class="access-section__title">
             <el-icon><UserFilled /></el-icon>
+            <span>角色</span>
           </div>
-          <h2>{{ profileName }}</h2>
-          <p>{{ auth.profile?.isSuper ? '超级管理员账号' : '授权账号' }}</p>
           <div class="role-list">
             <span
               v-for="role in roleSummary"
@@ -232,15 +313,12 @@ function openModule(item: ModuleCard | MenuItem): void {
               {{ role }}
             </span>
           </div>
-        </app-panel>
-
-        <app-panel
-          title="权限分布"
-          eyebrow="Permissions"
-        >
-          <template #actions>
-            <el-icon><Key /></el-icon>
-          </template>
+        </div>
+        <div class="access-section">
+          <div class="access-section__title">
+            <el-icon><Monitor /></el-icon>
+            <span>权限分布</span>
+          </div>
           <div class="permission-list">
             <div
               v-for="group in permissionGroups"
@@ -254,20 +332,11 @@ function openModule(item: ModuleCard | MenuItem): void {
               v-if="!permissionGroups.length"
               class="empty-state"
             >
-              暂无权限点
+              {{ auth.profile?.isSuper ? '超级管理员内置全权限' : '暂无权限点' }}
             </div>
           </div>
-        </app-panel>
-
-        <app-panel class="health-panel">
-          <div>
-            <el-icon><Monitor /></el-icon>
-            <span>访问状态</span>
-          </div>
-          <strong>正常</strong>
-          <p>菜单与按钮权限已按当前账号动态加载。</p>
-        </app-panel>
-      </aside>
+        </div>
+      </app-panel>
     </section>
   </section>
 </template>

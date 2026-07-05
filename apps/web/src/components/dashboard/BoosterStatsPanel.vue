@@ -2,7 +2,6 @@
 import { ref, watch } from 'vue';
 import type { BoosterStatsView, StatsRange } from '@app/contracts';
 import { dashboardApi } from '@/api/dashboard.api';
-import AppPanel from '@/components/common/AppPanel.vue';
 import AppStats from '@/components/common/AppStats.vue';
 import EChart from './EChart.vue';
 import { lineTrendOption, pieOption } from './chart-options';
@@ -28,10 +27,9 @@ watch(
 </script>
 
 <template>
-  <app-panel
+  <section
     v-loading="loading"
-    title="打手生态"
-    eyebrow="Boosters"
+    class="dashboard-stat-panel"
   >
     <template v-if="stats">
       <app-stats
@@ -41,19 +39,22 @@ watch(
           { label: '新增申请', value: stats.newApplications, helper: '区间内提交' },
         ]"
       />
-      <div class="chart-grid">
-        <e-chart :option="lineTrendOption(stats.applicationTrend, '申请数')" />
-        <e-chart :option="pieOption(stats.levelDistribution, '打手等级')" />
+      <div class="dashboard-chart-grid">
+        <div class="dashboard-chart-card">
+          <div class="dashboard-chart-card__title">申请趋势</div>
+          <e-chart
+            :option="lineTrendOption(stats.applicationTrend, '申请数')"
+            height="240px"
+          />
+        </div>
+        <div class="dashboard-chart-card">
+          <div class="dashboard-chart-card__title">打手等级分布</div>
+          <e-chart
+            :option="pieOption(stats.levelDistribution, '打手等级')"
+            height="240px"
+          />
+        </div>
       </div>
     </template>
-  </app-panel>
+  </section>
 </template>
-
-<style scoped>
-.chart-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-</style>

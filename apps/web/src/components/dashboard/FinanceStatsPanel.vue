@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue';
 import type { FinanceStatsView, StatsRange } from '@app/contracts';
 import { dashboardApi } from '@/api/dashboard.api';
-import AppPanel from '@/components/common/AppPanel.vue';
 import AppStats from '@/components/common/AppStats.vue';
 import EChart from './EChart.vue';
 import { fenToYuanText, flowTrendOption, pieOption } from './chart-options';
@@ -36,10 +35,9 @@ watch(
 </script>
 
 <template>
-  <app-panel
+  <section
     v-loading="loading"
-    title="财务资金"
-    eyebrow="Finance"
+    class="dashboard-stat-panel"
   >
     <template v-if="stats">
       <app-stats
@@ -58,19 +56,22 @@ watch(
           },
         ]"
       />
-      <div class="chart-grid">
-        <e-chart :option="flowTrendOption(stats.flowTrend)" />
-        <e-chart :option="pieOption(typeDistributionYuan, '流水金额（元）')" />
+      <div class="dashboard-chart-grid">
+        <div class="dashboard-chart-card">
+          <div class="dashboard-chart-card__title">收支趋势</div>
+          <e-chart
+            :option="flowTrendOption(stats.flowTrend)"
+            height="240px"
+          />
+        </div>
+        <div class="dashboard-chart-card">
+          <div class="dashboard-chart-card__title">流水类型金额</div>
+          <e-chart
+            :option="pieOption(typeDistributionYuan, '流水金额（元）')"
+            height="240px"
+          />
+        </div>
       </div>
     </template>
-  </app-panel>
+  </section>
 </template>
-
-<style scoped>
-.chart-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-</style>
