@@ -67,6 +67,8 @@ export interface AdminOrderView extends OrderView {
   userId: string;
   /** 商品关联客服快照（未关联为空串） */
   serviceAgentId: string;
+  /** 接单打手 id（未接单为空串） */
+  boosterId: string;
   /** 渠道交易号（未支付为空串） */
   providerTradeNo: string;
 }

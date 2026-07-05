@@ -73,6 +73,7 @@ export const PERMS = {
   order: {
     list: 'order:admin:list',
     detail: 'order:admin:detail',
+    dispatch: 'order:admin:dispatch',
   },
   review: {
     list: 'review:admin:list',

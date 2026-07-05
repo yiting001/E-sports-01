@@ -13,10 +13,18 @@ export interface NavItem {
   icon: IconName;
 }
 
-/** 四个一级 Tab */
+/** 老板身份的四个一级 Tab */
 export const NAV_ITEMS: NavItem[] = [
   { name: 'home', label: '首页', icon: 'home' },
   { name: 'category', label: '分类', icon: 'grid' },
+  { name: 'messages', label: '消息', icon: 'bell' },
+  { name: 'profile', label: '我的', icon: 'user' },
+];
+
+/** 打手身份的一级 Tab：接单大厅/订单中心/消息/个人中心 */
+export const BOOSTER_NAV_ITEMS: NavItem[] = [
+  { name: 'hall', label: '接单大厅', icon: 'crosshair' },
+  { name: 'booster-orders', label: '订单中心', icon: 'file' },
   { name: 'messages', label: '消息', icon: 'bell' },
   { name: 'profile', label: '我的', icon: 'user' },
 ];

@@ -2,20 +2,24 @@
 /**
  * 我的页：头部（登录/身份切换）→ 订单入口 → 余额/客服双卡 → 更多功能 → 版本号。
  * 各区块拆为独立组件，本视图只做纵向编排。
+ * 打手身份下只保留头部与余额/客服卡，购物向的订单入口/更多功能不展示。
  */
 import BalanceCards from '@/components/profile/BalanceCards.vue';
 import FeatureGrid from '@/components/profile/FeatureGrid.vue';
 import OrderEntries from '@/components/profile/OrderEntries.vue';
 import ProfileHeader from '@/components/profile/ProfileHeader.vue';
 import { APP_VERSION_TEXT } from '@/config/profile.mock';
+import { useRoleStore } from '@/stores/role.store';
+
+const role = useRoleStore();
 </script>
 
 <template>
   <div class="profile">
     <ProfileHeader />
-    <OrderEntries />
+    <OrderEntries v-if="!role.isBoosterMode" />
     <BalanceCards />
-    <FeatureGrid />
+    <FeatureGrid v-if="!role.isBoosterMode" />
     <p class="version">
       {{ APP_VERSION_TEXT }}
     </p>

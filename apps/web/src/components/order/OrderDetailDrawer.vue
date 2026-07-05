@@ -70,6 +70,9 @@ const visible = defineModel<boolean>({ required: true });
       <el-descriptions-item label="关联客服">
         {{ order.serviceAgentId || '未关联' }}
       </el-descriptions-item>
+      <el-descriptions-item label="接单打手">
+        {{ order.boosterId || '未接单' }}
+      </el-descriptions-item>
       <el-descriptions-item label="用户备注">
         {{ order.remark || '-' }}
       </el-descriptions-item>
