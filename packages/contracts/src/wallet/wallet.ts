@@ -10,6 +10,12 @@ export enum PaymentProvider {
   Wechat = 'wechat',
 }
 
+/** 支付渠道展示文案 */
+export const PAYMENT_PROVIDER_TEXT: Record<PaymentProvider, string> = {
+  [PaymentProvider.Alipay]: '支付宝',
+  [PaymentProvider.Wechat]: '微信',
+};
+
 /** 提现（付款）渠道；微信为预留位，调用即提示未开通 */
 export enum PayoutProvider {
   Alipay = 'alipay',

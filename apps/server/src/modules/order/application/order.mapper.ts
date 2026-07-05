@@ -1,4 +1,8 @@
-import { fenToYuan, type OrderView } from '@app/contracts';
+import {
+  fenToYuan,
+  type AdminOrderView,
+  type OrderView,
+} from '@app/contracts';
 import type { OrderEntity } from '../domain/order.entity';
 
 /** 订单实体 → C 端视图 */
@@ -17,5 +21,15 @@ export function toOrderView(entity: OrderEntity): OrderView {
     remark: entity.remark,
     createdAt: entity.createdAt.toISOString(),
     paidAt: entity.paidAt ? entity.paidAt.toISOString() : '',
+  };
+}
+
+/** 订单实体 → 管理端视图（补充归属用户/客服快照/渠道交易号） */
+export function toAdminOrderView(entity: OrderEntity): AdminOrderView {
+  return {
+    ...toOrderView(entity),
+    userId: entity.userId,
+    serviceAgentId: entity.serviceAgentId,
+    providerTradeNo: entity.providerTradeNo ?? '',
   };
 }

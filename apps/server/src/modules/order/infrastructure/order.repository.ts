@@ -4,7 +4,10 @@ import type { FindOptionsWhere, Repository } from 'typeorm';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
 import { withTenant } from '../../../shared/tenant/tenant-scope.util';
 import { OrderEntity } from '../domain/order.entity';
-import { OrderRepository } from '../domain/order-repository.interface';
+import {
+  AdminOrderFilter,
+  OrderRepository,
+} from '../domain/order-repository.interface';
 
 /** 订单仓储的 TypeORM 实现，读操作按租户上下文自动过滤 */
 @Injectable()
@@ -36,6 +39,26 @@ export class TypeormOrderRepository implements OrderRepository {
   ): Promise<[OrderEntity[], number]> {
     return this.repo.findAndCount({
       where: withTenant<OrderEntity>(this.tenant, { userId }),
+      order: { createdAt: 'DESC' },
+      skip,
+      take,
+    });
+  }
+
+  paginateAdmin(
+    skip: number,
+    take: number,
+    filter: AdminOrderFilter,
+  ): Promise<[OrderEntity[], number]> {
+    const where: FindOptionsWhere<OrderEntity> = {};
+    if (filter.status) {
+      where.status = filter.status;
+    }
+    if (filter.orderNo) {
+      where.orderNo = filter.orderNo;
+    }
+    return this.repo.findAndCount({
+      where: withTenant<OrderEntity>(this.tenant, where),
       order: { createdAt: 'DESC' },
       skip,
       take,

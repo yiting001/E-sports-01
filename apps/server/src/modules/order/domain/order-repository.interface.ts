@@ -1,4 +1,13 @@
+import type { OrderStatus } from '@app/contracts';
 import type { OrderEntity } from './order.entity';
+
+/** 管理端订单检索条件 */
+export interface AdminOrderFilter {
+  /** 按状态过滤 */
+  status?: OrderStatus;
+  /** 按商户订单号精确定位 */
+  orderNo?: string;
+}
 
 export const ORDER_REPOSITORY = Symbol('ORDER_REPOSITORY');
 
@@ -13,6 +22,12 @@ export interface OrderRepository {
     userId: string,
     skip: number,
     take: number,
+  ): Promise<[OrderEntity[], number]>;
+  /** 管理端分页检索全量订单（租户内），按创建时间倒序 */
+  paginateAdmin(
+    skip: number,
+    take: number,
+    filter: AdminOrderFilter,
   ): Promise<[OrderEntity[], number]>;
   create(data: Partial<OrderEntity>): OrderEntity;
   save(entity: OrderEntity): Promise<OrderEntity>;

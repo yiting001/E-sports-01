@@ -65,6 +65,10 @@ export const PERMS = {
     list: 'feedback:list',
     handle: 'feedback:handle',
   },
+  order: {
+    list: 'order:admin:list',
+    detail: 'order:admin:detail',
+  },
   notice: {
     list: 'notice:list',
     save: 'notice:save',

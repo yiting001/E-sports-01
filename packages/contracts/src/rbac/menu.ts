@@ -71,6 +71,14 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     group: 'commerce',
   },
   {
+    code: 'order:admin:menu',
+    title: '订单管理',
+    path: 'order/admin',
+    icon: 'Tickets',
+    sort: 3,
+    group: 'commerce',
+  },
+  {
     code: 'rbac:tenant:menu',
     title: '租户管理',
     path: 'rbac/tenants',
