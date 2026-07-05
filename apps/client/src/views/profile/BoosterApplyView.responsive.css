@@ -1,0 +1,117 @@
+/**
+ * 打手入驻页响应式布局：移动端保持全屏申请表单；
+ * PC 端将标题栏、状态提示、资料表单和提交按钮统一收敛到内容宽度。
+ */
+@media (min-width: 768px) {
+  .booster-page.booster-page.booster-page {
+    position: static;
+    min-height: 100vh;
+    display: block;
+    padding: 28px 24px 48px;
+    background: transparent;
+  }
+
+  .booster-page > .bar.bar {
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
+  }
+
+  .booster-page .bar-inner.bar-inner {
+    width: 100%;
+    max-width: 860px;
+    min-height: 40px;
+    margin: 0 auto;
+  }
+
+  .booster-page .back.back {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--c-border);
+    background: var(--c-surface);
+  }
+
+  .booster-page .name.name {
+    font-size: 22px;
+    letter-spacing: 0;
+  }
+
+  .booster-page > .scroll.scroll {
+    width: 100%;
+    max-width: 860px;
+    margin: 18px auto 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    overflow: visible;
+  }
+
+  .booster-page .hint.hint {
+    grid-column: 1 / -1;
+    padding: 28px 0;
+  }
+
+  .booster-page .state.state {
+    grid-column: 1;
+    position: sticky;
+    top: 24px;
+    min-height: 160px;
+    padding: 20px;
+    justify-content: center;
+  }
+
+  .booster-page .state-title.state-title {
+    font-size: 18px;
+  }
+
+  .booster-page .state-tip.state-tip {
+    font-size: 14px;
+  }
+
+  .booster-page .form.form {
+    grid-column: 1 / -1;
+    padding: 0;
+  }
+
+  .booster-page .state + .form.form {
+    grid-column: 2;
+  }
+
+  .booster-page .row.row {
+    min-height: 78px;
+    padding: 20px 24px;
+  }
+
+  .booster-page .label.label {
+    width: 76px;
+  }
+
+  .booster-page .input.input {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--c-border);
+    background: var(--c-bg);
+  }
+
+  .booster-page .textarea.textarea {
+    min-height: 132px;
+    padding: 10px 12px;
+  }
+
+  .booster-page .value.value {
+    line-height: 1.7;
+  }
+
+  .booster-page .submit.submit {
+    grid-column: 1 / -1;
+    width: 160px;
+    min-height: 44px;
+    padding: 0 18px;
+  }
+
+  .booster-page .submit--with-state.submit--with-state {
+    grid-column: 2;
+  }
+}

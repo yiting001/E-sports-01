@@ -14,7 +14,7 @@
 - **群聊**：建群、改名、加/移成员、退群；成员变更广播系统消息（xx 加入/退出）。
 - **客服**：访客发起会话进入待接入队列 → 坐席认领/管理员指派 → 接入对话 → 结束；支持配置自动分配与欢迎语。
   - **客服角色打通工作台**：内置「客服」角色（`service`）由 RbacSeeder 幂等补齐坐席所需菜单与接口权限（`im:menu` / `im:service:menu` / `im:message:history` / `im:service:agent`），管理员在用户管理中为客服人员分配该角色后即可登录管理端接待访客。
-  - **C 端联系客服**：用户端 `apps/client` 消息页「三角洲客服」入口进入 `/service` 全屏聊天，复用进行中的客服会话（否则新发起 `POST /im/service`），经 `/im` WebSocket 拉历史与实时收发；系统富文本消息经 DOMPurify 净化后渲染。PC 端顶部栏、消息区、输入栏同轴收敛，移动端保持全屏聊天。
+  - **C 端联系客服**：用户端 `apps/client` 消息页移动端点击会话进入 `/service` 全屏聊天；PC 端 `/messages` 采用左侧会话列表 + 右侧聊天面板，聊天面板复用 `ServiceChatPanel`，不重复实现 WebSocket 收发。客服聊天复用进行中的客服会话（否则在 `/service` 新发起 `POST /im/service`），经 `/im` WebSocket 拉历史与实时收发；系统富文本消息经 DOMPurify 净化后渲染。
 - **私聊**：按对端用户开启（已存在则复用）。
 - **实时收发**（`im:join` / `im:send` / `im:receive`）：进房成员校验，发送持久化后按房间广播；进房/发送同步刷新已读位点。
 - **未读统计**：每个成员维护 `lastReadAt`，列表未读数 = 该位点之后的消息条数。
@@ -79,6 +79,12 @@ flowchart LR
 - `conversation:<id>`：会话消息广播房间，进房前校验成员身份。
 - `user:<id>`：个人房间，推送会话新增/变更（被拉群、被分配客服等）`im:conversation`。
 - `agents`：坐席房间，订阅客服队列推送 `im:service:queued`。
+
+## C 端页面结构
+
+- `client/views/message/MessageView.vue`：消息页。移动端保留会话列表；PC 端为双栏布局，左侧展示会话摘要与未读数，右侧嵌入聊天面板。
+- `client/views/message/ServiceChatView.vue`：在线客服全屏页，只承载全屏版 `ServiceChatPanel`。
+- `client/components/message/ServiceChatPanel.vue`：客服聊天核心面板，统一处理会话解析、进房、历史消息、实时收发、图片/视频发送与自动滚动到底部。
 
 ## 目录结构（DDD 四层）
 

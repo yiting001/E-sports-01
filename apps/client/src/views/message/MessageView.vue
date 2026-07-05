@@ -1,19 +1,24 @@
 <script setup lang="ts">
 /**
- * 消息页：展示 IM 会话列表（含最近消息摘要与未读数）。
- * 点击会话进入在线客服聊天页；页面只承载真实 IM 会话，不保留固定占位入口。
+ * 消息页：移动端展示 IM 会话列表；PC 端左侧会话列表、右侧嵌入聊天面板。
+ * 会话实时收发复用 ServiceChatPanel，列表只负责会话摘要、选中态与移动端跳转。
  */
-import { onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { MessageType, type ChatMessage, type ConversationView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
+import ServiceChatPanel from '@/components/message/ServiceChatPanel.vue';
 import { imApi } from '@/api/im.api';
 
 const MESSAGE_TITLE = '会话消息';
 const router = useRouter();
 
 const conversations = ref<ConversationView[]>([]);
+const selectedConversation = ref<ConversationView | null>(null);
 const loading = ref(true);
+let desktopQuery: MediaQueryList | null = null;
+
+const selectedConversationId = computed(() => selectedConversation.value?.id ?? '');
 
 /** 最近一条消息摘要：图片/视频以占位文案展示 */
 function lastMessageText(message: ChatMessage | null): string {
@@ -39,17 +44,75 @@ function formatTime(ts: number): string {
   });
 }
 
-/** 点击会话：C 端会话均为客服会话，进入在线客服聊天页 */
-function openConversation(): void {
+function isDesktopLayout(): boolean {
+  return window.matchMedia('(min-width: 768px)').matches;
+}
+
+function selectDefaultConversation(): void {
+  if (!isDesktopLayout() || selectedConversation.value || conversations.value.length === 0) {
+    return;
+  }
+  selectedConversation.value = conversations.value[0];
+}
+
+function onViewportChange(event: MediaQueryListEvent): void {
+  if (event.matches) {
+    selectDefaultConversation();
+  }
+}
+
+/** 点击会话：移动端进入全屏聊天，PC 端在右侧打开 */
+function openConversation(conv: ConversationView): void {
+  if (isDesktopLayout()) {
+    selectedConversation.value = { ...conv, unread: 0 };
+    return;
+  }
   router.push({ name: 'service' });
 }
 
+function upsertConversation(conv: ConversationView): void {
+  const index = conversations.value.findIndex((item) => item.id === conv.id);
+  const next = { ...conv, unread: 0 };
+  if (index >= 0) {
+    conversations.value.splice(index, 1, next);
+  } else {
+    conversations.value.unshift(next);
+  }
+  selectedConversation.value = next;
+}
+
+function onChatMessage(message: ChatMessage): void {
+  const index = conversations.value.findIndex((item) => item.id === message.conversationId);
+  if (index < 0) {
+    return;
+  }
+  const current = conversations.value[index];
+  const isSelected = current.id === selectedConversationId.value;
+  const next = {
+    ...current,
+    lastMessage: message,
+    unread: isSelected ? 0 : current.unread + 1,
+    updatedAt: message.createdAt,
+  };
+  conversations.value.splice(index, 1, next);
+  if (isSelected) {
+    selectedConversation.value = next;
+  }
+}
+
 onMounted(async () => {
+  desktopQuery = window.matchMedia('(min-width: 768px)');
+  desktopQuery.addEventListener('change', onViewportChange);
   try {
     conversations.value = await imApi.listConversations();
+    selectDefaultConversation();
   } finally {
     loading.value = false;
   }
+});
+
+onBeforeUnmount(() => {
+  desktopQuery?.removeEventListener('change', onViewportChange);
 });
 </script>
 
@@ -67,7 +130,8 @@ onMounted(async () => {
           v-for="conv in conversations"
           :key="conv.id"
           class="entry"
-          @click="openConversation()"
+          :class="{ 'entry--active': conv.id === selectedConversationId }"
+          @click="openConversation(conv)"
         >
           <span class="avatar">
             <AppIcon
@@ -104,6 +168,17 @@ onMounted(async () => {
         <p>{{ loading ? '加载中…' : '暂无会话消息' }}</p>
       </div>
     </section>
+
+    <ServiceChatPanel
+      class="desktop-chat"
+      :conversation="selectedConversation"
+      :auto-start="false"
+      :embedded="true"
+      :show-back="false"
+      empty-text="选择左侧会话查看对话"
+      @ready="upsertConversation"
+      @message="onChatMessage"
+    />
   </div>
 </template>
 
@@ -112,6 +187,10 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.panel {
+  min-width: 0;
 }
 
 .panel-title {
@@ -129,6 +208,10 @@ onMounted(async () => {
   gap: 12px;
   padding: 14px 16px;
   text-align: left;
+}
+
+.entry--active {
+  background: color-mix(in srgb, var(--c-accent-dim) 60%, transparent);
 }
 
 .entry + .entry {
@@ -204,11 +287,51 @@ onMounted(async () => {
   opacity: 0.5;
 }
 
+.desktop-chat {
+  display: none;
+}
+
 @media (min-width: 768px) {
   .message {
-    max-width: 760px;
+    max-width: var(--page-max-width);
     margin: 0 auto;
     width: 100%;
+    min-height: 560px;
+    height: calc(100vh - 132px);
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .panel {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-title {
+    flex-shrink: 0;
+  }
+
+  .list,
+  .empty {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .list {
+    overflow-y: auto;
+  }
+
+  .entry {
+    padding: 16px;
+  }
+
+  .desktop-chat {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
   }
 
   .empty {

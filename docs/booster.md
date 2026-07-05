@@ -35,6 +35,7 @@ modules/rbac/
 前端：
 
 - C 端 `client/views/profile/BoosterApplyView.vue`（入口：「我的」页更多功能 →「打手入驻」，路由 `/profile/booster`）：按状态分场景展示申请表单 / 审核进度 / 入驻资料 / 驳回理由与重提。
+- C 端 `client/views/profile/BoosterApplyView.responsive.css`：移动端保持全屏申请表单；PC 端标题栏、状态卡、资料表单与提交按钮同轴收敛，有审核状态时左侧提示、右侧展示资料或重提表单。
 - 管理端 `web/views/booster/BoosterAdminView.vue`（菜单 `booster:menu` 打手管理，电竞运营分组）：状态筛选 + 审核通过/驳回 + 资料编辑弹窗。
 
 ## 权限（RBAC）

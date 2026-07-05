@@ -11,6 +11,7 @@ import { BOOSTER_LIMITS, BoosterStatus, type BoosterMineView } from '@app/contra
 import AppIcon from '@/components/common/AppIcon.vue';
 import { boosterApi } from '@/api/booster.api';
 import { useToast } from '@/composables/use-toast';
+import './BoosterApplyView.responsive.css';
 
 const router = useRouter();
 const toast = useToast();
@@ -142,7 +143,7 @@ onMounted(() => {
 
         <section
           v-if="status === BoosterStatus.Pending || status === BoosterStatus.Approved"
-          class="card form"
+          class="card form form--readonly"
         >
           <div class="row">
             <span class="label">游戏昵称</span>
@@ -163,7 +164,10 @@ onMounted(() => {
         </section>
 
         <template v-if="showForm">
-          <section class="card form">
+          <section
+            class="card form form--editable"
+            :class="{ 'form--with-state': status === BoosterStatus.Rejected }"
+          >
             <div class="row">
               <span class="label">游戏昵称</span>
               <input
@@ -205,6 +209,7 @@ onMounted(() => {
 
           <button
             class="submit"
+            :class="{ 'submit--with-state': status === BoosterStatus.Rejected }"
             :disabled="!canSubmit || submitting"
             @click="submit"
           >
