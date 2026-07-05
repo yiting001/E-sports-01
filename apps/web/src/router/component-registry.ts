@@ -15,6 +15,7 @@ const COMPONENT_REGISTRY: Record<string, ComponentLoader> = {
   'order:admin:menu': () => import('@/views/order/OrderAdminView.vue'),
   'review:menu': () => import('@/views/review/ReviewAdminView.vue'),
   'booster:menu': () => import('@/views/booster/BoosterAdminView.vue'),
+  'finance:withdrawal:menu': () => import('@/views/finance/WithdrawalAdminView.vue'),
   'wallet:admin:menu': () => import('@/views/wallet/WalletAdminView.vue'),
   'rbac:tenant:menu': () => import('@/views/rbac/TenantListView.vue'),
   'rbac:user:menu': () => import('@/views/rbac/UserListView.vue'),

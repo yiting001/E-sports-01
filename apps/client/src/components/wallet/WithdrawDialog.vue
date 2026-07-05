@@ -1,13 +1,14 @@
 <script setup lang="ts">
 /**
- * 提现弹层：金额（元）+ 支付宝收款账号/姓名 → 发起提现（支付宝转账）。
- * 成功/处理中通知父组件刷新余额；失败展示渠道返回原因。
+ * 提现弹层：金额（元）+ 支付宝收款账号/姓名 → 提交提现申请（审核制）。
+ * 输入金额时按配置费率实时展示手续费与到账金额；提交后等待财务审核。
  */
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import {
   PayoutProvider,
   WALLET_DEFAULTS,
   WithdrawalStatus,
+  calcWithdrawFeeFen,
   fenToYuan,
   yuanToFen,
 } from '@app/contracts';
@@ -17,6 +18,8 @@ import { useToast } from '@/composables/use-toast';
 const props = defineProps<{
   /** 可提现余额（分），前置校验避免无效请求 */
   balanceFen: number;
+  /** 提现手续费率（万分比），用于实时展示手续费与到账金额 */
+  feeRateBp: number;
 }>();
 const emit = defineEmits<{ done: []; close: [] }>();
 
@@ -26,6 +29,24 @@ const amountYuan = ref('');
 const account = ref('');
 const accountName = ref('');
 const submitting = ref(false);
+
+/** 手续费（分），随输入金额实时计算 */
+const feeFen = computed(() => {
+  const amountFen = yuanToFen(amountYuan.value);
+  if (!Number.isInteger(amountFen) || amountFen <= 0) {
+    return 0;
+  }
+  return calcWithdrawFeeFen(amountFen, props.feeRateBp);
+});
+
+/** 到账金额（分）= 提现金额 - 手续费 */
+const arriveFen = computed(() => {
+  const amountFen = yuanToFen(amountYuan.value);
+  if (!Number.isInteger(amountFen) || amountFen <= 0) {
+    return 0;
+  }
+  return Math.max(amountFen - feeFen.value, 0);
+});
 
 async function submit(): Promise<void> {
   const amountFen = yuanToFen(amountYuan.value);
@@ -54,7 +75,9 @@ async function submit(): Promise<void> {
       return;
     }
     toast.show(
-      result.status === WithdrawalStatus.Success ? '提现成功' : '提现处理中',
+      result.status === WithdrawalStatus.Pending
+        ? '提现申请已提交，审核通过后到账'
+        : '提现处理中',
     );
     emit('done');
   } finally {
@@ -104,6 +127,13 @@ async function submit(): Promise<void> {
           placeholder="收款方实名"
         >
       </label>
+
+      <p
+        v-if="arriveFen > 0"
+        class="fee-tip"
+      >
+        手续费 ¥{{ fenToYuan(feeFen) }}，预计到账 ¥{{ fenToYuan(arriveFen) }}
+      </p>
 
       <button
         class="primary"
@@ -172,6 +202,12 @@ async function submit(): Promise<void> {
   border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
   font-size: 14px;
+}
+
+.fee-tip {
+  width: 100%;
+  font-size: 12px;
+  color: var(--c-text-secondary);
 }
 
 .primary {

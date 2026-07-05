@@ -82,8 +82,9 @@ export class TypeormWalletLedger implements WalletLedger {
         walletId: wallet.id,
         outBizNo: input.outBizNo,
         amountFen: input.amountFen,
+        feeFen: input.feeFen,
         provider: input.provider,
-        status: WithdrawalStatus.Processing,
+        status: WithdrawalStatus.Pending,
         account: input.account,
         accountName: input.accountName,
         providerOrderId: null,
@@ -99,6 +100,22 @@ export class TypeormWalletLedger implements WalletLedger {
         remark: '提现冻结扣减',
       });
       return saved;
+    });
+  }
+
+  async beginWithdrawalTransfer(
+    orderId: string,
+  ): Promise<WithdrawalOrderEntity | null> {
+    return this.dataSource.transaction(async (m) => {
+      const order = await m.getRepository(WithdrawalOrderEntity).findOne({
+        where: { id: orderId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!order || order.status !== WithdrawalStatus.Pending) {
+        return null;
+      }
+      order.status = WithdrawalStatus.Processing;
+      return m.getRepository(WithdrawalOrderEntity).save(order);
     });
   }
 
@@ -124,12 +141,20 @@ export class TypeormWalletLedger implements WalletLedger {
     });
   }
 
-  async refundWithdrawal(orderId: string, reason: string): Promise<void> {
+  async refundWithdrawal(
+    orderId: string,
+    reason: string,
+    toStatus: WithdrawalStatus.Failed | WithdrawalStatus.Rejected,
+  ): Promise<void> {
     await this.dataSource.transaction(async (m) => {
       const order = await m.getRepository(WithdrawalOrderEntity).findOne({
         where: { id: orderId },
       });
-      if (!order || order.status !== WithdrawalStatus.Processing) {
+      const refundable = new Set([
+        WithdrawalStatus.Pending,
+        WithdrawalStatus.Processing,
+      ]);
+      if (!order || !refundable.has(order.status)) {
         return;
       }
       const wallet = await this.lockWallet(m, order.walletId);
@@ -142,10 +167,10 @@ export class TypeormWalletLedger implements WalletLedger {
           direction: FundDirection.In,
           amountFen: order.amountFen,
           bizOrderId: order.id,
-          remark: `提现失败退款：${reason}`,
+          remark: `提现回滚：${reason}`,
         });
       }
-      order.status = WithdrawalStatus.Failed;
+      order.status = toStatus;
       order.failReason = reason.slice(0, 255);
       await m.getRepository(WithdrawalOrderEntity).save(order);
     });

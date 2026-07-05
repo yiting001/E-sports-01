@@ -24,4 +24,26 @@ export class TypeormWithdrawalRepository implements WithdrawalOrderRepository {
       }),
     });
   }
+
+  findById(id: string): Promise<WithdrawalOrderEntity | null> {
+    return this.repo.findOne({
+      where: withTenant<WithdrawalOrderEntity>(this.tenant, { id }),
+    });
+  }
+
+  paginate(
+    skip: number,
+    take: number,
+    status?: WithdrawalStatus,
+  ): Promise<[WithdrawalOrderEntity[], number]> {
+    return this.repo.findAndCount({
+      where: withTenant<WithdrawalOrderEntity>(
+        this.tenant,
+        status ? { status } : {},
+      ),
+      order: { createdAt: 'DESC' },
+      skip,
+      take,
+    });
+  }
 }

@@ -56,15 +56,28 @@ export enum RechargeStatus {
   Closed = 'closed',
 }
 
-/** 提现订单状态 */
+/** 提现订单状态（审核制：申请冻结 → 人工审核 → 渠道转账） */
 export enum WithdrawalStatus {
-  /** 处理中（已冻结扣减，转账进行中） */
+  /** 待审核（已冻结扣减，等待财务审核） */
+  Pending = 'pending',
+  /** 处理中（审核通过，转账进行中） */
   Processing = 'processing',
   /** 成功 */
   Success = 'success',
-  /** 失败（余额已回滚） */
+  /** 失败（转账失败，余额已回滚） */
   Failed = 'failed',
+  /** 已驳回（审核不通过，余额已回滚） */
+  Rejected = 'rejected',
 }
+
+/** 提现状态展示文案 */
+export const WITHDRAWAL_STATUS_TEXT: Record<WithdrawalStatus, string> = {
+  [WithdrawalStatus.Pending]: '待审核',
+  [WithdrawalStatus.Processing]: '处理中',
+  [WithdrawalStatus.Success]: '已到账',
+  [WithdrawalStatus.Failed]: '转账失败',
+  [WithdrawalStatus.Rejected]: '已驳回',
+};
 
 /** 钱包视图 */
 export interface WalletView {
@@ -72,6 +85,8 @@ export interface WalletView {
   balanceFen: number;
   balanceYuan: string;
   status: WalletStatus;
+  /** 当前提现手续费率（万分比），供前端在提现前实时展示手续费与到账金额 */
+  withdrawFeeRateBp: number;
 }
 
 /** 钱包统计视图 */
@@ -166,7 +181,43 @@ export interface CreateWithdrawalBody {
 export interface WithdrawalResultView {
   orderId: string;
   status: WithdrawalStatus;
+  /** 手续费（分） */
+  feeFen: number;
+  /** 预计到账金额（分）= 提现金额 - 手续费 */
+  arriveFen: number;
   failReason: string | null;
+}
+
+/** 提现管理端列表项视图（财务审核用） */
+export interface WithdrawalAdminView {
+  id: string;
+  userId: string;
+  username: string;
+  nickname: string;
+  amountFen: number;
+  amountYuan: string;
+  feeFen: number;
+  feeYuan: string;
+  /** 实际到账金额（分）= 提现金额 - 手续费 */
+  arriveFen: number;
+  arriveYuan: string;
+  provider: PayoutProvider;
+  status: WithdrawalStatus;
+  /** 收款方支付宝账号 */
+  account: string;
+  /** 收款方真实姓名 */
+  accountName: string;
+  /** 渠道转账单号（成功后回填） */
+  providerOrderId: string | null;
+  /** 失败/驳回原因 */
+  failReason: string | null;
+  createdAt: string;
+}
+
+/** 提现驳回入参（管理端） */
+export interface RejectWithdrawalBody {
+  /** 驳回原因（回填到订单并展示给用户） */
+  reason: string;
 }
 
 /** 1 元 = 100 分 */
@@ -192,12 +243,28 @@ export function yuanToFen(yuan: string): number {
   return Math.round(Number(yuan) * FEN_PER_YUAN);
 }
 
+/** 费率基数：手续费率以万分比存储（如 100 = 1%），整数运算规避浮点误差 */
+export const FEE_RATE_BASE = 10000;
+
+/**
+ * 按万分比费率计算提现手续费（分），向上取整保证平台不亏损分位；
+ * 费率为 0 时手续费为 0。
+ */
+export function calcWithdrawFeeFen(amountFen: number, rateBp: number): number {
+  if (rateBp <= 0) {
+    return 0;
+  }
+  return Math.ceil((amountFen * rateBp) / FEE_RATE_BASE);
+}
+
 /** 钱包默认参数（配置中心未设置时回退；杜绝散落的硬编码阈值） */
 export const WALLET_DEFAULTS = {
   /** 最小充值金额（分） */
   minRechargeFen: 100,
   /** 最小提现金额（分） */
   minWithdrawFen: 100,
+  /** 提现手续费率（万分比，0 表示免手续费） */
+  withdrawFeeRateBp: 0,
   /** 默认充值渠道 */
   paymentProvider: PaymentProvider.Alipay,
   /** 默认提现渠道 */

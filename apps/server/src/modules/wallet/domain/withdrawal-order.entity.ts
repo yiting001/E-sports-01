@@ -6,7 +6,8 @@ import { bigintTransformer } from '../../../shared/database/numeric.transformer'
 /**
  * 提现订单实体。
  * 记录一次提现的渠道、金额、收款账户与处理状态；
- * 采用「申请即冻结扣减」：创建时余额已扣，转账失败则回滚并置 failed。
+ * 采用「申请即冻结扣减 + 人工审核」：创建时余额已扣并置 pending，
+ * 财务审核通过后发起渠道转账；驳回/转账失败则回滚余额。
  */
 @Entity('wallet_withdrawal_order')
 export class WithdrawalOrderEntity extends TenantScopedEntity {
@@ -22,10 +23,14 @@ export class WithdrawalOrderEntity extends TenantScopedEntity {
   @Column({ type: 'bigint', transformer: bigintTransformer })
   amountFen!: number;
 
+  /** 手续费（分），申请时按配置费率固定；实际转账金额 = amountFen - feeFen */
+  @Column({ type: 'bigint', default: 0, transformer: bigintTransformer })
+  feeFen!: number;
+
   @Column({ type: 'varchar', length: 16 })
   provider!: PayoutProvider;
 
-  @Column({ type: 'varchar', length: 16, default: WithdrawalStatus.Processing })
+  @Column({ type: 'varchar', length: 16, default: WithdrawalStatus.Pending })
   status!: WithdrawalStatus;
 
   /** 收款方账号（支付宝登录号：邮箱/手机号） */

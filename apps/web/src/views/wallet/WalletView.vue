@@ -129,10 +129,12 @@ async function submitWithdraw(): Promise<void> {
       account: withdrawForm.account,
       accountName: withdrawForm.accountName,
     });
-    if (result.status === WithdrawalStatus.Success) {
-      ElMessage.success('提现成功');
-    } else {
+    if (result.status === WithdrawalStatus.Pending) {
+      ElMessage.success('提现申请已提交，等待财务审核后到账');
+    } else if (result.status === WithdrawalStatus.Failed) {
       ElMessage.error(`提现失败：${result.failReason ?? '请稍后重试'}`);
+    } else {
+      ElMessage.success('提现已受理');
     }
     withdrawVisible.value = false;
     await store.refresh();

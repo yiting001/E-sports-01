@@ -187,6 +187,7 @@ onMounted(() => {
     <WithdrawDialog
       v-if="withdrawing && wallet"
       :balance-fen="wallet.balanceFen"
+      :fee-rate-bp="wallet.withdrawFeeRateBp"
       @done="onWithdrawn"
       @close="withdrawing = false"
     />

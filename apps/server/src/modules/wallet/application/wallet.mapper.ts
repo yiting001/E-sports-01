@@ -1,13 +1,17 @@
 import { WalletStatsView, WalletView, fenToYuan } from '@app/contracts';
 import { WalletEntity } from '../domain/wallet.entity';
 
-/** 实体 → 钱包视图 */
-export function toWalletView(wallet: WalletEntity): WalletView {
+/** 实体 + 当前手续费率 → 钱包视图 */
+export function toWalletView(
+  wallet: WalletEntity,
+  withdrawFeeRateBp: number,
+): WalletView {
   return {
     id: wallet.id,
     balanceFen: wallet.balanceFen,
     balanceYuan: fenToYuan(wallet.balanceFen),
     status: wallet.status,
+    withdrawFeeRateBp,
   };
 }
 

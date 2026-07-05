@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { WalletView } from '@app/contracts';
+import { CONFIG_KEYS, WALLET_DEFAULTS, WalletView } from '@app/contracts';
+import { ConfigService } from '../../../config/application/config.service';
 import { WalletService } from '../wallet.service';
 import { toWalletView } from '../wallet.mapper';
 
@@ -9,10 +10,17 @@ import { toWalletView } from '../wallet.mapper';
  */
 @Injectable()
 export class GetMyWalletUseCase {
-  constructor(private readonly walletService: WalletService) {}
+  constructor(
+    private readonly walletService: WalletService,
+    private readonly config: ConfigService,
+  ) {}
 
   async execute(userId: string): Promise<WalletView> {
     const wallet = await this.walletService.ensureWallet(userId);
-    return toWalletView(wallet);
+    const feeRateBp = await this.config.getNumber(
+      CONFIG_KEYS.wallet.withdrawFeeRateBp,
+      WALLET_DEFAULTS.withdrawFeeRateBp,
+    );
+    return toWalletView(wallet, feeRateBp);
   }
 }
