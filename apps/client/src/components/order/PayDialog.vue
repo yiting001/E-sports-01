@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * 扫码支付弹层：按下单结果渲染支付二维码（支付宝/微信），
- * 轮询订单状态，支付成功后通知父组件；关闭即停止轮询。
+ * 轮询主动查单接口（后端调渠道官方查单，回调未达也能确认支付），
+ * 支付成功后通知父组件；关闭即停止轮询。
  */
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import QRCode from 'qrcode';
@@ -25,7 +26,7 @@ const providerText =
   props.order.provider === PaymentProvider.Alipay ? '支付宝' : '微信';
 
 async function poll(): Promise<void> {
-  const order = await orderApi.detail(props.order.orderId);
+  const order = await orderApi.payQuery(props.order.orderId);
   if (order.status !== OrderStatus.PendingPayment) {
     stopPolling();
     emit('paid');

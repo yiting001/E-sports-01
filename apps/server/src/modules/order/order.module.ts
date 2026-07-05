@@ -6,6 +6,7 @@ import { CommerceModule } from '../commerce/commerce.module';
 import { WalletModule } from '../wallet/wallet.module';
 import { BoosterModule } from '../booster/booster.module';
 import { MemberModule } from '../member/member.module';
+import { CouponModule } from '../coupon/coupon.module';
 
 import { OrderEntity } from './domain/order.entity';
 import { ORDER_REPOSITORY } from './domain/order-repository.interface';
@@ -14,6 +15,8 @@ import { TypeormOrderRepository } from './infrastructure/order.repository';
 import { CreateOrderUseCase } from './application/use-cases/create-order.usecase';
 import { HandleOrderCallbackUseCase } from './application/use-cases/handle-order-callback.usecase';
 import { GetMyOrderUseCase } from './application/use-cases/get-my-order.usecase';
+import { QueryOrderPaymentUseCase } from './application/use-cases/query-order-payment.usecase';
+import { OrderPaymentSettleService } from './application/order-payment.service';
 import { ListMyOrdersUseCase } from './application/use-cases/list-my-orders.usecase';
 import { CancelMyOrderUseCase } from './application/use-cases/cancel-my-order.usecase';
 import { ListAdminOrdersUseCase } from './application/use-cases/list-admin-orders.usecase';
@@ -29,6 +32,7 @@ import { OrderCreateController } from './interfaces/controllers/order.create.con
 import { OrderCallbackController } from './interfaces/controllers/order.callback.controller';
 import { OrderMineListController } from './interfaces/controllers/order.mine.list.controller';
 import { OrderMineDetailController } from './interfaces/controllers/order.mine.detail.controller';
+import { OrderPayQueryController } from './interfaces/controllers/order.pay.query.controller';
 import { OrderCancelController } from './interfaces/controllers/order.cancel.controller';
 import { OrderAdminListController } from './interfaces/controllers/order.admin.list.controller';
 import { OrderAdminDetailController } from './interfaces/controllers/order.admin.detail.controller';
@@ -53,6 +57,7 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     WalletModule,
     BoosterModule,
     MemberModule,
+    CouponModule,
     TypeOrmModule.forFeature([OrderEntity]),
   ],
   controllers: [
@@ -67,13 +72,16 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     OrderAdminListController,
     OrderAdminDispatchController,
     OrderAdminDetailController,
+    OrderPayQueryController,
     OrderMineDetailController,
   ],
   providers: [
     { provide: ORDER_REPOSITORY, useClass: TypeormOrderRepository },
     CreateOrderUseCase,
     HandleOrderCallbackUseCase,
+    OrderPaymentSettleService,
     GetMyOrderUseCase,
+    QueryOrderPaymentUseCase,
     ListMyOrdersUseCase,
     CancelMyOrderUseCase,
     ListAdminOrdersUseCase,

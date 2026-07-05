@@ -1,0 +1,176 @@
+<script setup lang="ts">
+/**
+ * 优惠券编辑弹窗：券名/优惠方式/面值/门槛/库存/限领/有效期/上架开关。
+ * 满减面值按元输入（内部以分存储），折扣按折数输入（内部以万分比存储）。
+ */
+import { computed } from 'vue';
+import { COUPON_LIMITS, CouponType, type UpsertCouponPayload } from '@app/contracts';
+
+const visible = defineModel<boolean>({ required: true });
+const form = defineModel<UpsertCouponPayload>('form', { required: true });
+
+defineProps<{ isEdit: boolean; submitting: boolean }>();
+const emit = defineEmits<{ submit: [] }>();
+
+/** 满减金额（元）双向换算：contracts 层以分存储 */
+const valueYuan = computed({
+  get: () => form.value.value / 100,
+  set: (yuan: number) => {
+    form.value = { ...form.value, value: Math.round(yuan * 100) };
+  },
+});
+
+/** 折扣（折）双向换算：contracts 层以万分比存储（9.5 折 = 9500） */
+const valueZhe = computed({
+  get: () => form.value.value / 1000,
+  set: (zhe: number) => {
+    form.value = { ...form.value, value: Math.round(zhe * 1000) };
+  },
+});
+
+/** 门槛金额（元）双向换算 */
+const thresholdYuan = computed({
+  get: () => form.value.thresholdFen / 100,
+  set: (yuan: number) => {
+    form.value = { ...form.value, thresholdFen: Math.round(yuan * 100) };
+  },
+});
+
+/** 有效期区间双向换算（el-date-picker 区间 → validFrom/validTo） */
+const validRange = computed({
+  get: () =>
+    form.value.validFrom && form.value.validTo
+      ? [form.value.validFrom, form.value.validTo]
+      : [],
+  set: (range: string[]) => {
+    form.value = {
+      ...form.value,
+      validFrom: range?.[0] ?? '',
+      validTo: range?.[1] ?? '',
+    };
+  },
+});
+
+/** 切换优惠方式时重置面值，避免语义串用 */
+function onTypeChange(): void {
+  form.value = { ...form.value, value: 0 };
+}
+</script>
+
+<template>
+  <el-dialog
+    v-model="visible"
+    :title="isEdit ? '编辑优惠券' : '新建优惠券'"
+    width="560px"
+    destroy-on-close
+  >
+    <el-form label-width="92px">
+      <el-form-item label="券名">
+        <el-input
+          v-model="form.title"
+          :maxlength="COUPON_LIMITS.titleMax"
+          show-word-limit
+          placeholder="如：新人立减券"
+        />
+      </el-form-item>
+      <el-form-item label="优惠方式">
+        <el-radio-group
+          v-model="form.type"
+          @change="onTypeChange"
+        >
+          <el-radio :value="CouponType.Fixed">
+            满减
+          </el-radio>
+          <el-radio :value="CouponType.Percent">
+            折扣
+          </el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item
+        v-if="form.type === CouponType.Fixed"
+        label="减免金额"
+      >
+        <el-input-number
+          v-model="valueYuan"
+          :min="0.01"
+          :precision="2"
+          controls-position="right"
+        />
+        <span class="coupon-form__hint">元</span>
+      </el-form-item>
+      <el-form-item
+        v-else
+        label="折扣"
+      >
+        <el-input-number
+          v-model="valueZhe"
+          :min="0.1"
+          :max="9.9"
+          :precision="1"
+          controls-position="right"
+        />
+        <span class="coupon-form__hint">折（如 9.5 = 九五折）</span>
+      </el-form-item>
+      <el-form-item label="使用门槛">
+        <el-input-number
+          v-model="thresholdYuan"
+          :min="0"
+          :precision="2"
+          controls-position="right"
+        />
+        <span class="coupon-form__hint">元，0 = 无门槛</span>
+      </el-form-item>
+      <el-form-item label="发行总量">
+        <el-input-number
+          v-model="form.totalCount"
+          :min="1"
+          :max="COUPON_LIMITS.totalCountMax"
+          controls-position="right"
+        />
+        <span class="coupon-form__hint">张</span>
+      </el-form-item>
+      <el-form-item label="单人限领">
+        <el-input-number
+          v-model="form.perUserLimit"
+          :min="1"
+          :max="COUPON_LIMITS.perUserLimitMax"
+          controls-position="right"
+        />
+        <span class="coupon-form__hint">张</span>
+      </el-form-item>
+      <el-form-item label="有效期">
+        <el-date-picker
+          v-model="validRange"
+          type="datetimerange"
+          range-separator="至"
+          start-placeholder="开始时间"
+          end-placeholder="结束时间"
+          value-format="YYYY-MM-DDTHH:mm:ssZ"
+        />
+      </el-form-item>
+      <el-form-item label="上架">
+        <el-switch v-model="form.enabled" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="visible = false">
+        取消
+      </el-button>
+      <el-button
+        type="primary"
+        :loading="submitting"
+        @click="emit('submit')"
+      >
+        保存
+      </el-button>
+    </template>
+  </el-dialog>
+</template>
+
+<style scoped>
+.coupon-form__hint {
+  margin-left: 10px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+</style>

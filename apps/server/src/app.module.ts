@@ -18,6 +18,9 @@ import { NoticeModule } from './modules/notice/notice.module';
 import { OrderModule } from './modules/order/order.module';
 import { ReviewModule } from './modules/review/review.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { CouponModule } from './modules/coupon/coupon.module';
+import { ActivityModule } from './modules/activity/activity.module';
+import { RankModule } from './modules/rank/rank.module';
 
 /**
  * 应用根模块。
@@ -44,6 +47,9 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     OrderModule,
     ReviewModule,
     DashboardModule,
+    CouponModule,
+    ActivityModule,
+    RankModule,
   ],
 })
 export class AppModule {}

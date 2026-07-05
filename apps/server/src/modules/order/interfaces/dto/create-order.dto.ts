@@ -32,4 +32,8 @@ export class CreateOrderDto implements CreateOrderPayload {
   @IsString()
   @MaxLength(ORDER_LIMITS.remarkMax)
   remark?: string;
+
+  @IsOptional()
+  @IsString()
+  userCouponId?: string;
 }

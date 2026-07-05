@@ -9,6 +9,7 @@ import {
   PaymentCallbackRequest,
   PaymentCallbackResult,
   PaymentPort,
+  PaymentQueryResult,
   RechargeCreateInput,
   RechargeCreateResult,
 } from '../../domain/payment-port.interface';
@@ -18,10 +19,19 @@ import { WechatPayConfig, WechatPayConfigFactory } from './wechat-pay.config';
 const WECHAT_API_BASE = 'https://api.mch.weixin.qq.com';
 /** Native 下单路径 */
 const NATIVE_PATH = '/v3/pay/transactions/native';
+/** 商户订单号查单路径前缀 */
+const QUERY_PATH_PREFIX = '/v3/pay/transactions/out-trade-no/';
 
 /** Native 下单成功响应体 */
 interface NativePrepayResponse {
   code_url: string;
+}
+
+/** 查单响应体（仅取所需字段） */
+interface TransactionQueryResponse {
+  transaction_id?: string;
+  trade_state: string;
+  amount?: { payer_total?: number };
 }
 
 /** 回调报文外层结构 */
@@ -44,7 +54,8 @@ interface DecryptedResource {
 /**
  * 微信支付 v3「Native 扫码支付」充值驱动。
  * 依官方协议自行完成请求签名（RSA）与回调验签（RSA）+ 报文解密（AES-GCM），
- * 下单返回 code_url 供前端渲染二维码；支付后微信异步通知，验签解密后入账。
+ * 下单返回 code_url 供前端渲染二维码；支付后微信异步通知，验签解密后入账；
+ * 同时提供商户订单号查单接口，回调未达时兜底确认支付结果。
  */
 @Injectable()
 export class WechatPaymentDriver implements PaymentPort {
@@ -101,6 +112,28 @@ export class WechatPaymentDriver implements PaymentPort {
       providerTradeNo: resource.transaction_id,
       paidAmountFen: resource.amount.payer_total,
       success: resource.trade_state === 'SUCCESS',
+    };
+  }
+
+  async queryTrade(outTradeNo: string): Promise<PaymentQueryResult> {
+    const cfg = await this.configFactory.load();
+    const path = `${QUERY_PATH_PREFIX}${encodeURIComponent(outTradeNo)}?mchid=${cfg.mchId}`;
+    const authorization = this.sign(cfg, 'GET', path, '');
+    const resp = await fetch(`${WECHAT_API_BASE}${path}`, {
+      headers: { Authorization: authorization, Accept: 'application/json' },
+    });
+    // 单据不存在（用户未扫码）等非 200 均视为未支付，交由上层继续轮询
+    if (resp.status !== 200) {
+      return { paid: false, providerTradeNo: '', paidAmountFen: 0 };
+    }
+    const data = (await resp.json()) as TransactionQueryResponse;
+    if (data.trade_state !== 'SUCCESS') {
+      return { paid: false, providerTradeNo: '', paidAmountFen: 0 };
+    }
+    return {
+      paid: true,
+      providerTradeNo: data.transaction_id ?? '',
+      paidAmountFen: data.amount?.payer_total ?? 0,
     };
   }
 

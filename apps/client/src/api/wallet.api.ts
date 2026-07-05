@@ -3,6 +3,7 @@ import type {
   CreateRechargeResult,
   CreateWithdrawalBody,
   PaginatedResult,
+  RechargeStatusView,
   WalletTransactionView,
   WalletView,
   WithdrawalResultView,
@@ -25,6 +26,10 @@ export const walletApi = {
   /** 发起充值，返回扫码支付二维码内容 */
   recharge(body: CreateRechargeBody): Promise<CreateRechargeResult> {
     return http.post('/wallet/recharge', body);
+  },
+  /** 主动查询充值支付结果（调渠道官方查单兜底，回调未达也能确认入账） */
+  rechargeStatus(outTradeNo: string): Promise<RechargeStatusView> {
+    return http.get(`/wallet/recharge/${outTradeNo}/status`);
   },
   /** 发起提现（支付宝转账） */
   withdraw(body: CreateWithdrawalBody): Promise<WithdrawalResultView> {

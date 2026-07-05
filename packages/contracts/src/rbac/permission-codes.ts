@@ -110,6 +110,22 @@ export const PERMS = {
     /** 仪表盘-打手生态统计 */
     boosters: 'dashboard:boosters',
   },
+  coupon: {
+    /** 优惠券列表查看（管理端） */
+    list: 'coupon:list',
+    /** 优惠券新建/编辑/启停 */
+    save: 'coupon:save',
+    /** 优惠券删除 */
+    remove: 'coupon:remove',
+  },
+  activity: {
+    /** 福利活动列表查看（管理端） */
+    list: 'activity:list',
+    /** 活动新建/编辑/启停 */
+    save: 'activity:save',
+    /** 活动删除 */
+    remove: 'activity:remove',
+  },
   notice: {
     list: 'notice:list',
     save: 'notice:save',

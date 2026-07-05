@@ -27,6 +27,16 @@ export interface PaymentCallbackRequest {
   headers: Record<string, string | undefined>;
 }
 
+/** 主动查单结果（调用渠道官方查询接口，回调未达时兜底确认支付结果） */
+export interface PaymentQueryResult {
+  /** 是否已支付成功 */
+  paid: boolean;
+  /** 渠道交易号（已支付时有值） */
+  providerTradeNo: string;
+  /** 实付金额（分，已支付时有值） */
+  paidAmountFen: number;
+}
+
 /** 支付渠道回调解析结果 */
 export interface PaymentCallbackResult {
   /** 商户订单号 */
@@ -51,6 +61,8 @@ export interface PaymentPort {
   createRecharge(input: RechargeCreateInput): Promise<RechargeCreateResult>;
   /** 验签并解析异步回调；验签失败抛异常 */
   parseCallback(req: PaymentCallbackRequest): Promise<PaymentCallbackResult>;
+  /** 主动查单（渠道官方查询接口）；单据不存在/未支付返回 paid=false，不抛异常 */
+  queryTrade(outTradeNo: string): Promise<PaymentQueryResult>;
   /** 处理成功后应答给渠道的报文（支付宝为 success，微信为 JSON 串） */
   callbackAck(): string;
 }

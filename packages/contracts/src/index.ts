@@ -27,3 +27,6 @@ export * from './notice/notice';
 export * from './order/order';
 export * from './review/review';
 export * from './dashboard/dashboard';
+export * from './coupon/coupon';
+export * from './activity/activity';
+export * from './rank/rank';

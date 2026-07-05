@@ -48,6 +48,8 @@ export interface CreateOrderPayload {
   provider: PaymentProvider;
   /** 用户备注（大区/段位/开黑时间等，选填） */
   remark?: string;
+  /** 抵扣用的我的优惠券 id（选填，不用券不传） */
+  userCouponId?: string;
 }
 
 /** 创建订单结果（扫码支付：二维码内容） */
@@ -63,6 +65,8 @@ export interface CreateOrderResult {
   originalAmountFen: number;
   /** 会员折扣（万分比，10000 = 未打折） */
   discountBp: number;
+  /** 优惠券抵扣金额（分，未用券为 0） */
+  couponDeductionFen: number;
 }
 
 /** 管理端订单视图：在 C 端视图之上补充归属用户/客服快照/渠道交易号 */
@@ -93,6 +97,8 @@ export interface OrderView {
   originalAmountFen: number;
   /** 下单时会员折扣快照（万分比，10000 = 未打折） */
   discountBp: number;
+  /** 优惠券抵扣金额快照（分，未用券为 0） */
+  couponDeductionFen: number;
   /** 打手提成金额（分，完成结算后回填；未结算为 0） */
   commissionFen: number;
   /** 打手提成费率快照（万分比，完成结算后回填；未结算为 0） */

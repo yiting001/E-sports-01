@@ -41,14 +41,18 @@ watch(
       />
       <div class="dashboard-chart-grid">
         <div class="dashboard-chart-card">
-          <div class="dashboard-chart-card__title">申请趋势</div>
+          <div class="dashboard-chart-card__title">
+            申请趋势
+          </div>
           <e-chart
             :option="lineTrendOption(stats.applicationTrend, '申请数')"
             height="240px"
           />
         </div>
         <div class="dashboard-chart-card">
-          <div class="dashboard-chart-card__title">打手等级分布</div>
+          <div class="dashboard-chart-card__title">
+            打手等级分布
+          </div>
           <e-chart
             :option="pieOption(stats.levelDistribution, '打手等级')"
             height="240px"

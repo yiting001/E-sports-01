@@ -71,6 +71,48 @@ export const router = createRouter({
       meta: { title: '个人信息', requiresAuth: true },
     },
     {
+      path: '/coupons/center',
+      name: 'coupon-center',
+      component: () => import('@/views/coupon/CouponCenterView.vue'),
+      meta: { title: '领券中心', requiresAuth: true },
+    },
+    {
+      path: '/coupons/mine',
+      name: 'my-coupons',
+      component: () => import('@/views/coupon/MyCouponsView.vue'),
+      meta: { title: '我的优惠券', requiresAuth: true },
+    },
+    {
+      path: '/member/levels',
+      name: 'member-levels',
+      component: () => import('@/views/member/MemberLevelsView.vue'),
+      meta: { title: '会员等级', requiresAuth: true },
+    },
+    {
+      path: '/rank',
+      name: 'rank',
+      component: () => import('@/views/rank/RankView.vue'),
+      meta: { title: '排行榜', requiresAuth: true },
+    },
+    {
+      path: '/activities',
+      name: 'activities',
+      component: () => import('@/views/activity/ActivityListView.vue'),
+      meta: { title: '福利活动', requiresAuth: true },
+    },
+    {
+      path: '/activities/:id',
+      name: 'activity-detail',
+      component: () => import('@/views/activity/ActivityDetailView.vue'),
+      meta: { title: '活动详情', requiresAuth: true },
+    },
+    {
+      path: '/build',
+      name: 'build-intro',
+      component: () => import('@/views/profile/BuildIntroView.vue'),
+      meta: { title: '搭建同款电竞系统' },
+    },
+    {
       path: '/profile/booster',
       name: 'booster-apply',
       component: () => import('@/views/profile/BoosterApplyView.vue'),

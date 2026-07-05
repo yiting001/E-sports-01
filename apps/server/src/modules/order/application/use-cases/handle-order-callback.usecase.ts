@@ -1,25 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { OrderStatus, PaymentProvider } from '@app/contracts';
-import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
-import { ProductEntity } from '../../../commerce/domain/product.entity';
-import { MemberProgressService } from '../../../member/application/member-progress.service';
+import { PaymentProvider } from '@app/contracts';
 import { PaymentCallbackRequest } from '../../../wallet/domain/payment-port.interface';
 import { PaymentResolver } from '../../../wallet/application/payment.resolver';
-import { OrderEntity } from '../../domain/order.entity';
+import { OrderPaymentSettleService } from '../order-payment.service';
 
 /**
  * 用例：处理订单支付异步回调。
- * 按渠道验签解析 → 事务内以 orderNo 幂等定位订单：仅「待付款且金额一致」时
- * 标记已支付进入「待客服处理」，并累加商品销量与用户会员累计消费；
- * 重复回调直接应答成功。
+ * 按渠道验签解析 → 支付成功则经 OrderPaymentSettleService 幂等落账
+ * （与主动查单共用同一落账口）；重复回调直接应答成功。
  */
 @Injectable()
 export class HandleOrderCallbackUseCase {
   constructor(
     private readonly paymentResolver: PaymentResolver,
-    @InjectDataSource() private readonly dataSource: DataSource,
-    private readonly memberProgress: MemberProgressService,
+    private readonly settle: OrderPaymentSettleService,
   ) {}
 
   async execute(
@@ -29,44 +23,12 @@ export class HandleOrderCallbackUseCase {
     const port = this.paymentResolver.resolve(provider);
     const result = await port.parseCallback(req);
     if (result.success) {
-      await this.markPaid(
+      await this.settle.markPaid(
         result.outTradeNo,
         result.providerTradeNo,
         result.paidAmountFen,
       );
     }
     return port.callbackAck();
-  }
-
-  /** 事务 + 行锁内幂等落账：待付款 → 待客服处理，并累加商品销量 */
-  private async markPaid(
-    orderNo: string,
-    providerTradeNo: string,
-    paidAmountFen: number,
-  ): Promise<void> {
-    const paidUserId = await this.dataSource.transaction(async (m) => {
-      const order = await m.getRepository(OrderEntity).findOne({
-        where: { orderNo },
-        lock: { mode: 'pessimistic_write' },
-      });
-      if (
-        !order ||
-        order.status !== OrderStatus.PendingPayment ||
-        order.amountFen !== paidAmountFen
-      ) {
-        return null;
-      }
-      order.status = OrderStatus.PendingService;
-      order.providerTradeNo = providerTradeNo;
-      order.paidAt = new Date();
-      await m.getRepository(OrderEntity).save(order);
-      await m
-        .getRepository(ProductEntity)
-        .increment({ id: order.productId }, 'sold', order.quantity);
-      return order.userId;
-    });
-    if (paidUserId) {
-      await this.memberProgress.recordSpend(paidUserId, paidAmountFen);
-    }
   }
 }

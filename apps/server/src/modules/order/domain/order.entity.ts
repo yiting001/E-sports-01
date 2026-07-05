@@ -58,6 +58,14 @@ export class OrderEntity extends TenantScopedEntity {
   @Column({ name: 'discount_bp', type: 'int', default: FEE_RATE_BASE })
   discountBp!: number;
 
+  /** 抵扣用的用户券 id（未用券为 null，取消订单据此回退） */
+  @Column({ name: 'user_coupon_id', type: 'varchar', length: 36, nullable: true })
+  userCouponId!: string | null;
+
+  /** 优惠券抵扣金额快照（分，未用券为 0） */
+  @Column({ name: 'coupon_deduction_fen', type: 'bigint', default: 0, transformer: bigintTransformer })
+  couponDeductionFen!: number;
+
   /** 打手提成金额（分，完成结算时回填） */
   @Column({ name: 'commission_fen', type: 'bigint', default: 0, transformer: bigintTransformer })
   commissionFen!: number;

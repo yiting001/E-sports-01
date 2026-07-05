@@ -232,7 +232,9 @@ function openModule(item: ModuleCard | MenuItem): void {
       title="经营数据"
       eyebrow="Analytics"
     >
-      <div class="empty-state">当前账号暂无仪表盘统计权限</div>
+      <div class="empty-state">
+        当前账号暂无仪表盘统计权限
+      </div>
     </app-panel>
 
     <section class="dashboard-workspace">

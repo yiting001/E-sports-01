@@ -8,13 +8,19 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   ORDER_LIMITS,
   PaymentProvider,
+  UserCouponStatus,
+  calcCouponDeductionFen,
+  calcDiscountedFen,
   fenToYuan,
   type CreateOrderResult,
   type ProductPublicView,
+  type UserCouponView,
 } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import PayDialog from '@/components/order/PayDialog.vue';
 import { commerceApi } from '@/api/commerce.api';
+import { couponApi } from '@/api/coupon.api';
+import { memberApi } from '@/api/member.api';
 import { orderApi } from '@/api/order.api';
 import { useToast } from '@/composables/use-toast';
 import './CheckoutView.responsive.css';
@@ -39,10 +45,68 @@ const provider = ref<PaymentProvider>(PaymentProvider.Alipay);
 const submitting = ref(false);
 const payOrder = ref<CreateOrderResult | null>(null);
 
-/** 应付总额（分 → 元展示，由 contracts 工具换算） */
-const totalYuan = computed(() =>
-  product.value ? fenToYuan(product.value.priceFen * quantity.value) : '0.00',
+/** 我的可用优惠券与所选券（空串 = 不使用） */
+const coupons = ref<UserCouponView[]>([]);
+const selectedCouponId = ref('');
+const couponListOpen = ref(false);
+/** 当前会员折扣（万分比），与后端计价口径一致 */
+const discountBp = ref(0);
+
+/** 会员折后金额（分）：优惠券门槛与抵扣都以此为基数（与后端一致） */
+const memberAmountFen = computed(() =>
+  product.value
+    ? calcDiscountedFen(product.value.priceFen * quantity.value, discountBp.value)
+    : 0,
 );
+
+/** 按当前金额可用的券（未使用、未过期且达门槛） */
+const usableCoupons = computed(() =>
+  coupons.value.filter(
+    (item) =>
+      item.status === UserCouponStatus.Unused &&
+      !item.expired &&
+      calcCouponDeductionFen(item.type, item.value, item.thresholdFen, memberAmountFen.value) > 0,
+  ),
+);
+
+const selectedCoupon = computed(() =>
+  usableCoupons.value.find((item) => item.id === selectedCouponId.value) ?? null,
+);
+
+/** 券抵扣金额（分）：实付至少保留 1 分，与后端口径一致 */
+const couponDeductionFen = computed(() => {
+  const coupon = selectedCoupon.value;
+  if (!coupon) {
+    return 0;
+  }
+  const deduction = calcCouponDeductionFen(
+    coupon.type,
+    coupon.value,
+    coupon.thresholdFen,
+    memberAmountFen.value,
+  );
+  return Math.min(deduction, memberAmountFen.value - 1);
+});
+
+/** 应付总额（会员折后再减券抵扣，分 → 元展示） */
+const totalYuan = computed(() =>
+  fenToYuan(memberAmountFen.value - couponDeductionFen.value),
+);
+
+/** 优惠券行文案 */
+const couponRowText = computed(() => {
+  if (selectedCoupon.value) {
+    return `-¥${fenToYuan(couponDeductionFen.value)}`;
+  }
+  return usableCoupons.value.length
+    ? `${usableCoupons.value.length} 张可用`
+    : '暂无可用';
+});
+
+function pickCoupon(id: string): void {
+  selectedCouponId.value = selectedCouponId.value === id ? '' : id;
+  couponListOpen.value = false;
+}
 
 function changeQuantity(delta: number): void {
   const next = quantity.value + delta;
@@ -62,6 +126,7 @@ async function submit(): Promise<void> {
       quantity: quantity.value,
       provider: provider.value,
       remark: remark.value.trim() || undefined,
+      userCouponId: selectedCoupon.value?.id || undefined,
     });
   } finally {
     submitting.value = false;
@@ -76,7 +141,14 @@ function onPaid(): void {
 
 onMounted(async () => {
   try {
-    product.value = await commerceApi.getProduct(String(route.params.productId));
+    const [detail, mine, member] = await Promise.all([
+      commerceApi.getProduct(String(route.params.productId)),
+      couponApi.mine(),
+      memberApi.mine(),
+    ]);
+    product.value = detail;
+    coupons.value = mine;
+    discountBp.value = member.discountBp;
   } catch {
     missing.value = true;
   } finally {
@@ -168,6 +240,38 @@ onMounted(async () => {
               :maxlength="ORDER_LIMITS.remarkMax"
               placeholder="大区/段位/开黑时间等（选填）"
             />
+          </div>
+          <div class="row row--col">
+            <button
+              class="coupon-row"
+              :disabled="!usableCoupons.length"
+              @click="couponListOpen = !couponListOpen"
+            >
+              <span class="label">优惠券</span>
+              <span
+                class="coupon-text"
+                :class="{ active: selectedCoupon }"
+              >
+                {{ couponRowText }}
+              </span>
+            </button>
+            <div
+              v-if="couponListOpen"
+              class="coupon-list"
+            >
+              <button
+                v-for="item in usableCoupons"
+                :key="item.id"
+                class="coupon-opt"
+                :class="{ picked: item.id === selectedCouponId }"
+                @click="pickCoupon(item.id)"
+              >
+                <span class="coupon-title">{{ item.title }}</span>
+                <span class="coupon-off">
+                  -¥{{ fenToYuan(calcCouponDeductionFen(item.type, item.value, item.thresholdFen, memberAmountFen)) }}
+                </span>
+              </button>
+            </div>
           </div>
           <div class="row">
             <span class="label">支付方式</span>
@@ -263,6 +367,56 @@ onMounted(async () => {
   font-size: 13px;
   color: var(--c-text-secondary);
   padding: 24px 0;
+}
+
+.coupon-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.coupon-text {
+  font-size: 13px;
+  color: var(--c-text-secondary);
+}
+
+.coupon-text.active {
+  color: var(--c-accent);
+  font-weight: 700;
+}
+
+.coupon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.coupon-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  text-align: left;
+}
+
+.coupon-opt.picked {
+  border-color: var(--c-accent);
+  background: var(--c-accent-dim);
+}
+
+.coupon-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.coupon-off {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--c-accent);
 }
 
 .summary {

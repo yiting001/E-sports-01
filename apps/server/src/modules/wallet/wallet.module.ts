@@ -36,6 +36,7 @@ import { GetWalletStatsUseCase } from './application/use-cases/get-wallet-stats.
 import { ListTransactionsUseCase } from './application/use-cases/list-transactions.usecase';
 import { CreateRechargeUseCase } from './application/use-cases/create-recharge.usecase';
 import { HandleRechargeCallbackUseCase } from './application/use-cases/handle-recharge-callback.usecase';
+import { QueryRechargeUseCase } from './application/use-cases/query-recharge.usecase';
 import { CreateWithdrawalUseCase } from './application/use-cases/create-withdrawal.usecase';
 import { ListWalletsUseCase } from './application/use-cases/list-wallets.usecase';
 import { ListUserTransactionsUseCase } from './application/use-cases/list-user-transactions.usecase';
@@ -49,6 +50,7 @@ import { WalletStatsController } from './interfaces/controllers/wallet.stats.con
 import { WalletTransactionsController } from './interfaces/controllers/wallet.transactions.controller';
 import { RechargeCreateController } from './interfaces/controllers/recharge.create.controller';
 import { RechargeCallbackController } from './interfaces/controllers/recharge.callback.controller';
+import { RechargeQueryController } from './interfaces/controllers/recharge.query.controller';
 import { WithdrawalCreateController } from './interfaces/controllers/withdrawal.create.controller';
 import { WalletAdminListController } from './interfaces/controllers/wallet.admin.list.controller';
 import { WalletAdminTransactionsController } from './interfaces/controllers/wallet.admin.transactions.controller';
@@ -81,6 +83,7 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
     WalletTransactionsController,
     RechargeCreateController,
     RechargeCallbackController,
+    RechargeQueryController,
     WithdrawalCreateController,
     WalletAdminListController,
     WalletAdminTransactionsController,
@@ -133,6 +136,7 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
     ListTransactionsUseCase,
     CreateRechargeUseCase,
     HandleRechargeCallbackUseCase,
+    QueryRechargeUseCase,
     CreateWithdrawalUseCase,
     ListWalletsUseCase,
     ListUserTransactionsUseCase,

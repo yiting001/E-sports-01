@@ -185,6 +185,12 @@ export interface CreateRechargeResult {
   amountYuan: string;
 }
 
+/** 充值支付结果查询视图（前端轮询查单用） */
+export interface RechargeStatusView {
+  outTradeNo: string;
+  status: RechargeStatus;
+}
+
 /** 发起提现入参 */
 export interface CreateWithdrawalBody {
   /** 提现金额（分） */

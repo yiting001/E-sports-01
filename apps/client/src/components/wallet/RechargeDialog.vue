@@ -1,12 +1,14 @@
 <script setup lang="ts">
 /**
  * 充值弹层：输入金额（元）+ 选择支付宝/微信 → 发起充值拿二维码 →
- * 轮询钱包余额，入账（余额高于基线）即视为支付成功并通知父组件。
+ * 轮询主动查单接口（后端调渠道官方查单，回调未达也能确认入账），
+ * 查到已支付即通知父组件。
  */
 import { computed, onBeforeUnmount, ref } from 'vue';
 import QRCode from 'qrcode';
 import {
   PaymentProvider,
+  RechargeStatus,
   WALLET_DEFAULTS,
   fenToYuan,
   yuanToFen,
@@ -24,10 +26,6 @@ const PROVIDERS = [
 /** 支付结果轮询间隔（毫秒） */
 const POLL_INTERVAL_MS = 3000;
 
-const props = defineProps<{
-  /** 当前余额（分），作为入账判定基线 */
-  baselineFen: number;
-}>();
 const emit = defineEmits<{ paid: []; close: [] }>();
 
 const toast = useToast();
@@ -50,10 +48,13 @@ function stopPolling(): void {
   }
 }
 
-/** 轮询钱包余额：高于基线说明充值已入账 */
+/** 轮询主动查单：查到已支付即入账完成 */
 async function poll(): Promise<void> {
-  const wallet = await walletApi.mine();
-  if (wallet.balanceFen > props.baselineFen) {
+  if (!result.value) {
+    return;
+  }
+  const { status } = await walletApi.rechargeStatus(result.value.outTradeNo);
+  if (status === RechargeStatus.Paid) {
     stopPolling();
     emit('paid');
   }

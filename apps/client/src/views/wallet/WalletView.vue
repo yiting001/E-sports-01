@@ -184,7 +184,6 @@ onMounted(() => {
 
     <RechargeDialog
       v-if="recharging && wallet"
-      :baseline-fen="wallet.balanceFen"
       @paid="onRecharged"
       @close="recharging = false"
     />

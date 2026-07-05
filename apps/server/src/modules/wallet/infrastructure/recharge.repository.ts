@@ -20,6 +20,12 @@ export class TypeormRechargeRepository implements RechargeOrderRepository {
     return this.repo.save(order);
   }
 
+  findByOutTradeNo(outTradeNo: string): Promise<RechargeOrderEntity | null> {
+    return this.repo.findOne({
+      where: withTenant<RechargeOrderEntity>(this.tenant, { outTradeNo }),
+    });
+  }
+
   countPaidByWallet(walletId: string): Promise<number> {
     return this.repo.count({
       where: withTenant<RechargeOrderEntity>(this.tenant, {

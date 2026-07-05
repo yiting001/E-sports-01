@@ -4,6 +4,7 @@ import {
   PaymentCallbackRequest,
   PaymentCallbackResult,
   PaymentPort,
+  PaymentQueryResult,
   RechargeCreateInput,
   RechargeCreateResult,
 } from '../../domain/payment-port.interface';
@@ -16,7 +17,8 @@ const ALIPAY_PAID_STATUS = new Set(['TRADE_SUCCESS', 'TRADE_FINISHED']);
 
 /**
  * 支付宝充值驱动（扫码支付 alipay.trade.precreate）。
- * 下单返回二维码内容供前端渲染；用户支付后支付宝异步通知，经验签后入账。
+ * 下单返回二维码内容供前端渲染；用户支付后支付宝异步通知，经验签后入账；
+ * 同时提供 alipay.trade.query 主动查单，回调未达时兜底确认支付结果。
  */
 @Injectable()
 export class AlipayPaymentDriver implements PaymentPort {
@@ -58,6 +60,25 @@ export class AlipayPaymentDriver implements PaymentPort {
       providerTradeNo: String(body.trade_no),
       paidAmountFen: yuanToFen(String(body.total_amount)),
       success: ALIPAY_PAID_STATUS.has(String(body.trade_status)),
+    };
+  }
+
+  async queryTrade(outTradeNo: string): Promise<PaymentQueryResult> {
+    const alipay = await this.factory.create();
+    const result = await alipay.exec('alipay.trade.query', {
+      bizContent: { out_trade_no: outTradeNo },
+    });
+    // 单据不存在（用户未扫码）/ 未支付均视为未成功，交由上层继续轮询
+    if (
+      result.code !== ALIPAY_SUCCESS_CODE ||
+      !ALIPAY_PAID_STATUS.has(String(result.tradeStatus))
+    ) {
+      return { paid: false, providerTradeNo: '', paidAmountFen: 0 };
+    }
+    return {
+      paid: true,
+      providerTradeNo: String(result.tradeNo),
+      paidAmountFen: yuanToFen(String(result.totalAmount)),
     };
   }
 

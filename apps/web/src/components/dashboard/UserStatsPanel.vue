@@ -40,14 +40,18 @@ watch(
       />
       <div class="dashboard-chart-grid">
         <div class="dashboard-chart-card">
-          <div class="dashboard-chart-card__title">注册趋势</div>
+          <div class="dashboard-chart-card__title">
+            注册趋势
+          </div>
           <e-chart
             :option="lineTrendOption(stats.userTrend, '注册数')"
             height="240px"
           />
         </div>
         <div class="dashboard-chart-card">
-          <div class="dashboard-chart-card__title">会员等级分布</div>
+          <div class="dashboard-chart-card__title">
+            会员等级分布
+          </div>
           <e-chart
             :option="pieOption(stats.memberLevelDistribution, '会员等级')"
             height="240px"

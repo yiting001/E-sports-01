@@ -48,28 +48,36 @@ watch(
       />
       <div class="dashboard-chart-grid dashboard-chart-grid--quad">
         <div class="dashboard-chart-card">
-          <div class="dashboard-chart-card__title">下单趋势</div>
+          <div class="dashboard-chart-card__title">
+            下单趋势
+          </div>
           <e-chart
             :option="lineTrendOption(stats.orderTrend, '下单量')"
             height="180px"
           />
         </div>
         <div class="dashboard-chart-card">
-          <div class="dashboard-chart-card__title">GMV 趋势</div>
+          <div class="dashboard-chart-card__title">
+            GMV 趋势
+          </div>
           <e-chart
             :option="moneyTrendOption(stats.gmvTrend, 'GMV')"
             height="180px"
           />
         </div>
         <div class="dashboard-chart-card">
-          <div class="dashboard-chart-card__title">订单状态</div>
+          <div class="dashboard-chart-card__title">
+            订单状态
+          </div>
           <e-chart
             :option="pieOption(stats.statusDistribution, '订单状态')"
             height="180px"
           />
         </div>
         <div class="dashboard-chart-card">
-          <div class="dashboard-chart-card__title">商品销量 Top</div>
+          <div class="dashboard-chart-card__title">
+            商品销量 Top
+          </div>
           <e-chart
             :option="rankBarOption(stats.topProducts, '销量')"
             height="180px"

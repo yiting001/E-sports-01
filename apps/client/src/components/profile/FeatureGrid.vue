@@ -1,22 +1,31 @@
 <script setup lang="ts">
 /**
  * 更多功能网格：4 列图标入口（领券中心/会员等级/打手入驻等），金色线性图标。
- * 「打手入驻」跳转入驻申请页，其余入口暂为占位提示。
+ * 各入口按 ENTRY_ROUTES 映射跳转对应功能页。
  */
 import { useRouter } from 'vue-router';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { FEATURE_ENTRIES, type IconEntry } from '@/config/profile.mock';
-import { useToast } from '@/composables/use-toast';
+
+/** 入口 id → 路由名映射（入口清单见 FEATURE_ENTRIES） */
+const ENTRY_ROUTES: Record<string, string> = {
+  'coupon-center': 'coupon-center',
+  'my-coupons': 'my-coupons',
+  vip: 'member-levels',
+  rank: 'rank',
+  welfare: 'activities',
+  join: 'booster-apply',
+  announce: 'notices',
+  build: 'build-intro',
+};
 
 const router = useRouter();
-const toast = useToast();
 
 function onEntry(entry: IconEntry): void {
-  if (entry.id === 'join') {
-    void router.push({ name: 'booster-apply' });
-    return;
+  const name = ENTRY_ROUTES[entry.id];
+  if (name) {
+    void router.push({ name });
   }
-  toast.show(`「${entry.label}」即将上线`);
 }
 </script>
 

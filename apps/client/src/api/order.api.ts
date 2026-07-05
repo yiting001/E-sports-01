@@ -17,6 +17,10 @@ export const orderApi = {
   detail(id: string): Promise<OrderView> {
     return http.get(`/order/${id}`);
   },
+  /** 主动查询支付结果（调渠道官方查单兜底，回调未达也能确认支付） */
+  payQuery(id: string): Promise<OrderView> {
+    return http.get(`/order/${id}/pay/query`);
+  },
   /** 分页查询我的订单（可按状态过滤） */
   mine(
     page: number,

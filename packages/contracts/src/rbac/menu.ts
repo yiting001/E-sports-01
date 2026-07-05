@@ -104,6 +104,22 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     group: 'commerce',
   },
   {
+    code: 'coupon:menu',
+    title: '优惠券管理',
+    path: 'coupon',
+    icon: 'Discount',
+    sort: 7,
+    group: 'commerce',
+  },
+  {
+    code: 'activity:menu',
+    title: '福利活动',
+    path: 'activity',
+    icon: 'Present',
+    sort: 8,
+    group: 'commerce',
+  },
+  {
     code: 'finance:withdrawal:menu',
     title: '提现管理',
     path: 'finance/withdrawals',

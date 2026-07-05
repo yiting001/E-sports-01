@@ -58,14 +58,18 @@ watch(
       />
       <div class="dashboard-chart-grid">
         <div class="dashboard-chart-card">
-          <div class="dashboard-chart-card__title">收支趋势</div>
+          <div class="dashboard-chart-card__title">
+            收支趋势
+          </div>
           <e-chart
             :option="flowTrendOption(stats.flowTrend)"
             height="240px"
           />
         </div>
         <div class="dashboard-chart-card">
-          <div class="dashboard-chart-card__title">流水类型金额</div>
+          <div class="dashboard-chart-card__title">
+            流水类型金额
+          </div>
           <e-chart
             :option="pieOption(typeDistributionYuan, '流水金额（元）')"
             height="240px"

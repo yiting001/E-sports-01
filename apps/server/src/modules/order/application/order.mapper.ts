@@ -18,6 +18,7 @@ export function toOrderView(entity: OrderEntity): OrderView {
     amountYuan: fenToYuan(entity.amountFen),
     originalAmountFen: entity.originalAmountFen,
     discountBp: entity.discountBp,
+    couponDeductionFen: entity.couponDeductionFen,
     commissionFen: entity.commissionFen,
     commissionRateBp: entity.commissionRateBp,
     provider: entity.provider,
