@@ -248,7 +248,8 @@
 @media (min-width: 768px) {
   .chat-panel--fullscreen {
     position: static;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     padding: 28px 24px 24px;
     background: transparent;
   }
