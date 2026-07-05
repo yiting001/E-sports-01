@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 我的订单页（全屏）：分页列出本人订单（商品快照/数量/金额/状态），
- * 待付款订单可取消；下拉到底加载更多。
+ * 待付款订单可取消，已完成订单可评价（一单一评）；下拉到底加载更多。
  */
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -11,7 +11,9 @@ import {
   type OrderView,
 } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
+import ReviewDialog from '@/components/review/ReviewDialog.vue';
 import { orderApi } from '@/api/order.api';
+import { reviewApi } from '@/api/review.api';
 import { useToast } from '@/composables/use-toast';
 
 const PAGE_SIZE = 10;
@@ -23,6 +25,10 @@ const orders = ref<OrderView[]>([]);
 const page = ref(1);
 const total = ref(0);
 const loading = ref(false);
+/** 已评价的订单 id 集合（控制「评价/已评价」展示） */
+const reviewedIds = ref<Set<string>>(new Set());
+/** 当前正在评价的订单；非空时展示评价弹层 */
+const reviewingOrder = ref<OrderView | null>(null);
 
 /** 状态 → 徽标风格（进行中金色/完成绿色/取消灰色） */
 function statusClass(status: OrderStatus): string {
@@ -35,6 +41,18 @@ function statusClass(status: OrderStatus): string {
   return 'tag--accent';
 }
 
+/** 同步已完成订单的评价状态 */
+async function loadReviewed(list: OrderView[]): Promise<void> {
+  const completedIds = list
+    .filter((order) => order.status === OrderStatus.Completed)
+    .map((order) => order.id);
+  if (completedIds.length === 0) {
+    return;
+  }
+  const ids = await reviewApi.reviewedOrderIds(completedIds);
+  reviewedIds.value = new Set([...reviewedIds.value, ...ids]);
+}
+
 async function load(reset = false): Promise<void> {
   if (loading.value) {
     return;
@@ -43,10 +61,12 @@ async function load(reset = false): Promise<void> {
   try {
     if (reset) {
       page.value = 1;
+      reviewedIds.value = new Set();
     }
     const result = await orderApi.mine(page.value, PAGE_SIZE);
     orders.value = reset ? result.list : [...orders.value, ...result.list];
     total.value = result.total;
+    await loadReviewed(result.list);
   } finally {
     loading.value = false;
   }
@@ -68,6 +88,14 @@ async function cancel(order: OrderView): Promise<void> {
 
 function formatTime(iso: string): string {
   return iso ? iso.slice(0, 16).replace('T', ' ') : '';
+}
+
+/** 评价提交成功：标记已评价并关闭弹层 */
+function onReviewed(): void {
+  if (reviewingOrder.value) {
+    reviewedIds.value = new Set([...reviewedIds.value, reviewingOrder.value.id]);
+  }
+  reviewingOrder.value = null;
 }
 
 onMounted(() => void load(true));
@@ -145,6 +173,22 @@ onMounted(() => void load(true));
             取消订单
           </button>
         </div>
+        <div
+          v-else-if="order.status === OrderStatus.Completed"
+          class="actions"
+        >
+          <span
+            v-if="reviewedIds.has(order.id)"
+            class="reviewed"
+          >已评价</span>
+          <button
+            v-else
+            class="review"
+            @click="reviewingOrder = order"
+          >
+            评价
+          </button>
+        </div>
       </article>
 
       <button
@@ -156,6 +200,13 @@ onMounted(() => void load(true));
         {{ loading ? '加载中…' : '加载更多' }}
       </button>
     </div>
+
+    <ReviewDialog
+      v-if="reviewingOrder"
+      :order="reviewingOrder"
+      @submitted="onReviewed"
+      @close="reviewingOrder = null"
+    />
   </div>
 </template>
 
@@ -311,6 +362,21 @@ onMounted(() => void load(true));
   color: var(--c-text-secondary);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
+}
+
+.review {
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-accent);
+  border: 1px solid var(--c-accent);
+  border-radius: var(--radius-sm);
+}
+
+.reviewed {
+  padding: 6px 4px;
+  font-size: 12px;
+  color: var(--c-text-muted);
 }
 
 .more {

@@ -59,5 +59,6 @@ import { OrderAdminDetailController } from './interfaces/controllers/order.admin
     ListAdminOrdersUseCase,
     GetAdminOrderUseCase,
   ],
+  exports: [ORDER_REPOSITORY],
 })
 export class OrderModule {}

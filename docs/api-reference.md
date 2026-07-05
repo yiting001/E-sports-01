@@ -224,6 +224,17 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | GET | `/api/order/:id` | 登录 | 我的单笔订单（支付结果轮询/详情），仅本人可见 |
 | POST | `/api/order/:id/cancel` | 登录 | 取消待付款订单（已支付订单不可取消） |
 
+## 商品评论
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/review/public/product/:productId` | 公开 | 商品可见评论分页 `?page&pageSize`，附带平均分 `avgRating`（评论人昵称脱敏） |
+| POST | `/api/review` | 登录 | 对本人已完成订单发表评论 `{ orderId, rating(1-5), content }`，一单一评 |
+| GET | `/api/review/mine/reviewed` | 登录 | 给定订单集合中本人已评价的订单 id `?orderIds=a,b` |
+| GET | `/api/review` | `review:admin:list` | 管理端分页检索评论 `?page&pageSize&rating&visible` |
+| POST | `/api/review/:id/visibility` | `review:admin:moderate` | 隐藏/恢复评论 `{ visible }` |
+| DELETE | `/api/review/:id` | `review:admin:remove` | 删除评论（硬删除，删除后该订单可重新评价） |
+
 ## 权限码一览（contracts `PERMS`）
 
 | 模块 | 权限码 |
@@ -238,6 +249,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | 钱包管理 | `wallet:admin:list` `wallet:admin:transaction` `wallet:admin:adjust` |
 | 实名 | `realname:list` `realname:review` `realname:policy` |
 | 反馈 | `feedback:list` `feedback:handle` |
+| 评论 | `review:admin:list` `review:admin:moderate` `review:admin:remove` |
 | 通知 | `notice:list` `notice:save` `notice:remove` `notice:banner` |
 
 ## 业务状态码（`BizCode`）
