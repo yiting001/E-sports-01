@@ -90,6 +90,9 @@ export class TypeormOrderRepository implements OrderRepository {
     if (filter.orderNo) {
       where.orderNo = filter.orderNo;
     }
+    if (filter.serviceAgentId) {
+      where.serviceAgentId = filter.serviceAgentId;
+    }
     return this.repo.findAndCount({
       where: withTenant<OrderEntity>(this.tenant, where),
       order: { createdAt: 'DESC' },

@@ -18,6 +18,7 @@ import { Refresh, Search } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import OrderDetailDrawer from '@/components/order/OrderDetailDrawer.vue';
+import AssignBoosterDialog from '@/components/order/AssignBoosterDialog.vue';
 import ProductPreviewDialog from '@/components/order/ProductPreviewDialog.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { orderApi } from '@/api/order.api';
@@ -36,6 +37,15 @@ const current = ref<AdminOrderView | null>(null);
 
 const productVisible = ref(false);
 const productId = ref('');
+
+const assignVisible = ref(false);
+const assignTarget = ref<AdminOrderView | null>(null);
+
+/** 打开指派打手弹窗 */
+function openAssign(row: AdminOrderView): void {
+  assignTarget.value = row;
+  assignVisible.value = true;
+}
 
 /** 点击订单中的商品 → 弹窗预览商品详情 */
 function openProduct(id: string): void {
@@ -242,7 +252,7 @@ onMounted(load);
         </el-table-column>
         <el-table-column
           label="操作"
-          width="150"
+          width="210"
         >
           <template #default="{ row }">
             <el-button
@@ -260,6 +270,18 @@ onMounted(load);
               @click="dispatch(row)"
             >
               下发大厅
+            </el-button>
+            <el-button
+              v-if="
+                row.status === OrderStatus.PendingService ||
+                  row.status === OrderStatus.Dispatching
+              "
+              v-permission="PERMS.order.assign"
+              link
+              type="primary"
+              @click="openAssign(row)"
+            >
+              指派打手
             </el-button>
           </template>
         </el-table-column>
@@ -289,6 +311,12 @@ onMounted(load);
     <product-preview-dialog
       v-model="productVisible"
       :product-id="productId"
+    />
+
+    <assign-booster-dialog
+      v-model="assignVisible"
+      :order="assignTarget"
+      @assigned="load"
     />
   </section>
 </template>

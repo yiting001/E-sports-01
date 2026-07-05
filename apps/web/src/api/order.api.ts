@@ -2,6 +2,7 @@ import type {
   AdminOrderView,
   OrderStatus,
   PaginatedResult,
+  ServiceAgentOption,
 } from '@app/contracts';
 import { http } from './http';
 
@@ -25,5 +26,19 @@ export const orderApi = {
   /** 把「待客服处理」订单下发到接单大厅 */
   dispatch(id: string): Promise<AdminOrderView> {
     return http.post(`/order/admin/${id}/dispatch`);
+  },
+  /** 指派指定打手完成订单 */
+  assign(id: string, boosterId: string): Promise<AdminOrderView> {
+    return http.post(`/order/admin/${id}/assign`, { boosterId });
+  },
+  /** 分页查询可被指派的平台打手候选 */
+  boosterCandidates(
+    page: number,
+    pageSize: number,
+    keyword?: string,
+  ): Promise<PaginatedResult<ServiceAgentOption>> {
+    return http.get('/order/admin/booster-candidates', {
+      params: { page, pageSize, keyword: keyword || undefined },
+    });
   },
 };

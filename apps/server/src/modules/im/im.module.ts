@@ -20,6 +20,7 @@ import { ConversationAccessService } from './application/conversation-access.ser
 import { ConversationViewAssembler } from './application/conversation-view.assembler';
 import { ConversationNotifier } from './application/conversation-notifier.service';
 import { ServiceAssignmentService } from './application/service-assignment.service';
+import { GroupFacade } from './application/group-facade.service';
 
 import { GetHistoryUseCase } from './application/use-cases/get-history.usecase';
 import { SendMessageUseCase } from './application/use-cases/send-message.usecase';
@@ -100,6 +101,7 @@ import { ServiceCloseController } from './interfaces/controllers/service.close.c
     ConversationViewAssembler,
     ConversationNotifier,
     ServiceAssignmentService,
+    GroupFacade,
     GetHistoryUseCase,
     SendMessageUseCase,
     MarkReadUseCase,
@@ -118,5 +120,6 @@ import { ServiceCloseController } from './interfaces/controllers/service.close.c
     CloseServiceUseCase,
     ImGateway,
   ],
+  exports: [GroupFacade],
 })
 export class ImModule {}

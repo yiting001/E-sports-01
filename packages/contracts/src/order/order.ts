@@ -109,4 +109,6 @@ export interface OrderView {
   createdAt: string;
   /** 支付时间（未支付为空串） */
   paidAt: string;
+  /** 订单群会话 id（支付成功自动建群后回填；未建群为空串） */
+  conversationId: string;
 }

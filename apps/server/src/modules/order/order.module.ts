@@ -7,6 +7,7 @@ import { WalletModule } from '../wallet/wallet.module';
 import { BoosterModule } from '../booster/booster.module';
 import { MemberModule } from '../member/member.module';
 import { CouponModule } from '../coupon/coupon.module';
+import { ImModule } from '../im/im.module';
 
 import { OrderEntity } from './domain/order.entity';
 import { ORDER_REPOSITORY } from './domain/order-repository.interface';
@@ -27,6 +28,10 @@ import { AcceptHallOrderUseCase } from './application/use-cases/accept-hall-orde
 import { ListBoosterOrdersUseCase } from './application/use-cases/list-booster-orders.usecase';
 import { CompleteBoosterOrderUseCase } from './application/use-cases/complete-booster-order.usecase';
 import { BoosterAccess } from './application/booster-access.service';
+import { OrderGroupService } from './application/order-group.service';
+import { ServiceAgentScope } from './application/service-agent-scope.service';
+import { AssignOrderBoosterUseCase } from './application/use-cases/assign-order-booster.usecase';
+import { ListBoosterCandidatesUseCase } from './application/use-cases/list-booster-candidates.usecase';
 
 import { OrderCreateController } from './interfaces/controllers/order.create.controller';
 import { OrderCallbackController } from './interfaces/controllers/order.callback.controller';
@@ -37,6 +42,8 @@ import { OrderCancelController } from './interfaces/controllers/order.cancel.con
 import { OrderAdminListController } from './interfaces/controllers/order.admin.list.controller';
 import { OrderAdminDetailController } from './interfaces/controllers/order.admin.detail.controller';
 import { OrderAdminDispatchController } from './interfaces/controllers/order.admin.dispatch.controller';
+import { OrderAdminAssignController } from './interfaces/controllers/order.admin.assign.controller';
+import { OrderAdminBoosterCandidatesController } from './interfaces/controllers/order.admin.booster-candidates.controller';
 import { OrderHallListController } from './interfaces/controllers/order.hall.list.controller';
 import { OrderHallAcceptController } from './interfaces/controllers/order.hall.accept.controller';
 import { OrderBoosterListController } from './interfaces/controllers/order.booster.list.controller';
@@ -58,6 +65,7 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     BoosterModule,
     MemberModule,
     CouponModule,
+    ImModule,
     TypeOrmModule.forFeature([OrderEntity]),
   ],
   controllers: [
@@ -70,7 +78,9 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     OrderCreateController,
     OrderCancelController,
     OrderAdminListController,
+    OrderAdminBoosterCandidatesController,
     OrderAdminDispatchController,
+    OrderAdminAssignController,
     OrderAdminDetailController,
     OrderPayQueryController,
     OrderMineDetailController,
@@ -91,7 +101,11 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     AcceptHallOrderUseCase,
     ListBoosterOrdersUseCase,
     CompleteBoosterOrderUseCase,
+    AssignOrderBoosterUseCase,
+    ListBoosterCandidatesUseCase,
     BoosterAccess,
+    OrderGroupService,
+    ServiceAgentScope,
   ],
   exports: [ORDER_REPOSITORY],
 })

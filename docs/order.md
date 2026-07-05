@@ -1,8 +1,9 @@
 # 服务订单模块（order）
 
 用户在 C 端商品详情页下单陪玩/代打服务，扫码支付（支付宝/微信），
-支付成功后订单进入「待客服处理」；客服可把订单下发接单大厅，
-打手（booster 角色）在大厅接单 → 服务 → 完成。
+支付成功后订单进入「待客服处理」并自动创建订单沟通群（用户 + 商品关联客服 + 平台管理员）；
+客服可把订单下发接单大厅或直接指派指定打手，
+打手（booster 角色）接单/被指派后自动进群 → 服务 → 完成。
 
 ## 实现的功能
 
@@ -16,8 +17,11 @@
 - 管理端订单管理：分页检索全量订单（状态/订单号过滤）+ 详情抽屉（商品快照/归属用户/关联客服/渠道交易号），
   权限码 `order:admin:list` / `order:admin:detail`，菜单「电竞运营 / 订单管理」由播种器幂等补齐
 - 支付渠道配置沿用配置中心既有 `wallet.*` 键（网关地址、商户密钥、回调基址 `wallet.notify.base-url`），无新增配置
+- 支付成功自动建群：落账后经 im 模块 `GroupFacade` 自动创建订单群（下单用户 + 商品关联客服 + 平台管理员，客服缺省时管理员兜底为群主），群会话 id 回填订单 `conversationId`；建群失败仅记日志不阻断落账
+- 客服订单可见性：客服角色（非管理员）在管理端订单列表/详情/下发/指派均被强制限定为自己负责商品的订单（`ServiceAgentScope`）；客服角色默认权限已含订单菜单与处理接口
 - 下发大厅：管理端「待客服处理」订单可下发接单大厅（权限码 `order:admin:dispatch`），订单进入「待接单」
-- 接单大厅（C 端打手身份）：分页浏览待接单订单，接单后回填 `boosterId` 并进入「服务中」；不能接自己的单；接单前经 booster 模块 `BoosterDepositGuard` 校验押金已缴足
+- 指派打手：客服/管理员可直接指派指定平台打手（权限码 `order:admin:assign`，POST `/order/admin/:id/assign`），「待客服处理/待接单」→「服务中」；被指派人须有打手角色且押金缴足；候选列表 GET `/order/admin/booster-candidates` 仅返回打手角色用户
+- 接单大厅（C 端打手身份）：分页浏览待接单订单，接单后回填 `boosterId` 并进入「服务中」；不能接自己的单；接单前经 booster 模块 `BoosterDepositGuard` 校验押金已缴足；接单/被指派后打手自动加入订单群并广播系统消息
 - 完成结算：打手完成订单时按其当前等级费率（booster 模块 `BoosterProgressService`）计提成经 `WalletLedger` 入账（commission 流水），订单落 `commissionFen`/`commissionRateBp` 快照并累计完成单数
 - 打手订单中心（C 端打手身份）：分页查看本人接下的订单（全部/服务中/已完成），服务中可标记完成
 - C 端身份切换：拥有 booster 角色的账号可在「我的」页切换老板/打手身份（本地持久化），
@@ -30,8 +34,10 @@ pending_payment（待付款）
    ├─ 支付回调成功 ──▶ pending_service（待客服处理）
    └─ 用户取消 ──────▶ cancelled（已取消）
 pending_service（待客服处理）
-   └─ 客服下发大厅 ─▶ dispatching（待接单）
- dispatching ── 打手接单 ──▶ serving（服务中）── 打手完成 ──▶ completed（已完成）
+   ├─ 客服下发大厅 ─▶ dispatching（待接单）
+   └─ 客服指派打手 ─▶ serving（服务中）
+ dispatching ──┬─ 打手接单 ──▶ serving（服务中）── 打手完成 ──▶ completed（已完成）
+               └─ 客服指派打手 ─▶ serving（服务中）
 ```
 
 ## 结构导图
@@ -47,6 +53,8 @@ apps/server/src/modules/order/
 ├── application/
 │   ├── order.mapper.ts                      # 实体 → 视图
 │   ├── booster-access.service.ts            # 打手角色访问断言（复用 RBAC RoleGranter）
+│   ├── order-group.service.ts               # 订单群编排（支付成功建群 / 打手进群，失败不阻断主流程）
+│   ├── service-agent-scope.service.ts       # 客服可见范围解析（客服仅限自己负责的订单）
 │   └── use-cases/
 │       ├── create-order.usecase.ts          # 校验在架 → 固化快照 → 渠道下单取二维码
 │       ├── handle-order-callback.usecase.ts # 回调验签 → 幂等标记已支付 + 累加销量
@@ -56,6 +64,8 @@ apps/server/src/modules/order/
 │       ├── list-my-orders.usecase.ts        # 我的订单分页
 │       ├── cancel-my-order.usecase.ts       # 取消待付款订单
 │       ├── dispatch-order.usecase.ts        # 客服下发大厅（待客服处理 → 待接单）
+│       ├── assign-order-booster.usecase.ts  # 客服指派指定打手（→ 服务中，指派后进群）
+│       ├── list-booster-candidates.usecase.ts # 可指派打手候选分页（仅打手角色）
 │       ├── list-hall-orders.usecase.ts      # 接单大厅分页（仅打手）
 │       ├── accept-hall-order.usecase.ts     # 打手接单（待接单 → 服务中，回填 boosterId）
 │       ├── list-booster-orders.usecase.ts   # 打手订单中心分页（可按状态过滤）
@@ -63,6 +73,7 @@ apps/server/src/modules/order/
 ├── interfaces/
 │   ├── dto/create-order.dto.ts
 │   ├── dto/order-admin-list-query.dto.ts    # 分页 + 状态/订单号过滤
+│   ├── dto/assign-order.dto.ts              # 指派打手请求体（boosterId）
 │   └── controllers/                         # 一个路由一个文件
 │       ├── order.create.controller.ts       # POST /order
 │       ├── order.callback.controller.ts     # POST /order/pay/callback/:provider（公开）
@@ -70,6 +81,8 @@ apps/server/src/modules/order/
 │       ├── order.admin.list.controller.ts   # GET  /order/admin（order:admin:list）
 │       ├── order.admin.detail.controller.ts # GET  /order/admin/:id（order:admin:detail）
 │       ├── order.admin.dispatch.controller.ts # POST /order/admin/:id/dispatch（order:admin:dispatch）
+│       ├── order.admin.assign.controller.ts # POST /order/admin/:id/assign（order:admin:assign）
+│       ├── order.admin.booster-candidates.controller.ts # GET /order/admin/booster-candidates（order:admin:assign）
 │       ├── order.hall.list.controller.ts    # GET  /order/hall（仅打手）
 │       ├── order.hall.accept.controller.ts  # POST /order/hall/:id/accept（仅打手）
 │       ├── order.booster.list.controller.ts # GET  /order/booster/mine（仅打手）
@@ -79,6 +92,8 @@ apps/server/src/modules/order/
 └── order.module.ts                          # 模块装配（静态路由先于 :id 注册）
 
 复用的既有能力：
+- im：GroupFacade（系统建群/幂等进群 + 系统消息 + 会话推送，订单群编排复用）
+- rbac：RoleGranter（客服/管理员角色判定）/ UserDirectory（打手候选、平台管理员名录）
 - commerce：GET /commerce/public/products/:id（本次新增公开商品详情）+ 商品仓储导出
 - wallet：PaymentResolver / PaymentPort 策略（支付宝/微信驱动、验签、应答报文）+ WalletLedger 提成入账
 - booster：BoosterDepositGuard（接单押金门控）/ BoosterProgressService（完成单数累计 + 等级费率解析）
@@ -102,8 +117,9 @@ apps/client/src/
 
 apps/web/src/
 ├── api/order.api.ts                         # 管理端订单列表/详情
-├── views/order/OrderAdminView.vue           # 订单管理页（筛选/分页/详情抽屉）
-└── components/order/OrderDetailDrawer.vue   # 详情抽屉（完整字段）
+├── views/order/OrderAdminView.vue           # 订单管理页（筛选/分页/详情抽屉/下发/指派）
+├── components/order/OrderDetailDrawer.vue   # 详情抽屉（完整字段）
+└── components/order/AssignBoosterDialog.vue # 指派打手弹窗（远程搜索打手候选）
 ```
 
 ## 设计要点
@@ -113,7 +129,9 @@ apps/web/src/
 - **幂等回调**：以 `orderNo`（商户订单号，前缀 `O`）为幂等键，事务内行锁校验
   「待付款 + 金额一致」才落账，重复回调直接应答成功
 - **快照固化**：订单固化商品标题/封面/关联客服，商品后续改动不影响历史订单；
-  `serviceAgentId` 快照为后续「客服拉群/指派打手」预留
+  `serviceAgentId` 快照用于建群拉客服、客服可见性过滤与指派打手归属判定
+- **订单群编排**：`OrderGroupService` 复用 im 模块 `GroupFacade` 建群/进群，
+  建群/进群失败仅记日志，不阻断支付落账与接单主流程；重复落账幂等（已有 `conversationId` 跳过）
 - **C 端 UI 分层**：`MyOrdersView` 只负责页面状态与接口编排，状态筛选和订单卡片分别下沉到
   `OrderStatusTabs`、`OrderCard`，避免 PC/移动端样式互相污染，也让单文件保持在 500 行以内
 - **身份切换与导航**：`role.store` 只维护当前激活身份（是否拥有 booster 角色由 auth.store 角色码派生，

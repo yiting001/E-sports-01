@@ -26,6 +26,7 @@ export function toOrderView(entity: OrderEntity): OrderView {
     remark: entity.remark,
     createdAt: entity.createdAt.toISOString(),
     paidAt: entity.paidAt ? entity.paidAt.toISOString() : '',
+    conversationId: entity.conversationId,
   };
 }
 
