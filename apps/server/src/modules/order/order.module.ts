@@ -14,12 +14,16 @@ import { HandleOrderCallbackUseCase } from './application/use-cases/handle-order
 import { GetMyOrderUseCase } from './application/use-cases/get-my-order.usecase';
 import { ListMyOrdersUseCase } from './application/use-cases/list-my-orders.usecase';
 import { CancelMyOrderUseCase } from './application/use-cases/cancel-my-order.usecase';
+import { ListAdminOrdersUseCase } from './application/use-cases/list-admin-orders.usecase';
+import { GetAdminOrderUseCase } from './application/use-cases/get-admin-order.usecase';
 
 import { OrderCreateController } from './interfaces/controllers/order.create.controller';
 import { OrderCallbackController } from './interfaces/controllers/order.callback.controller';
 import { OrderMineListController } from './interfaces/controllers/order.mine.list.controller';
 import { OrderMineDetailController } from './interfaces/controllers/order.mine.detail.controller';
 import { OrderCancelController } from './interfaces/controllers/order.cancel.controller';
+import { OrderAdminListController } from './interfaces/controllers/order.admin.list.controller';
+import { OrderAdminDetailController } from './interfaces/controllers/order.admin.detail.controller';
 
 /**
  * 服务订单模块。
@@ -41,6 +45,8 @@ import { OrderCancelController } from './interfaces/controllers/order.cancel.con
     OrderMineListController,
     OrderCreateController,
     OrderCancelController,
+    OrderAdminListController,
+    OrderAdminDetailController,
     OrderMineDetailController,
   ],
   providers: [
@@ -50,6 +56,8 @@ import { OrderCancelController } from './interfaces/controllers/order.cancel.con
     GetMyOrderUseCase,
     ListMyOrdersUseCase,
     CancelMyOrderUseCase,
+    ListAdminOrdersUseCase,
+    GetAdminOrderUseCase,
   ],
 })
 export class OrderModule {}

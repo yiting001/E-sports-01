@@ -61,6 +61,16 @@ export interface CreateOrderResult {
   amountYuan: string;
 }
 
+/** 管理端订单视图：在 C 端视图之上补充归属用户/客服快照/渠道交易号 */
+export interface AdminOrderView extends OrderView {
+  /** 下单用户 id */
+  userId: string;
+  /** 商品关联客服快照（未关联为空串） */
+  serviceAgentId: string;
+  /** 渠道交易号（未支付为空串） */
+  providerTradeNo: string;
+}
+
 /** 订单视图（C 端我的订单） */
 export interface OrderView {
   id: string;
