@@ -61,8 +61,8 @@ export class TypeormCouponRepository implements CouponRepository {
     const result = await this.coupons
       .createQueryBuilder()
       .update()
-      .set({ issuedCount: () => '"issued_count" + 1' })
-      .where('id = :couponId AND "issued_count" < "total_count"', { couponId })
+      .set({ issuedCount: () => '"issuedCount" + 1' })
+      .where('id = :couponId AND "issuedCount" < "totalCount"', { couponId })
       .execute();
     return (result.affected ?? 0) > 0;
   }
