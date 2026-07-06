@@ -40,8 +40,11 @@ export class AlipayPaymentDriver implements PaymentPort {
       },
     });
     if (result.code !== ALIPAY_SUCCESS_CODE) {
+      // alipay-sdk v4 把应答键转为驼峰（subCode/subMsg），兼容两种写法透传详细错误
+      const subCode = result.subCode ?? result.sub_code;
+      const subMsg = result.subMsg ?? result.sub_msg;
       throw new BadRequestException(
-        `支付宝下单失败：${result.sub_msg ?? result.msg}（code=${result.code}${result.sub_code ? `, sub_code=${result.sub_code}` : ''}）`,
+        `支付宝下单失败：${subMsg ?? result.msg}（code=${result.code}${subCode ? `, sub_code=${subCode}` : ''}）`,
       );
     }
     return { qrCode: String(result.qrCode) };
