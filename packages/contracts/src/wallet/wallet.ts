@@ -213,6 +213,25 @@ export interface WithdrawalResultView {
   failReason: string | null;
 }
 
+/** C 端我的提现记录列表项（金额/手续费/到账/状态/失败原因） */
+export interface WithdrawalView {
+  id: string;
+  amountFen: number;
+  amountYuan: string;
+  feeFen: number;
+  feeYuan: string;
+  /** 实际到账金额（分）= 提现金额 - 手续费 */
+  arriveFen: number;
+  arriveYuan: string;
+  provider: PayoutProvider;
+  status: WithdrawalStatus;
+  /** 收款方支付宝账号 */
+  account: string;
+  /** 失败/驳回原因 */
+  failReason: string | null;
+  createdAt: string;
+}
+
 /** 提现管理端列表项视图（财务审核用） */
 export interface WithdrawalAdminView {
   id: string;

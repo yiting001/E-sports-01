@@ -18,6 +18,7 @@
 - **提现（审核制 + 转账到账）**：用户填写支付宝账号/实名提交申请，申请即校验余额并**冻结扣减**、按配置费率计手续费后置 `pending`（待审核）；财务在「财务 → 提现管理」**审核**：通过即调支付宝 `alipay.fund.trans.uni.transfer` 向收款账号转账**到账金额 = 提现金额 - 手续费**（成功置 `success`，失败回滚余额置 `failed`）；驳回则全额退回余额置 `rejected` 并留存理由。微信提现为**预留位**（调用即提示未开通）。
 - **转账场景报备**：支付宝「商家转账」要求报备的商户需在配置中心填写 `wallet.alipay.transferSceneName`（转账场景名称，如「业务结算」）、`wallet.alipay.transferReportInfoType`（报备信息类型，如「结算款项名称」）、`wallet.alipay.transferReportInfoContent`（报备信息内容，如「游戏账号租赁结算款」）；转账时随 `transfer_scene_name` / `transfer_scene_report_info` 上送，场景名称留空则不传（兼容未要求报备的商户）。
 - **提现手续费**：费率万分比配置（`wallet.withdrawFeeRateBp`，如 100 = 1%，0 免费），前端提现弹层实时展示手续费与预计到账金额（费率随 `GET /wallet/mine` 下发），计算函数 `calcWithdrawFeeFen` 前后端共享。
+- **C 端提现记录**：钱包页「流水明细 / 提现记录」页签，提现记录展示每笔提现的金额/手续费/到账金额、审核状态（待审核/处理中/已到账/转账失败/已驳回）与失败原因（`GET /wallet/withdrawals/mine`，仅见本人）；提现提交后自动切到该页签。
 - **支付宝证书模式**：应用公钥证书/支付宝公钥证书/根证书三证齐全时自动启用证书签名（转账等资金接口必须证书模式），否则回退公钥模式；支付/转账共用同一 SDK 工厂。
 - **收支明细**：分页查询本人流水，按时间倒序，含金额、方向、变更后余额快照、备注。
 - **统计**：余额、累计充值/提现金额与成功笔数。
@@ -26,7 +27,7 @@
 
 ## 权限（RBAC）
 
-**个人侧端点仅需登录态，不挂任何功能权限**（与「我的实名」一致，全员可用）：`GET /wallet/mine`、`GET /wallet/stats`、`GET /wallet/transactions`、`POST /wallet/recharge`、`POST /wallet/withdrawal`。
+**个人侧端点仅需登录态，不挂任何功能权限**（与「我的实名」一致，全员可用）：`GET /wallet/mine`、`GET /wallet/stats`、`GET /wallet/transactions`、`POST /wallet/recharge`、`POST /wallet/withdrawal`、`GET /wallet/withdrawals/mine`。
 
 **管理侧**菜单与功能权限纳入权限树（`MENU_DEFINITIONS` / `PERMS.wallet`），默认仅超级管理员拥有，其他角色在「角色管理」按需分配：
 
@@ -92,6 +93,7 @@ modules/wallet/
 │       ├── list-wallets.usecase.ts          管理端：分页所有用户钱包
 │       ├── list-user-transactions.usecase.ts 管理端：任意用户明细
 │       ├── adjust-wallet.usecase.ts          管理端：人工调整余额（记流水）
+│       ├── list-my-withdrawals.usecase.ts    C 端：分页我的提现记录（按钱包过滤）
 │       ├── list-withdrawals.usecase.ts       财务：分页提现工单（反查归属用户）
 │       ├── approve-withdrawal.usecase.ts     财务：审核通过→支付宝转账到账
 │       └── reject-withdrawal.usecase.ts      财务：驳回→全额退回余额
@@ -121,6 +123,7 @@ modules/wallet/
         ├── recharge.create.controller.ts     POST /api/wallet/recharge（登录态）
         ├── recharge.callback.controller.ts   POST /api/wallet/recharge/callback/:provider（公开）
         ├── withdrawal.create.controller.ts   POST /api/wallet/withdrawal（登录态）
+        ├── withdrawal.mine.controller.ts     GET  /api/wallet/withdrawals/mine（登录态，我的提现记录）
         ├── wallet.admin.list.controller.ts         GET  /api/wallet/admin/wallets
         ├── wallet.admin.transactions.controller.ts GET  /api/wallet/admin/wallets/:userId/transactions
         ├── wallet.admin.adjust.controller.ts       POST /api/wallet/admin/wallets/:userId/adjust

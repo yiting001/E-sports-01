@@ -7,6 +7,7 @@ import type {
   WalletTransactionView,
   WalletView,
   WithdrawalResultView,
+  WithdrawalView,
 } from '@app/contracts';
 import { http } from './http';
 
@@ -34,5 +35,12 @@ export const walletApi = {
   /** 发起提现（支付宝转账） */
   withdraw(body: CreateWithdrawalBody): Promise<WithdrawalResultView> {
     return http.post('/wallet/withdrawal', body);
+  },
+  /** 分页查询我的提现记录（含审核状态/到账金额/失败原因） */
+  myWithdrawals(
+    page: number,
+    pageSize: number,
+  ): Promise<PaginatedResult<WithdrawalView>> {
+    return http.get('/wallet/withdrawals/mine', { params: { page, pageSize } });
   },
 };
