@@ -71,6 +71,11 @@ export interface CreateOrderResult {
   couponDeductionFen: number;
 }
 
+/** 管理端进入订单群结果（幂等加入后返回群会话 id） */
+export interface OrderGroupJoinResult {
+  conversationId: string;
+}
+
 /** 管理端订单视图：在 C 端视图之上补充归属用户/客服快照/渠道交易号 */
 export interface AdminOrderView extends OrderView {
   /** 下单用户 id */

@@ -1,5 +1,6 @@
 import type {
   AdminOrderView,
+  OrderGroupJoinResult,
   OrderStatus,
   PaginatedResult,
   ServiceAgentOption,
@@ -22,6 +23,10 @@ export const orderApi = {
   /** 查询单笔订单详情 */
   detail(id: string): Promise<AdminOrderView> {
     return http.get(`/order/admin/${id}`);
+  },
+  /** 幂等加入订单群，返回群会话 id（后台打开群聊入口） */
+  joinGroup(id: string): Promise<OrderGroupJoinResult> {
+    return http.post(`/order/admin/${id}/group/join`);
   },
   /** 把「待客服处理」订单下发到接单大厅 */
   dispatch(id: string): Promise<AdminOrderView> {

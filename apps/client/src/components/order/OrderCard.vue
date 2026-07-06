@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
- * 订单列表卡片：展示订单号、商品快照、金额、状态与当前状态可用操作。
+ * 订单列表卡片：展示订单号、商品快照、金额、状态与当前状态可用操作，
+ * 点击卡片主体进入订单详情。
  * 父页面只负责数据加载和弹窗编排，卡片内部负责单条订单的展示规则。
  */
 import { ORDER_STATUS_TEXT, OrderStatus, type OrderView } from '@app/contracts';
@@ -12,6 +13,7 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
+  open: [order: OrderView];
   cancel: [order: OrderView];
   review: [order: OrderView];
 }>();
@@ -33,7 +35,10 @@ function formatTime(iso: string): string {
 </script>
 
 <template>
-  <article class="order card">
+  <article
+    class="order card"
+    @click="emit('open', order)"
+  >
     <div class="head">
       <span class="no">订单号 {{ order.orderNo }}</span>
       <span
@@ -77,7 +82,7 @@ function formatTime(iso: string): string {
     >
       <button
         class="cancel"
-        @click="emit('cancel', order)"
+        @click.stop="emit('cancel', order)"
       >
         取消订单
       </button>
@@ -93,7 +98,7 @@ function formatTime(iso: string): string {
       <button
         v-else
         class="review"
-        @click="emit('review', order)"
+        @click.stop="emit('review', order)"
       >
         评价
       </button>
@@ -104,6 +109,7 @@ function formatTime(iso: string): string {
 <style scoped>
 .order {
   padding: 12px 14px;
+  cursor: pointer;
 }
 
 .head {

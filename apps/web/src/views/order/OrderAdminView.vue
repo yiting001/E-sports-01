@@ -4,6 +4,7 @@
  * 「待客服处理」订单可下发接单大厅，由打手接单。
  */
 import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import {
   ORDER_STATUS_TEXT,
   OrderStatus,
@@ -22,6 +23,8 @@ import AssignBoosterDialog from '@/components/order/AssignBoosterDialog.vue';
 import ProductPreviewDialog from '@/components/order/ProductPreviewDialog.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { orderApi } from '@/api/order.api';
+
+const router = useRouter();
 
 const list = ref<AdminOrderView[]>([]);
 const total = ref(0);
@@ -45,6 +48,12 @@ const assignTarget = ref<AdminOrderView | null>(null);
 function openAssign(row: AdminOrderView): void {
   assignTarget.value = row;
   assignVisible.value = true;
+}
+
+/** 进入订单群：幂等加群后跳转 IM 并选中该群会话 */
+async function enterGroup(order: AdminOrderView): Promise<void> {
+  const { conversationId } = await orderApi.joinGroup(order.id);
+  await router.push({ path: '/im', query: { conversation: conversationId } });
 }
 
 /** 点击订单中的商品 → 弹窗预览商品详情 */
@@ -306,6 +315,7 @@ onMounted(load);
       :order="current"
       :format-date="formatDate"
       @view-product="openProduct"
+      @enter-group="enterGroup"
     />
 
     <product-preview-dialog

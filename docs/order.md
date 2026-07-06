@@ -14,10 +14,12 @@
 - 支付回调：渠道异步回调验签解析，事务 + 行锁内幂等落账（待付款 → 待客服处理），并累加商品销量与用户会员累计消费（`MemberProgressService.recordSpend`）
 - 主动查单兜底：支付二维码弹窗轮询 `GET /order/:id/pay/query`，后端调渠道官方查单接口（支付宝 `alipay.trade.query` / 微信 `GET /v3/pay/transactions/out-trade-no`），查到已支付则与回调共用 `OrderPaymentSettleService` 幂等落账——回调丢失/延迟也能正常完成支付流程
 - 我的订单：分页列表（商品快照/数量/金额/状态），待付款订单可取消；PC 端标题、紧凑状态筛选、列表统一收敛到内容区宽度，移动端保持全屏滚动
+- C 端订单详情页（`/orders/:id`）：点击订单卡片进入，展示商品快照、状态、价格明细（原价/会员折扣减免/优惠券抵扣/实付）、订单信息（订单号/支付方式/时间/备注）；已建群订单提供「进入订单群」入口（跳全屏聊天页 `/chat/:id`），待付款可取消
 - 管理端订单管理：分页检索全量订单（状态/订单号过滤）+ 详情抽屉（商品快照/归属用户/关联客服/渠道交易号），
   权限码 `order:admin:list` / `order:admin:detail`，菜单「电竞运营 / 订单管理」由播种器幂等补齐
 - 支付渠道配置沿用配置中心既有 `wallet.*` 键（网关地址、商户密钥、回调基址 `wallet.notify.base-url`），无新增配置
-- 支付成功自动建群：落账后经 im 模块 `GroupFacade` 自动创建订单群（下单用户 + 商品关联客服 + 平台管理员，客服缺省时管理员兜底为群主），群会话 id 回填订单 `conversationId`；建群失败仅记日志不阻断落账
+- 支付成功自动建群：落账后经 im 模块 `GroupFacade` 自动创建订单群（下单用户 + 商品关联客服 + 平台管理员，客服缺省时管理员兜底为群主），群会话 id 回填订单 `conversationId`；建群失败仅记日志不阻断落账；拉管理员优先租户管理员、无则回退超管，保证后台能看到订单群
+- 后台订单群入口：详情抽屉「进入订单群」→ POST `/order/admin/:id/group/join` 幂等加群（客服仅限自己负责的订单）→ 跳转 IM 页并自动选中该群会话（`/im?conversation=xxx`）
 - 客服订单可见性：客服角色（非管理员）在管理端订单列表/详情/下发/指派均被强制限定为自己负责商品的订单（`ServiceAgentScope`）；客服角色默认权限已含订单菜单与处理接口
 - 下发大厅：管理端「待客服处理」订单可下发接单大厅（权限码 `order:admin:dispatch`），订单进入「待接单」
 - 指派打手：客服/管理员可直接指派指定平台打手（权限码 `order:admin:assign`，POST `/order/admin/:id/assign`），「待客服处理/待接单」→「服务中」；被指派人须有打手角色且押金缴足；候选列表 GET `/order/admin/booster-candidates` 仅返回打手角色用户
@@ -66,6 +68,7 @@ apps/server/src/modules/order/
 │       ├── dispatch-order.usecase.ts        # 客服下发大厅（待客服处理 → 待接单）
 │       ├── assign-order-booster.usecase.ts  # 客服指派指定打手（→ 服务中，指派后进群）
 │       ├── list-booster-candidates.usecase.ts # 可指派打手候选分页（仅打手角色）
+│       ├── join-order-group.usecase.ts      # 管理端幂等加入订单群（返回会话 id）
 │       ├── list-hall-orders.usecase.ts      # 接单大厅分页（仅打手）
 │       ├── accept-hall-order.usecase.ts     # 打手接单（待接单 → 服务中，回填 boosterId）
 │       ├── list-booster-orders.usecase.ts   # 打手订单中心分页（可按状态过滤）
@@ -82,6 +85,7 @@ apps/server/src/modules/order/
 │       ├── order.admin.detail.controller.ts # GET  /order/admin/:id（order:admin:detail）
 │       ├── order.admin.dispatch.controller.ts # POST /order/admin/:id/dispatch（order:admin:dispatch）
 │       ├── order.admin.assign.controller.ts # POST /order/admin/:id/assign（order:admin:assign）
+│       ├── order.admin.group-join.controller.ts # POST /order/admin/:id/group/join（order:admin:detail）
 │       ├── order.admin.booster-candidates.controller.ts # GET /order/admin/booster-candidates（order:admin:assign）
 │       ├── order.hall.list.controller.ts    # GET  /order/hall（仅打手）
 │       ├── order.hall.accept.controller.ts  # POST /order/hall/:id/accept（仅打手）
@@ -106,19 +110,22 @@ apps/client/src/
 ├── views/product/ProductDetailView.vue      # 商品详情（纯展示，立即下单进下单页）
 ├── views/product/ProductDetailView.responsive.css # 商品详情 PC 响应式布局
 ├── views/order/CheckoutView.vue             # 下单页（数量/备注/支付方式 → 扫码支付）
-├── views/order/MyOrdersView.vue             # 我的订单页编排（筛选/分页/评价弹层）
+├── views/order/MyOrdersView.vue             # 我的订单页编排（筛选/分页/评价弹层/进详情）
+├── views/order/OrderDetailView.vue          # 订单详情页（价格明细/订单信息/订单群入口）
+├── views/order/OrderDetailView.css          # 订单详情页样式（移动全屏 + PC 收敛）
+├── views/message/ChatView.vue               # 全屏会话聊天页（订单群/群聊/客服复用 ServiceChatPanel）
 ├── views/order/HallView.vue                 # 接单大厅（打手一级 Tab，接单）
 ├── views/order/BoosterOrdersView.vue        # 打手订单中心（状态 tabs + 完成订单）
 └── components/order/
     ├── PayDialog.vue                        # 扫码支付弹层（轮询支付结果）
     ├── OrderStatusTabs.vue                  # 订单状态筛选：移动横滑，PC 居中分段筛选
-    ├── OrderCard.vue                        # 单条订单卡片：快照/金额/状态/取消/评价
+    ├── OrderCard.vue                        # 单条订单卡片：快照/金额/状态/取消/评价，点击进详情
     └── BoosterOrderCard.vue                 # 打手侧订单卡片（大厅/订单中心共用）
 
 apps/web/src/
-├── api/order.api.ts                         # 管理端订单列表/详情
-├── views/order/OrderAdminView.vue           # 订单管理页（筛选/分页/详情抽屉/下发/指派）
-├── components/order/OrderDetailDrawer.vue   # 详情抽屉（完整字段）
+├── api/order.api.ts                         # 管理端订单列表/详情/加入订单群
+├── views/order/OrderAdminView.vue           # 订单管理页（筛选/分页/详情抽屉/下发/指派/进订单群）
+├── components/order/OrderDetailDrawer.vue   # 详情抽屉（完整字段 + 价格明细 + 订单群入口）
 └── components/order/AssignBoosterDialog.vue # 指派打手弹窗（远程搜索打手候选）
 ```
 
@@ -131,7 +138,9 @@ apps/web/src/
 - **快照固化**：订单固化商品标题/封面/关联客服，商品后续改动不影响历史订单；
   `serviceAgentId` 快照用于建群拉客服、客服可见性过滤与指派打手归属判定
 - **订单群编排**：`OrderGroupService` 复用 im 模块 `GroupFacade` 建群/进群，
-  建群/进群失败仅记日志，不阻断支付落账与接单主流程；重复落账幂等（已有 `conversationId` 跳过）
+  建群/进群失败仅记日志，不阻断支付落账与接单主流程；重复落账幂等（已有 `conversationId` 跳过）；
+  平台管理员解析优先租户管理员、无则回退超管（`resolveAdminIds`），避免后台无人在群看不到订单群；
+  后台未在群的工作人员可经 `JoinOrderGroupUseCase` 幂等加群后进入会话
 - **C 端 UI 分层**：`MyOrdersView` 只负责页面状态与接口编排，状态筛选和订单卡片分别下沉到
   `OrderStatusTabs`、`OrderCard`，避免 PC/移动端样式互相污染，也让单文件保持在 500 行以内
 - **身份切换与导航**：`role.store` 只维护当前激活身份（是否拥有 booster 角色由 auth.store 角色码派生，

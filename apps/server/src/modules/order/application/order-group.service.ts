@@ -1,7 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { GroupFacade } from '../../im/application/group-facade.service';
 import { UserDirectory } from '../../rbac/application/user-directory.service';
-import { TENANT_ADMIN_ROLE } from '../../rbac/domain/rbac.constants';
+import {
+  SUPER_ADMIN_ROLE,
+  TENANT_ADMIN_ROLE,
+} from '../../rbac/domain/rbac.constants';
 import { OrderEntity } from '../domain/order.entity';
 import {
   ORDER_REPOSITORY,
@@ -28,18 +31,28 @@ export class OrderGroupService {
     private readonly users: UserDirectory,
   ) {}
 
+  /** 拉平台管理员入群：优先租户管理员，无租户管理员时回退超管，保证后台可见订单群 */
+  private async resolveAdminIds(): Promise<string[]> {
+    for (const role of [TENANT_ADMIN_ROLE, SUPER_ADMIN_ROLE]) {
+      const [admins] = await this.users.paginateProfilesByRole(
+        role,
+        0,
+        MAX_ADMIN_MEMBERS,
+      );
+      if (admins.length > 0) {
+        return admins.map((a) => a.id);
+      }
+    }
+    return [];
+  }
+
   /** 幂等地为已支付订单创建订单群（已建过则跳过），返回会话 id */
   async ensureGroup(order: OrderEntity): Promise<void> {
     if (order.conversationId) {
       return;
     }
     try {
-      const [admins] = await this.users.paginateProfilesByRole(
-        TENANT_ADMIN_ROLE,
-        0,
-        MAX_ADMIN_MEMBERS,
-      );
-      const adminIds = admins.map((a) => a.id);
+      const adminIds = await this.resolveAdminIds();
       const memberIds = [order.userId, order.serviceAgentId, ...adminIds];
       const ownerId = order.serviceAgentId || adminIds[0] || order.userId;
       const title = `订单群·${order.productTitle}`;

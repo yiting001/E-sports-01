@@ -7,6 +7,7 @@ import type {
 } from '@app/contracts';
 import { MessageType, PERMS, SYSTEM_SENDER_ID } from '@app/contracts';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { imApi } from '@/api/im.api';
 import { uploadApi } from '@/api/upload.api';
@@ -22,6 +23,7 @@ import './ImView.css';
 import './ImView.responsive.css';
 
 const auth = useAuthStore();
+const route = useRoute();
 const im = createImSocket();
 
 const conversations = ref<ConversationView[]>([]);
@@ -222,6 +224,11 @@ onMounted(async () => {
   });
   im.onConversation((view) => upsertConversation(view));
   await loadConversations();
+  // 外部入口（如订单详情「进入订单群」）携带 conversation 参数时自动选中该会话
+  const target = route.query.conversation;
+  if (typeof target === 'string' && conversations.value.some((c) => c.id === target)) {
+    await selectConversation(target);
+  }
 });
 
 onBeforeUnmount(() => im.disconnect());
