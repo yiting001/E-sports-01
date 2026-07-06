@@ -14,7 +14,7 @@ const ALIPAY_SUCCESS_CODE = '10000';
 /**
  * 支付宝提现（转账到账）驱动：alipay.fund.trans.uni.transfer。
  * 向收款方支付宝登录号直接转账，成功返回渠道转账单号。
- * 转账场景报备（transfer_scene_name / transfer_scene_report_info）取自配置中心，
+ * 转账场景报备（transfer_scene_name / transfer_scene_report_infos）取自配置中心，
  * 已开通「商家转账」并要求报备的商户必须配置，否则渠道拒绝（40004）。
  */
 @Injectable()
@@ -48,7 +48,7 @@ export class AlipayPayoutDriver implements PayoutPort {
       transfer_scene_name: sceneName,
       ...(infoType && infoContent
         ? {
-            transfer_scene_report_info: [
+            transfer_scene_report_infos: [
               { info_type: infoType, info_content: infoContent },
             ],
           }
