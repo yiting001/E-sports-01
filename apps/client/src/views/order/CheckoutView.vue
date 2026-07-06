@@ -74,7 +74,7 @@ const selectedCoupon = computed(() =>
   usableCoupons.value.find((item) => item.id === selectedCouponId.value) ?? null,
 );
 
-/** 券抵扣金额（分）：实付至少保留 1 分，与后端口径一致 */
+/** 券抵扣金额（分）：最多抵到 0 元，与后端口径一致 */
 const couponDeductionFen = computed(() => {
   const coupon = selectedCoupon.value;
   if (!coupon) {
@@ -86,7 +86,7 @@ const couponDeductionFen = computed(() => {
     coupon.thresholdFen,
     memberAmountFen.value,
   );
-  return Math.min(deduction, memberAmountFen.value - 1);
+  return Math.min(Math.max(deduction, 0), memberAmountFen.value);
 });
 
 /** 应付总额（会员折后再减券抵扣，分 → 元展示） */
@@ -122,13 +122,19 @@ async function submit(): Promise<void> {
   }
   submitting.value = true;
   try {
-    payOrder.value = await orderApi.create({
+    const result = await orderApi.create({
       productId: product.value.id,
       quantity: quantity.value,
       provider: provider.value,
       remark: remark.value.trim() || undefined,
       userCouponId: selectedCoupon.value?.id || undefined,
     });
+    // 0 元单后端已直接落账，无需扫码支付
+    if (result.paid) {
+      onPaid();
+      return;
+    }
+    payOrder.value = result;
   } finally {
     submitting.value = false;
   }

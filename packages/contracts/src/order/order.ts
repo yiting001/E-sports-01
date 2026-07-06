@@ -52,13 +52,15 @@ export interface CreateOrderPayload {
   userCouponId?: string;
 }
 
-/** 创建订单结果（扫码支付：二维码内容） */
+/** 创建订单结果（扫码支付：二维码内容；0 元单直接支付成功无需扫码） */
 export interface CreateOrderResult {
   orderId: string;
   orderNo: string;
   provider: PaymentProvider;
-  /** 二维码内容（支付宝 qr_code / 微信 code_url），前端据此渲染二维码 */
+  /** 二维码内容（支付宝 qr_code / 微信 code_url），前端据此渲染二维码；0 元单为空串 */
   qrCode: string;
+  /** 是否已支付完成（优惠抵扣到 0 元时免真实支付直接落账） */
+  paid: boolean;
   amountFen: number;
   amountYuan: string;
   /** 折前原价（分） */
