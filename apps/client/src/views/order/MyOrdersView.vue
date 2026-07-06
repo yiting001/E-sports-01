@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * 我的订单页（全屏）：顶部状态 tabs 切换（全部/待付款/…），分页列出本人订单
- * （商品快照/数量/金额/状态），待付款订单可取消，已完成订单可评价（一单一评）；
- * 到底加载更多。
+ * （商品快照/数量/金额/状态），点击订单进入详情，待付款订单可取消，
+ * 已完成订单可评价（一单一评）；到底加载更多。
  */
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -92,6 +92,11 @@ function loadMore(): void {
   void load();
 }
 
+/** 点击订单卡片 → 订单详情页 */
+function openDetail(order: OrderView): void {
+  void router.push({ name: 'order-detail', params: { id: order.id } });
+}
+
 async function cancel(order: OrderView): Promise<void> {
   await orderApi.cancel(order.id);
   toast.show('订单已取消');
@@ -151,6 +156,7 @@ onMounted(() => void load(true));
           :key="order.id"
           :order="order"
           :reviewed="reviewedIds.has(order.id)"
+          @open="openDetail"
           @cancel="cancel"
           @review="reviewingOrder = $event"
         />

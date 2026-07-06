@@ -32,6 +32,7 @@ import { OrderGroupService } from './application/order-group.service';
 import { ServiceAgentScope } from './application/service-agent-scope.service';
 import { AssignOrderBoosterUseCase } from './application/use-cases/assign-order-booster.usecase';
 import { ListBoosterCandidatesUseCase } from './application/use-cases/list-booster-candidates.usecase';
+import { JoinOrderGroupUseCase } from './application/use-cases/join-order-group.usecase';
 
 import { OrderCreateController } from './interfaces/controllers/order.create.controller';
 import { OrderCallbackController } from './interfaces/controllers/order.callback.controller';
@@ -41,6 +42,7 @@ import { OrderPayQueryController } from './interfaces/controllers/order.pay.quer
 import { OrderCancelController } from './interfaces/controllers/order.cancel.controller';
 import { OrderAdminListController } from './interfaces/controllers/order.admin.list.controller';
 import { OrderAdminDetailController } from './interfaces/controllers/order.admin.detail.controller';
+import { OrderAdminGroupJoinController } from './interfaces/controllers/order.admin.group-join.controller';
 import { OrderAdminDispatchController } from './interfaces/controllers/order.admin.dispatch.controller';
 import { OrderAdminAssignController } from './interfaces/controllers/order.admin.assign.controller';
 import { OrderAdminBoosterCandidatesController } from './interfaces/controllers/order.admin.booster-candidates.controller';
@@ -81,6 +83,7 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     OrderAdminBoosterCandidatesController,
     OrderAdminDispatchController,
     OrderAdminAssignController,
+    OrderAdminGroupJoinController,
     OrderAdminDetailController,
     OrderPayQueryController,
     OrderMineDetailController,
@@ -103,6 +106,7 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     CompleteBoosterOrderUseCase,
     AssignOrderBoosterUseCase,
     ListBoosterCandidatesUseCase,
+    JoinOrderGroupUseCase,
     BoosterAccess,
     OrderGroupService,
     ServiceAgentScope,

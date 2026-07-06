@@ -65,6 +65,18 @@ export const router = createRouter({
       meta: { title: '我的订单', requiresAuth: true },
     },
     {
+      path: '/orders/:id',
+      name: 'order-detail',
+      component: () => import('@/views/order/OrderDetailView.vue'),
+      meta: { title: '订单详情', requiresAuth: true },
+    },
+    {
+      path: '/chat/:id',
+      name: 'chat',
+      component: () => import('@/views/message/ChatView.vue'),
+      meta: { title: '会话聊天', requiresAuth: true },
+    },
+    {
       path: '/profile/edit',
       name: 'profile-edit',
       component: () => import('@/views/profile/ProfileEditView.vue'),

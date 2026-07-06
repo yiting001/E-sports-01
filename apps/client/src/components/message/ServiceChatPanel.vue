@@ -69,6 +69,9 @@ const statusText = computed(() => {
   if (!activeConversation.value) {
     return '等待选择会话';
   }
+  if (activeConversation.value.type === ConversationType.Group) {
+    return '群聊会话';
+  }
   switch (activeConversation.value.status) {
     case ConversationStatus.Active:
       return '客服服务中';

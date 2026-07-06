@@ -61,13 +61,13 @@ function onViewportChange(event: MediaQueryListEvent): void {
   }
 }
 
-/** 点击会话：移动端进入全屏聊天，PC 端在右侧打开 */
+/** 点击会话：移动端进入该会话的全屏聊天，PC 端在右侧打开 */
 function openConversation(conv: ConversationView): void {
   if (isDesktopLayout()) {
     selectedConversation.value = { ...conv, unread: 0 };
     return;
   }
-  router.push({ name: 'service' });
+  router.push({ name: 'chat', params: { id: conv.id } });
 }
 
 function upsertConversation(conv: ConversationView): void {
