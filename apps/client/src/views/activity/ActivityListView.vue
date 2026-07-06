@@ -28,7 +28,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="activity-page">
+  <div class="activity-page client-page">
     <header class="bar">
       <button
         class="back"

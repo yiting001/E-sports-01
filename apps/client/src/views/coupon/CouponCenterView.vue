@@ -63,7 +63,7 @@ onMounted(load);
 </script>
 
 <template>
-  <div class="coupon-center">
+  <div class="coupon-center client-page">
     <header class="bar">
       <button
         class="back"

@@ -104,7 +104,7 @@ function logout(): void {
 </script>
 
 <template>
-  <div class="edit-page">
+  <div class="edit-page client-page">
     <header class="bar">
       <div class="bar-inner">
         <button

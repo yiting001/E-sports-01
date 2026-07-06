@@ -44,7 +44,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="rank-page">
+  <div class="rank-page client-page">
     <header class="bar">
       <button
         class="back"

@@ -31,7 +31,7 @@ onMounted(load);
 </script>
 
 <template>
-  <div class="notice-page">
+  <div class="notice-page client-page">
     <header class="bar">
       <button
         class="back"

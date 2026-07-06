@@ -48,7 +48,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="member-levels">
+  <div class="member-levels client-page">
     <header class="bar">
       <button
         class="back"

@@ -97,7 +97,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="wallet-page">
+  <div class="wallet-page client-page">
     <header class="bar">
       <div class="bar-inner">
         <button

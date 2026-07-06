@@ -49,7 +49,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="my-coupons">
+  <div class="my-coupons client-page">
     <header class="bar">
       <button
         class="back"

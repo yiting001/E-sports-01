@@ -23,6 +23,7 @@ import { couponApi } from '@/api/coupon.api';
 import { memberApi } from '@/api/member.api';
 import { orderApi } from '@/api/order.api';
 import { useToast } from '@/composables/use-toast';
+import './CheckoutView.css';
 import './CheckoutView.responsive.css';
 
 /** 支付方式选项（渠道 → 展示文案） */
@@ -158,19 +159,21 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="checkout">
+  <div class="checkout client-page">
     <header class="bar">
-      <button
-        class="back"
-        aria-label="返回"
-        @click="router.back()"
-      >
-        <AppIcon
-          name="chevron"
-          :size="20"
-        />
-      </button>
-      <span class="name">确认下单</span>
+      <div class="bar-inner">
+        <button
+          class="back"
+          aria-label="返回"
+          @click="router.back()"
+        >
+          <AppIcon
+            name="chevron"
+            :size="20"
+          />
+        </button>
+        <span class="name">确认下单</span>
+      </div>
     </header>
 
     <div class="scroll">
@@ -316,289 +319,3 @@ onMounted(async () => {
     />
   </div>
 </template>
-
-<style scoped>
-.checkout {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  background:
-    radial-gradient(70% 36% at 50% 0%, rgba(255, 176, 32, 0.07), transparent 70%),
-    var(--c-bg);
-}
-
-.bar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--c-border);
-  background: var(--c-surface);
-}
-
-.back {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  color: var(--c-text);
-  transform: rotate(180deg);
-}
-
-.name {
-  font-size: 16px;
-  font-weight: 800;
-  font-style: italic;
-}
-
-.scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.hint {
-  text-align: center;
-  font-size: 13px;
-  color: var(--c-text-secondary);
-  padding: 24px 0;
-}
-
-.coupon-row {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  text-align: left;
-}
-
-.coupon-text {
-  font-size: 13px;
-  color: var(--c-text-secondary);
-}
-
-.coupon-text.active {
-  color: var(--c-accent);
-  font-weight: 700;
-}
-
-.coupon-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.coupon-opt {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border: 1px solid var(--c-border);
-  text-align: left;
-}
-
-.coupon-opt.picked {
-  border-color: var(--c-accent);
-  background: var(--c-accent-dim);
-}
-
-.coupon-title {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.coupon-off {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--c-accent);
-}
-
-.summary {
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.summary,
-.form {
-  flex-shrink: 0;
-}
-
-.thumb {
-  width: 56px;
-  height: 56px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-sm);
-  background: var(--c-cover-bg);
-  overflow: hidden;
-}
-
-.thumb--image {
-  background-size: cover;
-  background-position: center;
-}
-
-.thumb-icon {
-  color: rgba(61, 255, 155, 0.55);
-}
-
-.mid {
-  flex: 1;
-  min-width: 0;
-}
-
-.title {
-  font-size: 14px;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sub {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--c-text-secondary);
-}
-
-.price {
-  font-family: var(--font-num);
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--c-accent);
-}
-
-.form {
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.row--col {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.label {
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.stepper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.step {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  color: var(--c-text);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-}
-
-.step:disabled {
-  opacity: 0.4;
-}
-
-.count {
-  min-width: 28px;
-  text-align: center;
-  font-family: var(--font-num);
-  font-weight: 700;
-}
-
-.remark {
-  min-height: 66px;
-  padding: 10px 12px;
-  color: var(--c-text);
-  background: var(--c-bg);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  line-height: 1.5;
-  resize: vertical;
-}
-
-.providers {
-  display: flex;
-  gap: 8px;
-}
-
-.provider {
-  padding: 7px 14px;
-  font-size: 13px;
-  color: var(--c-text-secondary);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-}
-
-.provider.active {
-  color: var(--c-accent);
-  border-color: var(--c-accent);
-  font-weight: 700;
-}
-
-.footer {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--c-border);
-  background: var(--c-surface);
-}
-
-.total {
-  flex: 1;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.total-label {
-  font-size: 12px;
-  color: var(--c-text-secondary);
-}
-
-.total-value {
-  font-family: var(--font-num);
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--c-accent);
-}
-
-.buy {
-  padding: 11px 34px;
-  font-size: 15px;
-  font-weight: 800;
-  font-style: italic;
-  color: var(--c-bg);
-  background: var(--c-accent);
-  border-radius: var(--radius-sm);
-}
-
-.buy:disabled {
-  opacity: 0.6;
-}
-</style>
