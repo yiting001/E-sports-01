@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * 我的钱包页（全屏）：余额卡 + 充值/提现入口 + 分页流水明细。
- * 直连后端钱包模块既有接口；充值经扫码支付入账后自动刷新余额与流水。
+ * 我的钱包页（全屏）：余额卡 + 充值/提现入口 + 流水明细/提现记录页签。
+ * 直连后端钱包模块既有接口；充值入账、提现提交后自动刷新余额与列表。
  */
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -14,6 +14,7 @@ import {
 import AppIcon from '@/components/common/AppIcon.vue';
 import RechargeDialog from '@/components/wallet/RechargeDialog.vue';
 import WithdrawDialog from '@/components/wallet/WithdrawDialog.vue';
+import WithdrawalRecords from '@/components/wallet/WithdrawalRecords.vue';
 import { walletApi } from '@/api/wallet.api';
 import { useToast } from '@/composables/use-toast';
 import './WalletView.responsive.css';
@@ -41,6 +42,10 @@ const total = ref(0);
 const loading = ref(false);
 const recharging = ref(false);
 const withdrawing = ref(false);
+
+/** 列表页签：流水明细 / 提现记录 */
+const tab = ref<'txns' | 'withdrawals'>('txns');
+const withdrawalsRef = ref<InstanceType<typeof WithdrawalRecords> | null>(null);
 
 async function loadWallet(): Promise<void> {
   wallet.value = await walletApi.mine();
@@ -80,10 +85,15 @@ async function onRecharged(): Promise<void> {
   await Promise.all([loadWallet(), loadTransactions(true)]);
 }
 
-/** 提现提交后：关弹层 → 刷新余额与流水 */
+/** 提现提交后：关弹层 → 切到提现记录页签并刷新余额与列表 */
 async function onWithdrawn(): Promise<void> {
   withdrawing.value = false;
-  await Promise.all([loadWallet(), loadTransactions(true)]);
+  tab.value = 'withdrawals';
+  await Promise.all([
+    loadWallet(),
+    loadTransactions(true),
+    withdrawalsRef.value?.reload(),
+  ]);
 }
 
 function formatTime(iso: string): string {
@@ -135,50 +145,67 @@ onMounted(() => {
       </section>
 
       <section class="card txns">
-        <h2 class="sec-title">
-          流水明细
-        </h2>
-        <p
-          v-if="!loading && transactions.length === 0"
-          class="hint"
-        >
-          暂无流水记录
-        </p>
-        <div
-          v-for="txn in transactions"
-          :key="txn.id"
-          class="txn"
-        >
-          <div class="txn-left">
-            <p class="txn-type">
-              {{ TXN_TEXT[txn.type] }}
-              <span
-                v-if="txn.remark"
-                class="txn-remark"
-              >· {{ txn.remark }}</span>
-            </p>
-            <p class="txn-time">
-              {{ formatTime(txn.createdAt) }}
-            </p>
-          </div>
-          <div class="txn-right">
-            <span
-              class="txn-amount"
-              :class="{ 'txn-amount--in': txn.direction === FundDirection.In }"
-            >
-              {{ txn.direction === FundDirection.In ? '+' : '-' }}{{ txn.amountYuan }}
-            </span>
-            <span class="txn-balance">余额 {{ txn.balanceAfterYuan }}</span>
-          </div>
+        <div class="tabs">
+          <button
+            :class="['tab', { 'tab--on': tab === 'txns' }]"
+            @click="tab = 'txns'"
+          >
+            流水明细
+          </button>
+          <button
+            :class="['tab', { 'tab--on': tab === 'withdrawals' }]"
+            @click="tab = 'withdrawals'"
+          >
+            提现记录
+          </button>
         </div>
-        <button
-          v-if="transactions.length < total"
-          class="more"
-          :disabled="loading"
-          @click="loadMore"
-        >
-          {{ loading ? '加载中…' : '加载更多' }}
-        </button>
+        <WithdrawalRecords
+          v-show="tab === 'withdrawals'"
+          ref="withdrawalsRef"
+        />
+        <template v-if="tab === 'txns'">
+          <p
+            v-if="!loading && transactions.length === 0"
+            class="hint"
+          >
+            暂无流水记录
+          </p>
+          <div
+            v-for="txn in transactions"
+            :key="txn.id"
+            class="txn"
+          >
+            <div class="txn-left">
+              <p class="txn-type">
+                {{ TXN_TEXT[txn.type] }}
+                <span
+                  v-if="txn.remark"
+                  class="txn-remark"
+                >· {{ txn.remark }}</span>
+              </p>
+              <p class="txn-time">
+                {{ formatTime(txn.createdAt) }}
+              </p>
+            </div>
+            <div class="txn-right">
+              <span
+                class="txn-amount"
+                :class="{ 'txn-amount--in': txn.direction === FundDirection.In }"
+              >
+                {{ txn.direction === FundDirection.In ? '+' : '-' }}{{ txn.amountYuan }}
+              </span>
+              <span class="txn-balance">余额 {{ txn.balanceAfterYuan }}</span>
+            </div>
+          </div>
+          <button
+            v-if="transactions.length < total"
+            class="more"
+            :disabled="loading"
+            @click="loadMore"
+          >
+            {{ loading ? '加载中…' : '加载更多' }}
+          </button>
+        </template>
       </section>
     </div>
 
@@ -299,10 +326,25 @@ onMounted(() => {
   padding: 14px 16px;
 }
 
-.sec-title {
-  font-size: 14px;
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab {
+  padding: 6px 14px;
+  font-size: 13px;
   font-weight: 800;
   font-style: italic;
+  color: var(--c-text-secondary);
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+}
+
+.tab--on {
+  color: var(--c-bg);
+  background: var(--c-accent);
+  border-color: var(--c-accent);
 }
 
 .hint {

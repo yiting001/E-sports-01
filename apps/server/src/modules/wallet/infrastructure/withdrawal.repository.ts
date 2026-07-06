@@ -31,6 +31,19 @@ export class TypeormWithdrawalRepository implements WithdrawalOrderRepository {
     });
   }
 
+  paginateByWallet(
+    walletId: string,
+    skip: number,
+    take: number,
+  ): Promise<[WithdrawalOrderEntity[], number]> {
+    return this.repo.findAndCount({
+      where: withTenant<WithdrawalOrderEntity>(this.tenant, { walletId }),
+      order: { createdAt: 'DESC' },
+      skip,
+      take,
+    });
+  }
+
   paginate(
     skip: number,
     take: number,

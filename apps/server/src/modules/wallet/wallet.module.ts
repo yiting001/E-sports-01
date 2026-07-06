@@ -41,6 +41,7 @@ import { CreateWithdrawalUseCase } from './application/use-cases/create-withdraw
 import { ListWalletsUseCase } from './application/use-cases/list-wallets.usecase';
 import { ListUserTransactionsUseCase } from './application/use-cases/list-user-transactions.usecase';
 import { AdjustWalletUseCase } from './application/use-cases/adjust-wallet.usecase';
+import { ListMyWithdrawalsUseCase } from './application/use-cases/list-my-withdrawals.usecase';
 import { ListWithdrawalsUseCase } from './application/use-cases/list-withdrawals.usecase';
 import { ApproveWithdrawalUseCase } from './application/use-cases/approve-withdrawal.usecase';
 import { RejectWithdrawalUseCase } from './application/use-cases/reject-withdrawal.usecase';
@@ -52,6 +53,7 @@ import { RechargeCreateController } from './interfaces/controllers/recharge.crea
 import { RechargeCallbackController } from './interfaces/controllers/recharge.callback.controller';
 import { RechargeQueryController } from './interfaces/controllers/recharge.query.controller';
 import { WithdrawalCreateController } from './interfaces/controllers/withdrawal.create.controller';
+import { WithdrawalMineController } from './interfaces/controllers/withdrawal.mine.controller';
 import { WalletAdminListController } from './interfaces/controllers/wallet.admin.list.controller';
 import { WalletAdminTransactionsController } from './interfaces/controllers/wallet.admin.transactions.controller';
 import { WalletAdminAdjustController } from './interfaces/controllers/wallet.admin.adjust.controller';
@@ -85,6 +87,7 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
     RechargeCallbackController,
     RechargeQueryController,
     WithdrawalCreateController,
+    WithdrawalMineController,
     WalletAdminListController,
     WalletAdminTransactionsController,
     WalletAdminAdjustController,
@@ -141,6 +144,7 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
     ListWalletsUseCase,
     ListUserTransactionsUseCase,
     AdjustWalletUseCase,
+    ListMyWithdrawalsUseCase,
     ListWithdrawalsUseCase,
     ApproveWithdrawalUseCase,
     RejectWithdrawalUseCase,
