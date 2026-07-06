@@ -18,7 +18,7 @@ const FEATURES = [
 </script>
 
 <template>
-  <div class="build-page">
+  <div class="build-page client-page">
     <header class="bar">
       <button
         class="back"

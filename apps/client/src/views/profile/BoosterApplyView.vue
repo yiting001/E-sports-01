@@ -85,7 +85,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="booster-page">
+  <div class="booster-page client-page">
     <header class="bar">
       <div class="bar-inner">
         <button

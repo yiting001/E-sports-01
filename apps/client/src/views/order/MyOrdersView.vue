@@ -110,7 +110,7 @@ onMounted(() => void load(true));
 </script>
 
 <template>
-  <div class="orders-page">
+  <div class="orders-page client-page">
     <header class="bar">
       <div class="bar-inner">
         <button

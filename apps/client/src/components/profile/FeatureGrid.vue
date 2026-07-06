@@ -7,7 +7,6 @@ import { useRouter } from 'vue-router';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { FEATURE_ENTRIES, type IconEntry } from '@/config/profile.mock';
 
-/** 入口 id → 路由名映射（入口清单见 FEATURE_ENTRIES） */
 const ENTRY_ROUTES: Record<string, string> = {
   'coupon-center': 'coupon-center',
   'my-coupons': 'my-coupons',

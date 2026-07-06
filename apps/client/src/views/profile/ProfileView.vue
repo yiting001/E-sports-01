@@ -57,10 +57,13 @@ const role = useRoleStore();
     max-width: var(--page-max-width);
     display: grid;
     grid-template-columns: 380px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
     align-items: start;
   }
 
   .profile > :deep(.header),
+  .profile > :deep(.member-card),
+  .profile > :deep(.booster-card),
   .profile > :deep(.cards) {
     grid-column: 1;
   }
@@ -72,6 +75,19 @@ const role = useRoleStore();
 
   .profile > :deep(.orders) {
     grid-row: 1;
+  }
+
+  .profile > :deep(.member-card),
+  .profile > :deep(.booster-card) {
+    grid-row: 2;
+  }
+
+  .profile > :deep(.cards) {
+    grid-row: 3;
+  }
+
+  .profile > :deep(.features) {
+    grid-row: 2 / span 2;
   }
 
   .version {

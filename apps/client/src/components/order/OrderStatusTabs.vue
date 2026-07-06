@@ -65,27 +65,21 @@ const emit = defineEmits<{
 
 @media (min-width: 768px) {
   .tabs {
-    width: 100%;
-    max-width: 860px;
+    width: fit-content;
+    max-width: min(100%, 860px);
     margin: 12px auto 0;
-    padding: 6px;
+    padding: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
     overflow: visible;
     border: 1px solid var(--c-border);
-    background: linear-gradient(180deg, var(--c-surface-2), var(--c-surface));
-    clip-path: polygon(
-      var(--chamfer) 0,
-      100% 0,
-      100% calc(100% - var(--chamfer)),
-      calc(100% - var(--chamfer)) 100%,
-      0 100%,
-      0 var(--chamfer)
-    );
+    background: color-mix(in srgb, var(--c-surface) 82%, transparent);
   }
 
   .tab {
-    flex: 1;
+    flex: 0 0 auto;
     min-width: 0;
-    padding: 10px 6px;
+    padding: 8px 14px;
     text-align: center;
   }
 

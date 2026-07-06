@@ -94,7 +94,7 @@ onMounted(loadRecords);
 </script>
 
 <template>
-  <div class="feedback">
+  <div class="feedback client-page">
     <header class="bar">
       <div class="bar-inner">
         <button

@@ -118,6 +118,98 @@ ol {
   transform: skewX(-18deg);
 }
 
+/**
+ * 独立功能页页面壳：移动端全屏，PC 端参考商品详情页收敛为顶部返回栏 + 内容区。
+ * 个人中心更多功能页统一使用，不再使用侧边菜单式导航。
+ */
+@media (min-width: 768px) {
+  .client-page.client-page.client-page {
+    position: static;
+    min-height: 100vh;
+    display: block;
+    padding: 28px 24px 48px;
+    background: transparent;
+  }
+
+  .client-page.client-page.client-page > .bar.bar {
+    width: 100%;
+    max-width: var(--page-max-width);
+    min-height: 40px;
+    margin: 0 auto;
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
+  }
+
+  .client-page.client-page.client-page .bar-inner.bar-inner {
+    width: 100%;
+    max-width: var(--page-max-width);
+    min-height: 40px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .client-page.client-page.client-page .bar > .back,
+  .client-page.client-page.client-page .bar-inner > .back {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--c-border);
+    background: var(--c-surface);
+  }
+
+  .client-page.client-page.client-page .name.name {
+    font-size: 22px;
+    letter-spacing: 0;
+  }
+
+  .client-page.client-page.client-page .bar-title {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .client-page.client-page.client-page .tip {
+    font-size: 12px;
+    color: var(--c-text-muted);
+  }
+
+  .client-page.client-page.client-page > .scroll.scroll {
+    width: 100%;
+    max-width: var(--page-max-width);
+    margin: 18px auto 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .client-page.client-page.client-page > .tabs.tabs {
+    width: fit-content;
+    max-width: var(--page-max-width);
+    margin: 18px auto 0;
+    padding: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+    overflow: visible;
+    border: 1px solid var(--c-border);
+    background: color-mix(in srgb, var(--c-surface) 82%, transparent);
+  }
+
+  .client-page.client-page.client-page > .tabs.tabs > .tab {
+    flex: 0 0 auto;
+    min-width: 92px;
+    padding: 8px 14px;
+  }
+
+  .client-page.client-page.client-page > .tabs + .scroll.scroll {
+    margin-top: 14px;
+  }
+}
+
 /* 隐藏横向滚动条（分类签横滑区用） */
 .no-scrollbar {
   scrollbar-width: none;
