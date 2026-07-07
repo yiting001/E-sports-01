@@ -1,21 +1,18 @@
-# 宝塔面板部署指南（CentOS 7+）
+# 宝塔面板部署指南（CentOS 7+，单站点）
 
 本文档描述如何把本项目（NestJS 后端 + Vue3 管理端/C 端）部署到装有 **宝塔面板** 的
-**CentOS 7 及以上** 服务器。整体架构：
+**CentOS 7 及以上** 服务器。**前端与后端全部挂在同一个网站（同一个域名）下**，
+由 Nginx 按路径转发：
 
 ```
-用户浏览器
-   │
-   ├─ https://c.example.com    → Nginx 站点（C 端静态文件 apps/client/dist）
-   ├─ https://admin.example.com→ Nginx 站点（管理端静态文件 apps/web/dist）
-   └─ https://api.example.com  → Nginx 反向代理 → Node 后端 (127.0.0.1:3000)
-                                   ├─ REST：/api/*
-                                   ├─ WebSocket：/im（socket.io）
-                                   └─ 本地上传静态目录：/static/*
-后端依赖：PostgreSQL 16 + Redis 7
+用户浏览器 → https://example.com （一个宝塔站点）
+   ├─ /            → C 端静态文件（apps/client/dist）
+   ├─ /admin/      → 管理端静态文件（apps/web/dist，构建 base=/admin/）
+   ├─ /api/        → Nginx 反代 → Node 后端 127.0.0.1:3000（REST）
+   ├─ /socket.io/  → Nginx 反代（WebSocket，IM/客服）
+   └─ /static/     → Nginx 反代（本地上传文件）
+后端依赖：PostgreSQL 16 + Redis 7（均只监听本机）
 ```
-
-> 域名可按需替换；也可以用同一个域名 + 不同路径（见文末「单域名部署」）。
 
 ---
 
@@ -104,29 +101,36 @@ SEED_ADMIN_USERNAME=admin
 SEED_ADMIN_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
 ```
 
-### 4.2 前端 `apps/client/.env.production`、`apps/web/.env.production`
+### 4.2 前端生产配置（同域，接口走相对同域地址）
 
-两个文件内容相同（指向后端对外域名）：
+`apps/client/.env.production` 与 `apps/web/.env.production` 内容相同，
+把 `example.com` 换成你的域名：
 
 ```ini
-VITE_API_BASE_URL=https://api.example.com/api
-VITE_WS_BASE_URL=https://api.example.com
+VITE_API_BASE_URL=https://example.com/api
+VITE_WS_BASE_URL=https://example.com
 ```
 
 ## 5. 构建
 
 ```bash
 cd /www/wwwroot/esports
-pnpm build
+pnpm build:server
+pnpm build:client
+# 管理端挂在 /admin/ 子路径，须以 VITE_BASE 指定构建 base
+VITE_BASE=/admin/ pnpm build:web
 ```
 
 产物：
 
-| 应用 | 产物目录 | 部署方式 |
+| 应用 | 产物目录 | 访问路径 |
 | --- | --- | --- |
-| 后端 | `apps/server/dist` | PM2 常驻进程 |
-| C 端 | `apps/client/dist` | Nginx 静态站点 |
-| 管理端 | `apps/web/dist` | Nginx 静态站点 |
+| 后端 | `apps/server/dist` | PM2 常驻，Nginx 反代 `/api` `/socket.io` `/static` |
+| C 端 | `apps/client/dist` | 站点根路径 `/` |
+| 管理端 | `apps/web/dist` | 子路径 `/admin/` |
+
+> `packages/contracts` 为共享包，`pnpm build:server` 前会随工作区自动构建；
+> 若单独构建报找不到 `@app/contracts`，先执行一次 `pnpm build`。
 
 ## 6. PM2 启动后端
 
@@ -149,17 +153,18 @@ pm2 save && pm2 startup
 应返回 JSON。
 
 > 后端进程工作目录必须是 `apps/server`（`.env` 与本地上传目录 `uploads/` 都按
-> 工作目录解析）。
+> 工作目录解析）。后端只监听 127.0.0.1:3000，不对公网开放。
 
-## 7. Nginx 站点配置
+## 7. Nginx 单站点配置
 
-### 7.1 后端反向代理（api.example.com）
+宝塔「网站 → 添加站点」，域名填 `example.com`，
+**网站目录指向 C 端产物**：`/www/wwwroot/esports/apps/client/dist`。
 
-宝塔「网站 → 添加站点」建一个纯静态站点 `api.example.com`，然后在
-「设置 → 配置文件」的 `server {}` 中加入：
+然后打开「设置 → 配置文件」，在该站点 `server {}` 内加入以下内容
+（放在宝塔自动生成的 `location` 之前）：
 
 ```nginx
-# REST 接口
+# ---------- 后端 REST ----------
 location /api/ {
     proxy_pass http://127.0.0.1:3000;
     proxy_set_header Host $host;
@@ -169,7 +174,7 @@ location /api/ {
     client_max_body_size 100m;          # 备注图片/视频上传
 }
 
-# WebSocket（IM/客服，socket.io 默认握手路径）
+# ---------- WebSocket（IM/客服，socket.io 握手路径） ----------
 location /socket.io/ {
     proxy_pass http://127.0.0.1:3000;
     proxy_http_version 1.1;
@@ -179,39 +184,46 @@ location /socket.io/ {
     proxy_read_timeout 3600s;
 }
 
-# 本地上传文件静态访问
+# ---------- 本地上传文件 ----------
 location /static/ {
     proxy_pass http://127.0.0.1:3000;
     proxy_set_header Host $host;
 }
-```
 
-### 7.2 C 端 / 管理端静态站点
+# ---------- 管理端（/admin/ 子路径，history 回退） ----------
+location /admin/ {
+    alias /www/wwwroot/esports/apps/web/dist/;
+    try_files $uri $uri/ /admin/index.html;
+    index index.html;
+}
+# 兼容不带斜杠的 /admin
+location = /admin {
+    return 301 /admin/;
+}
 
-分别添加站点 `c.example.com`、`admin.example.com`，网站目录指向：
-
-- C 端：`/www/wwwroot/esports/apps/client/dist`
-- 管理端：`/www/wwwroot/esports/apps/web/dist`
-
-两个站点都要加 **history 路由回退**（配置文件 `server {}` 内）：
-
-```nginx
+# ---------- C 端（根路径，history 回退） ----------
 location / {
     try_files $uri $uri/ /index.html;
 }
 ```
 
-### 7.3 HTTPS
+保存后重载 Nginx。验证：
 
-在每个站点「设置 → SSL」申请 Let's Encrypt 证书并开启强制 HTTPS。
+- `https://example.com/` → C 端首页
+- `https://example.com/admin/` → 管理端登录页
+- `https://example.com/api/config/branding` → JSON 响应
+
+### HTTPS
+
+站点「设置 → SSL」申请 Let's Encrypt 证书并开启强制 HTTPS。
 前端 `.env.production` 中的地址协议须与之一致（https）。
 
 ## 8. 配置中心初始化（部署后必做）
 
-用 `SEED_ADMIN_USERNAME/PASSWORD` 登录管理端 → 「系统 / 配置中心」，按需设置：
+用 `SEED_ADMIN_USERNAME/PASSWORD` 登录管理端（`/admin/`）→ 「系统 / 配置中心」，按需设置：
 
-- `upload.local.baseUrl` → `https://api.example.com/static`（否则上传文件外链仍指向 127.0.0.1）
-- `wallet.notifyBaseUrl` → `https://api.example.com`（支付回调基址）
+- `upload.local.baseUrl` → `https://example.com/static`（否则上传文件外链仍指向 127.0.0.1）
+- `wallet.notifyBaseUrl` → `https://example.com`（支付回调基址）
 - 支付渠道 `wallet.*` 商户密钥、短信渠道、品牌名称/Logo 等
 
 ## 9. 升级发布
@@ -220,28 +232,20 @@ location / {
 cd /www/wwwroot/esports
 git pull origin esports
 pnpm install
-pnpm build
+pnpm build:server && pnpm build:client && VITE_BASE=/admin/ pnpm build:web
 pm2 restart esports-server
 ```
 
 前端为纯静态产物，构建完成即生效（浏览器强刷新）。
 
-## 10. 单域名部署（可选）
-
-只有一个域名时，可把 C 端放根路径、管理端放子路径，API 走同域反代：
-
-- 站点根目录指向 `apps/client/dist`；
-- `location /admin/ { alias /www/wwwroot/esports/apps/web/dist/; try_files $uri $uri/ /admin/index.html; }`
-  （管理端需以 `base: '/admin/'` 重新构建：修改 `apps/web/vite.config.ts`）；
-- `/api/`、`/socket.io/`、`/static/` 反代配置与 7.1 相同；
-- 前端 `.env.production` 中两个地址改为同域名。
-
-## 11. 常见问题
+## 10. 常见问题
 
 | 现象 | 排查 |
 | --- | --- |
 | 后端启动报「缺少必需的环境变量」 | `.env` 未放在 `apps/server/` 下，或 PM2 工作目录不对 |
 | 前端接口 404 | Nginx 未配置 `/api/` 反代，或 `VITE_API_BASE_URL` 少了 `/api` 后缀 |
+| `/admin/` 白屏或资源 404 | 管理端构建时未加 `VITE_BASE=/admin/`，或 Nginx `alias` 路径末尾少了 `/` |
+| `/admin/xxx` 刷新 404 | `location /admin/` 缺少 `try_files ... /admin/index.html` 回退 |
 | 客服/IM 连不上、控制台报 websocket error | 缺少 `/socket.io/` 的 Upgrade 反代配置 |
 | 上传图片显示 127.0.0.1 链接 | 配置中心 `upload.local.baseUrl` 未改为公网地址 |
 | 上传大视频报 413 | Nginx `client_max_body_size` 过小 |
