@@ -95,6 +95,12 @@ export const router = createRouter({
       meta: { title: '我的优惠券', requiresAuth: true },
     },
     {
+      path: '/invite',
+      name: 'invite',
+      component: () => import('@/views/invite/InviteView.vue'),
+      meta: { title: '邀请好友', requiresAuth: true },
+    },
+    {
       path: '/member/levels',
       name: 'member-levels',
       component: () => import('@/views/member/MemberLevelsView.vue'),

@@ -10,6 +10,7 @@ import { COUPON_REPOSITORY } from './domain/coupon-repository.interface';
 import { TypeormCouponRepository } from './infrastructure/coupon.repository';
 
 import { CouponRedeemService } from './application/coupon-redeem.service';
+import { CouponGrantService } from './application/coupon-grant.service';
 import { ListCouponsUseCase } from './application/use-cases/list-coupons.usecase';
 import { SaveCouponUseCase } from './application/use-cases/save-coupon.usecase';
 import { RemoveCouponUseCase } from './application/use-cases/remove-coupon.usecase';
@@ -49,6 +50,7 @@ import { CouponClaimController } from './interfaces/controllers/coupon.claim.con
   providers: [
     { provide: COUPON_REPOSITORY, useClass: TypeormCouponRepository },
     CouponRedeemService,
+    CouponGrantService,
     ListCouponsUseCase,
     SaveCouponUseCase,
     RemoveCouponUseCase,
@@ -56,7 +58,7 @@ import { CouponClaimController } from './interfaces/controllers/coupon.claim.con
     ClaimCouponUseCase,
     ListMyCouponsUseCase,
   ],
-  // 导出核销服务，供订单模块下单抵扣/取消回退复用
-  exports: [CouponRedeemService],
+  // 导出核销服务（订单模块抵扣/回退）与系统发券服务（邀请奖励发放）
+  exports: [CouponRedeemService, CouponGrantService],
 })
 export class CouponModule {}

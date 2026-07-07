@@ -119,6 +119,12 @@ export const PERMS = {
     /** 优惠券删除 */
     remove: 'coupon:remove',
   },
+  invite: {
+    /** 邀请奖励配置读写（管理端） */
+    configSet: 'invite:config:set',
+    /** 邀请记录查询（管理端） */
+    recordList: 'invite:record:list',
+  },
   activity: {
     /** 福利活动列表查看（管理端） */
     list: 'activity:list',

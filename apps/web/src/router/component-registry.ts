@@ -32,6 +32,7 @@ const COMPONENT_REGISTRY: Record<string, ComponentLoader> = {
   'feedback:menu': () => import('@/views/feedback/FeedbackAdminView.vue'),
   'notice:menu': () => import('@/views/notice/NoticeAdminView.vue'),
   'coupon:menu': () => import('@/views/coupon/CouponAdminView.vue'),
+  'invite:menu': () => import('@/views/invite/InviteAdminView.vue'),
   'activity:menu': () => import('@/views/activity/ActivityAdminView.vue'),
 };
 

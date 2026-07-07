@@ -44,6 +44,8 @@ export enum WalletTxnType {
   DepositRefund = 'deposit_refund',
   /** 罚款扣除（财务对打手罚款） */
   Penalty = 'penalty',
+  /** 邀请奖励入账（邀请好友绑定成功发放） */
+  InviteReward = 'invite_reward',
 }
 
 /** 流水类型展示文案（前端明细列表共用单一来源） */
@@ -55,6 +57,7 @@ export const WALLET_TXN_TYPE_TEXT: Record<WalletTxnType, string> = {
   [WalletTxnType.Deposit]: '押金缴纳',
   [WalletTxnType.DepositRefund]: '押金退还',
   [WalletTxnType.Penalty]: '罚款',
+  [WalletTxnType.InviteReward]: '邀请奖励',
 };
 
 /** 资金方向 */
