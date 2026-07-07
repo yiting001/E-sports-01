@@ -91,6 +91,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: '刷新令牌有效期（秒）',
   },
   {
+    key: CONFIG_KEYS.auth.userAgreement,
+    value: '',
+    type: ConfigValueType.RichText,
+    group: ConfigGroup.Auth,
+    remark: '用户协议正文（富文本，C 端登录/注册页需勾选同意后才可提交）',
+  },
+  {
     key: CONFIG_KEYS.upload.driver,
     value: StorageDriver.Local,
     type: ConfigValueType.String,

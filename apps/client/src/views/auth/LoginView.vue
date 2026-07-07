@@ -4,12 +4,14 @@
  * 仅支持手机号验证码方式：分段页签切换「登录 / 注册」，共用手机号+验证码表单，
  * 注册额外可填昵称与好友邀请码（填码注册成功自动绑定邀请关系）；注册成功即自动登录。登录态由 auth.store 维护，
  * 成功后按 redirect 回跳或进入首页。校验反馈统一走全局 toast。
+ * 登录/注册均需勾选同意《用户协议》（后台富文本配置，弹层查看全文）。
  */
 import { CHINA_MOBILE_PATTERN, INVITE_LIMITS } from '@app/contracts';
 import { computed, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { authApi } from '@/api/auth.api';
 import { inviteApi } from '@/api/invite.api';
+import AgreementDialog from '@/components/auth/AgreementDialog.vue';
 import AppIcon from '@/components/common/AppIcon.vue';
 import SegmentTabs from '@/components/common/SegmentTabs.vue';
 import { useToast } from '@/composables/use-toast';
@@ -31,6 +33,11 @@ const isRegister = computed(() => activeTab.value === 1);
 
 /** 表单模型：登录/注册共用，nickname/inviteCode 仅注册用 */
 const form = reactive({ phone: '', code: '', nickname: '', inviteCode: '' });
+
+/** 是否已勾选同意用户协议（登录/注册提交前置条件） */
+const agreed = ref(false);
+/** 用户协议弹层显隐 */
+const agreementOpen = ref(false);
 
 const submitting = ref(false);
 const sending = ref(false);
@@ -88,6 +95,10 @@ async function onSubmit(): Promise<void> {
   }
   if (!form.code.trim()) {
     toast.show('请输入验证码');
+    return;
+  }
+  if (!agreed.value) {
+    toast.show('请先阅读并同意《用户协议》');
     return;
   }
   submitting.value = true;
@@ -221,6 +232,21 @@ async function bindInviteCode(): Promise<void> {
           >
         </label>
 
+        <label class="agree-row">
+          <input
+            v-model="agreed"
+            type="checkbox"
+            class="agree-check"
+          >
+          <span class="agree-text">我已阅读并同意
+            <button
+              type="button"
+              class="agree-link"
+              @click.prevent="agreementOpen = true"
+            >《用户协议》</button>
+          </span>
+        </label>
+
         <button
           type="submit"
           class="submit"
@@ -231,9 +257,11 @@ async function bindInviteCode(): Promise<void> {
       </form>
 
       <p class="hint">
-        {{ isRegister ? '注册即成为普通会员（member），并同意用户协议' : '未注册的手机号请切换到「注册」页' }}
+        {{ isRegister ? '注册即成为普通会员（member）' : '未注册的手机号请切换到「注册」页' }}
       </p>
     </div>
+
+    <AgreementDialog v-model:open="agreementOpen" />
   </div>
 </template>
 
@@ -342,6 +370,28 @@ async function bindInviteCode(): Promise<void> {
 .send-btn:disabled {
   color: var(--c-text-muted);
   cursor: not-allowed;
+}
+
+.agree-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--c-text-secondary);
+}
+
+.agree-check {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--c-accent);
+}
+
+.agree-link {
+  padding: 0;
+  font-size: 12px;
+  color: var(--c-accent);
+  background: none;
+  border: none;
 }
 
 .submit {
