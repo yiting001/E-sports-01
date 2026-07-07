@@ -18,6 +18,8 @@ export interface MessageSearchFilter {
 /** 聊天消息仓储端口，隔离领域与持久化实现 */
 export interface MessageRepository {
   save(message: ChatMessageEntity): Promise<ChatMessageEntity>;
+  /** 按 id 查单条消息，供引用回复校验与快照 */
+  findById(id: string): Promise<ChatMessageEntity | null>;
   findRecent(conversationId: string, limit: number): Promise<ChatMessageEntity[]>;
   /** 会话最后一条消息，供会话列表预览 */
   findLatest(conversationId: string): Promise<ChatMessageEntity | null>;

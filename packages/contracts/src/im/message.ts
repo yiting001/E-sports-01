@@ -19,12 +19,30 @@ export enum ConversationType {
 /** 系统消息的发送者标识，前端据此渲染为居中灰色提示 */
 export const SYSTEM_SENDER_ID = 'system';
 
+/** 引用回复的原消息快照（发送时冻结，避免读侧逐条联查） */
+export interface MessageReplyPreview {
+  /** 被引用消息 id */
+  id: string;
+  /** 被引用消息发送者 id */
+  senderId: string;
+  /** 被引用消息发送者用户名 */
+  senderName: string;
+  /** 被引用消息类型 */
+  type: MessageType;
+  /** 被引用消息内容（文本截断后的摘要或媒体 URL） */
+  content: string;
+}
+
 /** 客户端发送消息的载荷 */
 export interface SendMessagePayload {
   conversationId: string;
   type: MessageType;
   /** 文本内容或媒体资源 URL */
   content: string;
+  /** 被 @ 的用户 id 列表（仅会话成员有效） */
+  mentions?: string[];
+  /** 引用回复的原消息 id（需属于同一会话） */
+  replyToId?: string;
 }
 
 /** 服务端广播的消息体 */
@@ -34,6 +52,10 @@ export interface ChatMessage {
   senderId: string;
   type: MessageType;
   content: string;
+  /** 被 @ 的用户 id 列表，无则为 null */
+  mentions: string[] | null;
+  /** 引用回复的原消息快照，无则为 null */
+  replyTo: MessageReplyPreview | null;
   createdAt: number;
 }
 

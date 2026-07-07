@@ -11,6 +11,7 @@ import {
 } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { imApi } from '@/api/im.api';
+import { replyContentText } from '@/composables/use-chat-compose';
 import { createImSocket } from '@/composables/use-im-socket';
 import { useAuthStore } from '@/stores/auth.store';
 import { sanitizeHtml } from '@/utils/sanitize-html';
@@ -277,6 +278,15 @@ onBeforeUnmount(() => im.disconnect());
                       <span>{{ message.senderId.slice(0, 8) }}</span>
                       <span>{{ messageTypeLabel(message.type) }}</span>
                       <time>{{ formatImTime(message.createdAt) }}</time>
+                    </div>
+                    <div
+                      v-if="message.replyTo"
+                      class="service-reply-quote"
+                    >
+                      <span class="service-reply-quote__sender">{{ message.replyTo.senderName }}</span>
+                      <span class="service-reply-quote__content">
+                        {{ replyContentText(message.replyTo.type, message.replyTo.content) }}
+                      </span>
                     </div>
                     <div
                       v-if="message.type === MessageType.Text"

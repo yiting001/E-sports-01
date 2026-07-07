@@ -1,4 +1,4 @@
-import { MessageType } from '@app/contracts';
+import { MessageReplyPreview, MessageType } from '@app/contracts';
 import { Column, Entity, Index } from 'typeorm';
 import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 
@@ -22,4 +22,12 @@ export class ChatMessageEntity extends TenantScopedEntity {
 
   @Column({ type: 'text' })
   content!: string;
+
+  /** 被 @ 的用户 id 列表，无则为 null */
+  @Column({ type: 'jsonb', nullable: true })
+  mentions!: string[] | null;
+
+  /** 引用回复的原消息快照（发送时冻结），无则为 null */
+  @Column({ name: 'reply_to', type: 'jsonb', nullable: true })
+  replyTo!: MessageReplyPreview | null;
 }

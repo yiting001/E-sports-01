@@ -103,9 +103,11 @@ async function selectConversation(id: string): Promise<void> {
   if (item) {
     item.unread = 0;
   }
+  // 成员清单供聊天面板 @选择与引用预览解析用户名
+  detail.value = await imApi.conversationDetail(id);
 }
 
-function send(): void {
+function send(extras: { mentions?: string[]; replyToId?: string }): void {
   if (!activeId.value) {
     return;
   }
@@ -117,6 +119,8 @@ function send(): void {
     conversationId: activeId.value,
     type: MessageType.Text,
     content: draft.value,
+    mentions: extras.mentions,
+    replyToId: extras.replyToId,
   });
   draft.value = '';
 }
@@ -281,6 +285,8 @@ onBeforeUnmount(() => im.disconnect());
         :messages="messages"
         :uploading="uploading"
         :can-manage="canManage"
+        :members="detail?.id === activeId ? detail.members : []"
+        :self-id="auth.profile?.id ?? null"
         :is-self="isSelf"
         :is-system="isSystem"
         @send="send"

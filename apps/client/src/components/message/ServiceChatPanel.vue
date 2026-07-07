@@ -15,6 +15,9 @@ import {
 import DOMPurify from 'dompurify';
 import AppIcon from '@/components/common/AppIcon.vue';
 import ChatMedia from '@/components/message/ChatMedia.vue';
+import ChatMentionPicker from '@/components/message/ChatMentionPicker.vue';
+import ChatReplyQuote from '@/components/message/ChatReplyQuote.vue';
+import { useChatCompose } from '@/composables/use-chat-compose';
 import { imApi } from '@/api/im.api';
 import { uploadApi } from '@/api/upload.api';
 import { createImSocket } from '@/composables/use-im-socket';
@@ -61,6 +64,7 @@ const draft = ref('');
 const loading = ref(false);
 const uploading = ref(false);
 const scrollArea = ref<HTMLElement | null>(null);
+const compose = useChatCompose(draft);
 const imageInput = ref<HTMLInputElement | null>(null);
 const videoInput = ref<HTMLInputElement | null>(null);
 
@@ -97,6 +101,21 @@ function isSelf(message: ChatMessage): boolean {
 
 function isSystem(message: ChatMessage): boolean {
   return message.senderId === SYSTEM_SENDER_ID;
+}
+
+/** 消息是否 @ 了当前用户，命中时气泡高亮 */
+function mentionedMe(message: ChatMessage): boolean {
+  const selfId = auth.profile?.id;
+  return Boolean(selfId && message.mentions?.includes(selfId));
+}
+
+/** 引用预览里的发送者名：自己显「我」，其他人从成员清单解析 */
+function senderNameOf(message: ChatMessage): string {
+  if (isSelf(message)) {
+    return '我';
+  }
+  const member = compose.members.value.find((m) => m.userId === message.senderId);
+  return member?.username ?? '对方';
 }
 
 /** 系统富文本消息净化后渲染，防止 XSS */
@@ -163,12 +182,23 @@ async function joinConversation(target: ConversationView | null): Promise<void> 
     socket.onError((err) => toast.show(err.message));
     messages.value = await socket.join(target.id);
     activeConversationId.value = target.id;
+    void loadMembers(target.id);
     emit('ready', target);
     await scrollToBottom();
   } catch {
     toast.show('客服接入失败，请稍后重试');
   } finally {
     loading.value = false;
+  }
+}
+
+/** 拉取会话成员供 @选择（失败不阻断聊天，仅不可 @） */
+async function loadMembers(conversationId: string): Promise<void> {
+  try {
+    const detail = await imApi.conversationDetail(conversationId);
+    compose.setMembers(detail.members, auth.profile?.id);
+  } catch {
+    compose.setMembers([]);
   }
 }
 
@@ -194,8 +224,11 @@ function send(): void {
     conversationId: activeConversation.value.id,
     type: MessageType.Text,
     content,
+    mentions: compose.collectMentions(content),
+    replyToId: compose.replyTarget.value?.id,
   });
   draft.value = '';
+  compose.clearAfterSend();
 }
 
 /** 选中图片/视频后：自助上传拿 URL，再作为对应类型的消息发送 */
@@ -309,7 +342,16 @@ onBeforeUnmount(() => socket.disconnect());
         >
           <div class="col">
             <span class="sender">{{ isSelf(msg) ? '我' : '客服' }}</span>
-            <div class="bubble">
+            <div
+              class="bubble"
+              :class="{ 'bubble--mention': mentionedMe(msg) }"
+            >
+              <ChatReplyQuote
+                v-if="msg.replyTo"
+                :sender-name="msg.replyTo.senderName"
+                :type="msg.replyTo.type"
+                :content="msg.replyTo.content"
+              />
               <p
                 v-if="msg.type === MessageType.Text"
                 class="text"
@@ -329,8 +371,41 @@ onBeforeUnmount(() => socket.disconnect());
               <span class="time">{{ formatTime(msg.createdAt) }}</span>
             </div>
           </div>
+          <button
+            v-if="canSend"
+            class="quote-btn"
+            aria-label="引用回复"
+            @click="compose.setReply(msg)"
+          >
+            <AppIcon
+              name="reply"
+              :size="14"
+            />
+          </button>
         </div>
       </template>
+    </div>
+
+    <div
+      v-if="compose.mentionQuery.value !== null"
+      class="compose-float"
+    >
+      <ChatMentionPicker
+        :candidates="compose.mentionCandidates.value"
+        @pick="compose.pickMention"
+      />
+    </div>
+    <div
+      v-if="compose.replyTarget.value"
+      class="compose-float"
+    >
+      <ChatReplyQuote
+        :sender-name="senderNameOf(compose.replyTarget.value)"
+        :type="compose.replyTarget.value.type"
+        :content="compose.replyTarget.value.content"
+        cancellable
+        @cancel="compose.clearAfterSend()"
+      />
     </div>
 
     <footer class="compose">

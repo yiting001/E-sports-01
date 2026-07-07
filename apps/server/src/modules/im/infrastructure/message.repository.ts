@@ -30,6 +30,12 @@ export class TypeormMessageRepository implements MessageRepository {
     return this.repo.save(message);
   }
 
+  findById(id: string): Promise<ChatMessageEntity | null> {
+    return this.repo.findOne({
+      where: withTenant<ChatMessageEntity>(this.tenant, { id }) as FindOptionsWhere<ChatMessageEntity>,
+    });
+  }
+
   async findRecent(
     conversationId: string,
     limit: number,
