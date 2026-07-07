@@ -26,6 +26,7 @@
 | 登录注册 UI | [auth-ui.md](./auth-ui.md) | 企业级电竞风格登录/注册/短信验证码入口，仅重做 UI 不改鉴权逻辑 |
 | 工作台 UI | [dashboard-ui.md](./dashboard-ui.md) | 响应式账号概览、业务入口、快捷访问和权限摘要 |
 | 数据统计仪表盘 | [dashboard.md](./dashboard.md) | 订单/财务/用户/打手四块只读聚合统计（ECharts），日/月/年时间范围，按权限分块展示 |
+| 部署文档 | [deployment.md](./deployment.md) | 环境变量、构建顺序、PM2 启停、Nginx 反代与更新部署检查清单 |
 | API 参考 | [api-reference.md](./api-reference.md) | 全部 REST 端点与 WS 事件、统一响应结构、权限码一览 |
 | 宝塔部署 | [deploy-bt.md](./deploy-bt.md) | 宝塔面板（CentOS 7+）单站点部署：前后端同域名，Nginx 按路径转发（/、/admin/、/api、/socket.io、/static） |
 

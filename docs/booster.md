@@ -54,10 +54,10 @@ modules/rbac/
 
 - C 端 `client/views/profile/BoosterApplyView.vue`（入口：「我的」页更多功能 →「打手入驻」，路由 `/profile/booster`）：按状态分场景展示申请表单 / 审核进度 / 入驻资料 / 驳回理由与重提。
 - C 端 `client/views/profile/BoosterApplyView.responsive.css`：移动端保持全屏申请表单；PC 端标题栏、状态卡、资料表单与提交按钮同轴收敛，有审核状态时左侧提示、右侧展示资料或重提表单。
-- 管理端 `web/views/booster/BoosterAdminView.vue`（菜单 `booster:menu` 打手管理，电竞运营分组）：状态筛选 + 审核通过/驳回 + 资料编辑弹窗 + 等级/完成单数/押金展示 + 押金退还。
-- 管理端 `web/views/booster/BoosterLevelDialog.vue`：等级档位配置弹窗（增删行 + 保存，`booster:level:set`）。
-- 管理端 `web/views/booster/BoosterDepositPolicyDialog.vue`：押金交付配置弹窗（最低/最高交付额，`booster:deposit:policy:set`）。
-- 管理端 `web/views/finance/PenaltyAdminView.vue`（菜单 `finance:penalty:menu` 罚款管理，财务分组）：罚款记录列表 + 创建罚款弹窗（余额/押金二选一）。
+- 管理端 `web/views/booster/BoosterAdminView.vue`（菜单 `booster:menu` 打手管理，电竞运营分组）：状态筛选 + 审核通过/驳回 + 资料编辑右侧抽屉 + 等级/完成单数/押金展示 + 押金退还。
+- 管理端 `web/views/booster/BoosterLevelDialog.vue`：等级档位配置右侧抽屉（增删行 + 保存，`booster:level:set`）。
+- 管理端 `web/views/booster/BoosterDepositPolicyDialog.vue`：押金交付配置右侧抽屉（最低/最高交付额，`booster:deposit:policy:set`）。
+- 管理端 `web/views/finance/PenaltyAdminView.vue`（菜单 `finance:penalty:menu` 罚款管理，财务分组）：罚款记录列表 + 打手 ID 筛选 + 创建罚款右侧抽屉（余额/押金二选一）。
 - C 端 `client/components/profile/BoosterLevelCard.vue`（「我的」页打手身份）：等级/提成/完成单数/押金进度展示与区间内自选金额缴纳。
 
 ## 权限（RBAC）
@@ -76,6 +76,22 @@ modules/rbac/
 | `finance:penalty:create` | 财务-罚款创建 | `POST /finance/penalties` |
 
 > `GET /booster/mine`、`POST /booster` 仅需登录态，所有角色可用（自助）。管理类接口默认仅超管，其余角色在「角色管理」按需分配。
+
+## 管理端 UI 流程
+
+```mermaid
+flowchart LR
+  A["打手申请列表"] --> B["审核通过/驳回"]
+  A --> C["编辑资料抽屉"]
+  A --> D["等级配置抽屉"]
+  A --> E["押金配置抽屉"]
+  A --> F["罚款记录筛选"]
+  F --> G["创建罚款抽屉"]
+  C --> A
+  D --> A
+  E --> A
+  G --> F
+```
 
 ## 接口
 

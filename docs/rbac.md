@@ -203,6 +203,7 @@ flowchart TD
 
 - 权限总数、命名空间、接口权限、前端权限四类概览。
 - 权限目录保持树形视图，展示分组、权限类型、权限码以及路由或接口信息。
+- 根命名空间显示中文模块名（如 `rbac` 显示为「角色与权限」），菜单命名空间优先复用 contracts `MENU_DEFINITIONS` 的标题，无菜单承载的命名空间集中在 `permission-tree.ts` 映射。
 - 窄屏通过目录容器横向滚动，避免树节点操作区遮挡。
 - 新增顶级权限和命名空间子权限，新增时自动带入权限码前缀。
 - 编辑/删除真实权限节点，虚拟分组只提供新增子权限入口。
@@ -213,6 +214,7 @@ flowchart TD
   Page["PermissionListView.vue 页面容器"] --> Stats["PermissionStats 指标概览"]
   Page --> Directory["PermissionDirectory 权限目录"]
   Page --> FormDialog["PermissionFormDialog 新建/编辑弹窗"]
-  Page --> TreeUtil["buildNamespaceTree/flattenPermissions"]
+  Page --> TreeUtil["buildNamespaceTree/flattenPermissions/namespaceLabel"]
+  TreeUtil --> MenuMeta["MENU_DEFINITIONS/MENU_GROUPS 中文菜单元数据"]
   Directory --> PermissionApi["permissionApi.tree/create/update/remove"]
 ```

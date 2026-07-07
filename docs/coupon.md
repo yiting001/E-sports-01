@@ -3,9 +3,10 @@
 ## 实现了什么
 
 1. **管理端发券**：新建/编辑/删除优惠券（满减/折扣、使用门槛、发行总量、单人限领、有效期、上架开关），权限码 `coupon:list/save/remove`，菜单「优惠券管理」。
-2. **C 端领券中心**：展示上架且在有效期内的券（剩余张数、我已领张数），点击领取；条件自增 `issuedCount < totalCount` 原子防超发，单人限领校验。
-3. **我的优惠券**：领取时快照券面信息（券名/面值/门槛/到期时间）到 `user_coupon`，后续管理端改券不影响已领的券；按可用/已使用/已过期展示。
-4. **下单抵扣**：下单页选券（前端按 contracts 共享的 `calcCouponDeductionFen` 预览抵扣，与后端同口径），后端在会员折后价上再抵扣，实付至少保留 1 分；条件核销（未使用 → 已使用）防并发重复用券，订单取消时自动回滚券为未使用。
+2. **后台 UI**：列表按「券信息/券面/领取进度/限领/有效期/上架/操作」展示；新建与编辑统一从右侧抽屉打开，中间内容滚动，底部操作区固定且左对齐。
+3. **C 端领券中心**：展示上架且在有效期内的券（剩余张数、我已领张数），点击领取；条件自增 `issuedCount < totalCount` 原子防超发，单人限领校验。
+4. **我的优惠券**：领取时快照券面信息（券名/面值/门槛/到期时间）到 `user_coupon`，后续管理端改券不影响已领的券；按可用/已使用/已过期展示。
+5. **下单抵扣**：下单页选券（前端按 contracts 共享的 `calcCouponDeductionFen` 预览抵扣，与后端同口径），后端在会员折后价上再抵扣，实付至少保留 1 分；条件核销（未使用 → 已使用）防并发重复用券，订单取消时自动回滚券为未使用。
 
 ## 结构导图
 
@@ -29,7 +30,7 @@ apps/server/src/modules/coupon/
 apps/web/src/
 ├── api/coupon.api.ts                       # 管理端券 CRUD
 ├── views/coupon/CouponAdminView.vue        # 券列表 + 领取进度
-└── components/coupon/CouponFormDialog.vue  # 券编辑弹窗（元/折输入换算分/万分比）
+└── components/coupon/CouponFormDialog.vue  # 右侧抽屉表单（元/折输入换算分/万分比）
 
 apps/client/src/
 ├── api/coupon.api.ts                       # center / claim / mine
@@ -37,6 +38,16 @@ apps/client/src/
 ├── views/coupon/MyCouponsView.vue          # 我的优惠券
 ├── views/coupon/coupon-format.ts           # 券面/门槛/日期文案
 └── views/order/CheckoutView.vue            # 下单选券抵扣（预览与后端同口径）
+```
+
+## 后台 UI 流程
+
+```mermaid
+flowchart LR
+  A["优惠券列表"] --> B["新建/编辑"]
+  B --> C["右侧抽屉表单"]
+  C --> D["保存券模板"]
+  D --> A
 ```
 
 ## 接口

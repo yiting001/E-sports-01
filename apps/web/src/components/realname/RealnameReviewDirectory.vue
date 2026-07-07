@@ -33,6 +33,11 @@ const emit = defineEmits<{
   'update:page': [value: number];
   'update:pageSize': [value: number];
 }>();
+
+/** 证件照预览图集，过滤空地址后交给 Element Plus 统一预览 */
+function certificateImages(row: RealnameView): string[] {
+  return [row.frontImage, row.backImage].filter((image): image is string => Boolean(image));
+}
 </script>
 
 <template>
@@ -114,15 +119,21 @@ const emit = defineEmits<{
             <el-image
               v-if="row.frontImage"
               :src="row.frontImage"
-              :preview-src-list="[row.frontImage, row.backImage].filter(Boolean)"
+              :preview-src-list="certificateImages(row)"
+              :initial-index="0"
+              preview-teleported
               fit="cover"
+              alt="身份证人像面"
               class="realname-thumb"
             />
             <el-image
               v-if="row.backImage"
               :src="row.backImage"
-              :preview-src-list="[row.backImage, row.frontImage].filter(Boolean)"
+              :preview-src-list="certificateImages(row)"
+              :initial-index="row.frontImage ? 1 : 0"
+              preview-teleported
               fit="cover"
+              alt="身份证国徽面"
               class="realname-thumb"
             />
             <span

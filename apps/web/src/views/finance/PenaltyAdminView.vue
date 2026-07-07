@@ -15,18 +15,26 @@ import {
   type PenaltyView,
 } from '@app/contracts';
 import { ElMessage } from 'element-plus';
-import { Plus, Refresh, Warning } from '@element-plus/icons-vue';
+import { Plus, Refresh, RefreshLeft, Search, Warning } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { financeApi } from '@/api/finance.api';
 import './PenaltyAdminView.css';
 
+type PenaltySourceTagType = 'warning' | 'danger';
+
 const list = ref<PenaltyView[]>([]);
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
+const boosterUserIdFilter = ref('');
 const loading = ref(false);
+
+const sourceTagType: Record<PenaltySource, PenaltySourceTagType> = {
+  [PenaltySource.Balance]: 'danger',
+  [PenaltySource.Deposit]: 'warning',
+};
 
 const sourceOptions = Object.values(PenaltySource).map((source) => ({
   label: PENALTY_SOURCE_TEXT[source],
@@ -46,12 +54,21 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
+function sourceText(row: PenaltyView): string {
+  return PENALTY_SOURCE_TEXT[row.source];
+}
+
+function sourceType(row: PenaltyView): PenaltySourceTagType {
+  return sourceTagType[row.source];
+}
+
 async function load(): Promise<void> {
   loading.value = true;
   try {
     const res = await financeApi.listPenalties({
       page: page.value,
       pageSize: pageSize.value,
+      boosterUserId: boosterUserIdFilter.value.trim() || undefined,
     });
     list.value = res.list;
     total.value = res.total;
@@ -67,6 +84,17 @@ async function changePage(value: number): Promise<void> {
 
 async function changePageSize(value: number): Promise<void> {
   pageSize.value = value;
+  page.value = PAGINATION_DEFAULTS.page;
+  await load();
+}
+
+async function search(): Promise<void> {
+  page.value = PAGINATION_DEFAULTS.page;
+  await load();
+}
+
+async function resetSearch(): Promise<void> {
+  boosterUserIdFilter.value = '';
   page.value = PAGINATION_DEFAULTS.page;
   await load();
 }
@@ -131,6 +159,7 @@ onMounted(() => {
     <app-panel
       title="打手罚款管理"
       eyebrow="Booster Penalty"
+      description="记录并追踪对打手的余额或押金扣款，保留订单与理由供审计"
     >
       <template #actions>
         <div class="admin-actions">
@@ -151,16 +180,44 @@ onMounted(() => {
         </div>
       </template>
 
+      <template #toolbar>
+        <div class="admin-toolbar">
+          <el-input
+            v-model="boosterUserIdFilter"
+            class="penalty-filter"
+            clearable
+            placeholder="按打手用户 ID 查询"
+            :prefix-icon="Search"
+            @keyup.enter="search"
+          />
+          <div class="admin-actions">
+            <el-button
+              type="primary"
+              :icon="Search"
+              @click="search"
+            >
+              查询
+            </el-button>
+            <el-button
+              :icon="RefreshLeft"
+              @click="resetSearch"
+            >
+              重置
+            </el-button>
+          </div>
+        </div>
+      </template>
+
       <app-data-table
         :data="list"
         :loading="loading"
-        :min-width="1080"
+        :min-width="920"
         table-class="penalty-table"
         empty-text="暂无罚款记录"
       >
         <el-table-column
           label="被罚打手"
-          min-width="170"
+          min-width="230"
         >
           <template #default="{ row }">
             <div class="penalty-user">
@@ -170,54 +227,48 @@ onMounted(() => {
               <div>
                 <strong>{{ row.nickname || row.username }}</strong>
                 <small>{{ row.username }}</small>
+                <span>{{ row.boosterUserId }}</span>
               </div>
             </div>
           </template>
         </el-table-column>
         <el-table-column
-          label="罚款金额"
-          width="110"
-        >
-          <template #default="{ row }">
-            <span class="penalty-amount">¥{{ row.amountYuan }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="扣除来源"
-          width="100"
-        >
-          <template #default="{ row }">
-            <el-tag
-              round
-              effect="light"
-              :type="row.source === PenaltySource.Deposit ? 'warning' : 'danger'"
-            >
-              {{ PENALTY_SOURCE_TEXT[row.source as PenaltySource] }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="关联订单号"
+          label="扣款信息"
           min-width="170"
         >
           <template #default="{ row }">
-            <span class="penalty-muted">{{ row.orderNo || '-' }}</span>
+            <div class="penalty-money">
+              <span class="penalty-amount">¥{{ row.amountYuan }}</span>
+              <el-tag
+                round
+                effect="light"
+                :type="sourceType(row)"
+              >
+                {{ sourceText(row) }}
+              </el-tag>
+            </div>
           </template>
         </el-table-column>
         <el-table-column
-          label="罚款理由"
-          min-width="220"
+          label="关联信息"
+          min-width="280"
         >
           <template #default="{ row }">
-            <span class="penalty-muted">{{ row.reason }}</span>
+            <div class="penalty-related">
+              <span>订单：{{ row.orderNo || '-' }}</span>
+              <span class="penalty-reason">{{ row.reason }}</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column
-          label="操作时间"
-          width="150"
+          label="操作信息"
+          min-width="190"
         >
           <template #default="{ row }">
-            <span class="penalty-muted">{{ formatDate(row.createdAt) }}</span>
+            <div class="penalty-operation">
+              <span>{{ formatDate(row.createdAt) }}</span>
+              <span class="penalty-muted">创建人：{{ row.createdBy }}</span>
+            </div>
           </template>
         </el-table-column>
       </app-data-table>
@@ -236,12 +287,15 @@ onMounted(() => {
       </div>
     </app-panel>
 
-    <el-dialog
+    <el-drawer
       v-model="createVisible"
       title="创建罚款"
-      width="520px"
+      size="520px"
+      class="admin-drawer penalty-create-drawer"
+      destroy-on-close
     >
       <el-form
+        class="penalty-create-form"
         label-width="110px"
         @submit.prevent
       >
@@ -261,7 +315,10 @@ onMounted(() => {
           />
         </el-form-item>
         <el-form-item label="扣除来源">
-          <el-radio-group v-model="createForm.source">
+          <el-radio-group
+            v-model="createForm.source"
+            class="penalty-source-group"
+          >
             <el-radio
               v-for="opt in sourceOptions"
               :key="opt.value"
@@ -290,17 +347,19 @@ onMounted(() => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="createVisible = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          :loading="creating"
-          @click="submitCreate"
-        >
-          确认罚款
-        </el-button>
+        <div class="admin-drawer__footer">
+          <el-button @click="createVisible = false">
+            取消
+          </el-button>
+          <el-button
+            type="primary"
+            :loading="creating"
+            @click="submitCreate"
+          >
+            确认罚款
+          </el-button>
+        </div>
       </template>
-    </el-dialog>
+    </el-drawer>
   </section>
 </template>

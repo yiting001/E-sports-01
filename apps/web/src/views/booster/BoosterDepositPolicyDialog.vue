@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 押金交付策略配置弹窗（booster:deposit:policy:set）。
+ * 押金交付策略配置抽屉（booster:deposit:policy:set）。
  * 管理端设置最低/最高交付额（元输入，分存储）：
  * 最低额为打手接单门槛，最高额为缴纳上限；打手在区间内自选金额缴纳。
  */
@@ -52,10 +52,12 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     v-model="visible"
     title="押金交付配置"
-    width="460px"
+    size="460px"
+    class="admin-drawer booster-deposit-drawer"
+    destroy-on-close
   >
     <p class="booster-muted">
       打手需缴押金达到最低交付额方可接单，可在最高交付额内继续追加；最低额为 0 表示不要求押金。
@@ -85,16 +87,18 @@ async function save(): Promise<void> {
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        :loading="saving"
-        @click="save"
-      >
-        保存
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="visible = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="saving"
+          @click="save"
+        >
+          保存
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>

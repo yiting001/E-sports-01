@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 打手等级档位配置弹窗（booster:level:set）。
+ * 打手等级档位配置抽屉（booster:level:set）。
  * 表格式编辑：等级名称 / 完成单数门槛 / 提成万分比，支持增删行；
  * 保存后立即对定级与订单完成结算生效。
  */
@@ -73,10 +73,12 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     v-model="visible"
     title="打手等级档位配置"
-    width="640px"
+    size="720px"
+    class="admin-drawer booster-level-drawer"
+    destroy-on-close
   >
     <p class="booster-muted">
       按累计完成单数自动定级，提成为订单实付金额的万分比（{{ FEE_RATE_BASE }} = 100%）。
@@ -154,16 +156,18 @@ async function save(): Promise<void> {
       新增档位
     </el-button>
     <template #footer>
-      <el-button @click="visible = false">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        :loading="saving"
-        @click="save"
-      >
-        保存
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="visible = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="saving"
+          @click="save"
+        >
+          保存
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>

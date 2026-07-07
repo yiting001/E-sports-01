@@ -1,10 +1,11 @@
 <script setup lang="ts">
 /**
- * 活动编辑弹窗：标题/封面图 URL/起止时间/排序/启用开关 + 富文本详情。
+ * 活动编辑抽屉：标题/封面上传/起止时间/排序/启用开关 + 富文本详情。
  * 新建与编辑复用同一表单，由父组件通过 isEdit 区分标题。
  */
 import { computed } from 'vue';
 import { ACTIVITY_LIMITS, type UpsertActivityPayload } from '@app/contracts';
+import ImageUploader from '@/components/common/ImageUploader.vue';
 import RichTextEditor from '@/components/common/RichTextEditor.vue';
 
 const visible = defineModel<boolean>({ required: true });
@@ -30,13 +31,17 @@ const timeRange = computed({
 </script>
 
 <template>
-  <el-dialog
+  <el-drawer
     v-model="visible"
     :title="isEdit ? '编辑活动' : '发布活动'"
-    width="640px"
+    size="680px"
+    class="admin-drawer activity-form-drawer"
     destroy-on-close
   >
-    <el-form label-width="72px">
+    <el-form
+      class="activity-form"
+      label-width="88px"
+    >
       <el-form-item label="标题">
         <el-input
           v-model="form.title"
@@ -46,15 +51,18 @@ const timeRange = computed({
         />
       </el-form-item>
       <el-form-item label="封面图">
-        <el-input
-          v-model="form.cover"
-          :maxlength="ACTIVITY_LIMITS.coverMax"
-          placeholder="封面图 URL（可留空）"
-        />
+        <div class="activity-form__cover">
+          <image-uploader
+            v-model="form.cover"
+            :show-url="false"
+          />
+          <span class="activity-form__hint">上传活动封面，列表与 C 端详情将复用这张图</span>
+        </div>
       </el-form-item>
       <el-form-item label="活动时间">
         <el-date-picker
           v-model="timeRange"
+          class="activity-form__range"
           type="datetimerange"
           range-separator="至"
           start-placeholder="开始时间"
@@ -63,12 +71,14 @@ const timeRange = computed({
         />
       </el-form-item>
       <el-form-item label="排序">
-        <el-input-number
-          v-model="form.sort"
-          :min="0"
-          controls-position="right"
-        />
-        <span class="activity-form__hint">数值越小越靠前</span>
+        <div class="activity-form__inline">
+          <el-input-number
+            v-model="form.sort"
+            :min="0"
+            controls-position="right"
+          />
+          <span class="activity-form__hint">数值越小越靠前</span>
+        </div>
       </el-form-item>
       <el-form-item label="启用">
         <el-switch v-model="form.enabled" />
@@ -81,23 +91,55 @@ const timeRange = computed({
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="visible = false">
-        取消
-      </el-button>
-      <el-button
-        type="primary"
-        :loading="submitting"
-        @click="emit('submit')"
-      >
-        保存
-      </el-button>
+      <div class="admin-drawer__footer">
+        <el-button @click="visible = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="submitting"
+          @click="emit('submit')"
+        >
+          保存
+        </el-button>
+      </div>
     </template>
-  </el-dialog>
+  </el-drawer>
 </template>
 
 <style scoped>
+.activity-form {
+  max-width: 100%;
+}
+
+.activity-form__range {
+  width: 100%;
+}
+
+.activity-form__inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.activity-form__cover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activity-form__cover :deep(.image-uploader__trigger) {
+  width: 220px;
+  height: 124px;
+  border-radius: 4px;
+}
+
+.activity-form__cover :deep(.image-uploader__preview) {
+  object-fit: cover;
+}
+
 .activity-form__hint {
-  margin-left: 10px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }

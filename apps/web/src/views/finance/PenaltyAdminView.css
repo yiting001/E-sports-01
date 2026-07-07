@@ -1,3 +1,7 @@
+.penalty-filter {
+  width: 260px;
+}
+
 .penalty-user {
   display: flex;
   align-items: center;
@@ -25,6 +29,7 @@
 
 .penalty-user strong,
 .penalty-user small,
+.penalty-user span,
 .penalty-muted {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -38,12 +43,49 @@
 }
 
 .penalty-user small,
+.penalty-user span,
 .penalty-muted {
   color: var(--app-text-color-secondary);
   font-size: 12px;
 }
 
+.penalty-money,
+.penalty-related,
+.penalty-operation {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  color: var(--app-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .penalty-amount {
   color: var(--el-color-danger);
   font-weight: 600;
+  font-size: 15px;
+}
+
+.penalty-reason {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--app-text-color);
+  word-break: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.penalty-create-form {
+  max-width: 100%;
+}
+
+.penalty-source-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.penalty-source-group .el-radio {
+  margin-right: 0;
 }

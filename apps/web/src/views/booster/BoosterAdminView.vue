@@ -169,6 +169,7 @@ onMounted(() => {
     <app-panel
       title="打手入驻管理"
       eyebrow="Booster Onboarding"
+      description="审核打手入驻申请，维护资料、等级、押金与履约状态"
     >
       <template #actions>
         <div class="admin-actions">
@@ -212,13 +213,13 @@ onMounted(() => {
       <app-data-table
         :data="list"
         :loading="loading"
-        :min-width="1080"
+        :min-width="980"
         table-class="booster-table"
         empty-text="暂无入驻申请"
       >
         <el-table-column
-          label="申请用户"
-          min-width="170"
+          label="打手信息"
+          min-width="240"
         >
           <template #default="{ row }">
             <div class="booster-user">
@@ -228,99 +229,61 @@ onMounted(() => {
               <div>
                 <strong>{{ row.nickname || row.username }}</strong>
                 <small>{{ row.username }}</small>
+                <span>{{ row.gameNickname || '未填写游戏昵称' }}</span>
               </div>
             </div>
           </template>
         </el-table-column>
         <el-table-column
-          label="游戏昵称"
-          min-width="120"
+          label="能力资料"
+          min-width="300"
         >
           <template #default="{ row }">
-            {{ row.gameNickname }}
+            <div class="booster-profile">
+              <span>擅长：{{ row.gameName || '-' }}</span>
+              <span>段位：{{ row.rank || '-' }}</span>
+              <span class="booster-content">{{ row.intro || '-' }}</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column
-          label="擅长游戏"
-          min-width="130"
+          label="等级与履约"
+          width="180"
         >
           <template #default="{ row }">
-            {{ row.gameName }}
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="段位/实力"
-          min-width="120"
-        >
-          <template #default="{ row }">
-            {{ row.rank }}
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="自我介绍"
-          min-width="220"
-        >
-          <template #default="{ row }">
-            <span class="booster-content">{{ row.intro }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="等级"
-          width="110"
-        >
-          <template #default="{ row }">
-            <el-tag
-              round
-              effect="plain"
-            >
-              Lv.{{ row.level }} {{ row.levelName }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="完成单数"
-          width="90"
-        >
-          <template #default="{ row }">
-            {{ row.completedOrders }}
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="已缴押金"
-          width="100"
-        >
-          <template #default="{ row }">
-            <span class="booster-muted">¥{{ (row.depositFen / 100).toFixed(2) }}</span>
+            <div class="booster-metrics">
+              <el-tag
+                round
+                effect="plain"
+              >
+                Lv.{{ row.level }} {{ row.levelName }}
+              </el-tag>
+              <span>完成 {{ row.completedOrders }} 单</span>
+              <span>押金 ¥{{ (row.depositFen / 100).toFixed(2) }}</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column
           label="状态"
-          width="100"
+          min-width="210"
         >
           <template #default="{ row }">
-            <el-tag
-              round
-              effect="light"
-              :type="statusMeta[row.status as BoosterStatus].type"
-            >
-              {{ statusMeta[row.status as BoosterStatus].text }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="驳回理由"
-          min-width="140"
-        >
-          <template #default="{ row }">
-            <span class="booster-muted">{{ row.rejectReason || '-' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="提交时间"
-          width="150"
-        >
-          <template #default="{ row }">
-            <span class="booster-muted">{{ formatDate(row.createdAt) }}</span>
+            <div class="booster-state">
+              <el-tag
+                round
+                effect="light"
+                :type="statusMeta[row.status as BoosterStatus].type"
+              >
+                {{ statusMeta[row.status as BoosterStatus].text }}
+              </el-tag>
+              <span class="booster-muted">提交：{{ formatDate(row.createdAt) }}</span>
+              <span
+                v-if="row.rejectReason"
+                class="booster-muted"
+              >
+                驳回：{{ row.rejectReason }}
+              </span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column
@@ -386,10 +349,12 @@ onMounted(() => {
       </div>
     </app-panel>
 
-    <el-dialog
+    <el-drawer
       v-model="editVisible"
       title="编辑打手资料"
-      width="520px"
+      size="520px"
+      class="admin-drawer booster-edit-drawer"
+      destroy-on-close
     >
       <el-form
         label-width="90px"
@@ -427,18 +392,20 @@ onMounted(() => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="editVisible = false">
-          取消
-        </el-button>
-        <el-button
-          type="primary"
-          :loading="editSaving"
-          @click="saveEdit"
-        >
-          保存
-        </el-button>
+        <div class="admin-drawer__footer">
+          <el-button @click="editVisible = false">
+            取消
+          </el-button>
+          <el-button
+            type="primary"
+            :loading="editSaving"
+            @click="saveEdit"
+          >
+            保存
+          </el-button>
+        </div>
       </template>
-    </el-dialog>
+    </el-drawer>
 
     <booster-level-dialog v-model="levelDialogVisible" />
     <booster-deposit-policy-dialog v-model="depositPolicyVisible" />

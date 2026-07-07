@@ -19,6 +19,13 @@ import ActivityFormDialog from '@/components/activity/ActivityFormDialog.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { activityApi } from '@/api/activity.api';
 
+type ActivityTagType = 'success' | 'info' | 'warning';
+
+interface ActivityStatus {
+  label: string;
+  type: ActivityTagType;
+}
+
 const list = ref<ActivityView[]>([]);
 const total = ref(0);
 const page = ref<number>(PAGINATION_DEFAULTS.page);
@@ -50,6 +57,21 @@ function formatDate(value: string): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+}
+
+/** 活动状态由启用开关和起止时间共同决定，便于运营快速判断前台可见性 */
+function getActivityStatus(row: ActivityView): ActivityStatus {
+  if (!row.enabled) {
+    return { label: '已停用', type: 'info' };
+  }
+  const now = Date.now();
+  if (new Date(row.startAt).getTime() > now) {
+    return { label: '未开始', type: 'warning' };
+  }
+  if (new Date(row.endAt).getTime() <= now) {
+    return { label: '已结束', type: 'info' };
+  }
+  return { label: '进行中', type: 'success' };
 }
 
 async function load(): Promise<void> {
@@ -187,25 +209,60 @@ onMounted(load);
         empty-text="暂无活动"
       >
         <el-table-column
-          label="标题"
-          min-width="220"
-          prop="title"
-        />
-        <el-table-column
-          label="活动时间"
-          min-width="260"
+          label="活动信息"
+          min-width="300"
         >
           <template #default="{ row }">
-            <span class="activity-muted">
-              {{ formatDate(row.startAt) }} ~ {{ formatDate(row.endAt) }}
-            </span>
+            <div class="activity-info">
+              <el-image
+                v-if="row.cover"
+                class="activity-info__cover"
+                :src="row.cover"
+                fit="cover"
+              >
+                <template #error>
+                  <div class="activity-info__empty">
+                    封面
+                  </div>
+                </template>
+              </el-image>
+              <div
+                v-else
+                class="activity-info__empty"
+              >
+                封面
+              </div>
+              <div class="activity-info__text">
+                <span class="activity-info__title">{{ row.title }}</span>
+                <span class="activity-muted">排序 {{ row.sort }}</span>
+              </div>
+            </div>
           </template>
         </el-table-column>
         <el-table-column
-          label="排序"
-          width="80"
-          prop="sort"
-        />
+          label="活动时间"
+          min-width="240"
+        >
+          <template #default="{ row }">
+            <div class="activity-time">
+              <span>开始：{{ formatDate(row.startAt) }}</span>
+              <span>结束：{{ formatDate(row.endAt) }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="状态"
+          width="96"
+        >
+          <template #default="{ row }">
+            <el-tag
+              size="small"
+              :type="getActivityStatus(row).type"
+            >
+              {{ getActivityStatus(row).label }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column
           label="启用"
           width="90"
@@ -221,6 +278,7 @@ onMounted(load);
         <el-table-column
           label="操作"
           width="150"
+          fixed="right"
         >
           <template #default="{ row }">
             <el-button
@@ -280,5 +338,53 @@ onMounted(load);
 .activity-muted {
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+.activity-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.activity-info__cover,
+.activity-info__empty {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid var(--app-border-color);
+  border-radius: 4px;
+  background: var(--app-muted-bg);
+}
+
+.activity-info__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.activity-info__text,
+.activity-time {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.activity-info__title {
+  overflow: hidden;
+  color: var(--app-text-color);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-time {
+  color: var(--app-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 </style>

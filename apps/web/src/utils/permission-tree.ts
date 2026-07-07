@@ -1,4 +1,8 @@
-import type { PermissionNode } from '@app/contracts';
+import {
+  MENU_DEFINITIONS,
+  MENU_GROUPS,
+  type PermissionNode,
+} from '@app/contracts';
 
 /** 虚拟分组节点 id 前缀，用于和真实权限（UUID）区分 */
 export const GROUP_ID_PREFIX = 'group:';
@@ -16,6 +20,67 @@ export interface PermissionTreeNode {
   /** 叶子对应的真实权限；分组为 null */
   permission: PermissionNode | null;
   children: PermissionTreeNode[];
+}
+
+/** 无菜单承载的权限命名空间中文名，菜单命名空间会从 contracts 菜单定义自动补齐 */
+const BASE_NAMESPACE_LABELS: Record<string, string> = {
+  rbac: '角色与权限',
+  upload: '文件管理',
+  'upload:file': '文件上传',
+  observability: '可观测性',
+  'observability:log': '日志管理',
+  wallet: '钱包管理',
+  'wallet:admin': '钱包管理',
+  realname: '实名管理',
+  feedback: '反馈管理',
+  booster: '打手管理',
+  'booster:level': '打手等级',
+  'booster:deposit': '打手押金',
+  member: '会员管理',
+  'member:level': '会员等级',
+  order: '订单管理',
+  'order:admin': '订单管理',
+  review: '评论管理',
+  'review:admin': '评论管理',
+  finance: '财务管理',
+  'finance:withdrawal': '提现管理',
+  'finance:penalty': '罚款管理',
+  dashboard: '工作台',
+  im: '即时通讯',
+  'im:message': '消息记录',
+  'im:conversation': '会话管理',
+  'im:service': '客服工作台',
+  invite: '邀请管理',
+  'invite:config': '邀请配置',
+  'invite:record': '邀请记录',
+};
+
+const MENU_GROUP_LABELS = new Map(MENU_GROUPS.map((group) => [group.code, group.title]));
+
+/** 从共享菜单定义提取菜单权限命名空间中文名，避免视图层重复维护模块标题 */
+const MENU_NAMESPACE_LABELS = MENU_DEFINITIONS.reduce<Record<string, string>>((labels, menu) => {
+  const segments = menu.code.split(':');
+  const namespace = segments.slice(0, -1).join(':');
+  if (namespace) {
+    labels[namespace] = menu.title;
+  }
+
+  const root = segments[0];
+  const groupLabel = menu.group ? MENU_GROUP_LABELS.get(menu.group) : undefined;
+  if (groupLabel && menu.group === root && !labels[root]) {
+    labels[root] = groupLabel;
+  }
+  return labels;
+}, {});
+
+const NAMESPACE_LABELS = {
+  ...BASE_NAMESPACE_LABELS,
+  ...MENU_NAMESPACE_LABELS,
+};
+
+/** 权限码命名空间展示名：已登记命名空间显示中文，未知扩展保持原始片段便于排查 */
+function namespaceLabel(path: string, segment: string): string {
+  return NAMESPACE_LABELS[path] ?? segment;
 }
 
 /** 展开成扁平的真实权限列表（兼容后端可能返回的嵌套结构） */
@@ -68,7 +133,7 @@ export function buildNamespaceTree(nodes: PermissionNode[]): PermissionTreeNode[
       if (!group) {
         group = {
           id: GROUP_ID_PREFIX + path,
-          label: segments[i],
+          label: namespaceLabel(path, segments[i]),
           code: path,
           isGroup: true,
           permission: null,

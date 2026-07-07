@@ -29,6 +29,7 @@
 
 .booster-user strong,
 .booster-user small,
+.booster-user span,
 .booster-muted {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -42,9 +43,22 @@
 }
 
 .booster-user small,
+.booster-user span,
 .booster-muted {
   color: var(--app-text-color-secondary);
   font-size: 12px;
+}
+
+.booster-profile,
+.booster-metrics,
+.booster-state {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  color: var(--app-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .booster-content {

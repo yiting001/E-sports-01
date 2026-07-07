@@ -5,8 +5,8 @@ import { ref } from 'vue';
 import { uploadApi } from '@/api/upload.api';
 
 const props = withDefaults(
-  defineProps<{ modelValue: string; self?: boolean }>(),
-  { self: false },
+  defineProps<{ modelValue: string; self?: boolean; showUrl?: boolean }>(),
+  { self: false, showUrl: true },
 );
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
@@ -78,6 +78,7 @@ function clear(): void {
       class="image-uploader__actions"
     >
       <el-input
+        v-if="props.showUrl"
         :model-value="props.modelValue"
         readonly
         size="small"
