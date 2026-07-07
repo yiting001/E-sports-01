@@ -78,6 +78,12 @@ export const router = createRouter({
       meta: { title: '订单详情', requiresAuth: true },
     },
     {
+      path: '/booster/orders/:id',
+      name: 'booster-order-detail',
+      component: () => import('@/views/order/BoosterOrderDetailView.vue'),
+      meta: { title: '订单详情', requiresAuth: true },
+    },
+    {
       path: '/chat/:id',
       name: 'chat',
       component: () => import('@/views/message/ChatView.vue'),

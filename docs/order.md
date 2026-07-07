@@ -27,7 +27,7 @@
 - 指派打手：客服/管理员可直接指派指定平台打手（权限码 `order:admin:assign`，POST `/order/admin/:id/assign`），「待客服处理/待接单」→「服务中」；被指派人须有打手角色、满足实名要求（`BoosterRealnameGuard`，开关关闭不校验）且押金缴足；候选列表 GET `/order/admin/booster-candidates` 仅返回打手角色用户
 - 接单大厅（C 端打手身份）：分页浏览待接单订单，点卡片进入大厅订单详情页（`/hall/:id`，GET `/order/hall/:id`，展示备注与附件、隐藏账号信息，可直接接单）；接单后回填 `boosterId` 并进入「服务中」；不能接自己的单；接单前经 booster 模块 `BoosterRealnameGuard` 校验实名要求（后台开启 `booster.requireRealname` 时须实名已通过，未开启不校验）与 `BoosterDepositGuard` 校验押金已缴足；接单/被指派后打手自动加入订单群并广播系统消息
 - 完成结算：打手完成订单时按其当前等级费率（booster 模块 `BoosterProgressService`）计提成经 `WalletLedger` 入账（commission 流水），订单落 `commissionFen`/`commissionRateBp` 快照并累计完成单数
-- 打手订单中心（C 端打手身份）：分页查看本人接下的订单（全部/服务中/已完成），服务中可标记完成
+- 打手订单中心（C 端打手身份）：分页查看本人接下的订单（全部/服务中/已完成），点卡片进入打手订单详情页（`/booster/orders/:id`，GET `/order/booster/mine/:id`，展示用户备注/附件/账号信息，服务中可直接完成）；列表服务中可标记完成
 - C 端身份切换：拥有 booster 角色的账号可在「我的」页切换老板/打手身份（本地持久化），
   打手身份下一级导航变为「接单大厅/订单中心/消息/我的」；接单接口由后端 `BoosterAccess` 断言角色
 
@@ -73,6 +73,7 @@ apps/server/src/modules/order/
 │       ├── join-order-group.usecase.ts      # 管理端幂等加入订单群（返回会话 id）
 │       ├── list-hall-orders.usecase.ts      # 接单大厅分页（仅打手，账号信息置空）
 │       ├── get-hall-order.usecase.ts        # 接单大厅订单详情（仅打手，账号信息置空）
+│       ├── get-booster-order.usecase.ts     # 打手本人订单详情（接单后账号信息可见）
 │       ├── accept-hall-order.usecase.ts     # 打手接单（待接单 → 服务中，回填 boosterId）
 │       ├── list-booster-orders.usecase.ts   # 打手订单中心分页（可按状态过滤）
 │       └── complete-booster-order.usecase.ts# 打手完成服务（服务中 → 已完成，提成结算入账）
@@ -92,6 +93,7 @@ apps/server/src/modules/order/
 │       ├── order.admin.booster-candidates.controller.ts # GET /order/admin/booster-candidates（order:admin:assign）
 │       ├── order.hall.list.controller.ts    # GET  /order/hall（仅打手）
 │       ├── order.hall.detail.controller.ts  # GET  /order/hall/:id（仅打手）
+│       ├── order.booster.detail.controller.ts # GET /order/booster/mine/:id（仅打手本人）
 │       ├── order.hall.accept.controller.ts  # POST /order/hall/:id/accept（仅打手）
 │       ├── order.booster.list.controller.ts # GET  /order/booster/mine（仅打手）
 │       ├── order.booster.complete.controller.ts # POST /order/booster/:id/complete（仅打手）
@@ -120,6 +122,7 @@ apps/client/src/
 ├── views/message/ChatView.vue               # 全屏会话聊天页（订单群/群聊/客服复用 ServiceChatPanel）
 ├── views/order/HallView.vue                 # 接单大厅（打手一级 Tab，接单/点卡片看详情）
 ├── views/order/HallOrderDetailView.vue      # 大厅订单详情（/hall/:id，含备注附件，可接单）
+├── views/order/BoosterOrderDetailView.vue   # 打手订单详情（/booster/orders/:id，含账号信息，可完成）
 ├── views/order/BoosterOrdersView.vue        # 打手订单中心（状态 tabs + 完成订单）
 └── components/order/
     ├── PayDialog.vue                        # 扫码支付弹层（轮询支付结果）

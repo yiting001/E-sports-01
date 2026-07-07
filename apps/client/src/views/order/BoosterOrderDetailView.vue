@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /**
- * 接单大厅订单详情页（全屏，仅打手）：展示待接单订单的商品快照、
- * 数量、金额、备注与备注附件（图片/视频），底部可直接接单；
- * 账号信息在接单前后端不下发、不展示。
+ * 打手订单详情页（全屏，仅打手）：查看本人接下订单的商品快照、
+ * 金额、用户备注与备注附件（图片/视频）、账号信息（接单后可见）；
+ * 服务中订单可直接标记完成。
  */
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ORDER_STATUS_TEXT, type OrderView } from '@app/contracts';
+import { ORDER_STATUS_TEXT, OrderStatus, type OrderView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import RemarkMediaGallery from '@/components/order/RemarkMediaGallery.vue';
 import { orderApi } from '@/api/order.api';
@@ -19,30 +19,29 @@ const toast = useToast();
 
 const order = ref<OrderView | null>(null);
 const loading = ref(true);
-const accepting = ref(false);
+const completing = ref(false);
 
 function formatTime(iso: string): string {
   return iso ? iso.slice(0, 19).replace('T', ' ') : '-';
 }
 
-/** 接单：成功后提示并返回大厅 */
-async function accept(): Promise<void> {
-  if (!order.value || accepting.value) {
+/** 完成服务中的订单 */
+async function complete(): Promise<void> {
+  if (!order.value || completing.value) {
     return;
   }
-  accepting.value = true;
+  completing.value = true;
   try {
-    await orderApi.accept(order.value.id);
-    toast.show('接单成功，请前往订单中心跟进服务');
-    router.back();
+    order.value = await orderApi.complete(order.value.id);
+    toast.show('订单已完成');
   } finally {
-    accepting.value = false;
+    completing.value = false;
   }
 }
 
 onMounted(async () => {
   try {
-    order.value = await orderApi.hallDetail(route.params.id as string);
+    order.value = await orderApi.boosterDetail(route.params.id as string);
   } finally {
     loading.value = false;
   }
@@ -122,6 +121,10 @@ onMounted(async () => {
               <dt>用户备注</dt>
               <dd>{{ order.remark || '-' }}</dd>
             </div>
+            <div class="row">
+              <dt>账号信息</dt>
+              <dd>{{ order.accountInfo || '-' }}</dd>
+            </div>
           </dl>
           <RemarkMediaGallery
             v-if="order.remarkMedia.length"
@@ -130,13 +133,16 @@ onMounted(async () => {
           />
         </section>
 
-        <div class="actions">
+        <div
+          v-if="order.status === OrderStatus.Serving"
+          class="actions"
+        >
           <button
-            class="accept"
-            :disabled="accepting"
-            @click="accept"
+            class="complete"
+            :disabled="completing"
+            @click="complete"
           >
-            {{ accepting ? '接单中…' : '接单' }}
+            {{ completing ? '提交中…' : '完成订单' }}
           </button>
         </div>
       </div>
@@ -145,7 +151,7 @@ onMounted(async () => {
         v-else-if="!loading"
         class="hint card"
       >
-        订单不存在或已被接走
+        订单不存在
       </p>
     </div>
   </div>
@@ -156,7 +162,7 @@ onMounted(async () => {
   margin-top: 12px;
 }
 
-.accept {
+.complete {
   width: 100%;
   padding: 12px;
   font-size: 15px;

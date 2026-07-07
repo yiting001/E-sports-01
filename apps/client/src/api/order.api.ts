@@ -53,6 +53,10 @@ export const orderApi = {
   ): Promise<PaginatedResult<OrderView>> {
     return http.get('/order/booster/mine', { params: { page, pageSize, status } });
   },
+  /** 打手订单中心：查看我接下的订单详情（接单后账号信息可见） */
+  boosterDetail(id: string): Promise<OrderView> {
+    return http.get(`/order/booster/mine/${id}`);
+  },
   /** 打手完成服务中的订单 */
   complete(id: string): Promise<OrderView> {
     return http.post(`/order/booster/${id}/complete`);
