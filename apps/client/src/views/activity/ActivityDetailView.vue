@@ -33,20 +33,23 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="activity-detail">
+  <div class="activity-detail client-page">
     <header class="bar">
-      <button
-        class="back"
-        aria-label="返回"
-        @click="router.back()"
-      >
-        <AppIcon
-          name="chevron"
-          :size="20"
-        />
-      </button>
-      <div class="bar-title">
-        <span class="name">活动详情</span>
+      <div class="bar-inner">
+        <button
+          class="back"
+          aria-label="返回"
+          @click="router.back()"
+        >
+          <AppIcon
+            name="chevron"
+            :size="20"
+          />
+        </button>
+        <div class="bar-title">
+          <span class="name">活动详情</span>
+          <span class="tip">平台活动与福利动态</span>
+        </div>
       </div>
     </header>
 
@@ -73,12 +76,21 @@ onMounted(async () => {
           :style="{ backgroundImage: `url(${activity.cover})` }"
         />
         <div class="inner">
-          <h1 class="title">
-            {{ activity.title }}
-          </h1>
-          <p class="time">
-            {{ activityDateText(activity.startAt) }} ~ {{ activityDateText(activity.endAt) }}
-          </p>
+          <header class="article-head">
+            <span class="badge">
+              <AppIcon
+                name="gift"
+                :size="15"
+              />
+              活动中心
+            </span>
+            <h1 class="title">
+              {{ activity.title }}
+            </h1>
+            <p class="time">
+              活动时间：{{ activityDateText(activity.startAt) }} ~ {{ activityDateText(activity.endAt) }}
+            </p>
+          </header>
           <!-- eslint-disable vue/no-v-html -->
           <div
             class="content"
@@ -112,6 +124,13 @@ onMounted(async () => {
   background: var(--c-surface);
 }
 
+.bar-inner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .back {
   display: grid;
   place-items: center;
@@ -121,10 +140,22 @@ onMounted(async () => {
   transform: rotate(180deg);
 }
 
+.bar-title {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .name {
   font-size: 16px;
   font-weight: 800;
   font-style: italic;
+}
+
+.tip {
+  font-size: 12px;
+  color: var(--c-accent);
 }
 
 .scroll {
@@ -146,37 +177,92 @@ onMounted(async () => {
 
 .cover {
   width: 100%;
-  height: 160px;
+  height: 168px;
   background-size: cover;
   background-position: center;
+  border-bottom: 1px solid var(--c-border);
 }
 
 .inner {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  padding: 18px 16px 20px;
+}
+
+.article-head {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.badge {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-accent);
+  background: var(--c-accent-dim);
 }
 
 .title {
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 800;
+  line-height: 1.45;
 }
 
 .time {
+  margin-top: 8px;
   font-size: 12px;
   color: var(--c-text-secondary);
 }
 
 .content {
-  margin-top: 8px;
+  margin-top: 18px;
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.8;
   word-break: break-word;
+}
+
+.content :deep(p),
+.content :deep(ul),
+.content :deep(ol),
+.content :deep(blockquote) {
+  margin: 0 0 12px;
 }
 
 .content :deep(img),
 .content :deep(video) {
   max-width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+@media (min-width: 768px) {
+  .activity-detail.activity-detail.activity-detail > .scroll.scroll {
+    max-width: 860px;
+  }
+
+  .cover {
+    height: 260px;
+  }
+
+  .inner {
+    padding: 28px 30px 32px;
+  }
+
+  .title {
+    font-size: 26px;
+    line-height: 1.35;
+  }
+
+  .time {
+    font-size: 13px;
+  }
+
+  .content {
+    margin-top: 22px;
+    font-size: 15px;
+    line-height: 1.9;
+  }
 }
 </style>
