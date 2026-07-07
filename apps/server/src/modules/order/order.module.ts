@@ -27,6 +27,7 @@ import { ListHallOrdersUseCase } from './application/use-cases/list-hall-orders.
 import { GetHallOrderUseCase } from './application/use-cases/get-hall-order.usecase';
 import { AcceptHallOrderUseCase } from './application/use-cases/accept-hall-order.usecase';
 import { ListBoosterOrdersUseCase } from './application/use-cases/list-booster-orders.usecase';
+import { GetBoosterOrderUseCase } from './application/use-cases/get-booster-order.usecase';
 import { CompleteBoosterOrderUseCase } from './application/use-cases/complete-booster-order.usecase';
 import { BoosterAccess } from './application/booster-access.service';
 import { OrderGroupService } from './application/order-group.service';
@@ -51,6 +52,7 @@ import { OrderHallListController } from './interfaces/controllers/order.hall.lis
 import { OrderHallDetailController } from './interfaces/controllers/order.hall.detail.controller';
 import { OrderHallAcceptController } from './interfaces/controllers/order.hall.accept.controller';
 import { OrderBoosterListController } from './interfaces/controllers/order.booster.list.controller';
+import { OrderBoosterDetailController } from './interfaces/controllers/order.booster.detail.controller';
 import { OrderBoosterCompleteController } from './interfaces/controllers/order.booster.complete.controller';
 
 /**
@@ -79,6 +81,7 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     OrderHallAcceptController,
     OrderHallDetailController,
     OrderBoosterListController,
+    OrderBoosterDetailController,
     OrderBoosterCompleteController,
     OrderCreateController,
     OrderCancelController,
@@ -107,6 +110,7 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     GetHallOrderUseCase,
     AcceptHallOrderUseCase,
     ListBoosterOrdersUseCase,
+    GetBoosterOrderUseCase,
     CompleteBoosterOrderUseCase,
     AssignOrderBoosterUseCase,
     ListBoosterCandidatesUseCase,

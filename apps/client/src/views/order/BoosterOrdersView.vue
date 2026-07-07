@@ -1,9 +1,11 @@
 <script setup lang="ts">
 /**
  * 打手订单中心（打手身份一级 Tab）：顶部状态 tabs（全部/服务中/已完成），
- * 分页列出本人接下的订单，服务中订单可标记完成；到底加载更多。
+ * 分页列出本人接下的订单，点卡片可看详情（备注/附件/账号信息），
+ * 服务中订单可标记完成；到底加载更多。
  */
 import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { ORDER_STATUS_TEXT, OrderStatus, type OrderView } from '@app/contracts';
 import BoosterOrderCard from '@/components/order/BoosterOrderCard.vue';
 import OrderStatusTabs from '@/components/order/OrderStatusTabs.vue';
@@ -12,6 +14,7 @@ import { useToast } from '@/composables/use-toast';
 
 const PAGE_SIZE = 10;
 
+const router = useRouter();
 const toast = useToast();
 
 const orders = ref<OrderView[]>([]);
@@ -72,6 +75,11 @@ async function complete(order: OrderView): Promise<void> {
   toast.show('订单已完成');
   await load(true);
 }
+/** 点击卡片 → 打手订单详情页 */
+function openDetail(order: OrderView): void {
+  router.push({ name: 'booster-order-detail', params: { id: order.id } });
+}
+
 onMounted(() => void load(true));
 </script>
 
@@ -106,6 +114,7 @@ onMounted(() => void load(true));
       :order="order"
       :action-label="order.status === OrderStatus.Serving ? '完成订单' : undefined"
       @action="complete"
+      @open="openDetail"
     />
 
     <div
