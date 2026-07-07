@@ -10,7 +10,7 @@
 - **审核工作流**：状态机 `none →(提交) pending →(审核) approved / rejected`；`rejected` 可覆盖重提回到 `pending`。
 - **角色授予**：审核通过时经 RBAC 的 `RoleGranter` 幂等地为申请人授予 `booster` 角色（角色由播种器内置，管理员也可在用户管理中手动调整）。
 - **资料维护**：管理端可编辑打手的游戏昵称/擅长游戏/段位/自我介绍（不改变审核状态）。
-- **实名前置**：配置开关 `booster.requireRealname`（默认开启），开启时未通过实名认证不可提交入驻申请（复用 realname 模块只读检查器 `RealnameChecker`）。
+- **实名前置**：配置开关 `booster.requireRealname`（默认开启），开启时未通过实名认证不可提交入驻申请（复用 realname 模块只读检查器 `RealnameChecker`）；同一开关同时门控接单：`BoosterRealnameGuard`（导出供 order 模块）在接单/指派前断言实名已通过，开关关闭则不校验。
 - **打手等级**：等级档位（名称/完成单数门槛/提成万分比）存配置中心 `booster.levels`，按累计完成单数自动定级；订单完成时按当前等级费率计提成经 `WalletLedger` 入账（commission 流水）。
 - **打手押金**：交付策略存配置中心（最低 `booster.depositMinFen` / 最高 `booster.depositMaxFen`，管理端可配）；已入驻打手在区间内自选金额从钱包余额缴纳（deposit 流水，累计不超最高额），接单前由 `BoosterDepositGuard` 校验已达最低交付额；管理端可全额退还（deposit_refund 流水）。
 - **财务罚款**：财务可对打手按订单罚款（理由必填），从钱包余额（penalty 流水）或已缴押金中扣除，留存罚款记录供审计。
@@ -29,6 +29,7 @@ modules/booster/
 │  ├─ booster-policy.service.ts         策略读写：等级档位 / 押金交付策略（最低/最高）/ 实名开关（配置中心）
 │  ├─ booster-progress.service.ts       完成单数累计（供 order 模块完成结算调用，导出）
 │  ├─ booster-deposit.service.ts        BoosterDepositGuard 押金最低交付额门控（供 order 接单调用，导出）
+│  ├─ booster-realname.service.ts       BoosterRealnameGuard 实名门控（开关开启时接单/指派须实名已通过，供 order 调用，导出）
 │  └─ use-cases/                        get-my / submit / list / review / update
 │                                        / get·set-booster-levels / pay·refund-deposit / get·set-deposit-policy
 │                                        / create·list-penalties

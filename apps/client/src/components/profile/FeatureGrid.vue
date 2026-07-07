@@ -15,6 +15,7 @@ const ENTRY_ROUTES: Record<string, string> = {
   welfare: 'activities',
   invite: 'invite',
   join: 'booster-apply',
+  realname: 'realname',
   announce: 'notices',
   build: 'build-intro',
 };
