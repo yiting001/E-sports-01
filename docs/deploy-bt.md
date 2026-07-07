@@ -113,6 +113,8 @@ VITE_WS_BASE_URL=https://example.com
 
 ## 5. 构建
 
+可在服务器上构建，也可在本地构建后只上传产物（见 5.1）：
+
 ```bash
 cd /www/wwwroot/esports
 pnpm build:server
@@ -121,11 +123,41 @@ pnpm build:client
 VITE_BASE=/admin/ pnpm build:web
 ```
 
+### 5.1 后端单文件打包（推荐，服务器免编译免装依赖）
+
+在本地（任意平台）执行：
+
+```bash
+pnpm --filter @app/server bundle
+```
+
+产出 **`apps/server/bundle/main.js`**（全部依赖已内联的单文件）。
+服务器上只需一个目录放两个文件：
+
+```
+/www/wwwroot/esports-server/
+├── main.js     # 打包产物，直接上传
+└── .env        # 后端环境变量（见 4.1，启动时自动读取工作目录下的 .env）
+```
+
+启动：
+
+```bash
+cd /www/wwwroot/esports-server
+pm2 start main.js --name esports-server
+pm2 save && pm2 startup
+```
+
+前端也在本地构建（命令同上），把 `apps/client/dist` 内容上传到站点根目录、
+`apps/web/dist` 内容上传到站点 `admin/` 子目录即可，服务器无需 pnpm/仓库。
+
+> 注意：本地上传图片/视频默认落在工作目录的 `uploads/`，升级替换 main.js 时不要删该目录。
+
 产物：
 
 | 应用 | 产物目录 | 访问路径 |
 | --- | --- | --- |
-| 后端 | `apps/server/dist` | PM2 常驻，Nginx 反代 `/api` `/socket.io` `/static` |
+| 后端 | `apps/server/dist`（或单文件 `apps/server/bundle/main.js`） | PM2 常驻，Nginx 反代 `/api` `/socket.io` `/static` |
 | C 端 | `apps/client/dist` | 站点根路径 `/` |
 | 管理端 | `apps/web/dist` | 子路径 `/admin/` |
 
@@ -161,11 +193,11 @@ pm2 save && pm2 startup
 **网站目录指向 C 端产物**：`/www/wwwroot/esports/apps/client/dist`。
 
 然后打开「设置 → 配置文件」，在该站点 `server {}` 内加入以下内容
-（放在宝塔自动生成的 `location` 之前）：
+（`^~` 前缀确保优先于宝塔模板中的静态缓存正则 location，否则 /admin/ 资源与反代路径会被正则截走 404）：
 
 ```nginx
 # ---------- 后端 REST ----------
-location /api/ {
+location ^~ /api/ {
     proxy_pass http://127.0.0.1:3000;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -175,7 +207,7 @@ location /api/ {
 }
 
 # ---------- WebSocket（IM/客服，socket.io 握手路径） ----------
-location /socket.io/ {
+location ^~ /socket.io/ {
     proxy_pass http://127.0.0.1:3000;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
@@ -185,13 +217,13 @@ location /socket.io/ {
 }
 
 # ---------- 本地上传文件 ----------
-location /static/ {
+location ^~ /static/ {
     proxy_pass http://127.0.0.1:3000;
     proxy_set_header Host $host;
 }
 
 # ---------- 管理端（/admin/ 子路径，history 回退） ----------
-location /admin/ {
+location ^~ /admin/ {
     alias /www/wwwroot/esports/apps/web/dist/;
     try_files $uri $uri/ /admin/index.html;
     index index.html;
@@ -235,6 +267,9 @@ pnpm install
 pnpm build:server && pnpm build:client && VITE_BASE=/admin/ pnpm build:web
 pm2 restart esports-server
 ```
+
+若采用 5.1 单文件方式：本地 `pnpm --filter @app/server bundle` 后上传新的
+`main.js` 覆盖，再 `pm2 restart esports-server`；前端重新上传 dist 内容即可。
 
 前端为纯静态产物，构建完成即生效（浏览器强刷新）。
 
