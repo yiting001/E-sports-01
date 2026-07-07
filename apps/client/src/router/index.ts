@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import MainLayout from '@/layouts/MainLayout.vue';
 import { registerAuthGuard } from './guard';
+import { useBrandingStore } from '@/stores/branding.store';
 
 /**
  * 路由表：登录页独立于主布局全屏展示；四个一级 Tab 页挂在主布局下。
@@ -183,8 +184,8 @@ export const router = createRouter({
 
 registerAuthGuard(router);
 
-/** 每次导航后同步页面标题，便于多标签页区分 */
+/** 每次导航后同步页面标题（软件名称来自配置中心品牌配置），便于多标签页区分 */
 router.afterEach((to) => {
   const title = to.meta.title as string | undefined;
-  document.title = title ? `${title} · 电竞陪练商城` : '电竞陪练商城';
+  useBrandingStore().setPageTitle(title ?? '');
 });

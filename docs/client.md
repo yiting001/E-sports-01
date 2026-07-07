@@ -7,6 +7,7 @@
 - **商城主框架**：底部 TabBar（移动端）/ 顶部导航（PC 端）承载首页、分类、消息、我的四个一级页；UI 演示数据见 `src/config/*.mock.ts`。
 - **短信登录**：手机号 + 验证码登录（要求手机号已注册），调用后端 `POST /auth/sms/code`、`POST /auth/sms/login`。
 - **短信注册**：手机号 + 验证码 + 可选昵称注册（要求手机号未注册），调用后端 `POST /auth/sms/register-code`、`POST /auth/sms/register`；注册成功后端直接签发令牌，前端即自动登录。
+- **品牌配置共用**：C 端软件名称/图标与管理端共用配置中心品牌配置（`system.appName` / `system.appLogo`，公开接口 `GET /config/branding`）；启动即拉取（`stores/branding.store.ts`），登录页与 PC 顶部导航展示配置名称/图标（未配图标回退默认徽标），浏览器标题按「页标题 · 软件名称」拼合并同步 favicon。
 - **用户协议**：登录/注册均需勾选「我已阅读并同意《用户协议》」才可提交；协议正文为后台配置中心富文本（`auth.userAgreement` 键），公开接口 `GET /config/agreement` 登录前可读，弹层（`AgreementDialog`）内 DOMPurify 消毒后展示。
 - **登录守卫**：访问带 `meta.requiresAuth` 的页面（我的 / 消息）未登录时自动重定向到 `/login` 并带 `redirect` 回跳地址；已登录再访问登录页直接回首页。
 - **登录态展示**：「我的」页头部登录后展示昵称与用户 ID 并提供退出登录；未登录展示「立即登录」入口；PC 端个人页采用左右两列，右侧订单与更多功能紧凑衔接。
