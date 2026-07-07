@@ -1,6 +1,6 @@
 /**
- * 首页静态 UI 文案（横幅、公告、快捷入口）。
- * 这些是运营展示位文案，非业务数据；商品与分类已改由后端公开接口下发。
+ * 首页静态 UI 文案（快捷入口）。
+ * 这些是运营展示位文案，非业务数据；商品/分类/横幅/公告均由后端接口下发。
  */
 import type { IconName } from './icon-paths';
 
@@ -14,20 +14,6 @@ export interface QuickEntry {
   /** 卡片下方说明 */
   label: string;
 }
-
-/** 顶部横幅文案 */
-export const HOME_BANNER = {
-  title: '制作同款小程序',
-  subTitle: '承包客服管理售后包你满意',
-  tagLeft: '欢迎前来咨询',
-  tagRight: '限时降价1.5w',
-  contact: '搜索服务号：gs2026666',
-  scanTip: '或扫码关注',
-};
-
-/** 滚动公告 */
-export const HOME_NOTICE =
-  '单！如果打手服务不好联系客服免单！如果打手有私加直接联系客服举报！';
 
 /** 活动入口条目 id，点击进入活动中心页 */
 export const ACTIVITY_ENTRY_ID = 'activity';

@@ -2,8 +2,8 @@
 
 ## 实现了什么
 
-1. **首页横幅**：C 端首页顶部横幅改为后台可编辑的单张图片——管理端上传图片保存后即时生效；未配置时 C 端回退默认样式。图片 URL 存于配置中心 `portal.homeBanner`（Image 类型，「运营」组），不新增表。
-2. **通知公告**：管理端维护通知（标题 + 富文本详情 + 启停 + 排序）；C 端首页公告条滚动展示启用中的通知标题，点击进入通知列表/详情页（免登录可读）。
+1. **首页横幅**：C 端首页顶部横幅改为后台可编辑的单张图片——管理端上传图片保存后即时生效；未配置时 C 端不展示横幅。图片 URL 存于配置中心 `portal.homeBanner`（Image 类型，「运营」组），不新增表。
+2. **通知公告**：管理端维护通知（标题 + 富文本详情 + 启停 + 排序）；C 端首页公告条滚动展示启用中的通知标题，点击进入通知列表/详情页（免登录可读）；无启用通知时公告条不渲染。
 3. **管理端「运营通知」菜单页**：首页横幅设置面板 + 通知 CRUD（表格行内启停、编辑弹窗内置富文本编辑器，支持插图/视频）。
 
 ## 结构导图
@@ -26,8 +26,8 @@ apps/server/src/modules/notice/
 
 apps/client/src/
 ├── api/notice.api.ts                       # 公开接口客户端（横幅/通知列表/详情）
-├── components/home/HomeBanner.vue          # 配了图直接展示图片，否则回退默认样式
-├── components/home/NoticeBar.vue           # 滚动展示启用通知标题，点击进列表/详情
+├── components/home/HomeBanner.vue          # 配了图展示图片，未配置不渲染
+├── components/home/NoticeBar.vue           # 滚动展示启用通知标题（无通知不渲染），点击进列表/详情
 └── views/notice/                           # NoticeListView / NoticeDetailView（DOMPurify 净化富文本）
 
 apps/web/src/
