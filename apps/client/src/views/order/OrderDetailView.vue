@@ -15,6 +15,7 @@ import {
   type OrderView,
 } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
+import RemarkMediaGallery from '@/components/order/RemarkMediaGallery.vue';
 import { orderApi } from '@/api/order.api';
 import { useToast } from '@/composables/use-toast';
 import './OrderDetailView.css';
@@ -221,7 +222,19 @@ onMounted(async () => {
               <dt>备注</dt>
               <dd>{{ order.remark }}</dd>
             </div>
+            <div
+              v-if="order.accountInfo"
+              class="row"
+            >
+              <dt>账号信息</dt>
+              <dd>{{ order.accountInfo }}</dd>
+            </div>
           </dl>
+          <RemarkMediaGallery
+            v-if="order.remarkMedia.length"
+            class="media"
+            :items="order.remarkMedia"
+          />
         </section>
 
         <div

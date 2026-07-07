@@ -5,7 +5,7 @@ import {
   OrderRepository,
 } from '../../domain/order-repository.interface';
 import { BoosterAccess } from '../booster-access.service';
-import { toOrderView } from '../order.mapper';
+import { toHallOrderView } from '../order.mapper';
 
 /** 用例：打手分页浏览接单大厅（状态为待接单的订单），按创建时间倒序 */
 @Injectable()
@@ -24,6 +24,6 @@ export class ListHallOrdersUseCase {
   ): Promise<PaginatedResult<OrderView>> {
     await this.boosterAccess.assert(userId);
     const [rows, total] = await this.orders.paginateDispatching(skip, pageSize);
-    return { list: rows.map(toOrderView), total, page, pageSize };
+    return { list: rows.map(toHallOrderView), total, page, pageSize };
   }
 }

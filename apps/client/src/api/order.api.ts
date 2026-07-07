@@ -37,6 +37,10 @@ export const orderApi = {
   hall(page: number, pageSize: number): Promise<PaginatedResult<OrderView>> {
     return http.get('/order/hall', { params: { page, pageSize } });
   },
+  /** 接单大厅：查看待接单订单详情（仅打手；账号信息接单前不可见） */
+  hallDetail(id: string): Promise<OrderView> {
+    return http.get(`/order/hall/${id}`);
+  },
   /** 接单大厅：接单（仅打手） */
   accept(id: string): Promise<OrderView> {
     return http.post(`/order/hall/${id}/accept`);

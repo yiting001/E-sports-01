@@ -8,6 +8,8 @@
 ## 实现的功能
 
 - C 端商品详情页：封面/标题/价格/富文本详情，PC 端导航与详情主体同轴收敛，进入结算页选择数量、备注、优惠券与支付方式后下单；结算页复用同类顶部返回栏，基础样式拆分到 `CheckoutView.css`
+- 备注附件：下单备注支持上传图片/视频（`RemarkMediaUploader`，复用 `/upload/self` 自助上传，最多 `ORDER_LIMITS.remarkMediaMax` 个），订单固化 `remarkMedia` jsonb 快照，详情页/大厅详情/管理端抽屉以缩略图展示（`RemarkMediaGallery`）
+- 账号信息：下单可选填 `accountInfo`（游戏账号等敏感信息）；仅本人、接单后的打手与管理端可见，接单大厅列表/详情经 `toHallOrderView` 置空不下发
 - 下单支付：复用钱包模块的支付宝/微信收款驱动（策略模式），返回扫码二维码，前端轮询支付结果
 - 会员折扣：下单时按用户当前会员等级折扣（member 模块 `MemberLevelService`）计应付，订单固化 `originalAmountFen`/`discountBp` 快照
 - 优惠券抵扣：下单可选用未使用的我的优惠券（coupon 模块 `CouponRedeemService`），在会员折后价上再抵扣（实付至少 1 分），订单固化 `userCouponId`/`couponDeductionFen` 快照；条件核销防并发重复用券，取消订单时自动回滚券为未使用（详见 docs/coupon.md）
@@ -23,7 +25,7 @@
 - 客服订单可见性：客服角色（非管理员）在管理端订单列表/详情/下发/指派均被强制限定为自己负责商品的订单（`ServiceAgentScope`）；客服角色默认权限已含订单菜单与处理接口
 - 下发大厅：管理端「待客服处理」订单可下发接单大厅（权限码 `order:admin:dispatch`），订单进入「待接单」
 - 指派打手：客服/管理员可直接指派指定平台打手（权限码 `order:admin:assign`，POST `/order/admin/:id/assign`），「待客服处理/待接单」→「服务中」；被指派人须有打手角色、满足实名要求（`BoosterRealnameGuard`，开关关闭不校验）且押金缴足；候选列表 GET `/order/admin/booster-candidates` 仅返回打手角色用户
-- 接单大厅（C 端打手身份）：分页浏览待接单订单，接单后回填 `boosterId` 并进入「服务中」；不能接自己的单；接单前经 booster 模块 `BoosterRealnameGuard` 校验实名要求（后台开启 `booster.requireRealname` 时须实名已通过，未开启不校验）与 `BoosterDepositGuard` 校验押金已缴足；接单/被指派后打手自动加入订单群并广播系统消息
+- 接单大厅（C 端打手身份）：分页浏览待接单订单，点卡片进入大厅订单详情页（`/hall/:id`，GET `/order/hall/:id`，展示备注与附件、隐藏账号信息，可直接接单）；接单后回填 `boosterId` 并进入「服务中」；不能接自己的单；接单前经 booster 模块 `BoosterRealnameGuard` 校验实名要求（后台开启 `booster.requireRealname` 时须实名已通过，未开启不校验）与 `BoosterDepositGuard` 校验押金已缴足；接单/被指派后打手自动加入订单群并广播系统消息
 - 完成结算：打手完成订单时按其当前等级费率（booster 模块 `BoosterProgressService`）计提成经 `WalletLedger` 入账（commission 流水），订单落 `commissionFen`/`commissionRateBp` 快照并累计完成单数
 - 打手订单中心（C 端打手身份）：分页查看本人接下的订单（全部/服务中/已完成），服务中可标记完成
 - C 端身份切换：拥有 booster 角色的账号可在「我的」页切换老板/打手身份（本地持久化），
@@ -69,7 +71,8 @@ apps/server/src/modules/order/
 │       ├── assign-order-booster.usecase.ts  # 客服指派指定打手（→ 服务中，指派后进群）
 │       ├── list-booster-candidates.usecase.ts # 可指派打手候选分页（仅打手角色）
 │       ├── join-order-group.usecase.ts      # 管理端幂等加入订单群（返回会话 id）
-│       ├── list-hall-orders.usecase.ts      # 接单大厅分页（仅打手）
+│       ├── list-hall-orders.usecase.ts      # 接单大厅分页（仅打手，账号信息置空）
+│       ├── get-hall-order.usecase.ts        # 接单大厅订单详情（仅打手，账号信息置空）
 │       ├── accept-hall-order.usecase.ts     # 打手接单（待接单 → 服务中，回填 boosterId）
 │       ├── list-booster-orders.usecase.ts   # 打手订单中心分页（可按状态过滤）
 │       └── complete-booster-order.usecase.ts# 打手完成服务（服务中 → 已完成，提成结算入账）
@@ -88,6 +91,7 @@ apps/server/src/modules/order/
 │       ├── order.admin.group-join.controller.ts # POST /order/admin/:id/group/join（order:admin:detail）
 │       ├── order.admin.booster-candidates.controller.ts # GET /order/admin/booster-candidates（order:admin:assign）
 │       ├── order.hall.list.controller.ts    # GET  /order/hall（仅打手）
+│       ├── order.hall.detail.controller.ts  # GET  /order/hall/:id（仅打手）
 │       ├── order.hall.accept.controller.ts  # POST /order/hall/:id/accept（仅打手）
 │       ├── order.booster.list.controller.ts # GET  /order/booster/mine（仅打手）
 │       ├── order.booster.complete.controller.ts # POST /order/booster/:id/complete（仅打手）
@@ -114,13 +118,16 @@ apps/client/src/
 ├── views/order/OrderDetailView.vue          # 订单详情页（价格明细/订单信息/订单群入口）
 ├── views/order/OrderDetailView.css          # 订单详情页样式（移动全屏 + PC 收敛）
 ├── views/message/ChatView.vue               # 全屏会话聊天页（订单群/群聊/客服复用 ServiceChatPanel）
-├── views/order/HallView.vue                 # 接单大厅（打手一级 Tab，接单）
+├── views/order/HallView.vue                 # 接单大厅（打手一级 Tab，接单/点卡片看详情）
+├── views/order/HallOrderDetailView.vue      # 大厅订单详情（/hall/:id，含备注附件，可接单）
 ├── views/order/BoosterOrdersView.vue        # 打手订单中心（状态 tabs + 完成订单）
 └── components/order/
     ├── PayDialog.vue                        # 扫码支付弹层（轮询支付结果）
     ├── OrderStatusTabs.vue                  # 订单状态筛选：移动横滑，PC 居中分段筛选
     ├── OrderCard.vue                        # 单条订单卡片：快照/金额/状态/取消/评价，点击进详情
-    └── BoosterOrderCard.vue                 # 打手侧订单卡片（大厅/订单中心共用）
+    ├── BoosterOrderCard.vue                 # 打手侧订单卡片（大厅/订单中心共用，接单后展示账号信息）
+    ├── RemarkMediaUploader.vue              # 下单备注图片/视频上传
+    └── RemarkMediaGallery.vue               # 备注附件展示（详情页共用）
 
 apps/web/src/
 ├── api/order.api.ts                         # 管理端订单列表/详情/加入订单群

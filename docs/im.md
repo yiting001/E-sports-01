@@ -9,7 +9,7 @@
 
 实现的功能：
 
-- **握手鉴权**：连接校验 access 令牌，无效则 `im:error` + 断连；连接后自动加入个人房间 `user:<id>`。
+- **握手鉴权**：连接校验 access 令牌，无效则 `im:error` + 断连；连接后自动加入个人房间 `user:<id>`。消息处理前先等待握手鉴权完成（`authReady` 信号），避免客户端连接后立即发消息（如坐席订阅 `im:service:watch`）时身份未就绪被误判无权限。
 - **会话列表**（REST `GET /im/conversations`）：返回当前用户全部会话，含未读数、最后一条消息、显示标题（私聊解析为对端昵称）。
 - **会话搜索**（REST `GET /im/conversations/search?keyword=`）：在我参与的会话中按显示标题（私聊即对方用户名）忽略大小写模糊匹配，复用列表用例保证口径一致。
 - **聊天记录搜索**（REST `GET /im/messages/search`）：会话内按内容关键词 + 日期范围（`dateFrom`/`dateTo`，YYYY-MM-DD 闭区间，两者均可缺省）分页搜索（新→旧），仅会话成员可搜；不传关键词时即按日期翻阅当天聊天记录。

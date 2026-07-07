@@ -2,7 +2,8 @@
 /**
  * 打手侧订单卡片：接单大厅与打手订单中心共用。
  * 展示商品快照/数量/备注/金额/状态，通过 actionLabel 渲染可选主操作按钮
- * （大厅传「接单」、订单中心对服务中订单传「完成订单」）。
+ * （大厅传「接单」、订单中心对服务中订单传「完成订单」）；
+ * 点击卡片体触发 open 事件供宿主跳转详情；账号信息仅在后端下发时展示（接单后可见）。
  */
 import { ORDER_STATUS_TEXT, OrderStatus, type OrderView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
@@ -15,6 +16,7 @@ defineProps<{
 
 const emit = defineEmits<{
   action: [order: OrderView];
+  open: [order: OrderView];
 }>();
 
 /** 状态 → 徽标风格（进行中金色/完成绿色/取消灰色） */
@@ -34,7 +36,10 @@ function formatTime(iso: string): string {
 </script>
 
 <template>
-  <article class="order card">
+  <article
+    class="order card"
+    @click="emit('open', order)"
+  >
     <div class="head">
       <span class="no">订单号 {{ order.orderNo }}</span>
       <span
@@ -73,6 +78,12 @@ function formatTime(iso: string): string {
         >
           备注：{{ order.remark }}
         </p>
+        <p
+          v-if="order.accountInfo"
+          class="remark"
+        >
+          账号：{{ order.accountInfo }}
+        </p>
       </div>
 
       <span class="amount">¥{{ order.amountYuan }}</span>
@@ -84,7 +95,7 @@ function formatTime(iso: string): string {
     >
       <button
         class="action"
-        @click="emit('action', order)"
+        @click.stop="emit('action', order)"
       >
         {{ actionLabel }}
       </button>
