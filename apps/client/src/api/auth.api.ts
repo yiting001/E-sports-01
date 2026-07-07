@@ -1,4 +1,5 @@
 import type {
+  AgreementView,
   AuthProfile,
   SendSmsCodePayload,
   SendSmsCodeResult,
@@ -16,6 +17,10 @@ import { http } from './http';
  * 每个方法对应一个后端路由，返回已解包的业务数据。
  */
 export const authApi = {
+  /** 读取用户协议正文（公开，登录前可访问） */
+  agreement(): Promise<AgreementView> {
+    return http.get('/config/agreement');
+  },
   /** 发送「登录」短信验证码（要求手机号已注册） */
   sendLoginCode(payload: SendSmsCodePayload): Promise<SendSmsCodeResult> {
     return http.post('/auth/sms/code', payload);

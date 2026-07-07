@@ -9,8 +9,10 @@ import { ListConfigsUseCase } from './application/use-cases/list-configs.usecase
 import { UpsertConfigUseCase } from './application/use-cases/upsert-config.usecase';
 import { RemoveConfigUseCase } from './application/use-cases/remove-config.usecase';
 import { GetBrandingUseCase } from './application/use-cases/get-branding.usecase';
+import { GetAgreementUseCase } from './application/use-cases/get-agreement.usecase';
 import { ListConfigsController } from './interfaces/list-configs.controller';
 import { GetBrandingController } from './interfaces/get-branding.controller';
+import { GetAgreementController } from './interfaces/get-agreement.controller';
 import { UpsertConfigController } from './interfaces/upsert-config.controller';
 import { RemoveConfigController } from './interfaces/remove-config.controller';
 
@@ -23,6 +25,7 @@ import { RemoveConfigController } from './interfaces/remove-config.controller';
   imports: [TypeOrmModule.forFeature([ConfigItem])],
   controllers: [
     GetBrandingController,
+    GetAgreementController,
     ListConfigsController,
     UpsertConfigController,
     RemoveConfigController,
@@ -35,6 +38,7 @@ import { RemoveConfigController } from './interfaces/remove-config.controller';
     UpsertConfigUseCase,
     RemoveConfigUseCase,
     GetBrandingUseCase,
+    GetAgreementUseCase,
   ],
   // 额外导出 UpsertConfigUseCase：供业务模块（如邀请奖励配置）写入配置中心
   exports: [ConfigService, UpsertConfigUseCase],

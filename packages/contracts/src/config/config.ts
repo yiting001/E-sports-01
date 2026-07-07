@@ -52,6 +52,12 @@ export interface BrandingView {
   appLogo: string;
 }
 
+/** 用户协议（公开，登录前即可读取） */
+export interface AgreementView {
+  /** 协议正文（富文本 HTML，未配置为空串） */
+  contentHtml: string;
+}
+
 /** 软件名称默认值（未在配置中心设置时回退使用） */
 export const DEFAULT_APP_NAME = '基础设施平台';
 
@@ -73,6 +79,8 @@ export const CONFIG_KEYS = {
   auth: {
     accessTokenTtl: 'auth.accessTokenTtl',
     refreshTokenTtl: 'auth.refreshTokenTtl',
+    /** 用户协议正文（富文本 HTML，登录/注册页需同意后才可提交） */
+    userAgreement: 'auth.userAgreement',
   },
   upload: {
     driver: 'upload.driver',
