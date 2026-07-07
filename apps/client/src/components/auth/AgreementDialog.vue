@@ -120,6 +120,7 @@ watch(open, async (value) => {
 
 .agreement-body {
   flex: 1;
+  min-height: 140px;
   padding: 16px;
   overflow-y: auto;
 }
@@ -140,5 +141,28 @@ watch(open, async (value) => {
 
 .agreement-content :deep(img) {
   max-width: 100%;
+}
+
+@media (min-width: 768px) {
+  .agreement-mask {
+    align-items: center;
+    padding: 48px;
+  }
+
+  .agreement-panel {
+    width: min(720px, 100%);
+    max-height: calc(100vh - 96px);
+    border-radius: 12px;
+    box-shadow: 0 18px 48px rgb(0 0 0 / 35%);
+  }
+
+  .agreement-head {
+    padding: 16px 20px;
+  }
+
+  .agreement-body {
+    min-height: 260px;
+    padding: 20px;
+  }
 }
 </style>
