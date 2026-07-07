@@ -98,8 +98,6 @@ export interface AdminOrderView extends OrderView {
   userId: string;
   /** 商品关联客服快照（未关联为空串） */
   serviceAgentId: string;
-  /** 接单打手 id（未接单为空串） */
-  boosterId: string;
   /** 渠道交易号（未支付为空串） */
   providerTradeNo: string;
 }
@@ -133,9 +131,21 @@ export interface OrderView {
   remarkMedia: RemarkMediaItem[];
   /** 账号信息（接单大厅视图中为空串，打手接单后可见） */
   accountInfo: string;
+  /** 接单打手 id（接单/被指派后回填；未接单为空串） */
+  boosterId: string;
+  /** 接单打手显示名快照（接单/被指派时固化；未接单为空串） */
+  boosterName: string;
   createdAt: string;
   /** 支付时间（未支付为空串） */
   paidAt: string;
+  /** 下发接单大厅时间（未下发为空串） */
+  dispatchedAt: string;
+  /** 打手接单/被指派时间（未接单为空串） */
+  acceptedAt: string;
+  /** 服务完成时间（未完成为空串） */
+  completedAt: string;
+  /** 取消时间（未取消为空串） */
+  cancelledAt: string;
   /** 订单群会话 id（支付成功自动建群后回填；未建群为空串） */
   conversationId: string;
 }

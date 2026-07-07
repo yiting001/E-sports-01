@@ -47,6 +47,10 @@ export class OrderEntity extends TenantScopedEntity {
   @Column({ name: 'booster_id', length: 36, default: '' })
   boosterId!: string;
 
+  /** 接单打手显示名快照（接单/被指派时固化，改名不影响历史订单） */
+  @Column({ name: 'booster_name', length: 64, default: '' })
+  boosterName!: string;
+
   /** 订单群会话 id（支付成功自动建群后回填；未建群为空串） */
   @Column({ name: 'conversation_id', length: 36, default: '' })
   conversationId!: string;
@@ -111,4 +115,20 @@ export class OrderEntity extends TenantScopedEntity {
   /** 支付时间（支付成功后回填） */
   @Column({ name: 'paid_at', type: 'timestamptz', nullable: true })
   paidAt!: Date | null;
+
+  /** 下发接单大厅时间（客服下发时回填） */
+  @Column({ name: 'dispatched_at', type: 'timestamptz', nullable: true })
+  dispatchedAt!: Date | null;
+
+  /** 打手接单/被指派时间（接单时回填） */
+  @Column({ name: 'accepted_at', type: 'timestamptz', nullable: true })
+  acceptedAt!: Date | null;
+
+  /** 服务完成时间（打手完成时回填） */
+  @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
+  completedAt!: Date | null;
+
+  /** 取消时间（用户取消时回填） */
+  @Column({ name: 'cancelled_at', type: 'timestamptz', nullable: true })
+  cancelledAt!: Date | null;
 }

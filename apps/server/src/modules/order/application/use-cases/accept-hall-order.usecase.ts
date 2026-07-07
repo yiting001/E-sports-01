@@ -11,6 +11,7 @@ import {
 } from '../../domain/order-repository.interface';
 import { BoosterDepositGuard } from '../../../booster/application/booster-deposit.service';
 import { BoosterRealnameGuard } from '../../../booster/application/booster-realname.service';
+import { UserDirectory } from '../../../rbac/application/user-directory.service';
 import { BoosterAccess } from '../booster-access.service';
 import { OrderGroupService } from '../order-group.service';
 import { toOrderView } from '../order.mapper';
@@ -28,6 +29,7 @@ export class AcceptHallOrderUseCase {
     private readonly realnameGuard: BoosterRealnameGuard,
     private readonly depositGuard: BoosterDepositGuard,
     private readonly orderGroup: OrderGroupService,
+    private readonly users: UserDirectory,
   ) {}
 
   async execute(userId: string, id: string): Promise<OrderView> {
@@ -44,8 +46,12 @@ export class AcceptHallOrderUseCase {
     if (order.userId === userId) {
       throw new BadRequestException('不能接自己的订单');
     }
+    const profiles = await this.users.resolveProfiles([userId]);
+    const profile = profiles.get(userId);
     order.status = OrderStatus.Serving;
     order.boosterId = userId;
+    order.boosterName = profile ? profile.nickname || profile.username : '';
+    order.acceptedAt = new Date();
     const saved = await this.orders.save(order);
     await this.orderGroup.joinBooster(saved, userId);
     return toOrderView(saved);

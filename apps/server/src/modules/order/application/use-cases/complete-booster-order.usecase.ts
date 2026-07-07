@@ -67,6 +67,7 @@ export class CompleteBoosterOrderUseCase {
       });
     }
     order.status = OrderStatus.Completed;
+    order.completedAt = new Date();
     order.commissionFen = commissionFen;
     order.commissionRateBp = tier.commissionRateBp;
     return toOrderView(await this.orders.save(order));

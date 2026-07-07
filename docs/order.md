@@ -16,7 +16,8 @@
 - 支付回调：渠道异步回调验签解析，事务 + 行锁内幂等落账（待付款 → 待客服处理），并累加商品销量与用户会员累计消费（`MemberProgressService.recordSpend`）
 - 主动查单兜底：支付二维码弹窗轮询 `GET /order/:id/pay/query`，后端调渠道官方查单接口（支付宝 `alipay.trade.query` / 微信 `GET /v3/pay/transactions/out-trade-no`），查到已支付则与回调共用 `OrderPaymentSettleService` 幂等落账——回调丢失/延迟也能正常完成支付流程
 - 我的订单：分页列表（商品快照/数量/金额/状态），待付款订单可取消；PC 端标题、紧凑状态筛选、列表统一收敛到内容区宽度，移动端保持全屏滚动
-- C 端订单详情页（`/orders/:id`）：点击订单卡片进入，展示商品快照、状态、价格明细（原价/会员折扣减免/优惠券抵扣/实付）、订单信息（订单号/支付方式/时间/备注）；已建群订单提供「进入订单群」入口（跳全屏聊天页 `/chat/:id`），待付款可取消
+- C 端订单详情页（`/orders/:id`）：支付成功（含 0 元单免扫码）自动跳转进入，也可点击订单卡片进入；展示商品快照、状态、服务信息（接单打手显示名快照 `boosterName`/接单时间/完成时间，打手接单或被指派后展示）、价格明细（原价/会员折扣减免/优惠券抵扣/实付）、订单信息（订单号/支付方式/备注）与全量时间线（下单/支付/下发大厅 `dispatchedAt`/接单 `acceptedAt`/完成 `completedAt`/取消 `cancelledAt`，未发生的不展示）；已建群订单提供「进入订单群」入口（跳全屏聊天页 `/chat/:id`），待付款可取消
+- 订单全量时间线与打手快照：订单实体新增 `booster_name`（接单/被指派时经 RBAC `UserDirectory` 固化昵称||用户名，改名不影响历史订单）与 `dispatched_at`/`accepted_at`/`completed_at`/`cancelled_at` 时间列，分别由下发/接单与指派/完成/取消用例回填；`OrderView` 契约同步下发 `boosterId`/`boosterName` 与四个时间字段，C 端/大厅/打手/管理端视图共用
 - 管理端订单管理：分页检索全量订单（状态/订单号过滤）+ 详情抽屉（商品快照/归属用户/关联客服/渠道交易号），
   权限码 `order:admin:list` / `order:admin:detail`，菜单「电竞运营 / 订单管理」由播种器幂等补齐
 - 支付渠道配置沿用配置中心既有 `wallet.*` 键（网关地址、商户密钥、回调基址 `wallet.notify.base-url`），无新增配置

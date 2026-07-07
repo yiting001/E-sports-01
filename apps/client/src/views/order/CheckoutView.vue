@@ -2,7 +2,7 @@
 /**
  * 下单页（全屏，独立于商品详情页）：商品摘要 + 数量/备注（含图片视频附件）/
  * 账号信息（仅接单打手可见）/支付方式，确认下单后弹出扫码支付
- * （支付宝/微信），支付成功跳「我的订单」。
+ * （支付宝/微信），支付成功跳订单详情页。
  */
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -139,20 +139,24 @@ async function submit(): Promise<void> {
       userCouponId: selectedCoupon.value?.id || undefined,
     });
     // 0 元单后端已直接落账，无需扫码支付
+    payOrder.value = result;
     if (result.paid) {
       onPaid();
-      return;
     }
-    payOrder.value = result;
   } finally {
     submitting.value = false;
   }
 }
 
 function onPaid(): void {
+  const orderId = payOrder.value?.orderId;
   payOrder.value = null;
   toast.show('支付成功，客服将尽快为您安排服务');
-  router.replace('/orders');
+  if (orderId) {
+    void router.replace({ name: 'order-detail', params: { id: orderId } });
+  } else {
+    void router.replace('/orders');
+  }
 }
 
 onMounted(async () => {
