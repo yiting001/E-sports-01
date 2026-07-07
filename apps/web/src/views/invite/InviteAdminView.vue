@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 邀请管理页：邀请奖励配置 + 邀请记录。
- * 奖励配置分邀请人/被邀请人两侧（不发放/优惠券/钱包金额），落配置中心即时生效；
+ * 奖励配置分邀请人/被邀请人两侧（不发放/优惠券/钱包金额），另支持邀请规则富文本编辑（C 端邀请页展示），落配置中心即时生效；
  * 邀请记录展示邀请双方与奖励发放结果快照。
  */
 import { onMounted, ref } from 'vue';
@@ -18,6 +18,7 @@ import { ElMessage } from 'element-plus';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import InviteRewardConfigForm from '@/components/invite/InviteRewardConfigForm.vue';
+import RichTextEditor from '@/components/common/RichTextEditor.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { couponApi } from '@/api/coupon.api';
 import { inviteApi } from '@/api/invite.api';
@@ -28,7 +29,7 @@ function emptyConfig(): InviteConfigView {
     couponId: '',
     amountFen: 0,
   };
-  return { inviter: { ...side }, invitee: { ...side } };
+  return { inviter: { ...side }, invitee: { ...side }, rulesHtml: '' };
 }
 
 const config = ref<InviteConfigView>(emptyConfig());
@@ -127,6 +128,16 @@ onMounted(async () => {
           :coupons="coupons"
         />
       </div>
+
+      <div class="rules-block">
+        <h3 class="rules-title">
+          邀请规则（C 端邀请页展示，留空则不展示）
+        </h3>
+        <rich-text-editor
+          v-model="config.rulesHtml"
+          placeholder="邀请规则说明，支持富文本…"
+        />
+      </div>
     </app-panel>
 
     <app-panel
@@ -212,6 +223,15 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
+}
+
+.rules-block {
+  margin-top: 16px;
+}
+
+.rules-title {
+  margin: 0 0 12px;
+  font-size: 14px;
 }
 
 .invite-muted {

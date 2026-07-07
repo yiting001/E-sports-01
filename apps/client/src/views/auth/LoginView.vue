@@ -2,13 +2,14 @@
 /**
  * 登录/注册页（C 端 · 战术电竞风全屏页）。
  * 仅支持手机号验证码方式：分段页签切换「登录 / 注册」，共用手机号+验证码表单，
- * 注册额外可填昵称；注册成功即自动登录。登录态由 auth.store 维护，
+ * 注册额外可填昵称与好友邀请码（填码注册成功自动绑定邀请关系）；注册成功即自动登录。登录态由 auth.store 维护，
  * 成功后按 redirect 回跳或进入首页。校验反馈统一走全局 toast。
  */
-import { CHINA_MOBILE_PATTERN } from '@app/contracts';
+import { CHINA_MOBILE_PATTERN, INVITE_LIMITS } from '@app/contracts';
 import { computed, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { authApi } from '@/api/auth.api';
+import { inviteApi } from '@/api/invite.api';
 import AppIcon from '@/components/common/AppIcon.vue';
 import SegmentTabs from '@/components/common/SegmentTabs.vue';
 import { useToast } from '@/composables/use-toast';
@@ -28,8 +29,8 @@ const router = useRouter();
 const activeTab = ref(0);
 const isRegister = computed(() => activeTab.value === 1);
 
-/** 表单模型：登录/注册共用，nickname 仅注册用 */
-const form = reactive({ phone: '', code: '', nickname: '' });
+/** 表单模型：登录/注册共用，nickname/inviteCode 仅注册用 */
+const form = reactive({ phone: '', code: '', nickname: '', inviteCode: '' });
 
 const submitting = ref(false);
 const sending = ref(false);
@@ -93,6 +94,7 @@ async function onSubmit(): Promise<void> {
   try {
     if (isRegister.value) {
       await auth.smsRegister({ phone: form.phone, code: form.code, nickname: form.nickname || undefined });
+      await bindInviteCode();
     } else {
       await auth.smsLogin({ phone: form.phone, code: form.code });
     }
@@ -103,6 +105,20 @@ async function onSubmit(): Promise<void> {
     toast.show(resolveHttpErrorMessage(error, isRegister.value ? '注册失败' : '登录失败'));
   } finally {
     submitting.value = false;
+  }
+}
+
+/** 注册成功后绑定好友邀请码：绑定失败不阻断注册流程，仅提示 */
+async function bindInviteCode(): Promise<void> {
+  const code = form.inviteCode.trim().toUpperCase();
+  if (!code) {
+    return;
+  }
+  try {
+    await inviteApi.bind(code);
+    toast.show('邀请码绑定成功');
+  } catch (error) {
+    toast.show(resolveHttpErrorMessage(error, '邀请码绑定失败'));
   }
 }
 </script>
@@ -185,6 +201,23 @@ async function onSubmit(): Promise<void> {
             type="text"
             maxlength="20"
             placeholder="昵称（选填，默认用手机号）"
+          >
+        </label>
+
+        <label
+          v-if="isRegister"
+          class="field"
+        >
+          <AppIcon
+            name="share"
+            :size="18"
+            class="field-icon"
+          />
+          <input
+            v-model.trim="form.inviteCode"
+            type="text"
+            :maxlength="INVITE_LIMITS.codeLength"
+            placeholder="好友邀请码（选填，填码可得奖励）"
           >
         </label>
 

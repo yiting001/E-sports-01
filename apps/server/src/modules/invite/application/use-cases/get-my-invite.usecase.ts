@@ -51,6 +51,7 @@ export class GetMyInviteUseCase {
       bound: Boolean(boundRecord),
       inviterRewardText,
       inviteeRewardText,
+      rulesHtml: config.rulesHtml,
       records: views,
     };
   }
