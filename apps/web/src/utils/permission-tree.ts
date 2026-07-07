@@ -45,6 +45,7 @@ const BASE_NAMESPACE_LABELS: Record<string, string> = {
   finance: '财务管理',
   'finance:withdrawal': '提现管理',
   'finance:penalty': '罚款管理',
+  penalty: '罚款管理',
   dashboard: '工作台',
   im: '即时通讯',
   'im:message': '消息记录',
@@ -53,6 +54,8 @@ const BASE_NAMESPACE_LABELS: Record<string, string> = {
   invite: '邀请管理',
   'invite:config': '邀请配置',
   'invite:record': '邀请记录',
+  player: '玩家管理',
+  'player:level': '玩家等级',
 };
 
 const MENU_GROUP_LABELS = new Map(MENU_GROUPS.map((group) => [group.code, group.title]));
