@@ -285,3 +285,4 @@ pm2 restart esports-server
 | 上传图片显示 127.0.0.1 链接 | 配置中心 `upload.local.baseUrl` 未改为公网地址 |
 | 上传大视频报 413 | Nginx `client_max_body_size` 过小 |
 | 支付回调收不到 | 配置中心 `wallet.notifyBaseUrl` 未设为公网 https 地址 |
+| 建表报 `uuid_generate_v4() does not exist` | 旧版本代码依赖 uuid-ossp 扩展；现已改用 PG 13+ 内置 `gen_random_uuid()`，更新后端后重建库即可 |

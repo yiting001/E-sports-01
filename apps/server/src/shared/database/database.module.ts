@@ -23,6 +23,10 @@ import { loadEnvConfig } from '../../bootstrap/env.config';
           autoLoadEntities: true,
           synchronize: env.database.synchronize,
           namingStrategy: undefined,
+          // uuid 主键默认值用 PG 13+ 内置的 gen_random_uuid()，
+          // 不依赖 uuid-ossp/pgcrypto 扩展，也不自动执行 CREATE EXTENSION
+          uuidExtension: 'pgcrypto',
+          installExtensions: false,
         };
       },
     }),
