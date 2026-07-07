@@ -1,9 +1,11 @@
 <script setup lang="ts">
 /**
  * 接单大厅（打手身份一级 Tab）：分页浏览已下发大厅的待接单订单，
- * 点「接单」抢单成功后订单进入服务中并出现在打手订单中心；到底加载更多。
+ * 点卡片可查看订单详情，点「接单」抢单成功后订单进入服务中
+ * 并出现在打手订单中心；到底加载更多。
  */
 import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import type { OrderView } from '@app/contracts';
 import BoosterOrderCard from '@/components/order/BoosterOrderCard.vue';
 import { orderApi } from '@/api/order.api';
@@ -11,6 +13,7 @@ import { useToast } from '@/composables/use-toast';
 
 const PAGE_SIZE = 10;
 
+const router = useRouter();
 const toast = useToast();
 
 const orders = ref<OrderView[]>([]);
@@ -50,6 +53,11 @@ async function accept(order: OrderView): Promise<void> {
   await load(true);
 }
 
+/** 点击卡片 → 大厅订单详情页 */
+function openDetail(order: OrderView): void {
+  router.push({ name: 'hall-order-detail', params: { id: order.id } });
+}
+
 onMounted(() => void load(true));
 </script>
 
@@ -78,6 +86,7 @@ onMounted(() => void load(true));
       :order="order"
       action-label="接单"
       @action="accept"
+      @open="openDetail"
     />
 
     <div

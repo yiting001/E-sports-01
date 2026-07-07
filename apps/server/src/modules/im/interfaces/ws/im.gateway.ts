@@ -37,6 +37,9 @@ export class ImGateway
 {
   private readonly logger = new Logger(ImGateway.name);
 
+  /** 连接 → 握手鉴权完成信号：消息处理前先等待，避免身份未就绪导致误判无权限 */
+  private readonly authReady = new WeakMap<Socket, Promise<void>>();
+
   constructor(
     private readonly tokens: TokenService,
     private readonly permissions: PermissionResolver,
@@ -57,7 +60,8 @@ export class ImGateway
    * 在独立链路上下文中执行 WS 消息处理。
    * 每次消息生成新的 traceId/spanId，并带上握手身份，使 WS 行为与 HTTP 一致可追踪。
    */
-  private runInTrace<T>(socket: AuthedSocket, handler: () => Promise<T>): Promise<T> {
+  private async runInTrace<T>(socket: AuthedSocket, handler: () => Promise<T>): Promise<T> {
+    await this.authReady.get(socket);
     return this.trace.run(
       {
         traceId: TraceContextService.newTraceId(),
@@ -76,7 +80,14 @@ export class ImGateway
     );
   }
 
-  async handleConnection(socket: Socket): Promise<void> {
+  handleConnection(socket: Socket): Promise<void> {
+    const ready = this.authenticate(socket);
+    this.authReady.set(socket, ready);
+    return ready;
+  }
+
+  /** 握手鉴权：校验访问令牌、解析超管标识并加入个人房间，失败则断开连接 */
+  private async authenticate(socket: Socket): Promise<void> {
     const token = extractToken(socket);
     if (!token) {
       this.deny(socket, '缺少访问令牌');

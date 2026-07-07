@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * 下单页（全屏，独立于商品详情页）：商品摘要 + 数量/备注/支付方式，
- * 确认下单后弹出扫码支付（支付宝/微信），支付成功跳「我的订单」。
+ * 下单页（全屏，独立于商品详情页）：商品摘要 + 数量/备注（含图片视频附件）/
+ * 账号信息（仅接单打手可见）/支付方式，确认下单后弹出扫码支付
+ * （支付宝/微信），支付成功跳「我的订单」。
  */
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -14,10 +15,12 @@ import {
   fenToYuan,
   type CreateOrderResult,
   type ProductPublicView,
+  type RemarkMediaItem,
   type UserCouponView,
 } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import PayDialog from '@/components/order/PayDialog.vue';
+import RemarkMediaUploader from '@/components/order/RemarkMediaUploader.vue';
 import { commerceApi } from '@/api/commerce.api';
 import { couponApi } from '@/api/coupon.api';
 import { memberApi } from '@/api/member.api';
@@ -42,6 +45,10 @@ const missing = ref(false);
 
 const quantity = ref(1);
 const remark = ref('');
+/** 备注附件（图片/视频） */
+const remarkMedia = ref<RemarkMediaItem[]>([]);
+/** 账号信息（仅本人、接单打手与管理端可见） */
+const accountInfo = ref('');
 const provider = ref<PaymentProvider>(PaymentProvider.Alipay);
 const submitting = ref(false);
 const payOrder = ref<CreateOrderResult | null>(null);
@@ -127,6 +134,8 @@ async function submit(): Promise<void> {
       quantity: quantity.value,
       provider: provider.value,
       remark: remark.value.trim() || undefined,
+      remarkMedia: remarkMedia.value.length ? remarkMedia.value : undefined,
+      accountInfo: accountInfo.value.trim() || undefined,
       userCouponId: selectedCoupon.value?.id || undefined,
     });
     // 0 元单后端已直接落账，无需扫码支付
@@ -248,6 +257,16 @@ onMounted(async () => {
               class="remark"
               :maxlength="ORDER_LIMITS.remarkMax"
               placeholder="大区/段位/开黑时间等（选填）"
+            />
+            <RemarkMediaUploader v-model="remarkMedia" />
+          </div>
+          <div class="row row--col">
+            <span class="label">账号信息</span>
+            <textarea
+              v-model="accountInfo"
+              class="remark"
+              :maxlength="ORDER_LIMITS.accountInfoMax"
+              placeholder="游戏账号等（选填，仅接单打手可见）"
             />
           </div>
           <div class="row row--col">

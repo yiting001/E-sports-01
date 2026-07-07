@@ -24,6 +24,7 @@ import { ListAdminOrdersUseCase } from './application/use-cases/list-admin-order
 import { GetAdminOrderUseCase } from './application/use-cases/get-admin-order.usecase';
 import { DispatchOrderUseCase } from './application/use-cases/dispatch-order.usecase';
 import { ListHallOrdersUseCase } from './application/use-cases/list-hall-orders.usecase';
+import { GetHallOrderUseCase } from './application/use-cases/get-hall-order.usecase';
 import { AcceptHallOrderUseCase } from './application/use-cases/accept-hall-order.usecase';
 import { ListBoosterOrdersUseCase } from './application/use-cases/list-booster-orders.usecase';
 import { CompleteBoosterOrderUseCase } from './application/use-cases/complete-booster-order.usecase';
@@ -47,6 +48,7 @@ import { OrderAdminDispatchController } from './interfaces/controllers/order.adm
 import { OrderAdminAssignController } from './interfaces/controllers/order.admin.assign.controller';
 import { OrderAdminBoosterCandidatesController } from './interfaces/controllers/order.admin.booster-candidates.controller';
 import { OrderHallListController } from './interfaces/controllers/order.hall.list.controller';
+import { OrderHallDetailController } from './interfaces/controllers/order.hall.detail.controller';
 import { OrderHallAcceptController } from './interfaces/controllers/order.hall.accept.controller';
 import { OrderBoosterListController } from './interfaces/controllers/order.booster.list.controller';
 import { OrderBoosterCompleteController } from './interfaces/controllers/order.booster.complete.controller';
@@ -75,6 +77,7 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     OrderMineListController,
     OrderHallListController,
     OrderHallAcceptController,
+    OrderHallDetailController,
     OrderBoosterListController,
     OrderBoosterCompleteController,
     OrderCreateController,
@@ -101,6 +104,7 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     GetAdminOrderUseCase,
     DispatchOrderUseCase,
     ListHallOrdersUseCase,
+    GetHallOrderUseCase,
     AcceptHallOrderUseCase,
     ListBoosterOrdersUseCase,
     CompleteBoosterOrderUseCase,

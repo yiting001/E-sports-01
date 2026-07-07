@@ -105,6 +105,8 @@ export class CreateOrderUseCase {
         provider: payload.provider,
         status: OrderStatus.PendingPayment,
         remark: payload.remark?.trim() ?? '',
+        remarkMedia: payload.remarkMedia ?? [],
+        accountInfo: payload.accountInfo?.trim() ?? '',
         providerTradeNo: null,
         paidAt: null,
       }),

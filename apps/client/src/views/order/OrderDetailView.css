@@ -266,3 +266,8 @@
     padding: 18px 20px;
   }
 }
+
+/* 备注附件缩略图区（图片/视频） */
+.order-detail .media {
+  margin-top: 12px;
+}

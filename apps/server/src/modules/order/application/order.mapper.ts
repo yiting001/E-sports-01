@@ -24,10 +24,17 @@ export function toOrderView(entity: OrderEntity): OrderView {
     provider: entity.provider,
     status: entity.status,
     remark: entity.remark,
+    remarkMedia: entity.remarkMedia ?? [],
+    accountInfo: entity.accountInfo,
     createdAt: entity.createdAt.toISOString(),
     paidAt: entity.paidAt ? entity.paidAt.toISOString() : '',
     conversationId: entity.conversationId,
   };
+}
+
+/** 订单实体 → 接单大厅视图：未接单前对打手隐藏账号信息 */
+export function toHallOrderView(entity: OrderEntity): OrderView {
+  return { ...toOrderView(entity), accountInfo: '' };
 }
 
 /** 订单实体 → 管理端视图（补充归属用户/客服快照/渠道交易号） */

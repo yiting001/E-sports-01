@@ -37,7 +37,19 @@ export const ORDER_LIMITS = {
   remarkMax: 200,
   quantityMin: 1,
   quantityMax: 99,
+  /** 备注附件（图片/视频）最大数量 */
+  remarkMediaMax: 6,
+  accountInfoMax: 200,
 } as const;
+
+/** 备注附件类型 */
+export type RemarkMediaType = 'image' | 'video';
+
+/** 备注附件（用户下单时上传的图片/视频） */
+export interface RemarkMediaItem {
+  type: RemarkMediaType;
+  url: string;
+}
 
 /** 创建订单入参 */
 export interface CreateOrderPayload {
@@ -48,6 +60,10 @@ export interface CreateOrderPayload {
   provider: PaymentProvider;
   /** 用户备注（大区/段位/开黑时间等，选填） */
   remark?: string;
+  /** 备注附件（图片/视频，选填） */
+  remarkMedia?: RemarkMediaItem[];
+  /** 账号信息（选填；仅本人、接单打手与管理端可见，接单大厅不展示） */
+  accountInfo?: string;
   /** 抵扣用的我的优惠券 id（选填，不用券不传） */
   userCouponId?: string;
 }
@@ -113,6 +129,10 @@ export interface OrderView {
   provider: PaymentProvider;
   status: OrderStatus;
   remark: string;
+  /** 备注附件（图片/视频） */
+  remarkMedia: RemarkMediaItem[];
+  /** 账号信息（接单大厅视图中为空串，打手接单后可见） */
+  accountInfo: string;
   createdAt: string;
   /** 支付时间（未支付为空串） */
   paidAt: string;

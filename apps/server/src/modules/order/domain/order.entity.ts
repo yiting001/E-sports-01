@@ -1,4 +1,9 @@
-import { FEE_RATE_BASE, OrderStatus, PaymentProvider } from '@app/contracts';
+import {
+  FEE_RATE_BASE,
+  OrderStatus,
+  PaymentProvider,
+  type RemarkMediaItem,
+} from '@app/contracts';
 import { Column, Entity, Index } from 'typeorm';
 import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 import { bigintTransformer } from '../../../shared/database/numeric.transformer';
@@ -90,6 +95,14 @@ export class OrderEntity extends TenantScopedEntity {
   /** 用户备注（大区/段位/开黑时间等） */
   @Column({ length: 256, default: '' })
   remark!: string;
+
+  /** 备注附件（用户下单时上传的图片/视频 URL 列表） */
+  @Column({ name: 'remark_media', type: 'jsonb', default: () => "'[]'" })
+  remarkMedia!: RemarkMediaItem[];
+
+  /** 账号信息（仅本人/接单打手/管理端可见，大厅视图置空） */
+  @Column({ name: 'account_info', length: 256, default: '' })
+  accountInfo!: string;
 
   /** 渠道交易号（支付成功后回填） */
   @Column({ name: 'provider_trade_no', type: 'varchar', length: 64, nullable: true })

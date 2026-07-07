@@ -118,6 +118,38 @@ const visible = defineModel<boolean>({ required: true });
       <el-descriptions-item label="用户备注">
         {{ order.remark || '-' }}
       </el-descriptions-item>
+      <el-descriptions-item label="备注附件">
+        <div
+          v-if="order.remarkMedia.length"
+          class="media-list"
+        >
+          <template
+            v-for="(item, index) in order.remarkMedia"
+            :key="index"
+          >
+            <video
+              v-if="item.type === 'video'"
+              class="media-cell"
+              :src="item.url"
+              controls
+              preload="metadata"
+            />
+            <el-image
+              v-else
+              class="media-cell"
+              :src="item.url"
+              :preview-src-list="[item.url]"
+              fit="cover"
+            />
+          </template>
+        </div>
+        <template v-else>
+          -
+        </template>
+      </el-descriptions-item>
+      <el-descriptions-item label="账号信息">
+        {{ order.accountInfo || '-' }}
+      </el-descriptions-item>
       <el-descriptions-item label="下单时间">
         {{ formatDate(order.createdAt) }}
       </el-descriptions-item>
@@ -127,3 +159,18 @@ const visible = defineModel<boolean>({ required: true });
     </el-descriptions>
   </el-drawer>
 </template>
+
+<style scoped>
+.media-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.media-cell {
+  width: 72px;
+  height: 72px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+</style>
