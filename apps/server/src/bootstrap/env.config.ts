@@ -5,6 +5,8 @@
  * 一切业务可调参数都交给【配置中心】(modules/config) 管理并入库，
  * 因此本文件刻意保持精简，是全平台唯一允许读取 process.env 的地方。
  */
+import { config as loadDotenv } from 'dotenv';
+
 export interface EnvConfig {
   nodeEnv: string;
   port: number;
@@ -47,8 +49,9 @@ function toNumber(value: string, key: string): number {
   return parsed;
 }
 
-/** 解析并校验环境变量，缺失即快速失败 */
+/** 解析并校验环境变量，缺失即快速失败；先加载工作目录下的 .env（已有同名变量不覆盖） */
 export function loadEnvConfig(): EnvConfig {
+  loadDotenv();
   return {
     nodeEnv: process.env.NODE_ENV ?? 'development',
     port: toNumber(process.env.PORT ?? '3000', 'PORT'),
