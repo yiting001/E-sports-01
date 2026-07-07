@@ -1,14 +1,13 @@
 <script setup lang="ts">
 /**
  * 滚动公告条：喇叭图标 + 竖向逐条轮播文案，点击进入平台通知列表页。
- * 文案取启用中的通知标题；后台未发布通知时回退默认文案。
+ * 文案取启用中的通知标题；后台未发布通知时不渲染公告条。
  * 多条通知时克隆首条到末尾，过渡结束后无动画复位，实现连续向上轮播。
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import type { NoticePublicView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { HOME_NOTICE } from '@/config/home.mock';
 import { noticeApi } from '@/api/notice.api';
 
 const router = useRouter();
@@ -18,15 +17,13 @@ const transitionEnabled = ref(true);
 let timer: ReturnType<typeof setInterval> | null = null;
 
 interface NoticeTickerItem {
-  id?: string;
+  id: string;
   title: string;
 }
 
-/** 轮播条目：有公告展示公告标题，无公告时展示默认文案 */
+/** 轮播条目：启用中公告的标题列表；为空时公告条整体不渲染 */
 const tickerItems = computed<NoticeTickerItem[]>(() =>
-  notices.value.length
-    ? notices.value.map((notice) => ({ id: notice.id, title: notice.title }))
-    : [{ title: HOME_NOTICE }],
+  notices.value.map((notice) => ({ id: notice.id, title: notice.title })),
 );
 
 /** 多条时追加首条副本，让最后一条继续向上切到第一条 */
@@ -84,7 +81,7 @@ onMounted(async () => {
   try {
     notices.value = await noticeApi.list();
   } catch {
-    // 拉取失败时静默回退默认文案，不阻断首页渲染
+    // 拉取失败时静默隐藏公告条，不阻断首页渲染
   }
 });
 
@@ -94,6 +91,7 @@ onUnmounted(stopTicker);
 
 <template>
   <button
+    v-if="tickerItems.length"
     class="notice card"
     @click="open"
   >
@@ -111,7 +109,7 @@ onUnmounted(stopTicker);
       >
         <span
           v-for="(item, index) in loopItems"
-          :key="`${item.id ?? 'fallback'}-${index}`"
+          :key="`${item.id}-${index}`"
           class="item"
         >
           <span class="text">{{ item.title }}</span>

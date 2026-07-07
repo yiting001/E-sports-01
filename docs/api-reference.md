@@ -204,7 +204,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| GET | `/api/notice/banner` | 公开 | 首页横幅图片 `{ image }`（未配置为空串，C 端回退默认样式） |
+| GET | `/api/notice/banner` | 公开 | 首页横幅图片 `{ image }`（未配置为空串，C 端不展示横幅） |
 | PUT | `/api/notice/banner` | `notice:banner` | 更新横幅 `{ image }`，传空串即撤下 |
 | GET | `/api/notice/public` | 公开 | 启用中的通知列表（sort 升序 + 创建时间倒序） |
 | GET | `/api/notice/public/:id` | 公开 | 单条通知详情（仅启用中的可见） |
