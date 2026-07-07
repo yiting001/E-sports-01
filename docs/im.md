@@ -11,6 +11,8 @@
 
 - **握手鉴权**：连接校验 access 令牌，无效则 `im:error` + 断连；连接后自动加入个人房间 `user:<id>`。
 - **会话列表**（REST `GET /im/conversations`）：返回当前用户全部会话，含未读数、最后一条消息、显示标题（私聊解析为对端昵称）。
+- **会话搜索**（REST `GET /im/conversations/search?keyword=`）：在我参与的会话中按显示标题（私聊即对方用户名）忽略大小写模糊匹配，复用列表用例保证口径一致。
+- **聊天记录搜索**（REST `GET /im/messages/search`）：会话内按内容关键词 + 日期范围（`dateFrom`/`dateTo`，YYYY-MM-DD 闭区间，两者均可缺省）分页搜索（新→旧），仅会话成员可搜；不传关键词时即按日期翻阅当天聊天记录。
 - **群聊**：建群、改名、加/移成员、退群；成员变更广播系统消息（xx 加入/退出）。
 - **系统建群门面**：`GroupFacade` 供业务模块（如订单支付成功自动建群、打手接单进群）
   以系统身份建群/幂等加人并广播系统消息，不做操作者管理权校验。
@@ -105,9 +107,10 @@ modules/im/
 │   ├── conversation-notifier.service.ts        会话变更经个人房间推送
 │   ├── service-assignment.service.ts           坐席接入(claim/assign 共用)
 │   ├── member.factory.ts                       成员构造
-│   └── use-cases/                              每用例一文件(共 16)
+│   └── use-cases/                              每用例一文件(共 18)
 │       ├── send-message / get-history / mark-read
-│       ├── create-group / list-conversations / get-conversation-detail
+│       ├── create-group / list-conversations / search-conversations
+│       ├── search-messages / get-conversation-detail
 │       ├── add-members / remove-member / leave-conversation / rename-group
 │       ├── open-private
 │       └── start-service / get-service-queue / claim-service / assign-service / close-service
@@ -117,8 +120,8 @@ modules/im/
 │   └── conversation-member.repository.ts
 └── interfaces/
     ├── ws/im.gateway.ts                         Socket.IO 网关
-    ├── dto/                                     7 个请求 DTO
-    └── controllers/                             每路由一文件(共 14)
+    ├── dto/                                     8 个请求 DTO
+    └── controllers/                             每路由一文件(共 16)
 ```
 
 ## REST 端点
@@ -126,6 +129,8 @@ modules/im/
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
 | GET | `/im/messages` | `im:message:history` | 拉取会话历史 |
+| GET | `/im/messages/search` | `im:message:history` + 成员 | 搜索聊天记录（关键词/日期范围，分页） |
+| GET | `/im/conversations/search` | 登录 | 搜索我的会话（标题关键词） |
 | GET | `/im/conversations` | 登录 | 我的会话列表 |
 | POST | `/im/conversations` | `im:conversation:create` | 建群 |
 | POST | `/im/conversations/private` | 登录 | 开启/复用私聊 |
