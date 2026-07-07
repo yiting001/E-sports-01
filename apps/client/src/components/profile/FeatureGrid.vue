@@ -13,6 +13,7 @@ const ENTRY_ROUTES: Record<string, string> = {
   vip: 'member-levels',
   rank: 'rank',
   welfare: 'activities',
+  invite: 'invite',
   join: 'booster-apply',
   announce: 'notices',
   build: 'build-intro',

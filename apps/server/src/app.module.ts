@@ -21,6 +21,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { CouponModule } from './modules/coupon/coupon.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { RankModule } from './modules/rank/rank.module';
+import { InviteModule } from './modules/invite/invite.module';
 
 /**
  * 应用根模块。
@@ -50,6 +51,7 @@ import { RankModule } from './modules/rank/rank.module';
     CouponModule,
     ActivityModule,
     RankModule,
+    InviteModule,
   ],
 })
 export class AppModule {}

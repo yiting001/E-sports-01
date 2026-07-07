@@ -28,6 +28,7 @@ export const FEATURE_ENTRIES: IconEntry[] = [
   { id: 'vip', icon: 'crown', label: '会员等级' },
   { id: 'rank', icon: 'trophy', label: '排行榜' },
   { id: 'welfare', icon: 'gift', label: '福利活动' },
+  { id: 'invite', icon: 'share', label: '邀请好友' },
   { id: 'join', icon: 'gamepad', label: '打手入驻' },
   { id: 'announce', icon: 'megaphone', label: '公告通知' },
   { id: 'build', icon: 'wrench', label: '搭建同款电竞系统' },

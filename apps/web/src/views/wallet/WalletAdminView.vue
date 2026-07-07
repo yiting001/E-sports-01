@@ -32,6 +32,7 @@ const txnTypeText: Record<WalletTxnType, string> = {
   [WalletTxnType.Deposit]: '缴纳押金',
   [WalletTxnType.DepositRefund]: '押金退还',
   [WalletTxnType.Penalty]: '罚款',
+  [WalletTxnType.InviteReward]: '邀请奖励',
 };
 
 async function load(): Promise<void> {

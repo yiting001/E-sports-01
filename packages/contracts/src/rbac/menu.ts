@@ -120,6 +120,14 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     group: 'commerce',
   },
   {
+    code: 'invite:menu',
+    title: '邀请管理',
+    path: 'invite',
+    icon: 'Share',
+    sort: 9,
+    group: 'commerce',
+  },
+  {
     code: 'finance:withdrawal:menu',
     title: '提现管理',
     path: 'finance/withdrawals',

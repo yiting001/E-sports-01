@@ -36,6 +36,7 @@ import { RemoveConfigController } from './interfaces/remove-config.controller';
     RemoveConfigUseCase,
     GetBrandingUseCase,
   ],
-  exports: [ConfigService],
+  // 额外导出 UpsertConfigUseCase：供业务模块（如邀请奖励配置）写入配置中心
+  exports: [ConfigService, UpsertConfigUseCase],
 })
 export class ConfigModule {}

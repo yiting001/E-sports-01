@@ -74,6 +74,8 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.coupon.list]: '优惠券-查询',
   [PERMS.coupon.save]: '优惠券-新建/编辑',
   [PERMS.coupon.remove]: '优惠券-删除',
+  [PERMS.invite.configSet]: '邀请-奖励配置',
+  [PERMS.invite.recordList]: '邀请-记录查询',
   [PERMS.activity.list]: '活动-查询',
   [PERMS.activity.save]: '活动-新建/编辑',
   [PERMS.activity.remove]: '活动-删除',

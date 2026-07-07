@@ -29,6 +29,8 @@ export enum ConfigGroup {
   Member = 'member',
   /** 运营展示位（首页横幅等） */
   Portal = 'portal',
+  /** 邀请奖励（邀请人/被邀请人奖励方式与额度） */
+  Invite = 'invite',
 }
 
 /** 配置项对外结构（敏感项的值在传输前会被脱敏） */
@@ -134,6 +136,20 @@ export const CONFIG_KEYS = {
     retentionDays: 'log.retentionDays',
     /** 不记录访问日志的路径前缀（JSON 字符串数组） */
     excludePaths: 'log.excludePaths',
+  },
+  invite: {
+    /** 邀请人奖励方式：none / coupon / wallet */
+    inviterRewardType: 'invite.inviter.rewardType',
+    /** 邀请人奖励优惠券模板 id */
+    inviterCouponId: 'invite.inviter.couponId',
+    /** 邀请人奖励钱包入账金额（分） */
+    inviterAmountFen: 'invite.inviter.amountFen',
+    /** 被邀请人奖励方式：none / coupon / wallet */
+    inviteeRewardType: 'invite.invitee.rewardType',
+    /** 被邀请人奖励优惠券模板 id */
+    inviteeCouponId: 'invite.invitee.couponId',
+    /** 被邀请人奖励钱包入账金额（分） */
+    inviteeAmountFen: 'invite.invitee.amountFen',
   },
   wallet: {
     /** 当前生效的充值渠道：alipay / wechat */

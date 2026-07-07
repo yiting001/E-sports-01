@@ -30,4 +30,5 @@ export const CONFIG_GROUP_META: Record<ConfigGroup, { label: string }> = {
   [ConfigGroup.Portal]: { label: '运营' },
   [ConfigGroup.Booster]: { label: '打手' },
   [ConfigGroup.Member]: { label: '会员' },
+  [ConfigGroup.Invite]: { label: '邀请' },
 };
