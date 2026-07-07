@@ -27,6 +27,8 @@ import { SendMessageUseCase } from './application/use-cases/send-message.usecase
 import { MarkReadUseCase } from './application/use-cases/mark-read.usecase';
 import { CreateGroupUseCase } from './application/use-cases/create-group.usecase';
 import { ListConversationsUseCase } from './application/use-cases/list-conversations.usecase';
+import { SearchConversationsUseCase } from './application/use-cases/search-conversations.usecase';
+import { SearchMessagesUseCase } from './application/use-cases/search-messages.usecase';
 import { GetConversationDetailUseCase } from './application/use-cases/get-conversation-detail.usecase';
 import { AddMembersUseCase } from './application/use-cases/add-members.usecase';
 import { RemoveMemberUseCase } from './application/use-cases/remove-member.usecase';
@@ -41,6 +43,8 @@ import { CloseServiceUseCase } from './application/use-cases/close-service.useca
 
 import { ImGateway } from './interfaces/ws/im.gateway';
 import { MessageHistoryController } from './interfaces/controllers/message.history.controller';
+import { MessageSearchController } from './interfaces/controllers/message.search.controller';
+import { ConversationSearchController } from './interfaces/controllers/conversation.search.controller';
 import { ConversationCreateController } from './interfaces/controllers/conversation.create.controller';
 import { ConversationListController } from './interfaces/controllers/conversation.list.controller';
 import { ConversationOpenPrivateController } from './interfaces/controllers/conversation.open-private.controller';
@@ -74,8 +78,11 @@ import { ServiceCloseController } from './interfaces/controllers/service.close.c
   ],
   controllers: [
     MessageHistoryController,
+    MessageSearchController,
     ConversationCreateController,
     ConversationListController,
+    // 搜索路由须先于详情的 :id 通配路由注册，避免 search 被当作会话 id
+    ConversationSearchController,
     ConversationOpenPrivateController,
     ConversationDetailController,
     ConversationAddMembersController,
@@ -107,6 +114,8 @@ import { ServiceCloseController } from './interfaces/controllers/service.close.c
     MarkReadUseCase,
     CreateGroupUseCase,
     ListConversationsUseCase,
+    SearchConversationsUseCase,
+    SearchMessagesUseCase,
     GetConversationDetailUseCase,
     AddMembersUseCase,
     RemoveMemberUseCase,
