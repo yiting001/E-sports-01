@@ -37,6 +37,16 @@ export interface ChatMessage {
   createdAt: number;
 }
 
+/** 聊天记录搜索查询参数（REST GET /im/messages/search，日期为 YYYY-MM-DD 闭区间） */
+export interface SearchMessagesQuery {
+  conversationId: string;
+  keyword?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page: number;
+  pageSize: number;
+}
+
 /** WebSocket 事件名常量，前后端共享避免硬编码字符串 */
 export const IM_EVENTS = {
   join: 'im:join',

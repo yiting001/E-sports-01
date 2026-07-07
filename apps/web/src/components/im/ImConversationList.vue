@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ConversationView } from '@app/contracts';
-import { ChatDotRound, Headset, Plus } from '@element-plus/icons-vue';
+import { ChatDotRound, Headset, Plus, Search } from '@element-plus/icons-vue';
 import {
   conversationInitial,
   conversationTypeLabel,
@@ -16,6 +16,9 @@ defineProps<{
   activeId: string | null;
   canCreateGroup: boolean;
 }>();
+
+/** 会话标题搜索关键词，由父组件调后端搜索接口 */
+const keyword = defineModel<string>('keyword', { required: true });
 
 const emit = defineEmits<{
   createGroup: [];
@@ -48,6 +51,15 @@ const emit = defineEmits<{
       >
         联系客服
       </el-button>
+    </div>
+
+    <div class="im-sidebar__search">
+      <el-input
+        v-model="keyword"
+        placeholder="搜索会话"
+        clearable
+        :prefix-icon="Search"
+      />
     </div>
 
     <el-scrollbar class="im-conversation-list">
@@ -87,7 +99,7 @@ const emit = defineEmits<{
       <el-empty
         v-if="conversations.length === 0"
         :image-size="96"
-        description="暂无会话"
+        :description="keyword ? '没有匹配的会话' : '暂无会话'"
       >
         <el-button
           type="primary"

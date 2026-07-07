@@ -7,6 +7,7 @@ import {
   EditPen,
   Picture,
   Promotion,
+  Search,
   User,
   VideoCamera,
 } from '@element-plus/icons-vue';
@@ -38,6 +39,7 @@ const emit = defineEmits<{
   rename: [];
   openMembers: [];
   leave: [];
+  openSearch: [];
 }>();
 
 const listRef = ref<HTMLElement | null>(null);
@@ -87,24 +89,29 @@ watch(
             </span>
           </div>
         </div>
-        <div
-          v-if="active.type === ConversationType.Group"
-          class="im-chat__actions"
-        >
+        <div class="im-chat__actions">
           <el-button
-            v-if="canManage"
+            :icon="Search"
+            @click="emit('openSearch')"
+          >
+            搜索记录
+          </el-button>
+          <el-button
+            v-if="canManage && active.type === ConversationType.Group"
             :icon="EditPen"
             @click="emit('rename')"
           >
             改名
           </el-button>
           <el-button
+            v-if="active.type === ConversationType.Group"
             :icon="User"
             @click="emit('openMembers')"
           >
             成员
           </el-button>
           <el-button
+            v-if="active.type === ConversationType.Group"
             type="danger"
             :icon="CloseBold"
             @click="emit('leave')"

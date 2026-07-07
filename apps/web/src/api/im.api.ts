@@ -5,7 +5,9 @@ import type {
   ConversationDetailView,
   ConversationView,
   CreateGroupPayload,
+  PaginatedResult,
   RenameGroupPayload,
+  SearchMessagesQuery,
   ServiceQueueItemView,
   StartServicePayload,
 } from '@app/contracts';
@@ -23,6 +25,16 @@ export const imApi = {
 
   listConversations(): Promise<ConversationView[]> {
     return http.get('/im/conversations');
+  },
+
+  /** 按标题关键词搜索我的会话 */
+  searchConversations(keyword: string): Promise<ConversationView[]> {
+    return http.get('/im/conversations/search', { params: { keyword } });
+  },
+
+  /** 会话内搜索聊天记录（关键词 + 日期范围，分页） */
+  searchMessages(query: SearchMessagesQuery): Promise<PaginatedResult<ChatMessage>> {
+    return http.get('/im/messages/search', { params: query });
   },
 
   conversationDetail(id: string): Promise<ConversationDetailView> {
