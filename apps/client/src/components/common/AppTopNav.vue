@@ -1,13 +1,16 @@
 <script setup lang="ts">
 /**
  * PC 端顶部导航条：品牌切角徽标 + 一级页签（底部金色指示线），与移动端共用导航配置。
+ * 软件名称/图标来自配置中心品牌配置（与管理端共用），未配图标时回退默认徽标。
  * 导航项随当前身份切换：打手身份展示接单大厅/订单中心/消息/我的。
  */
 import { computed } from 'vue';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { BOOSTER_NAV_ITEMS, NAV_ITEMS } from '@/config/nav';
+import { useBrandingStore } from '@/stores/branding.store';
 import { useRoleStore } from '@/stores/role.store';
 
+const branding = useBrandingStore();
 const role = useRoleStore();
 const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS));
 </script>
@@ -17,12 +20,19 @@ const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS
     <div class="inner">
       <div class="brand">
         <span class="logo">
+          <img
+            v-if="branding.appLogo"
+            :src="branding.appLogo"
+            :alt="branding.appName"
+            class="logo-img"
+          >
           <AppIcon
+            v-else
             name="gamepad"
             :size="18"
           />
         </span>
-        <span class="name">电竞陪练商城</span>
+        <span class="name">{{ branding.appName }}</span>
       </div>
       <nav class="links">
         <router-link
@@ -77,6 +87,12 @@ const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS
   background: var(--c-accent);
   color: var(--c-bg);
   clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+}
+
+.logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .links {

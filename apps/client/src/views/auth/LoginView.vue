@@ -16,6 +16,7 @@ import AppIcon from '@/components/common/AppIcon.vue';
 import SegmentTabs from '@/components/common/SegmentTabs.vue';
 import { useToast } from '@/composables/use-toast';
 import { useAuthStore } from '@/stores/auth.store';
+import { useBrandingStore } from '@/stores/branding.store';
 import { resolveHttpErrorMessage } from '@/utils/http-error';
 
 /** 分段页签：0=登录，1=注册 */
@@ -24,6 +25,7 @@ const TABS = ['登录', '注册'] as const;
 const FALLBACK_COOLDOWN = 60;
 
 const auth = useAuthStore();
+const branding = useBrandingStore();
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
@@ -137,10 +139,18 @@ async function bindInviteCode(): Promise<void> {
 <template>
   <div class="login">
     <div class="brand">
-      <span class="logo">E</span>
+      <span class="logo">
+        <img
+          v-if="branding.appLogo"
+          :src="branding.appLogo"
+          :alt="branding.appName"
+          class="logo-img"
+        >
+        <template v-else>{{ branding.appName.slice(0, 1) }}</template>
+      </span>
       <div class="brand-text">
         <h1 class="title">
-          电竞陪练商城
+          {{ branding.appName }}
         </h1>
         <p class="subtitle">
           手机号验证码 · 快捷登录注册
@@ -293,6 +303,12 @@ async function bindInviteCode(): Promise<void> {
   font-weight: 800;
   font-style: italic;
   clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+}
+
+.logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .title {
