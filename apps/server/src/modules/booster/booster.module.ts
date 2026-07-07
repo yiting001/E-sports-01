@@ -17,6 +17,7 @@ import { TypeormBoosterPenaltyRepository } from './infrastructure/penalty.reposi
 import { BoosterPolicyService } from './application/booster-policy.service';
 import { BoosterProgressService } from './application/booster-progress.service';
 import { BoosterDepositGuard } from './application/booster-deposit.service';
+import { BoosterRealnameGuard } from './application/booster-realname.service';
 import { GetMyBoosterUseCase } from './application/use-cases/get-my-booster.usecase';
 import { SubmitBoosterUseCase } from './application/use-cases/submit-booster.usecase';
 import { ListBoosterUseCase } from './application/use-cases/list-booster.usecase';
@@ -85,6 +86,7 @@ import { PenaltyListController } from './interfaces/controllers/penalty.list.con
     BoosterPolicyService,
     BoosterProgressService,
     BoosterDepositGuard,
+    BoosterRealnameGuard,
     GetMyBoosterUseCase,
     SubmitBoosterUseCase,
     ListBoosterUseCase,
@@ -99,7 +101,12 @@ import { PenaltyListController } from './interfaces/controllers/penalty.list.con
     CreatePenaltyUseCase,
     ListPenaltiesUseCase,
   ],
-  // 供订单模块：完成结算时定级取费率、接单时校验押金
-  exports: [BoosterProgressService, BoosterDepositGuard, BoosterPolicyService],
+  // 供订单模块：完成结算时定级取费率、接单时校验押金与实名
+  exports: [
+    BoosterProgressService,
+    BoosterDepositGuard,
+    BoosterRealnameGuard,
+    BoosterPolicyService,
+  ],
 })
 export class BoosterModule {}

@@ -2,7 +2,8 @@
 /**
  * 我的页 · 打手等级/押金卡（仅打手身份展示）。
  * 展示当前等级、完成单数、提成比例与押金缴纳进度；
- * 押金在配置的最低/最高交付额区间内自选金额缴纳（达最低额方可接单）。
+ * 押金在配置的最低/最高交付额区间内自选金额缴纳（达最低额方可接单）；
+ * 后台开启实名要求且未通过时展示实名认证入口（未实名不可接单）。
  */
 import { computed, onMounted, ref } from 'vue';
 import {
@@ -22,6 +23,10 @@ const paying = ref(false);
 const amountYuan = ref('');
 
 const record = computed(() => mine.value?.record ?? null);
+/** 后台要求实名且尚未通过，需引导去实名认证 */
+const realnameBlocked = computed(
+  () => (mine.value?.requireRealname ?? false) && !(mine.value?.realnameApproved ?? false),
+);
 const approved = computed(() => mine.value?.status === BoosterStatus.Approved);
 const minFen = computed(() => mine.value?.depositPolicy.minFen ?? 0);
 const maxFen = computed(() => mine.value?.depositPolicy.maxFen ?? 0);
@@ -80,6 +85,13 @@ onMounted(() => {
       <span>累计完成 {{ record.completedOrders }} 单</span>
       <span>已缴押金 ¥{{ fenToYuan(paidFen) }}（最低 ¥{{ fenToYuan(minFen) }} / 最高 ¥{{ fenToYuan(maxFen) }}）</span>
     </div>
+    <RouterLink
+      v-if="realnameBlocked"
+      class="realname"
+      :to="{ name: 'realname' }"
+    >
+      平台要求打手实名认证，未实名不可接单，去完成 ›
+    </RouterLink>
     <div
       v-if="canPayMore"
       class="deposit"
@@ -134,6 +146,14 @@ onMounted(() => {
   justify-content: space-between;
   font-size: 12px;
   color: var(--c-text-muted);
+}
+
+.realname {
+  font-size: 13px;
+  color: var(--c-danger);
+  padding: 8px 10px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
 }
 
 .deposit {

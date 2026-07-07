@@ -132,6 +132,12 @@ export const router = createRouter({
       meta: { title: '搭建同款电竞系统' },
     },
     {
+      path: '/profile/realname',
+      name: 'realname',
+      component: () => import('@/views/profile/RealnameView.vue'),
+      meta: { title: '实名认证', requiresAuth: true },
+    },
+    {
       path: '/profile/booster',
       name: 'booster-apply',
       component: () => import('@/views/profile/BoosterApplyView.vue'),

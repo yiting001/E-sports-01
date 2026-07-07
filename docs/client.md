@@ -11,7 +11,7 @@
 - **用户协议**：登录/注册均需勾选「我已阅读并同意《用户协议》」才可提交；协议正文为后台配置中心富文本（`auth.userAgreement` 键），公开接口 `GET /config/agreement` 登录前可读，弹层（`AgreementDialog`）内 DOMPurify 消毒后展示。
 - **登录守卫**：访问带 `meta.requiresAuth` 的页面（我的 / 消息）未登录时自动重定向到 `/login` 并带 `redirect` 回跳地址；已登录再访问登录页直接回首页。
 - **登录态展示**：「我的」页头部登录后展示昵称与用户 ID 并提供退出登录；未登录展示「立即登录」入口；PC 端个人页采用左右两列，右侧订单与更多功能紧凑衔接。
-- **更多功能网格（全部落地）**：领券中心 `/coupons/center`、我的优惠券 `/coupons/mine`、会员等级 `/member/levels`、排行榜 `/rank`、福利活动 `/activities`（详情 `/activities/:id`）、打手入驻 `/profile/booster`、公告通知 `/notices`、搭建同款电竞系统 `/build`（介绍页 + 在线客服咨询入口）；入口 → 路由映射见 `components/profile/FeatureGrid.vue` 的 `ENTRY_ROUTES`。
+- **更多功能网格（全部落地）**：领券中心 `/coupons/center`、我的优惠券 `/coupons/mine`、会员等级 `/member/levels`、排行榜 `/rank`、福利活动 `/activities`（详情 `/activities/:id`）、打手入驻 `/profile/booster`、实名认证 `/profile/realname`（复用 realname 模块接口，打手等级卡/入驻页未实名时同步引导）、公告通知 `/notices`、搭建同款电竞系统 `/build`（介绍页 + 在线客服咨询入口）；入口 → 路由映射见 `components/profile/FeatureGrid.vue` 的 `ENTRY_ROUTES`。
 - **更多功能页导航规范**：个人页进入的功能页统一采用商品详情页同类型的顶部返回栏 + 标题，不使用侧边菜单式导航；PC 端由 `styles/base.css` 的 `client-page` 页面壳统一收敛标题栏和内容区，订单/榜单等内容筛选使用紧凑分段按钮。
 
 > 说明：账号密码登录属于管理端 `apps/web` 的能力，用户端刻意不提供，保证 C 端只能走短信方式。令牌存储键使用 `client.*` 前缀，与管理端 `infra.*` 隔离，避免同域串号。

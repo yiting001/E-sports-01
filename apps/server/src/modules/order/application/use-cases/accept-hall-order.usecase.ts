@@ -10,12 +10,13 @@ import {
   OrderRepository,
 } from '../../domain/order-repository.interface';
 import { BoosterDepositGuard } from '../../../booster/application/booster-deposit.service';
+import { BoosterRealnameGuard } from '../../../booster/application/booster-realname.service';
 import { BoosterAccess } from '../booster-access.service';
 import { OrderGroupService } from '../order-group.service';
 import { toOrderView } from '../order.mapper';
 
 /**
- * 用例：打手在接单大厅接单（待接单 → 服务中，回填接单打手）；接单前校验押金已缴足，
+ * 用例：打手在接单大厅接单（待接单 → 服务中，回填接单打手）；接单前校验实名要求与押金已缴足，
  * 接单后自动加入订单群并广播系统消息。
  */
 @Injectable()
@@ -24,12 +25,14 @@ export class AcceptHallOrderUseCase {
     @Inject(ORDER_REPOSITORY)
     private readonly orders: OrderRepository,
     private readonly boosterAccess: BoosterAccess,
+    private readonly realnameGuard: BoosterRealnameGuard,
     private readonly depositGuard: BoosterDepositGuard,
     private readonly orderGroup: OrderGroupService,
   ) {}
 
   async execute(userId: string, id: string): Promise<OrderView> {
     await this.boosterAccess.assert(userId);
+    await this.realnameGuard.assertApproved(userId);
     await this.depositGuard.assertPaid(userId);
     const order = await this.orders.findById(id);
     if (!order) {

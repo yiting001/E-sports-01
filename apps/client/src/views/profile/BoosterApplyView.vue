@@ -180,6 +180,12 @@ onMounted(() => {
             <p class="state-tip">
               平台要求打手实名入驻，请先在实名认证页完成认证后再提交申请。
             </p>
+            <button
+              class="goto-realname"
+              @click="router.push({ name: 'realname' })"
+            >
+              去实名认证
+            </button>
           </section>
           <section
             class="card form form--editable"
@@ -389,5 +395,16 @@ onMounted(() => {
 
 .submit:disabled {
   opacity: 0.5;
+}
+
+.goto-realname {
+  align-self: flex-start;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 800;
+  font-style: italic;
+  color: var(--c-bg);
+  background: var(--c-accent);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
 }
 </style>

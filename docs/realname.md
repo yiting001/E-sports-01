@@ -35,6 +35,8 @@ modules/realname/
 
 前端：`web/views/realname/RealnameMineView.vue`（用户提交/查看，入口在头像下拉「实名认证」），`web/views/realname/RealnameAdminView.vue`（菜单 `realname:menu`，审核 + 策略设置）。
 
+C 端：`client/views/profile/RealnameView.vue`（路由 `/profile/realname`，复用 `GET /realname/mine` 与 `POST /realname`，证件照经 `POST /upload/self` 自助上传）；入口：「我的」页更多功能「实名认证」、打手等级卡未实名提示、打手入驻页「去实名认证」引导。
+
 ## 权限（RBAC）
 
 | 权限码 | 名称 | 守卫接口 |

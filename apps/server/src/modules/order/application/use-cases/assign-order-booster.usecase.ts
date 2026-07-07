@@ -10,6 +10,7 @@ import {
   OrderRepository,
 } from '../../domain/order-repository.interface';
 import { BoosterDepositGuard } from '../../../booster/application/booster-deposit.service';
+import { BoosterRealnameGuard } from '../../../booster/application/booster-realname.service';
 import { BoosterAccess } from '../booster-access.service';
 import { OrderGroupService } from '../order-group.service';
 import { ServiceAgentScope } from '../service-agent-scope.service';
@@ -17,7 +18,7 @@ import { toAdminOrderView } from '../order.mapper';
 
 /**
  * 用例：客服指派指定平台打手完成订单（待客服处理/待接单 → 服务中）。
- * 客服仅限自己负责的订单；被指派人须拥有打手角色且押金缴足、不能是下单用户本人；
+ * 客服仅限自己负责的订单；被指派人须拥有打手角色、满足实名要求且押金缴足、不能是下单用户本人；
  * 指派成功后打手自动加入订单群并广播系统消息。
  */
 @Injectable()
@@ -27,6 +28,7 @@ export class AssignOrderBoosterUseCase {
     private readonly orders: OrderRepository,
     private readonly scope: ServiceAgentScope,
     private readonly boosterAccess: BoosterAccess,
+    private readonly realnameGuard: BoosterRealnameGuard,
     private readonly depositGuard: BoosterDepositGuard,
     private readonly orderGroup: OrderGroupService,
   ) {}
@@ -51,6 +53,7 @@ export class AssignOrderBoosterUseCase {
       throw new BadRequestException('不能指派下单用户本人');
     }
     await this.boosterAccess.assert(boosterId);
+    await this.realnameGuard.assertApproved(boosterId);
     await this.depositGuard.assertPaid(boosterId);
     order.status = OrderStatus.Serving;
     order.boosterId = boosterId;

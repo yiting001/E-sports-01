@@ -22,8 +22,8 @@
 - 后台订单群入口：详情抽屉「进入订单群」→ POST `/order/admin/:id/group/join` 幂等加群（客服仅限自己负责的订单）→ 跳转 IM 页并自动选中该群会话（`/im?conversation=xxx`）
 - 客服订单可见性：客服角色（非管理员）在管理端订单列表/详情/下发/指派均被强制限定为自己负责商品的订单（`ServiceAgentScope`）；客服角色默认权限已含订单菜单与处理接口
 - 下发大厅：管理端「待客服处理」订单可下发接单大厅（权限码 `order:admin:dispatch`），订单进入「待接单」
-- 指派打手：客服/管理员可直接指派指定平台打手（权限码 `order:admin:assign`，POST `/order/admin/:id/assign`），「待客服处理/待接单」→「服务中」；被指派人须有打手角色且押金缴足；候选列表 GET `/order/admin/booster-candidates` 仅返回打手角色用户
-- 接单大厅（C 端打手身份）：分页浏览待接单订单，接单后回填 `boosterId` 并进入「服务中」；不能接自己的单；接单前经 booster 模块 `BoosterDepositGuard` 校验押金已缴足；接单/被指派后打手自动加入订单群并广播系统消息
+- 指派打手：客服/管理员可直接指派指定平台打手（权限码 `order:admin:assign`，POST `/order/admin/:id/assign`），「待客服处理/待接单」→「服务中」；被指派人须有打手角色、满足实名要求（`BoosterRealnameGuard`，开关关闭不校验）且押金缴足；候选列表 GET `/order/admin/booster-candidates` 仅返回打手角色用户
+- 接单大厅（C 端打手身份）：分页浏览待接单订单，接单后回填 `boosterId` 并进入「服务中」；不能接自己的单；接单前经 booster 模块 `BoosterRealnameGuard` 校验实名要求（后台开启 `booster.requireRealname` 时须实名已通过，未开启不校验）与 `BoosterDepositGuard` 校验押金已缴足；接单/被指派后打手自动加入订单群并广播系统消息
 - 完成结算：打手完成订单时按其当前等级费率（booster 模块 `BoosterProgressService`）计提成经 `WalletLedger` 入账（commission 流水），订单落 `commissionFen`/`commissionRateBp` 快照并累计完成单数
 - 打手订单中心（C 端打手身份）：分页查看本人接下的订单（全部/服务中/已完成），服务中可标记完成
 - C 端身份切换：拥有 booster 角色的账号可在「我的」页切换老板/打手身份（本地持久化），
