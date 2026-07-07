@@ -9,6 +9,8 @@ export function toChatMessage(entity: ChatMessageEntity): ChatMessage {
     senderId: entity.senderId,
     type: entity.type,
     content: entity.content,
+    mentions: entity.mentions ?? null,
+    replyTo: entity.replyTo ?? null,
     createdAt: entity.createdAt.getTime(),
   };
 }

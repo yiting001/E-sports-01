@@ -1,4 +1,8 @@
-import type { ConversationView, StartServicePayload } from '@app/contracts';
+import type {
+  ConversationDetailView,
+  ConversationView,
+  StartServicePayload,
+} from '@app/contracts';
 import { http } from './http';
 
 /**
@@ -10,6 +14,11 @@ export const imApi = {
   /** 我的会话列表（含客服会话，用于复用进行中的客服会话，避免重复发起） */
   listConversations(): Promise<ConversationView[]> {
     return http.get('/im/conversations');
+  },
+
+  /** 会话详情（含成员清单），供聊天 @成员选择 */
+  conversationDetail(id: string): Promise<ConversationDetailView> {
+    return http.get(`/im/conversations/${id}`);
   },
 
   /** 发起客服会话，进入待接入队列，返回会话视图 */

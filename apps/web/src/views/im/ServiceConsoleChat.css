@@ -254,3 +254,33 @@
   color: var(--app-text-color);
   font-size: 14px;
 }
+
+/* 访客消息里的引用摘要（工作台侧只读展示） */
+.service-reply-quote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 420px;
+  margin-bottom: 4px;
+  padding: 4px 10px;
+  border-left: 3px solid var(--el-color-primary, #409eff);
+  border-radius: 6px;
+  background: rgb(0 0 0 / 5%);
+  color: var(--el-text-color-secondary, #909399);
+  font-size: 12px;
+}
+
+.service-reply-quote__sender {
+  flex: none;
+  font-weight: 600;
+}
+
+.service-reply-quote__sender::after {
+  content: '：';
+}
+
+.service-reply-quote__content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

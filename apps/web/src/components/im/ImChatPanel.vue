@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import type { ChatMessage, ConversationView } from '@app/contracts';
+import type {
+  ChatMessage,
+  ConversationMemberView,
+  ConversationView,
+} from '@app/contracts';
 import { ConversationType, MessageType } from '@app/contracts';
-import { nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import {
+  ChatLineSquare,
   CloseBold,
   EditPen,
   Picture,
@@ -11,6 +16,7 @@ import {
   User,
   VideoCamera,
 } from '@element-plus/icons-vue';
+import { replyContentText, useChatCompose } from '@/composables/use-chat-compose';
 import { sanitizeHtml } from '@/utils/sanitize-html';
 import {
   conversationInitial,
@@ -28,13 +34,18 @@ const props = defineProps<{
   draft: string;
   uploading: boolean;
   canManage: boolean;
+  /** 当前会话成员（供 @选择与引用预览的用户名解析） */
+  members: ConversationMemberView[];
+  /** 当前登录用户 id，用于 @我 高亮与候选排除自己 */
+  selfId: string | null;
   isSelf: (message: ChatMessage) => boolean;
   isSystem: (message: ChatMessage) => boolean;
 }>();
 
 const emit = defineEmits<{
   'update:draft': [value: string];
-  send: [];
+  /** 发送文本，附带 @提及与引用字段 */
+  send: [extras: { mentions?: string[]; replyToId?: string }];
   sendMedia: [file: File, type: MessageType.Image | MessageType.Video];
   rename: [];
   openMembers: [];
@@ -43,6 +54,39 @@ const emit = defineEmits<{
 }>();
 
 const listRef = ref<HTMLElement | null>(null);
+
+/** 把父组件的 draft 桥接为可写 ref，供提及/引用状态机直接读写 */
+const draftRef = computed({
+  get: () => props.draft,
+  set: (value: string) => emit('update:draft', value),
+});
+const compose = useChatCompose(draftRef);
+
+watch(
+  () => props.members,
+  (list) => compose.setMembers(list, props.selfId ?? undefined),
+  { immediate: true },
+);
+
+/** 消息是否 @ 了当前用户，命中时气泡高亮 */
+function mentionedMe(message: ChatMessage): boolean {
+  return Boolean(props.selfId && message.mentions?.includes(props.selfId));
+}
+
+/** 引用预览里的发送者名：从成员清单解析，兜底用 id 前缀 */
+function senderNameOf(message: ChatMessage): string {
+  const member = props.members.find((m) => m.userId === message.senderId);
+  return member?.username ?? message.senderId.slice(0, 8);
+}
+
+/** 发送：带上有效提及与引用 id，发完清空引用状态 */
+function handleSend(): void {
+  emit('send', {
+    mentions: compose.collectMentions(props.draft),
+    replyToId: compose.replyTarget.value?.id,
+  });
+  compose.clearAfterSend();
+}
 
 function waitForFrame(): Promise<void> {
   return new Promise((resolve) => {
@@ -150,10 +194,27 @@ watch(
                   <span>{{ message.senderId.slice(0, 8) }}</span>
                   <span>{{ messageTypeLabel(message.type) }}</span>
                   <time>{{ formatImTime(message.createdAt) }}</time>
+                  <el-button
+                    text
+                    size="small"
+                    class="im-message__quote"
+                    :icon="ChatLineSquare"
+                    aria-label="引用回复"
+                    @click="compose.setReply(message)"
+                  />
+                </div>
+                <div
+                  v-if="message.replyTo"
+                  class="im-reply-quote"
+                >
+                  <span class="im-reply-quote__sender">{{ message.replyTo.senderName }}</span>
+                  <span class="im-reply-quote__content">
+                    {{ replyContentText(message.replyTo.type, message.replyTo.content) }}
+                  </span>
                 </div>
                 <div
                   v-if="message.type === MessageType.Text"
-                  class="im-bubble"
+                  :class="['im-bubble', { 'is-mentioned': mentionedMe(message) }]"
                 >
                   {{ message.content }}
                 </div>
@@ -183,6 +244,41 @@ watch(
       </div>
 
       <div class="im-composer">
+        <div
+          v-if="compose.mentionQuery.value !== null"
+          class="im-mention-picker"
+        >
+          <p
+            v-if="compose.mentionCandidates.value.length === 0"
+            class="im-mention-picker__empty"
+          >
+            无匹配成员
+          </p>
+          <button
+            v-for="member in compose.mentionCandidates.value"
+            :key="member.userId"
+            class="im-mention-picker__item"
+            @click="compose.pickMention(member)"
+          >
+            @{{ member.username }}
+          </button>
+        </div>
+        <div
+          v-if="compose.replyTarget.value"
+          class="im-reply-quote is-composing"
+        >
+          <span class="im-reply-quote__sender">{{ senderNameOf(compose.replyTarget.value) }}</span>
+          <span class="im-reply-quote__content">
+            {{ replyContentText(compose.replyTarget.value.type, compose.replyTarget.value.content) }}
+          </span>
+          <el-button
+            text
+            size="small"
+            :icon="CloseBold"
+            aria-label="取消引用"
+            @click="compose.clearAfterSend()"
+          />
+        </div>
         <div class="im-composer__box">
           <div class="im-composer__bar">
             <div class="im-composer__tools">
@@ -236,13 +332,13 @@ watch(
             class="im-composer__input"
             placeholder="输入消息"
             @update:model-value="emit('update:draft', String($event))"
-            @keydown.enter.exact.prevent="emit('send')"
+            @keydown.enter.exact.prevent="handleSend"
           />
           <div class="im-composer__footer">
             <el-button
               type="primary"
               :icon="Promotion"
-              @click="emit('send')"
+              @click="handleSend"
             >
               发送
             </el-button>

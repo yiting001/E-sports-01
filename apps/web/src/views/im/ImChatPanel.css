@@ -239,3 +239,92 @@
   color: var(--app-text-secondary);
   font-size: 13px;
 }
+
+/* ===== @提及与引用回复 ===== */
+
+/* 消息元信息里的「引用」按钮：悬停消息时才显现 */
+.im-message__quote {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.im-message:hover .im-message__quote,
+.im-message:focus-within .im-message__quote {
+  opacity: 1;
+}
+
+/* 被 @ 的消息气泡高亮 */
+.im-bubble.is-mentioned {
+  outline: 1px solid var(--el-color-primary, #409eff);
+}
+
+/* 引用摘要块：消息气泡上方与输入区上方共用 */
+.im-reply-quote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 420px;
+  margin-bottom: 4px;
+  padding: 4px 10px;
+  border-left: 3px solid var(--el-color-primary, #409eff);
+  border-radius: 6px;
+  background: rgb(0 0 0 / 5%);
+  color: var(--el-text-color-secondary, #909399);
+  font-size: 12px;
+}
+
+.im-reply-quote__sender {
+  flex: none;
+  font-weight: 600;
+}
+
+.im-reply-quote__sender::after {
+  content: '：';
+}
+
+.im-reply-quote__content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 输入区上方的引用预览条 */
+.im-reply-quote.is-composing {
+  max-width: none;
+  margin: 0 0 6px;
+  background: var(--el-fill-color-light, #f5f7fa);
+}
+
+/* @成员候选面板 */
+.im-mention-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 120px;
+  margin-bottom: 6px;
+  padding: 8px;
+  border: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border-radius: 8px;
+  background: var(--el-bg-color, #fff);
+  overflow-y: auto;
+}
+
+.im-mention-picker__empty {
+  margin: 0;
+  color: var(--el-text-color-secondary, #909399);
+  font-size: 12px;
+}
+
+.im-mention-picker__item {
+  padding: 4px 10px;
+  border: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--el-color-primary, #409eff);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.im-mention-picker__item:hover {
+  background: var(--el-color-primary-light-9, #ecf5ff);
+}
