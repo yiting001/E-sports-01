@@ -46,11 +46,12 @@ export class InviteConfigService {
 
   /** 读取当前邀请奖励配置 */
   async get(): Promise<InviteConfigView> {
-    const [inviter, invitee] = await Promise.all([
+    const [inviter, invitee, rulesHtml] = await Promise.all([
       this.readSide(INVITER_KEYS),
       this.readSide(INVITEE_KEYS),
+      this.config.getString(CONFIG_KEYS.invite.rules, ''),
     ]);
-    return { inviter, invitee };
+    return { inviter, invitee, rulesHtml };
   }
 
   /** 保存邀请奖励配置（校验后逐键落配置中心） */
@@ -61,6 +62,13 @@ export class InviteConfigService {
     ]);
     await this.writeSide(INVITER_KEYS, view.inviter, '邀请人');
     await this.writeSide(INVITEE_KEYS, view.invitee, '被邀请人');
+    await this.upsert.execute({
+      key: CONFIG_KEYS.invite.rules,
+      value: view.rulesHtml,
+      type: ConfigValueType.RichText,
+      group: ConfigGroup.Invite,
+      remark: '邀请规则说明（富文本，C 端邀请页展示，空则不展示）',
+    });
   }
 
   /** 奖励说明文案（如「优惠券『满50减10』」/「钱包入账 5.00 元」，不发放为空串） */

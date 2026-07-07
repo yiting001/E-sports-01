@@ -35,4 +35,8 @@ export class SaveInviteConfigDto implements InviteConfigView {
   @ValidateNested()
   @Type(() => InviteRewardConfigDto)
   invitee!: InviteRewardConfigDto;
+
+  /** 邀请规则说明（富文本 HTML，可为空串表示不展示） */
+  @IsString()
+  rulesHtml!: string;
 }

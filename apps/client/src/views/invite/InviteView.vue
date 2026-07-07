@@ -1,9 +1,10 @@
 <script setup lang="ts">
 /**
- * 邀请好友页（全屏）：展示我的邀请码（一键复制）、当前奖励说明、
+ * 邀请好友页（全屏）：展示我的邀请码（一键复制）、当前奖励说明、邀请规则（后台富文本配置）、
  * 填写好友邀请码绑定（一次性），以及我的邀请记录（好友昵称 + 奖励快照）。
  */
-import { onMounted, ref } from 'vue';
+import DOMPurify from 'dompurify';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { INVITE_LIMITS, type MyInviteView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
@@ -17,6 +18,11 @@ const info = ref<MyInviteView | null>(null);
 const loading = ref(true);
 const bindCode = ref('');
 const binding = ref(false);
+
+/** 邀请规则富文本（消毒后渲染，空串不展示） */
+const safeRules = computed(() =>
+  info.value ? DOMPurify.sanitize(info.value.rulesHtml) : '',
+);
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('zh-CN', {
@@ -133,6 +139,19 @@ onMounted(load);
               {{ binding ? '绑定中…' : '绑定' }}
             </button>
           </div>
+        </section>
+
+        <section
+          v-if="safeRules"
+          class="card block"
+        >
+          <span class="block-label">邀请规则</span>
+          <!-- eslint-disable vue/no-v-html -->
+          <div
+            class="rules"
+            v-html="safeRules"
+          />
+          <!-- eslint-enable vue/no-v-html -->
         </section>
 
         <section class="card block">
@@ -286,6 +305,17 @@ onMounted(load);
 
 .bind-btn:disabled {
   opacity: 0.6;
+}
+
+.rules {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--c-text-secondary);
+  overflow-wrap: break-word;
+}
+
+.rules :deep(img) {
+  max-width: 100%;
 }
 
 .record {

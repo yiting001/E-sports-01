@@ -42,6 +42,8 @@ export interface InviteConfigView {
   inviter: InviteRewardConfig;
   /** 被邀请人奖励 */
   invitee: InviteRewardConfig;
+  /** 邀请规则说明（富文本 HTML，C 端邀请页展示，空串不展示） */
+  rulesHtml: string;
 }
 
 /** C 端我的邀请视图 */
@@ -54,6 +56,8 @@ export interface MyInviteView {
   inviterRewardText: string;
   /** 被邀请人当前可得奖励说明 */
   inviteeRewardText: string;
+  /** 邀请规则说明（富文本 HTML，空串不展示） */
+  rulesHtml: string;
   /** 我的邀请记录（我邀请到的人） */
   records: InviteRecordView[];
 }

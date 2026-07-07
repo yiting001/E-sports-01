@@ -414,6 +414,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: '被邀请人奖励钱包入账金额（分，奖励方式为 wallet 时生效）',
   },
   {
+    key: CONFIG_KEYS.invite.rules,
+    value: '',
+    type: ConfigValueType.RichText,
+    group: ConfigGroup.Invite,
+    remark: '邀请规则说明（富文本，C 端邀请页展示，空则不展示）',
+  },
+  {
     key: CONFIG_KEYS.wallet.paymentProvider,
     value: WALLET_DEFAULTS.paymentProvider,
     type: ConfigValueType.String,

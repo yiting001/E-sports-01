@@ -150,6 +150,8 @@ export const CONFIG_KEYS = {
     inviteeCouponId: 'invite.invitee.couponId',
     /** 被邀请人奖励钱包入账金额（分） */
     inviteeAmountFen: 'invite.invitee.amountFen',
+    /** 邀请规则说明（富文本 HTML，C 端邀请页展示） */
+    rules: 'invite.rules',
   },
   wallet: {
     /** 当前生效的充值渠道：alipay / wechat */
