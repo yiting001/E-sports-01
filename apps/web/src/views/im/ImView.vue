@@ -6,7 +6,7 @@ import type {
   UserView,
 } from '@app/contracts';
 import { MessageType, PERMS, SYSTEM_SENDER_ID } from '@app/contracts';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { imApi } from '@/api/im.api';
@@ -16,6 +16,7 @@ import ImChatPanel from '@/components/im/ImChatPanel.vue';
 import ImConversationList from '@/components/im/ImConversationList.vue';
 import ImGroupDialog from '@/components/im/ImGroupDialog.vue';
 import ImMemberDialog from '@/components/im/ImMemberDialog.vue';
+import ImMessageSearchDialog from '@/components/im/ImMessageSearchDialog.vue';
 import { createImSocket } from '@/composables/use-im-socket';
 import { useAuthStore } from '@/stores/auth.store';
 import './ImChatPanel.css';
@@ -28,6 +29,15 @@ const im = createImSocket();
 
 const conversations = ref<ConversationView[]>([]);
 const activeId = ref<string | null>(null);
+
+/** 会话搜索：关键词防抖后调后端搜索接口，置空时回退到全量列表 */
+const searchKeyword = ref('');
+const searchResults = ref<ConversationView[] | null>(null);
+const SEARCH_DEBOUNCE_MS = 300;
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** 聊天记录搜索弹窗 */
+const messageSearchDialog = ref(false);
 const messages = ref<ChatMessage[]>([]);
 const draft = ref('');
 const uploading = ref(false);
@@ -48,6 +58,11 @@ const active = computed(() =>
   conversations.value.find((c) => c.id === activeId.value),
 );
 
+/** 左侧展示的会话：搜索中展示命中结果，否则展示全量列表 */
+const displayedConversations = computed(
+  () => searchResults.value ?? conversations.value,
+);
+
 const memberCandidates = computed(() =>
   users.value.filter(
     (u) => !detail.value?.members.some((m) => m.userId === u.id),
@@ -66,6 +81,20 @@ function upsertConversation(view: ConversationView): void {
 async function loadConversations(): Promise<void> {
   conversations.value = await imApi.listConversations();
 }
+
+watch(searchKeyword, (value) => {
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+  }
+  const keyword = value.trim();
+  if (!keyword) {
+    searchResults.value = null;
+    return;
+  }
+  searchTimer = setTimeout(async () => {
+    searchResults.value = await imApi.searchConversations(keyword);
+  }, SEARCH_DEBOUNCE_MS);
+});
 
 async function selectConversation(id: string): Promise<void> {
   activeId.value = id;
@@ -238,7 +267,8 @@ onBeforeUnmount(() => im.disconnect());
   <section class="admin-page im-page">
     <section class="im-workspace">
       <im-conversation-list
-        :conversations="conversations"
+        v-model:keyword="searchKeyword"
+        :conversations="displayedConversations"
         :active-id="activeId"
         :can-create-group="canCreateGroup"
         @create-group="openGroupDialog"
@@ -258,6 +288,7 @@ onBeforeUnmount(() => im.disconnect());
         @rename="rename"
         @open-members="openMemberDialog"
         @leave="leave"
+        @open-search="messageSearchDialog = true"
       />
     </section>
     <im-group-dialog
@@ -266,6 +297,10 @@ onBeforeUnmount(() => im.disconnect());
       v-model:members="groupMembers"
       :users="users"
       @submit="createGroup"
+    />
+    <im-message-search-dialog
+      v-model="messageSearchDialog"
+      :conversation-id="activeId"
     />
     <im-member-dialog
       v-model="memberDialog"
