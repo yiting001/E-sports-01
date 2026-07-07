@@ -31,6 +31,7 @@ export class DispatchOrderUseCase {
       throw new BadRequestException('仅「待客服处理」订单可下发大厅');
     }
     order.status = OrderStatus.Dispatching;
+    order.dispatchedAt = new Date();
     return toAdminOrderView(await this.orders.save(order));
   }
 }

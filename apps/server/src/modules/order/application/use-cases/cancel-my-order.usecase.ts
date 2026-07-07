@@ -30,6 +30,7 @@ export class CancelMyOrderUseCase {
       throw new BadRequestException('仅待付款订单可取消');
     }
     order.status = OrderStatus.Cancelled;
+    order.cancelledAt = new Date();
     const saved = await this.orders.save(order);
     if (order.userCouponId) {
       await this.couponRedeem.restoreByOrder(order.id);

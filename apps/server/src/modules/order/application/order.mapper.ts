@@ -5,6 +5,11 @@ import {
 } from '@app/contracts';
 import type { OrderEntity } from '../domain/order.entity';
 
+/** 可空时间 → ISO 字符串（未发生为空串） */
+function toIso(date: Date | null): string {
+  return date ? date.toISOString() : '';
+}
+
 /** 订单实体 → C 端视图 */
 export function toOrderView(entity: OrderEntity): OrderView {
   return {
@@ -26,8 +31,14 @@ export function toOrderView(entity: OrderEntity): OrderView {
     remark: entity.remark,
     remarkMedia: entity.remarkMedia ?? [],
     accountInfo: entity.accountInfo,
+    boosterId: entity.boosterId,
+    boosterName: entity.boosterName,
     createdAt: entity.createdAt.toISOString(),
-    paidAt: entity.paidAt ? entity.paidAt.toISOString() : '',
+    paidAt: toIso(entity.paidAt),
+    dispatchedAt: toIso(entity.dispatchedAt),
+    acceptedAt: toIso(entity.acceptedAt),
+    completedAt: toIso(entity.completedAt),
+    cancelledAt: toIso(entity.cancelledAt),
     conversationId: entity.conversationId,
   };
 }
@@ -43,7 +54,6 @@ export function toAdminOrderView(entity: OrderEntity): AdminOrderView {
     ...toOrderView(entity),
     userId: entity.userId,
     serviceAgentId: entity.serviceAgentId,
-    boosterId: entity.boosterId,
     providerTradeNo: entity.providerTradeNo ?? '',
   };
 }

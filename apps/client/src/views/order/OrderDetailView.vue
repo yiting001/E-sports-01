@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * 订单详情页（全屏）：展示单笔订单的商品快照、状态、价格明细
- * （原价/会员折扣/优惠券抵扣/实付）、订单信息与时间线；
+ * 订单详情页（全屏）：展示单笔订单的商品快照、状态、服务信息（接单打手）、
+ * 价格明细（原价/会员折扣/优惠券抵扣/实付）、订单信息与全量时间线
+ * （下单/支付/下发大厅/接单/完成/取消）；
  * 已建群订单提供「进入订单群」入口，待付款订单可取消。
  */
 import { computed, onMounted, ref } from 'vue';
@@ -124,6 +125,33 @@ onMounted(async () => {
           </div>
         </section>
 
+        <!-- 服务信息（打手接单/被指派后展示） -->
+        <section
+          v-if="order.boosterId"
+          class="card block"
+        >
+          <h3 class="block-title">
+            服务信息
+          </h3>
+          <dl class="rows">
+            <div class="row">
+              <dt>接单打手</dt>
+              <dd>{{ order.boosterName || order.boosterId }}</dd>
+            </div>
+            <div class="row">
+              <dt>接单时间</dt>
+              <dd>{{ formatTime(order.acceptedAt) }}</dd>
+            </div>
+            <div
+              v-if="order.completedAt"
+              class="row"
+            >
+              <dt>完成时间</dt>
+              <dd>{{ formatTime(order.completedAt) }}</dd>
+            </div>
+          </dl>
+        </section>
+
         <!-- 订单群入口 -->
         <section
           v-if="order.conversationId"
@@ -214,6 +242,34 @@ onMounted(async () => {
             <div class="row">
               <dt>支付时间</dt>
               <dd>{{ formatTime(order.paidAt) }}</dd>
+            </div>
+            <div
+              v-if="order.dispatchedAt"
+              class="row"
+            >
+              <dt>下发大厅时间</dt>
+              <dd>{{ formatTime(order.dispatchedAt) }}</dd>
+            </div>
+            <div
+              v-if="order.acceptedAt"
+              class="row"
+            >
+              <dt>接单时间</dt>
+              <dd>{{ formatTime(order.acceptedAt) }}</dd>
+            </div>
+            <div
+              v-if="order.completedAt"
+              class="row"
+            >
+              <dt>完成时间</dt>
+              <dd>{{ formatTime(order.completedAt) }}</dd>
+            </div>
+            <div
+              v-if="order.cancelledAt"
+              class="row"
+            >
+              <dt>取消时间</dt>
+              <dd>{{ formatTime(order.cancelledAt) }}</dd>
             </div>
             <div
               v-if="order.remark"
