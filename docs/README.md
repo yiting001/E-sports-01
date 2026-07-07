@@ -27,6 +27,7 @@
 | 工作台 UI | [dashboard-ui.md](./dashboard-ui.md) | 响应式账号概览、业务入口、快捷访问和权限摘要 |
 | 数据统计仪表盘 | [dashboard.md](./dashboard.md) | 订单/财务/用户/打手四块只读聚合统计（ECharts），日/月/年时间范围，按权限分块展示 |
 | API 参考 | [api-reference.md](./api-reference.md) | 全部 REST 端点与 WS 事件、统一响应结构、权限码一览 |
+| 宝塔部署 | [deploy-bt.md](./deploy-bt.md) | 宝塔面板（CentOS 7+）生产部署：PG/Redis/PM2/Nginx 反代与 HTTPS、升级发布 |
 
 ## 总体架构
 
