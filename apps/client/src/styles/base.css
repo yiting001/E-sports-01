@@ -79,6 +79,18 @@ ol {
   list-style: none;
 }
 
+/*
+ * iOS Safari 会在聚焦字号小于 16px 的表单控件时自动放大页面，
+ * 移动端把全部输入控件字号钳制到 16px（覆盖组件内更小的字号）以禁止该行为。
+ */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* 键盘可达性：统一焦点描边 */
 :focus-visible {
   outline: 2px solid var(--c-accent);
