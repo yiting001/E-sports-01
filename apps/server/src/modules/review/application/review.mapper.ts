@@ -25,7 +25,8 @@ export function toReviewPublicView(
 ): ReviewPublicView {
   return {
     id: entity.id,
-    reviewerName: maskName(user.nickname || user.username),
+    reviewerName: entity.reviewerName || maskName(user.nickname || user.username),
+    avatar: entity.avatar,
     rating: entity.rating,
     content: entity.content,
     createdAt: entity.createdAt.toISOString(),
@@ -42,7 +43,9 @@ export function toAdminReviewView(
     userId: entity.userId,
     username: user.username,
     nickname: user.nickname,
-    orderId: entity.orderId,
+    reviewerName: entity.reviewerName,
+    avatar: entity.avatar,
+    orderId: entity.orderId ?? '',
     orderNo: entity.orderNo,
     productId: entity.productId,
     productTitle: entity.productTitle,

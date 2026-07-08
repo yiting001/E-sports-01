@@ -90,6 +90,8 @@ export const PERMS = {
     list: 'review:admin:list',
     moderate: 'review:admin:moderate',
     remove: 'review:admin:remove',
+    /** 营销工具：管理端添加自定义评论 */
+    marketing: 'review:admin:marketing',
   },
   finance: {
     /** 提现工单列表查看 */

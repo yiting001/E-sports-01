@@ -10,6 +10,7 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus';
 import ProductDirectory from '@/components/commerce/product/ProductDirectory.vue';
 import ProductFormDrawer from '@/components/commerce/product/ProductFormDrawer.vue';
+import ProductMarketingDialog from '@/components/commerce/product/ProductMarketingDialog.vue';
 import ProductStats from '@/components/commerce/product/ProductStats.vue';
 import type {
   ProductFilterModel,
@@ -39,6 +40,8 @@ const statusOptions = [
 ];
 
 const drawerVisible = ref(false);
+const marketingVisible = ref(false);
+const marketingProduct = ref<ProductView | null>(null);
 const editingId = ref('');
 const form = reactive<ProductFormModel>(emptyForm());
 
@@ -197,6 +200,11 @@ async function submit(): Promise<void> {
   await load();
 }
 
+function openMarketing(row: ProductView): void {
+  marketingProduct.value = row;
+  marketingVisible.value = true;
+}
+
 async function togglePublish(row: ProductView): Promise<void> {
   const next =
     row.status === ProductStatus.OnShelf ? ProductStatus.OffShelf : ProductStatus.OnShelf;
@@ -242,6 +250,7 @@ onMounted(async () => {
       @refresh="load"
       @create="openCreate"
       @edit="openEdit"
+      @marketing="openMarketing"
       @publish="togglePublish"
       @remove="remove"
       @update:page="changePage"
@@ -257,6 +266,11 @@ onMounted(async () => {
       @update:form="updateForm"
       @search-agents="searchAgents"
       @submit="submit"
+    />
+    <product-marketing-dialog
+      v-model="marketingVisible"
+      :product="marketingProduct"
+      @saved="load"
     />
   </section>
 </template>

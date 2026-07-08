@@ -87,6 +87,8 @@ export interface UpdateProductPayload {
   originPriceFen?: number;
   serviceAgentId?: string;
   sort?: number;
+  /** 已售数量（营销工具可编辑） */
+  sold?: number;
 }
 
 /** 上下架入参 */

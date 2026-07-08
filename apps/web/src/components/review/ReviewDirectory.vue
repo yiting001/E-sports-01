@@ -93,8 +93,8 @@ const emit = defineEmits<{
               <el-icon><ChatDotSquare /></el-icon>
             </span>
             <div>
-              <strong>{{ row.nickname || row.username }}</strong>
-              <small>{{ row.username }}</small>
+              <strong>{{ row.reviewerName || row.nickname || row.username }}</strong>
+              <small>{{ row.reviewerName ? '营销评论' : row.username }}</small>
             </div>
           </div>
         </template>
@@ -112,7 +112,7 @@ const emit = defineEmits<{
         min-width="150"
       >
         <template #default="{ row }">
-          <span class="review-muted">{{ row.orderNo }}</span>
+          <span class="review-muted">{{ row.orderNo || '—' }}</span>
         </template>
       </el-table-column>
       <el-table-column
