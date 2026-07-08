@@ -1,13 +1,14 @@
 <script setup lang="ts">
 /**
  * 排行榜页（全屏）：打手榜（完成单数）与消费榜（累计消费）两个 Tab。
- * 数据由后端只读聚合，昵称脱敏展示。
+ * 数据由后端只读聚合，昵称脱敏展示；后台关闭排行榜时直接返回个人中心。
  */
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { fenToYuan, type RankBoardView, type RankEntryView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { rankApi } from '@/api/rank.api';
+import { usePortalStore } from '@/stores/portal.store';
 
 /** Tab 定义：key → 标题 */
 const TABS = [
@@ -35,6 +36,14 @@ function valueText(entry: RankEntryView): string {
 }
 
 onMounted(async () => {
+  const portal = usePortalStore();
+  if (!portal.loaded) {
+    await portal.load();
+  }
+  if (!portal.showRank) {
+    void router.replace({ name: 'profile' });
+    return;
+  }
   try {
     board.value = await rankApi.board();
   } finally {

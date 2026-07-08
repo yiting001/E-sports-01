@@ -77,6 +77,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: 'C 端首页运营横幅图片（建议在「运营通知」页维护）',
   },
   {
+    key: CONFIG_KEYS.portal.showRank,
+    value: 'true',
+    type: ConfigValueType.Boolean,
+    group: ConfigGroup.Portal,
+    remark: 'C 端是否展示排行榜（个人中心入口与排行榜页），关闭后隐藏',
+  },
+  {
     key: CONFIG_KEYS.auth.accessTokenTtl,
     value: '3600',
     type: ConfigValueType.Number,

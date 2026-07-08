@@ -9,6 +9,7 @@ import { useRouter } from 'vue-router';
 import AppToast from '@/components/common/AppToast.vue';
 import { useBrandingStore } from '@/stores/branding.store';
 import { useHallBadgeStore } from '@/stores/hall-badge.store';
+import { usePortalStore } from '@/stores/portal.store';
 import { useUnreadStore } from '@/stores/unread.store';
 
 const router = useRouter();
@@ -21,6 +22,7 @@ const removeAfterEach = router.afterEach(() => {
 
 onMounted(() => {
   void useBrandingStore().load();
+  void usePortalStore().load();
   badges.forEach((badge) => badge.startPolling());
 });
 
