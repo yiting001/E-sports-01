@@ -21,12 +21,15 @@ export const ORDER_ENTRIES: IconEntry[] = [
   { id: 'refund', icon: 'refund', label: '退款' },
 ];
 
+/** 排行榜入口 id（受后台 portal.showRank 开关控制显隐） */
+export const RANK_ENTRY_ID = 'rank';
+
 /** 更多功能网格 */
 export const FEATURE_ENTRIES: IconEntry[] = [
   { id: 'coupon-center', icon: 'ticket', label: '领券中心' },
   { id: 'my-coupons', icon: 'percent', label: '我的优惠券' },
   { id: 'vip', icon: 'crown', label: '会员等级' },
-  { id: 'rank', icon: 'trophy', label: '排行榜' },
+  { id: RANK_ENTRY_ID, icon: 'trophy', label: '排行榜' },
   { id: 'welfare', icon: 'gift', label: '福利活动' },
   { id: 'invite', icon: 'share', label: '邀请好友' },
   { id: 'join', icon: 'gamepad', label: '打手入驻' },

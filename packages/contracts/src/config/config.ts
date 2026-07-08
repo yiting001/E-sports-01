@@ -52,6 +52,12 @@ export interface BrandingView {
   appLogo: string;
 }
 
+/** C 端门户开关配置（公开，登录前即可读取） */
+export interface PortalConfigView {
+  /** 是否展示排行榜入口与排行榜页 */
+  showRank: boolean;
+}
+
 /** 用户协议（公开，登录前即可读取） */
 export interface AgreementView {
   /** 协议正文（富文本 HTML，未配置为空串） */
@@ -75,6 +81,8 @@ export const CONFIG_KEYS = {
   portal: {
     /** C 端首页运营横幅图片 URL（未配置为空，前端回退默认样式） */
     homeBanner: 'portal.homeBanner',
+    /** C 端是否展示排行榜（个人中心入口与排行榜页） */
+    showRank: 'portal.showRank',
   },
   auth: {
     accessTokenTtl: 'auth.accessTokenTtl',

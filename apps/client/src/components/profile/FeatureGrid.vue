@@ -1,11 +1,13 @@
 <script setup lang="ts">
 /**
  * 更多功能网格：4 列图标入口（领券中心/会员等级/打手入驻等），金色线性图标。
- * 各入口按 ENTRY_ROUTES 映射跳转对应功能页。
+ * 各入口按 ENTRY_ROUTES 映射跳转对应功能页；排行榜入口受后台开关控制显隐。
  */
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { FEATURE_ENTRIES, type IconEntry } from '@/config/profile.mock';
+import { FEATURE_ENTRIES, RANK_ENTRY_ID, type IconEntry } from '@/config/profile.mock';
+import { usePortalStore } from '@/stores/portal.store';
 
 const ENTRY_ROUTES: Record<string, string> = {
   'coupon-center': 'coupon-center',
@@ -21,6 +23,12 @@ const ENTRY_ROUTES: Record<string, string> = {
 };
 
 const router = useRouter();
+const portal = usePortalStore();
+
+/** 可见入口：后台关闭排行榜时过滤对应入口 */
+const entries = computed(() =>
+  portal.showRank ? FEATURE_ENTRIES : FEATURE_ENTRIES.filter((entry) => entry.id !== RANK_ENTRY_ID),
+);
 
 function onEntry(entry: IconEntry): void {
   const name = ENTRY_ROUTES[entry.id];
@@ -37,7 +45,7 @@ function onEntry(entry: IconEntry): void {
     </h2>
     <div class="grid">
       <button
-        v-for="entry in FEATURE_ENTRIES"
+        v-for="entry in entries"
         :key="entry.id"
         class="entry"
         @click="onEntry(entry)"
