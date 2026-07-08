@@ -1,4 +1,4 @@
-import { COUPON_LIMITS, CouponType } from '@app/contracts';
+import { COUPON_LIMITS, CouponAudience, CouponType } from '@app/contracts';
 import { Column, Entity, Index } from 'typeorm';
 import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 import { bigintTransformer } from '../../../shared/database/numeric.transformer';
@@ -50,4 +50,9 @@ export class CouponEntity extends TenantScopedEntity {
   @Index()
   @Column({ default: true })
   enabled!: boolean;
+
+  /** 发放方式：公开领取进领券中心；定向发放仅经分发人链接领取 */
+  @Index()
+  @Column({ type: 'varchar', length: 16, default: CouponAudience.Public })
+  audience!: CouponAudience;
 }

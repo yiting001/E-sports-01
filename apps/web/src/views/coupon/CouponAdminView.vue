@@ -1,11 +1,12 @@
 <script setup lang="ts">
 /**
- * 优惠券管理页：券模板 CRUD。
- * 管理端配置满减/折扣券（门槛/库存/限领/有效期），
- * C 端领券中心领取、下单结算抵扣；已领出的用户券为快照，改券不影响。
+ * 优惠券管理页：券模板 CRUD + 定向发放（分发人管理/领取记录）。
+ * 管理端配置满减/折扣券（门槛/库存/限领/有效期/发放方式），
+ * 公开券进 C 端领券中心；定向券由分发人凭专属链接发放引流，领取记录可查。
  */
 import { onMounted, reactive, ref } from 'vue';
 import {
+  CouponAudience,
   CouponType,
   PAGINATION_DEFAULTS,
   PERMS,
@@ -17,18 +18,19 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import CouponFormDialog from '@/components/coupon/CouponFormDialog.vue';
+import CouponDistributorDialog from '@/components/coupon/CouponDistributorDialog.vue';
+import CouponClaimsDialog from '@/components/coupon/CouponClaimsDialog.vue';
+import {
+  COUPON_AUDIENCE_META,
+  COUPON_TYPE_META,
+  couponDateText,
+  couponFaceText,
+  couponRemainingCount,
+  couponUsagePercent,
+  type CouponTagType,
+} from '@/components/coupon/coupon-admin.format';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { couponApi } from '@/api/coupon.api';
-
-type CouponTagType = 'success' | 'warning';
-
-const COUPON_TYPE_META: Record<
-  CouponType,
-  { label: string; type: CouponTagType }
-> = {
-  [CouponType.Fixed]: { label: '满减', type: 'success' },
-  [CouponType.Percent]: { label: '折扣', type: 'warning' },
-};
 
 const list = ref<CouponView[]>([]);
 const total = ref(0);
@@ -41,6 +43,11 @@ const submitting = ref(false);
 const editingId = ref('');
 const form = reactive<UpsertCouponPayload>(emptyForm());
 
+/** 分发人/领取记录抽屉当前操作的券 */
+const activeCoupon = ref<CouponView | null>(null);
+const distributorVisible = ref(false);
+const claimsVisible = ref(false);
+
 function emptyForm(): UpsertCouponPayload {
   return {
     title: '',
@@ -52,42 +59,19 @@ function emptyForm(): UpsertCouponPayload {
     validFrom: '',
     validTo: '',
     enabled: true,
+    audience: CouponAudience.Public,
   };
-}
-
-/** 券面文案：满减 → 满 X 减 Y；折扣 → 满 X 可打 Z 折 */
-function faceText(row: CouponView): string {
-  const threshold =
-    row.thresholdFen > 0 ? `满${row.thresholdFen / 100}元` : '无门槛';
-  if (row.type === CouponType.Fixed) {
-    return `${threshold}减${row.value / 100}元`;
-  }
-  return `${threshold}打${row.value / 1000}折`;
 }
 
 function couponTypeMeta(row: CouponView): { label: string; type: CouponTagType } {
   return COUPON_TYPE_META[row.type];
 }
 
-function usagePercent(row: CouponView): number {
-  if (row.totalCount <= 0) {
-    return 0;
-  }
-  return Math.min(100, Math.round((row.issuedCount / row.totalCount) * 100));
-}
-
-function remainingCount(row: CouponView): number {
-  return Math.max(row.totalCount - row.issuedCount, 0);
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
+function couponAudienceMeta(row: CouponView): {
+  label: string;
+  type: CouponTagType;
+} {
+  return COUPON_AUDIENCE_META[row.audience];
 }
 
 async function load(): Promise<void> {
@@ -130,8 +114,19 @@ function openEdit(row: CouponView): void {
     validFrom: row.validFrom,
     validTo: row.validTo,
     enabled: row.enabled,
+    audience: row.audience,
   });
   dialogVisible.value = true;
+}
+
+function openDistributors(row: CouponView): void {
+  activeCoupon.value = row;
+  distributorVisible.value = true;
+}
+
+function openClaims(row: CouponView): void {
+  activeCoupon.value = row;
+  claimsVisible.value = true;
 }
 
 function updateForm(value: UpsertCouponPayload): void {
@@ -233,7 +228,20 @@ onMounted(load);
           min-width="180"
         >
           <template #default="{ row }">
-            <span class="coupon-face">{{ faceText(row) }}</span>
+            <span class="coupon-face">{{ couponFaceText(row) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="发放方式"
+          width="100"
+        >
+          <template #default="{ row }">
+            <el-tag
+              size="small"
+              :type="couponAudienceMeta(row).type"
+            >
+              {{ couponAudienceMeta(row).label }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column
@@ -244,10 +252,10 @@ onMounted(load);
             <div class="coupon-progress">
               <div class="coupon-progress__text">
                 <span>{{ row.issuedCount }} / {{ row.totalCount }}</span>
-                <span class="coupon-muted">剩余 {{ remainingCount(row) }}</span>
+                <span class="coupon-muted">剩余 {{ couponRemainingCount(row) }}</span>
               </div>
               <el-progress
-                :percentage="usagePercent(row)"
+                :percentage="couponUsagePercent(row)"
                 :show-text="false"
               />
             </div>
@@ -267,8 +275,8 @@ onMounted(load);
         >
           <template #default="{ row }">
             <div class="coupon-time">
-              <span>开始：{{ formatDate(row.validFrom) }}</span>
-              <span>结束：{{ formatDate(row.validTo) }}</span>
+              <span>开始：{{ couponDateText(row.validFrom) }}</span>
+              <span>结束：{{ couponDateText(row.validTo) }}</span>
             </div>
           </template>
         </el-table-column>
@@ -287,7 +295,7 @@ onMounted(load);
         </el-table-column>
         <el-table-column
           label="操作"
-          width="150"
+          width="250"
           fixed="right"
         >
           <template #default="{ row }">
@@ -299,6 +307,23 @@ onMounted(load);
               @click="openEdit(row)"
             >
               编辑
+            </el-button>
+            <el-button
+              v-if="row.audience === CouponAudience.Directed"
+              v-permission="PERMS.coupon.save"
+              link
+              type="primary"
+              @click="openDistributors(row)"
+            >
+              分发
+            </el-button>
+            <el-button
+              v-permission="PERMS.coupon.list"
+              link
+              type="primary"
+              @click="openClaims(row)"
+            >
+              领取记录
             </el-button>
             <el-button
               v-permission="PERMS.coupon.remove"
@@ -334,6 +359,20 @@ onMounted(load);
       :submitting="submitting"
       @update:form="updateForm"
       @submit="submit"
+    />
+
+    <coupon-distributor-dialog
+      v-if="activeCoupon"
+      v-model="distributorVisible"
+      :coupon-id="activeCoupon.id"
+      :coupon-title="activeCoupon.title"
+    />
+
+    <coupon-claims-dialog
+      v-if="activeCoupon"
+      v-model="claimsVisible"
+      :coupon-id="activeCoupon.id"
+      :coupon-title="activeCoupon.title"
     />
   </section>
 </template>

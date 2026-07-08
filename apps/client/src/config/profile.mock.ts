@@ -28,6 +28,7 @@ export const RANK_ENTRY_ID = 'rank';
 export const FEATURE_ENTRIES: IconEntry[] = [
   { id: 'coupon-center', icon: 'ticket', label: '领券中心' },
   { id: 'my-coupons', icon: 'percent', label: '我的优惠券' },
+  { id: 'coupon-share', icon: 'share', label: '推广发券' },
   { id: 'vip', icon: 'crown', label: '会员等级' },
   { id: RANK_ENTRY_ID, icon: 'trophy', label: '排行榜' },
   { id: 'welfare', icon: 'gift', label: '福利活动' },

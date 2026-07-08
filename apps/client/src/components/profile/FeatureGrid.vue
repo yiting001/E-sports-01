@@ -12,6 +12,7 @@ import { usePortalStore } from '@/stores/portal.store';
 const ENTRY_ROUTES: Record<string, string> = {
   'coupon-center': 'coupon-center',
   'my-coupons': 'my-coupons',
+  'coupon-share': 'coupon-share',
   vip: 'member-levels',
   rank: 'rank',
   welfare: 'activities',
