@@ -23,7 +23,7 @@
 
 .im-sidebar {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   overflow: hidden;
   border-right: 1px solid var(--app-border-color);
   background: var(--app-muted-bg);
@@ -80,11 +80,19 @@
 .im-sidebar__search {
   padding: 12px 16px;
   border-bottom: 1px solid var(--app-border-color);
+  background: var(--app-surface-color);
+}
+
+.im-sidebar__search .el-input {
+  display: block;
+  width: 100%;
 }
 
 .im-conversation-list {
+  height: 100%;
   min-height: 0;
   padding: 8px;
+  overflow: hidden;
 }
 
 .im-conversation {
@@ -148,7 +156,7 @@
 
 .im-conversation__body {
   display: grid;
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
   gap: 5px;
 }
@@ -156,6 +164,7 @@
 .im-conversation__top {
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
 }
 
 .im-conversation__top strong,
@@ -167,6 +176,7 @@
 }
 
 .im-conversation__top strong {
+  flex: 1 1 auto;
   min-width: 0;
   color: var(--app-text-color);
   font-size: 14px;
@@ -179,6 +189,8 @@
 
 .im-conversation__meta {
   gap: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .im-type,
