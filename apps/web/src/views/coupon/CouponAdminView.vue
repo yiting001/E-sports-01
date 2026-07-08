@@ -71,7 +71,7 @@ function couponAudienceMeta(row: CouponView): {
   label: string;
   type: CouponTagType;
 } {
-  return COUPON_AUDIENCE_META[row.audience];
+  return COUPON_AUDIENCE_META[row.audience] ?? COUPON_AUDIENCE_META[CouponAudience.Public];
 }
 
 async function load(): Promise<void> {
