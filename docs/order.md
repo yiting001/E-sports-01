@@ -30,7 +30,7 @@
 - 完成结算：打手完成订单时按其当前等级费率（booster 模块 `BoosterProgressService`）计提成经 `WalletLedger` 入账（commission 流水），订单落 `commissionFen`/`commissionRateBp` 快照并累计完成单数
 - 打手订单中心（C 端打手身份）：分页查看本人接下的订单（全部/服务中/已完成），点卡片进入打手订单详情页（`/booster/orders/:id`，GET `/order/booster/mine/:id`，展示用户备注/附件/账号信息，服务中可直接完成）；列表服务中可标记完成
 - C 端身份切换：拥有 booster 角色的账号可在「我的」页切换老板/打手身份（本地持久化），
-  打手身份下一级导航变为「接单大厅/订单中心/消息/我的」；接单接口由后端 `BoosterAccess` 断言角色
+  打手身份下一级导航变为「接单大厅/订单中心/消息/我的」，「接单大厅」入口展示红色待接单数角标（`stores/hall-badge.store.ts` 基于通用角标工厂 `badge-store.factory.ts` 轮询大厅总数，大厅页加载时本地同步）；接单接口由后端 `BoosterAccess` 断言角色
 
 ## 订单状态机
 

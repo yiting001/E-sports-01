@@ -22,7 +22,7 @@
   - **C 端联系客服**：用户端 `apps/client` 消息页移动端点击会话进入 `/service` 全屏聊天；PC 端 `/messages` 采用左侧会话列表 + 右侧聊天面板，聊天面板复用 `ServiceChatPanel`，不重复实现 WebSocket 收发。客服聊天复用进行中的客服会话（否则在 `/service` 新发起 `POST /im/service`），经 `/im` WebSocket 拉历史与实时收发；系统富文本消息经 DOMPurify 净化后渲染。
 - **私聊**：按对端用户开启（已存在则复用）。
 - **实时收发**（`im:join` / `im:send` / `im:receive`）：进房成员校验，发送持久化后按房间广播；进房/发送同步刷新已读位点。
-- **未读统计**：每个成员维护 `lastReadAt`，列表未读数 = 该位点之后的消息条数。C 端导航「消息」入口（底部 TabBar 与 PC 顶部导航）展示红色未读总数角标（超 99 显示 99+），由 `stores/unread.store.ts` 汇总会话未读数驱动：启动轮询 + 路由切换后刷新，消息页本地列表变化时直接同步。
+- **未读统计**：每个成员维护 `lastReadAt`，列表未读数 = 该位点之后的消息条数。C 端导航「消息」入口（底部 TabBar 与 PC 顶部导航）展示红色未读总数角标（超 99 显示 99+），由 `stores/unread.store.ts`（基于通用角标工厂 `stores/badge-store.factory.ts`）汇总会话未读数驱动：启动轮询 + 路由切换后刷新，消息页本地列表变化时直接同步。
 
 ## 会话状态机
 
@@ -88,7 +88,8 @@ flowchart LR
 ## C 端页面结构
 
 - `client/views/message/MessageView.vue`：消息页。移动端保留会话列表；PC 端为双栏布局，左侧展示会话摘要与未读数，右侧嵌入聊天面板；列表变化时同步导航未读角标。
-- `client/stores/unread.store.ts`：未读消息状态，汇总全部会话未读数供导航角标（`AppTabBar` / `AppTopNav`）展示，支持轮询与本地同步。
+- `client/stores/badge-store.factory.ts`：导航角标 store 工厂，封装数量拉取/轮询/本地同步的通用逻辑（消息未读与大厅待接单角标共用）。
+- `client/stores/unread.store.ts`：未读消息状态，汇总全部会话未读数供导航角标（`AppTabBar` / `AppTopNav`）展示。
 - `client/views/message/ServiceChatView.vue`：在线客服全屏页，只承载全屏版 `ServiceChatPanel`。
 - `client/components/message/ServiceChatPanel.vue`：客服聊天核心面板，统一处理会话解析、进房、历史消息、实时收发、图片/视频发送与自动滚动到底部。
 
