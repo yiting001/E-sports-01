@@ -1,5 +1,6 @@
 import {
   COUPON_LIMITS,
+  CouponAudience,
   CouponType,
   UpsertCouponPayload,
 } from '@app/contracts';
@@ -56,4 +57,7 @@ export class UpsertCouponDto implements UpsertCouponPayload {
 
   @IsBoolean()
   enabled!: boolean;
+
+  @IsEnum(CouponAudience)
+  audience!: CouponAudience;
 }

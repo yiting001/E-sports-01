@@ -1,10 +1,16 @@
 <script setup lang="ts">
 /**
- * 优惠券编辑抽屉：券名/优惠方式/面值/门槛/库存/限领/有效期/上架开关。
+ * 优惠券编辑抽屉：券名/优惠方式/面值/门槛/库存/限领/有效期/上架开关/发放方式。
+ * 公开领取进 C 端领券中心；定向发放仅限分发人专属链接领取。
  * 满减面值按元输入（内部以分存储），折扣按折数输入（内部以万分比存储）。
  */
 import { computed } from 'vue';
-import { COUPON_LIMITS, CouponType, type UpsertCouponPayload } from '@app/contracts';
+import {
+  COUPON_LIMITS,
+  CouponAudience,
+  CouponType,
+  type UpsertCouponPayload,
+} from '@app/contracts';
 
 const visible = defineModel<boolean>({ required: true });
 const form = defineModel<UpsertCouponPayload>('form', { required: true });
@@ -76,6 +82,19 @@ function onTypeChange(): void {
           show-word-limit
           placeholder="如：新人立减券"
         />
+      </el-form-item>
+      <el-form-item label="发放方式">
+        <el-radio-group v-model="form.audience">
+          <el-radio :value="CouponAudience.Public">
+            公开领取
+          </el-radio>
+          <el-radio :value="CouponAudience.Directed">
+            定向发放
+          </el-radio>
+        </el-radio-group>
+        <div class="coupon-form__hint">
+          定向发放不进领券中心，保存后在列表「分发」中指派分发人
+        </div>
       </el-form-item>
       <el-form-item label="优惠方式">
         <el-radio-group

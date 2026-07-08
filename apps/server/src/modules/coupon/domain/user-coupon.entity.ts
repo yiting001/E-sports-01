@@ -47,4 +47,9 @@ export class UserCouponEntity extends TenantScopedEntity {
   /** 核销订单 id（未使用为 null） */
   @Column({ type: 'varchar', length: 36, nullable: true })
   usedOrderId!: string | null;
+
+  /** 分发人用户 id（经分发链接领取时记录，领券中心自领为 null） */
+  @Index()
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  distributorUserId!: string | null;
 }

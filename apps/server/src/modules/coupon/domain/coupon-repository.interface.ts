@@ -1,3 +1,4 @@
+import type { CouponDistributorEntity } from './coupon-distributor.entity';
 import type { CouponEntity } from './coupon.entity';
 import type { UserCouponEntity } from './user-coupon.entity';
 
@@ -7,6 +8,8 @@ export const COUPON_REPOSITORY = Symbol('COUPON_REPOSITORY');
 /** 优惠券仓储端口（券模板 + 用户券，领域层只依赖此抽象） */
 export interface CouponRepository {
   findById(id: string): Promise<CouponEntity | null>;
+  /** 批量查询券模板（C 端我的推广券联查券面） */
+  findByIds(ids: string[]): Promise<CouponEntity[]>;
   /** 管理端分页（创建时间倒序） */
   paginate(skip: number, take: number): Promise<[CouponEntity[], number]>;
   /** 领券中心：上架且在有效期内的券（有效期结束升序） */
@@ -37,4 +40,31 @@ export interface CouponRepository {
   markUsed(userCouponId: string, orderId: string): Promise<boolean>;
   /** 取消订单回退：该订单核销的券恢复未使用 */
   restoreByOrder(orderId: string): Promise<void>;
+
+  /** 某券下的全部分发人（创建时间升序） */
+  findDistributors(couponId: string): Promise<CouponDistributorEntity[]>;
+  findDistributorById(id: string): Promise<CouponDistributorEntity | null>;
+  /** 按分发码查分发人（C 端领取链接落地页） */
+  findDistributorByCode(code: string): Promise<CouponDistributorEntity | null>;
+  /** 某用户名下的全部分发任务（C 端我的推广券） */
+  findDistributorsByUser(userId: string): Promise<CouponDistributorEntity[]>;
+  createDistributor(
+    data: Partial<CouponDistributorEntity>,
+  ): CouponDistributorEntity;
+  saveDistributor(
+    entity: CouponDistributorEntity,
+  ): Promise<CouponDistributorEntity>;
+  removeDistributor(entity: CouponDistributorEntity): Promise<void>;
+
+  /** 经某分发人领取的张数（发放进度归因） */
+  countClaimedViaDistributor(
+    couponId: string,
+    distributorUserId: string,
+  ): Promise<number>;
+  /** 某券的领取记录分页（领取时间倒序） */
+  paginateClaims(
+    couponId: string,
+    skip: number,
+    take: number,
+  ): Promise<[UserCouponEntity[], number]>;
 }

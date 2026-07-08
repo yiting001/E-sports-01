@@ -108,6 +108,18 @@ export const router = createRouter({
       meta: { title: '我的优惠券', requiresAuth: true },
     },
     {
+      path: '/coupons/share',
+      name: 'coupon-share',
+      component: () => import('@/views/coupon/CouponShareView.vue'),
+      meta: { title: '推广发券', requiresAuth: true },
+    },
+    {
+      path: '/coupons/claim/:code',
+      name: 'coupon-claim',
+      component: () => import('@/views/coupon/CouponClaimByCodeView.vue'),
+      meta: { title: '领取优惠券', requiresAuth: true },
+    },
+    {
       path: '/invite',
       name: 'invite',
       component: () => import('@/views/invite/InviteView.vue'),

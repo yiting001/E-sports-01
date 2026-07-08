@@ -1,5 +1,7 @@
 import type {
+  CouponCodeView,
   CouponPublicView,
+  CouponShareView,
   CouponView,
   UserCouponView,
 } from '@app/contracts';
@@ -20,6 +22,7 @@ export function toCouponView(entity: CouponEntity): CouponView {
     validFrom: entity.validFrom.toISOString(),
     validTo: entity.validTo.toISOString(),
     enabled: entity.enabled,
+    audience: entity.audience,
     createdAt: entity.createdAt.toISOString(),
     updatedAt: entity.updatedAt.toISOString(),
   };
@@ -41,6 +44,36 @@ export function toCouponPublicView(
     remaining: Math.max(entity.totalCount - entity.issuedCount, 0),
     claimedByMe,
     perUserLimit: entity.perUserLimit,
+  };
+}
+
+/** 实体 → 分发链接落地页视图（公开视图 + 分发码） */
+export function toCouponCodeView(
+  entity: CouponEntity,
+  claimedByMe: number,
+  code: string,
+): CouponCodeView {
+  return { ...toCouponPublicView(entity, claimedByMe), code };
+}
+
+/** 实体 → 我的推广券视图（分发人侧：券面 + 分发码 + 发放进度） */
+export function toCouponShareView(
+  entity: CouponEntity,
+  code: string,
+  claimedCount: number,
+): CouponShareView {
+  return {
+    couponId: entity.id,
+    title: entity.title,
+    type: entity.type,
+    value: entity.value,
+    thresholdFen: entity.thresholdFen,
+    validFrom: entity.validFrom.toISOString(),
+    validTo: entity.validTo.toISOString(),
+    enabled: entity.enabled,
+    code,
+    claimedCount,
+    remaining: Math.max(entity.totalCount - entity.issuedCount, 0),
   };
 }
 

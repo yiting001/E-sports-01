@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { UserCouponStatus } from '@app/contracts';
+import { CouponAudience, UserCouponStatus } from '@app/contracts';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, LessThanOrEqual, MoreThan, type Repository } from 'typeorm';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
 import { withTenant } from '../../../shared/tenant/tenant-scope.util';
+import { CouponDistributorEntity } from '../domain/coupon-distributor.entity';
 import { CouponEntity } from '../domain/coupon.entity';
 import { UserCouponEntity } from '../domain/user-coupon.entity';
 import { CouponRepository } from '../domain/coupon-repository.interface';
@@ -16,12 +17,23 @@ export class TypeormCouponRepository implements CouponRepository {
     private readonly coupons: Repository<CouponEntity>,
     @InjectRepository(UserCouponEntity)
     private readonly userCoupons: Repository<UserCouponEntity>,
+    @InjectRepository(CouponDistributorEntity)
+    private readonly distributors: Repository<CouponDistributorEntity>,
     private readonly tenant: TenantContextService,
   ) {}
 
   findById(id: string): Promise<CouponEntity | null> {
     return this.coupons.findOne({
       where: withTenant<CouponEntity>(this.tenant, { id }),
+    });
+  }
+
+  findByIds(ids: string[]): Promise<CouponEntity[]> {
+    if (ids.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.coupons.find({
+      where: withTenant<CouponEntity>(this.tenant, { id: In(ids) }),
     });
   }
 
@@ -38,6 +50,7 @@ export class TypeormCouponRepository implements CouponRepository {
     return this.coupons.find({
       where: withTenant<CouponEntity>(this.tenant, {
         enabled: true,
+        audience: CouponAudience.Public,
         validFrom: LessThanOrEqual(now),
         validTo: MoreThan(now),
       }),
@@ -132,5 +145,72 @@ export class TypeormCouponRepository implements CouponRepository {
       { usedOrderId: orderId, status: UserCouponStatus.Used },
       { status: UserCouponStatus.Unused, usedOrderId: null },
     );
+  }
+
+  findDistributors(couponId: string): Promise<CouponDistributorEntity[]> {
+    return this.distributors.find({
+      where: withTenant<CouponDistributorEntity>(this.tenant, { couponId }),
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  findDistributorById(id: string): Promise<CouponDistributorEntity | null> {
+    return this.distributors.findOne({
+      where: withTenant<CouponDistributorEntity>(this.tenant, { id }),
+    });
+  }
+
+  findDistributorByCode(code: string): Promise<CouponDistributorEntity | null> {
+    return this.distributors.findOne({
+      where: withTenant<CouponDistributorEntity>(this.tenant, { code }),
+    });
+  }
+
+  findDistributorsByUser(userId: string): Promise<CouponDistributorEntity[]> {
+    return this.distributors.find({
+      where: withTenant<CouponDistributorEntity>(this.tenant, { userId }),
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  createDistributor(
+    data: Partial<CouponDistributorEntity>,
+  ): CouponDistributorEntity {
+    return this.distributors.create(data);
+  }
+
+  saveDistributor(
+    entity: CouponDistributorEntity,
+  ): Promise<CouponDistributorEntity> {
+    return this.distributors.save(entity);
+  }
+
+  async removeDistributor(entity: CouponDistributorEntity): Promise<void> {
+    await this.distributors.remove(entity);
+  }
+
+  countClaimedViaDistributor(
+    couponId: string,
+    distributorUserId: string,
+  ): Promise<number> {
+    return this.userCoupons.count({
+      where: withTenant<UserCouponEntity>(this.tenant, {
+        couponId,
+        distributorUserId,
+      }),
+    });
+  }
+
+  paginateClaims(
+    couponId: string,
+    skip: number,
+    take: number,
+  ): Promise<[UserCouponEntity[], number]> {
+    return this.userCoupons.findAndCount({
+      where: withTenant<UserCouponEntity>(this.tenant, { couponId }),
+      order: { createdAt: 'DESC' },
+      skip,
+      take,
+    });
   }
 }
