@@ -2,14 +2,20 @@
 /**
  * 移动端底部导航条：切角深色面板，激活项战术金高亮 + 顶部指示线。
  * 导航项随当前身份切换：打手身份展示接单大厅/订单中心/消息/我的。
+ * 「消息」Tab 展示未读消息红色数量角标。
  */
 import { computed } from 'vue';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { BOOSTER_NAV_ITEMS, NAV_ITEMS } from '@/config/nav';
+import { BOOSTER_NAV_ITEMS, MESSAGE_NAV_NAME, NAV_ITEMS } from '@/config/nav';
 import { useRoleStore } from '@/stores/role.store';
+import { useUnreadStore } from '@/stores/unread.store';
 
 const role = useRoleStore();
+const unread = useUnreadStore();
 const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS));
+
+/** 角标文案：超过 99 显示 99+ */
+const badgeText = computed(() => (unread.total > 99 ? '99+' : String(unread.total)));
 </script>
 
 <template>
@@ -22,10 +28,16 @@ const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS
       :class="{ active: $route.name === item.name }"
     >
       <span class="indicator" />
-      <AppIcon
-        :name="item.icon"
-        :size="21"
-      />
+      <span class="icon-wrap">
+        <AppIcon
+          :name="item.icon"
+          :size="21"
+        />
+        <span
+          v-if="item.name === MESSAGE_NAV_NAME && unread.total > 0"
+          class="badge"
+        >{{ badgeText }}</span>
+      </span>
       <span class="label">{{ item.label }}</span>
     </router-link>
   </nav>
@@ -73,6 +85,30 @@ const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS
   height: 2px;
   background: transparent;
   transition: background 0.2s ease;
+}
+
+.icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.badge {
+  position: absolute;
+  top: -5px;
+  left: calc(100% - 8px);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--c-danger);
+  border-radius: 8px;
+  white-space: nowrap;
 }
 
 .tab .label {

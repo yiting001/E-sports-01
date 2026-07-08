@@ -9,10 +9,12 @@ import { MessageType, type ChatMessage, type ConversationView } from '@app/contr
 import AppIcon from '@/components/common/AppIcon.vue';
 import ServiceChatPanel from '@/components/message/ServiceChatPanel.vue';
 import { imApi } from '@/api/im.api';
+import { useUnreadStore } from '@/stores/unread.store';
 
 const MESSAGE_TITLE = '会话消息';
 const router = useRouter();
 
+const unreadStore = useUnreadStore();
 const conversations = ref<ConversationView[]>([]);
 const selectedConversation = ref<ConversationView | null>(null);
 const loading = ref(true);
@@ -44,6 +46,11 @@ function formatTime(ts: number): string {
   });
 }
 
+/** 本地会话列表变化后同步导航未读角标（免额外请求） */
+function syncUnreadBadge(): void {
+  unreadStore.setTotal(conversations.value.reduce((sum, conv) => sum + conv.unread, 0));
+}
+
 function isDesktopLayout(): boolean {
   return window.matchMedia('(min-width: 768px)').matches;
 }
@@ -64,7 +71,13 @@ function onViewportChange(event: MediaQueryListEvent): void {
 /** 点击会话：移动端进入该会话的全屏聊天，PC 端在右侧打开 */
 function openConversation(conv: ConversationView): void {
   if (isDesktopLayout()) {
-    selectedConversation.value = { ...conv, unread: 0 };
+    const index = conversations.value.findIndex((item) => item.id === conv.id);
+    const next = { ...conv, unread: 0 };
+    if (index >= 0) {
+      conversations.value.splice(index, 1, next);
+    }
+    selectedConversation.value = next;
+    syncUnreadBadge();
     return;
   }
   router.push({ name: 'chat', params: { id: conv.id } });
@@ -79,6 +92,7 @@ function upsertConversation(conv: ConversationView): void {
     conversations.value.unshift(next);
   }
   selectedConversation.value = next;
+  syncUnreadBadge();
 }
 
 function onChatMessage(message: ChatMessage): void {
@@ -98,6 +112,7 @@ function onChatMessage(message: ChatMessage): void {
   if (isSelected) {
     selectedConversation.value = next;
   }
+  syncUnreadBadge();
 }
 
 onMounted(async () => {
@@ -106,6 +121,7 @@ onMounted(async () => {
   try {
     conversations.value = await imApi.listConversations();
     selectDefaultConversation();
+    syncUnreadBadge();
   } finally {
     loading.value = false;
   }
