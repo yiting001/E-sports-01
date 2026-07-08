@@ -13,11 +13,14 @@ export interface NavItem {
   icon: IconName;
 }
 
+/** 消息页路由名（未读角标挂载点，两套身份导航共用） */
+export const MESSAGE_NAV_NAME = 'messages';
+
 /** 老板身份的四个一级 Tab */
 export const NAV_ITEMS: NavItem[] = [
   { name: 'home', label: '首页', icon: 'home' },
   { name: 'category', label: '分类', icon: 'grid' },
-  { name: 'messages', label: '消息', icon: 'bell' },
+  { name: MESSAGE_NAV_NAME, label: '消息', icon: 'bell' },
   { name: 'profile', label: '我的', icon: 'user' },
 ];
 
@@ -25,6 +28,6 @@ export const NAV_ITEMS: NavItem[] = [
 export const BOOSTER_NAV_ITEMS: NavItem[] = [
   { name: 'hall', label: '接单大厅', icon: 'crosshair' },
   { name: 'booster-orders', label: '订单中心', icon: 'file' },
-  { name: 'messages', label: '消息', icon: 'bell' },
+  { name: MESSAGE_NAV_NAME, label: '消息', icon: 'bell' },
   { name: 'profile', label: '我的', icon: 'user' },
 ];

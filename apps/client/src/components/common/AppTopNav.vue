@@ -3,16 +3,22 @@
  * PC 端顶部导航条：品牌切角徽标 + 一级页签（底部金色指示线），与移动端共用导航配置。
  * 软件名称/图标来自配置中心品牌配置（与管理端共用），未配图标时回退默认徽标。
  * 导航项随当前身份切换：打手身份展示接单大厅/订单中心/消息/我的。
+ * 「消息」页签展示未读消息红色数量角标。
  */
 import { computed } from 'vue';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { BOOSTER_NAV_ITEMS, NAV_ITEMS } from '@/config/nav';
+import { BOOSTER_NAV_ITEMS, MESSAGE_NAV_NAME, NAV_ITEMS } from '@/config/nav';
 import { useBrandingStore } from '@/stores/branding.store';
 import { useRoleStore } from '@/stores/role.store';
+import { useUnreadStore } from '@/stores/unread.store';
 
 const branding = useBrandingStore();
 const role = useRoleStore();
+const unread = useUnreadStore();
 const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS));
+
+/** 角标文案：超过 99 显示 99+ */
+const badgeText = computed(() => (unread.total > 99 ? '99+' : String(unread.total)));
 </script>
 
 <template>
@@ -43,6 +49,10 @@ const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS
           :class="{ active: $route.name === item.name }"
         >
           {{ item.label }}
+          <span
+            v-if="item.name === MESSAGE_NAV_NAME && unread.total > 0"
+            class="badge"
+          >{{ badgeText }}</span>
         </router-link>
       </nav>
     </div>
@@ -123,6 +133,24 @@ const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS
   background: transparent;
   transform: skewX(-18deg);
   transition: background 0.2s ease;
+}
+
+.badge {
+  margin-left: 5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+  color: #fff;
+  background: var(--c-danger);
+  border-radius: 8px;
+  white-space: nowrap;
 }
 
 .link:hover {
