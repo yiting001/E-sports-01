@@ -16,6 +16,9 @@ export interface NavItem {
 /** 消息页路由名（未读角标挂载点，两套身份导航共用） */
 export const MESSAGE_NAV_NAME = 'messages';
 
+/** 接单大厅路由名（待接单角标挂载点，打手身份导航） */
+export const HALL_NAV_NAME = 'hall';
+
 /** 老板身份的四个一级 Tab */
 export const NAV_ITEMS: NavItem[] = [
   { name: 'home', label: '首页', icon: 'home' },
@@ -26,7 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
 
 /** 打手身份的一级 Tab：接单大厅/订单中心/消息/个人中心 */
 export const BOOSTER_NAV_ITEMS: NavItem[] = [
-  { name: 'hall', label: '接单大厅', icon: 'crosshair' },
+  { name: HALL_NAV_NAME, label: '接单大厅', icon: 'crosshair' },
   { name: 'booster-orders', label: '订单中心', icon: 'file' },
   { name: MESSAGE_NAV_NAME, label: '消息', icon: 'bell' },
   { name: 'profile', label: '我的', icon: 'user' },

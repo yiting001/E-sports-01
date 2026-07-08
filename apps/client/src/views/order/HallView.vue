@@ -10,11 +10,13 @@ import type { OrderView } from '@app/contracts';
 import BoosterOrderCard from '@/components/order/BoosterOrderCard.vue';
 import { orderApi } from '@/api/order.api';
 import { useToast } from '@/composables/use-toast';
+import { useHallBadgeStore } from '@/stores/hall-badge.store';
 
 const PAGE_SIZE = 10;
 
 const router = useRouter();
 const toast = useToast();
+const hallBadge = useHallBadgeStore();
 
 const orders = ref<OrderView[]>([]);
 const page = ref(1);
@@ -33,6 +35,7 @@ async function load(reset = false): Promise<void> {
     const result = await orderApi.hall(page.value, PAGE_SIZE);
     orders.value = reset ? result.list : [...orders.value, ...result.list];
     total.value = result.total;
+    hallBadge.setTotal(result.total);
   } finally {
     loading.value = false;
   }

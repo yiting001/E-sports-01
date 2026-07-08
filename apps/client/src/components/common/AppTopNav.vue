@@ -3,22 +3,37 @@
  * PC 端顶部导航条：品牌切角徽标 + 一级页签（底部金色指示线），与移动端共用导航配置。
  * 软件名称/图标来自配置中心品牌配置（与管理端共用），未配图标时回退默认徽标。
  * 导航项随当前身份切换：打手身份展示接单大厅/订单中心/消息/我的。
- * 「消息」页签展示未读消息红色数量角标。
+ * 「消息」展示未读消息、「接单大厅」展示待接单数的红色数量角标。
  */
 import { computed } from 'vue';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { BOOSTER_NAV_ITEMS, MESSAGE_NAV_NAME, NAV_ITEMS } from '@/config/nav';
+import { BOOSTER_NAV_ITEMS, HALL_NAV_NAME, MESSAGE_NAV_NAME, NAV_ITEMS } from '@/config/nav';
 import { useBrandingStore } from '@/stores/branding.store';
+import { useHallBadgeStore } from '@/stores/hall-badge.store';
 import { useRoleStore } from '@/stores/role.store';
 import { useUnreadStore } from '@/stores/unread.store';
 
 const branding = useBrandingStore();
 const role = useRoleStore();
 const unread = useUnreadStore();
+const hallBadge = useHallBadgeStore();
 const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS));
 
+/** 各导航项的角标数：消息=未读数，接单大厅=待接单数 */
+function badgeCount(name: string): number {
+  if (name === MESSAGE_NAV_NAME) {
+    return unread.total;
+  }
+  if (name === HALL_NAV_NAME) {
+    return hallBadge.total;
+  }
+  return 0;
+}
+
 /** 角标文案：超过 99 显示 99+ */
-const badgeText = computed(() => (unread.total > 99 ? '99+' : String(unread.total)));
+function badgeText(count: number): string {
+  return count > 99 ? '99+' : String(count);
+}
 </script>
 
 <template>
@@ -50,9 +65,9 @@ const badgeText = computed(() => (unread.total > 99 ? '99+' : String(unread.tota
         >
           {{ item.label }}
           <span
-            v-if="item.name === MESSAGE_NAV_NAME && unread.total > 0"
+            v-if="badgeCount(item.name) > 0"
             class="badge"
-          >{{ badgeText }}</span>
+          >{{ badgeText(badgeCount(item.name)) }}</span>
         </router-link>
       </nav>
     </div>

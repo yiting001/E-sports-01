@@ -2,20 +2,35 @@
 /**
  * 移动端底部导航条：切角深色面板，激活项战术金高亮 + 顶部指示线。
  * 导航项随当前身份切换：打手身份展示接单大厅/订单中心/消息/我的。
- * 「消息」Tab 展示未读消息红色数量角标。
+ * 「消息」展示未读消息、「接单大厅」展示待接单数的红色数量角标。
  */
 import { computed } from 'vue';
 import AppIcon from '@/components/common/AppIcon.vue';
-import { BOOSTER_NAV_ITEMS, MESSAGE_NAV_NAME, NAV_ITEMS } from '@/config/nav';
+import { BOOSTER_NAV_ITEMS, HALL_NAV_NAME, MESSAGE_NAV_NAME, NAV_ITEMS } from '@/config/nav';
+import { useHallBadgeStore } from '@/stores/hall-badge.store';
 import { useRoleStore } from '@/stores/role.store';
 import { useUnreadStore } from '@/stores/unread.store';
 
 const role = useRoleStore();
 const unread = useUnreadStore();
+const hallBadge = useHallBadgeStore();
 const items = computed(() => (role.isBoosterMode ? BOOSTER_NAV_ITEMS : NAV_ITEMS));
 
+/** 各导航项的角标数：消息=未读数，接单大厅=待接单数 */
+function badgeCount(name: string): number {
+  if (name === MESSAGE_NAV_NAME) {
+    return unread.total;
+  }
+  if (name === HALL_NAV_NAME) {
+    return hallBadge.total;
+  }
+  return 0;
+}
+
 /** 角标文案：超过 99 显示 99+ */
-const badgeText = computed(() => (unread.total > 99 ? '99+' : String(unread.total)));
+function badgeText(count: number): string {
+  return count > 99 ? '99+' : String(count);
+}
 </script>
 
 <template>
@@ -34,9 +49,9 @@ const badgeText = computed(() => (unread.total > 99 ? '99+' : String(unread.tota
           :size="21"
         />
         <span
-          v-if="item.name === MESSAGE_NAV_NAME && unread.total > 0"
+          v-if="badgeCount(item.name) > 0"
           class="badge"
-        >{{ badgeText }}</span>
+        >{{ badgeText(badgeCount(item.name)) }}</span>
       </span>
       <span class="label">{{ item.label }}</span>
     </router-link>
