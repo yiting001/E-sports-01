@@ -13,7 +13,7 @@
 - **实名前置**：配置开关 `booster.requireRealname`（默认开启），开启时未通过实名认证不可提交入驻申请（复用 realname 模块只读检查器 `RealnameChecker`）；同一开关同时门控接单：`BoosterRealnameGuard`（导出供 order 模块）在接单/指派前断言实名已通过，开关关闭则不校验。
 - **打手等级**：等级档位（名称/完成单数门槛/提成万分比）存配置中心 `booster.levels`，按累计完成单数自动定级；订单完成时按当前等级费率计提成经 `WalletLedger` 入账（commission 流水）。
 - **打手押金**：交付策略存配置中心（最低 `booster.depositMinFen` / 最高 `booster.depositMaxFen`，管理端可配）；已入驻打手在区间内自选金额从钱包余额缴纳（deposit 流水，累计不超最高额），接单前由 `BoosterDepositGuard` 校验已达最低交付额；管理端可全额退还（deposit_refund 流水）。
-- **财务罚款**：财务可对打手按订单罚款（理由必填），从钱包余额（penalty 流水）或已缴押金中扣除，留存罚款记录供审计。
+- **财务罚款**：财务可对打手按订单罚款（理由必填），从钱包余额（penalty 流水）或已缴押金中扣除，留存罚款记录供审计；管理端打手列表提供已入驻打手的快速扣款入口，复用同一罚款抽屉与接口。
 
 ## 结构导图（DDD 四层）
 
@@ -54,10 +54,11 @@ modules/rbac/
 
 - C 端 `client/views/profile/BoosterApplyView.vue`（入口：「我的」页更多功能 →「打手入驻」，路由 `/profile/booster`）：按状态分场景展示申请表单 / 审核进度 / 入驻资料 / 驳回理由与重提。
 - C 端 `client/views/profile/BoosterApplyView.responsive.css`：移动端保持全屏申请表单；PC 端标题栏、状态卡、资料表单与提交按钮同轴收敛，有审核状态时左侧提示、右侧展示资料或重提表单。
-- 管理端 `web/views/booster/BoosterAdminView.vue`（菜单 `booster:menu` 打手管理，电竞运营分组）：状态筛选 + 审核通过/驳回 + 资料编辑右侧抽屉 + 等级/完成单数/押金展示 + 押金退还。
+- 管理端 `web/views/booster/BoosterAdminView.vue`（菜单 `booster:menu` 打手管理，电竞运营分组）：状态筛选 + 审核通过/驳回 + 资料编辑右侧抽屉 + 等级/完成单数/押金展示 + 押金退还 + 已入驻打手快速扣款。
 - 管理端 `web/views/booster/BoosterLevelDialog.vue`：等级档位配置右侧抽屉（增删行 + 保存，`booster:level:set`）。
 - 管理端 `web/views/booster/BoosterDepositPolicyDialog.vue`：押金交付配置右侧抽屉（最低/最高交付额，`booster:deposit:policy:set`）。
 - 管理端 `web/views/finance/PenaltyAdminView.vue`（菜单 `finance:penalty:menu` 罚款管理，财务分组）：罚款记录列表 + 打手 ID 筛选 + 创建罚款右侧抽屉（余额/押金二选一）。
+- 管理端 `web/components/finance/PenaltyCreateDrawer.vue`：创建罚款右侧抽屉，支持罚款管理页手动输入打手用户 ID，也支持打手管理页预填并锁定用户 ID。
 - C 端 `client/components/profile/BoosterLevelCard.vue`（「我的」页打手身份）：等级/提成/完成单数/押金进度展示与区间内自选金额缴纳。
 
 ## 权限（RBAC）
@@ -85,11 +86,13 @@ flowchart LR
   A --> C["编辑资料抽屉"]
   A --> D["等级配置抽屉"]
   A --> E["押金配置抽屉"]
+  A --> H["快速扣款抽屉"]
   A --> F["罚款记录筛选"]
   F --> G["创建罚款抽屉"]
   C --> A
   D --> A
   E --> A
+  H --> A
   G --> F
 ```
 
@@ -119,3 +122,4 @@ flowchart LR
 - **多租户**：实体继承 `TenantScopedEntity`，仓储经 `withTenant` 行级隔离。
 - **零硬编码**：等级档位/应缴押金/实名开关均存配置中心（`CONFIG_KEYS.booster.*`，默认值回退 `BOOSTER_LEVEL_DEFAULTS`/`BOOSTER_DEFAULTS`）；等级不落库，读时由档位+完成单数解析，改档位即时生效。
 - **资金唯一写口**：押金缴纳/退还、余额罚款、完成提成均经 `WalletLedger.adjustBalance` 入账（新增流水类型 commission/deposit/deposit_refund/penalty），保持余额变动单一入口不变量。
+- **前端复用**：打手管理快速扣款与罚款管理创建罚款共用 `PenaltyCreateDrawer`，仅由调用方决定是否预填并锁定打手用户 ID，避免两套表单逻辑漂移。

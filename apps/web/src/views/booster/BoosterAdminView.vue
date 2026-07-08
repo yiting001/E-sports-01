@@ -15,9 +15,21 @@ import {
   type BoosterView,
 } from '@app/contracts';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Check, Close, Coin, EditPen, Refresh, RefreshLeft, Search, Setting, Trophy } from '@element-plus/icons-vue';
+import {
+  Check,
+  Close,
+  Coin,
+  EditPen,
+  Refresh,
+  RefreshLeft,
+  Search,
+  Setting,
+  Trophy,
+  Warning,
+} from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
+import PenaltyCreateDrawer from '@/components/finance/PenaltyCreateDrawer.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { boosterApi } from '@/api/booster.api';
 import BoosterLevelDialog from './BoosterLevelDialog.vue';
@@ -128,6 +140,8 @@ const editVisible = ref(false);
 const editSaving = ref(false);
 const editingId = ref('');
 const editForm = reactive({ gameNickname: '', gameName: '', rank: '', intro: '' });
+const penaltyVisible = ref(false);
+const penaltyTarget = ref<BoosterView | null>(null);
 
 function openEdit(row: BoosterView): void {
   editingId.value = row.id;
@@ -157,6 +171,11 @@ async function saveEdit(): Promise<void> {
   } finally {
     editSaving.value = false;
   }
+}
+
+function openPenalty(row: BoosterView): void {
+  penaltyTarget.value = row;
+  penaltyVisible.value = true;
 }
 
 onMounted(() => {
@@ -288,7 +307,7 @@ onMounted(() => {
         </el-table-column>
         <el-table-column
           label="操作"
-          width="200"
+          width="260"
           fixed="right"
         >
           <template #default="{ row }">
@@ -320,6 +339,16 @@ onMounted(() => {
               @click="openEdit(row)"
             >
               编辑
+            </el-button>
+            <el-button
+              v-if="row.status === BoosterStatus.Approved"
+              v-permission="PERMS.finance.penaltyCreate"
+              link
+              type="danger"
+              :icon="Warning"
+              @click="openPenalty(row)"
+            >
+              扣款
             </el-button>
             <el-button
               v-if="row.depositFen > 0"
@@ -409,5 +438,11 @@ onMounted(() => {
 
     <booster-level-dialog v-model="levelDialogVisible" />
     <booster-deposit-policy-dialog v-model="depositPolicyVisible" />
+    <penalty-create-drawer
+      v-model="penaltyVisible"
+      :booster-user-id="penaltyTarget?.userId"
+      :booster-name="penaltyTarget ? (penaltyTarget.nickname || penaltyTarget.username) : undefined"
+      @saved="load"
+    />
   </section>
 </template>

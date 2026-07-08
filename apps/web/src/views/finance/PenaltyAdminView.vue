@@ -4,20 +4,18 @@
  * 分页展示对打手的罚款记录（金额/来源/理由/关联订单/操作时间），
  * 支持创建罚款（finance:penalty:create）：从钱包余额或已缴押金中扣除。
  */
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import {
-  FEN_PER_YUAN,
   PAGINATION_DEFAULTS,
-  PENALTY_LIMITS,
   PENALTY_SOURCE_TEXT,
   PERMS,
   PenaltySource,
   type PenaltyView,
 } from '@app/contracts';
-import { ElMessage } from 'element-plus';
 import { Plus, Refresh, RefreshLeft, Search, Warning } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
+import PenaltyCreateDrawer from '@/components/finance/PenaltyCreateDrawer.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { financeApi } from '@/api/finance.api';
 import './PenaltyAdminView.css';
@@ -35,11 +33,6 @@ const sourceTagType: Record<PenaltySource, PenaltySourceTagType> = {
   [PenaltySource.Balance]: 'danger',
   [PenaltySource.Deposit]: 'warning',
 };
-
-const sourceOptions = Object.values(PenaltySource).map((source) => ({
-  label: PENALTY_SOURCE_TEXT[source],
-  value: source,
-}));
 
 function formatDate(value: string): string {
   if (!value) {
@@ -100,54 +93,6 @@ async function resetSearch(): Promise<void> {
 }
 
 const createVisible = ref(false);
-const creating = ref(false);
-const createForm = reactive({
-  boosterUserId: '',
-  amountYuan: 0,
-  source: PenaltySource.Balance,
-  reason: '',
-  orderNo: '',
-});
-
-function openCreate(): void {
-  createForm.boosterUserId = '';
-  createForm.amountYuan = 0;
-  createForm.source = PenaltySource.Balance;
-  createForm.reason = '';
-  createForm.orderNo = '';
-  createVisible.value = true;
-}
-
-async function submitCreate(): Promise<void> {
-  if (!createForm.boosterUserId.trim()) {
-    ElMessage.warning('请填写被罚打手的用户 ID');
-    return;
-  }
-  const amountFen = Math.round(createForm.amountYuan * FEN_PER_YUAN);
-  if (amountFen <= 0) {
-    ElMessage.warning('罚款金额须大于 0');
-    return;
-  }
-  if (!createForm.reason.trim()) {
-    ElMessage.warning('罚款理由不能为空');
-    return;
-  }
-  creating.value = true;
-  try {
-    await financeApi.createPenalty({
-      boosterUserId: createForm.boosterUserId.trim(),
-      amountFen,
-      source: createForm.source,
-      reason: createForm.reason.trim(),
-      orderNo: createForm.orderNo.trim() || undefined,
-    });
-    ElMessage.success('罚款已创建并完成扣除');
-    createVisible.value = false;
-    await load();
-  } finally {
-    creating.value = false;
-  }
-}
 
 onMounted(() => {
   void load();
@@ -167,7 +112,7 @@ onMounted(() => {
             v-permission="PERMS.finance.penaltyCreate"
             type="primary"
             :icon="Plus"
-            @click="openCreate"
+            @click="createVisible = true"
           >
             创建罚款
           </el-button>
@@ -287,79 +232,9 @@ onMounted(() => {
       </div>
     </app-panel>
 
-    <el-drawer
+    <penalty-create-drawer
       v-model="createVisible"
-      title="创建罚款"
-      size="520px"
-      class="admin-drawer penalty-create-drawer"
-      destroy-on-close
-    >
-      <el-form
-        class="penalty-create-form"
-        label-width="110px"
-        @submit.prevent
-      >
-        <el-form-item label="打手用户 ID">
-          <el-input
-            v-model="createForm.boosterUserId"
-            placeholder="被罚打手的用户 ID"
-          />
-        </el-form-item>
-        <el-form-item label="罚款金额（元）">
-          <el-input-number
-            v-model="createForm.amountYuan"
-            :min="0"
-            :step="1"
-            :precision="2"
-            controls-position="right"
-          />
-        </el-form-item>
-        <el-form-item label="扣除来源">
-          <el-radio-group
-            v-model="createForm.source"
-            class="penalty-source-group"
-          >
-            <el-radio
-              v-for="opt in sourceOptions"
-              :key="opt.value"
-              :value="opt.value"
-            >
-              {{ opt.label }}
-            </el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="关联订单号">
-          <el-input
-            v-model="createForm.orderNo"
-            :maxlength="PENALTY_LIMITS.orderNoMax"
-            placeholder="选填"
-          />
-        </el-form-item>
-        <el-form-item label="罚款理由">
-          <el-input
-            v-model="createForm.reason"
-            type="textarea"
-            :rows="3"
-            :maxlength="PENALTY_LIMITS.reasonMax"
-            show-word-limit
-            placeholder="必填，供审计追溯"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="admin-drawer__footer">
-          <el-button @click="createVisible = false">
-            取消
-          </el-button>
-          <el-button
-            type="primary"
-            :loading="creating"
-            @click="submitCreate"
-          >
-            确认罚款
-          </el-button>
-        </div>
-      </template>
-    </el-drawer>
+      @saved="load"
+    />
   </section>
 </template>

@@ -75,17 +75,3 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
-
-.penalty-create-form {
-  max-width: 100%;
-}
-
-.penalty-source-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-}
-
-.penalty-source-group .el-radio {
-  margin-right: 0;
-}
