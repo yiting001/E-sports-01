@@ -85,6 +85,18 @@ onMounted(() => void load(true));
       class="review"
     >
       <div class="review-head">
+        <img
+          v-if="review.avatar"
+          :src="review.avatar"
+          alt=""
+          class="avatar"
+        >
+        <span
+          v-else
+          class="avatar avatar--fallback"
+        >
+          {{ review.reviewerName.slice(0, 1) }}
+        </span>
         <span class="reviewer">{{ review.reviewerName }}</span>
         <RatingStars
           :model-value="review.rating"
@@ -161,6 +173,24 @@ onMounted(() => void load(true));
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+
+.avatar--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-text-secondary);
+  background: var(--c-border);
 }
 
 .reviewer {

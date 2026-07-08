@@ -10,6 +10,7 @@ import {
   Download,
   EditPen,
   Plus,
+  Promotion,
   Refresh,
   Search,
   Upload,
@@ -38,6 +39,7 @@ const emit = defineEmits<{
   refresh: [];
   create: [];
   edit: [row: ProductView];
+  marketing: [row: ProductView];
   publish: [row: ProductView];
   remove: [row: ProductView];
   'update:page': [value: number];
@@ -219,7 +221,7 @@ function updateFilter(patch: Partial<ProductFilterModel>): void {
       </el-table-column>
       <el-table-column
         label="操作"
-        width="220"
+        width="290"
       >
         <template #default="{ row }">
           <div class="commerce-actions">
@@ -231,6 +233,15 @@ function updateFilter(patch: Partial<ProductFilterModel>): void {
               @click="emit('edit', row)"
             >
               编辑
+            </el-button>
+            <el-button
+              v-permission="PERMS.product.update"
+              type="warning"
+              link
+              :icon="Promotion"
+              @click="emit('marketing', row)"
+            >
+              营销
             </el-button>
             <el-button
               v-permission="PERMS.product.publish"

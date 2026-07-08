@@ -68,6 +68,9 @@ export class UpdateProductUseCase {
     if (payload.sort !== undefined) {
       entity.sort = payload.sort;
     }
+    if (payload.sold !== undefined) {
+      entity.sold = payload.sold;
+    }
     const saved = await this.repo.save(entity);
     return this.assembler.assemble(saved);
   }

@@ -14,12 +14,31 @@ export const REVIEW_LIMITS = {
   /** 评论内容长度区间 */
   contentMin: 1,
   contentMax: 500,
+  /** 营销评论自定义昵称长度区间 */
+  reviewerNameMin: 1,
+  reviewerNameMax: 32,
+  /** 营销评论头像 URL 最大长度 */
+  avatarMax: 512,
 } as const;
 
 /** 提交评论入参（订单维度：一张已完成订单只能评一次） */
 export interface SubmitReviewPayload {
   /** 被评价的订单 id（须为本人已完成订单） */
   orderId: string;
+  /** 星级评分（1-5） */
+  rating: number;
+  /** 评论内容 */
+  content: string;
+}
+
+/** 营销工具：管理端为商品添加评论入参（昵称/头像自定义，无订单） */
+export interface CreateMarketingReviewPayload {
+  /** 目标商品 id */
+  productId: string;
+  /** 自定义展示昵称 */
+  reviewerName: string;
+  /** 自定义头像 URL（选填，空串为默认头像） */
+  avatar?: string;
   /** 星级评分（1-5） */
   rating: number;
   /** 评论内容 */
@@ -35,8 +54,10 @@ export interface SetReviewVisibilityPayload {
 /** 评论公开视图（商品详情页展示，评论人昵称已脱敏） */
 export interface ReviewPublicView {
   id: string;
-  /** 脱敏后的评论人昵称（如「小*明」） */
+  /** 评论人展示昵称（真实用户脱敏；营销评论为自定义昵称原样展示） */
   reviewerName: string;
+  /** 评论人头像 URL；空串由前端展示默认头像 */
+  avatar: string;
   rating: number;
   content: string;
   createdAt: string;
@@ -56,8 +77,13 @@ export interface AdminReviewView {
   username: string;
   /** 评论人昵称（管理端展示） */
   nickname: string;
+  /** 营销评论自定义昵称；真实用户评论为空串 */
+  reviewerName: string;
+  /** 营销评论自定义头像 URL；真实用户评论为空串 */
+  avatar: string;
+  /** 被评价订单 id；营销评论为空串 */
   orderId: string;
-  /** 商户订单号快照 */
+  /** 商户订单号快照；营销评论为空串 */
   orderNo: string;
   productId: string;
   /** 商品标题快照（评论时固化） */

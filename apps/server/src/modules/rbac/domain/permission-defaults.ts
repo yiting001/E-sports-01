@@ -71,6 +71,7 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.review.list]: '评论-查询',
   [PERMS.review.moderate]: '评论-显隐',
   [PERMS.review.remove]: '评论-删除',
+  [PERMS.review.marketing]: '评论-营销添加',
   [PERMS.coupon.list]: '优惠券-查询',
   [PERMS.coupon.save]: '优惠券-新建/编辑',
   [PERMS.coupon.remove]: '优惠券-删除',

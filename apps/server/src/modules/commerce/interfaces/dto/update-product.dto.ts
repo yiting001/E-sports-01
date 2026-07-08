@@ -59,4 +59,9 @@ export class UpdateProductDto implements UpdateProductPayload {
   @IsInt()
   @Min(0)
   sort?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  sold?: number;
 }

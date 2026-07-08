@@ -49,7 +49,7 @@ export class TypeormReviewRepository implements ReviewRepository {
       }),
       select: { orderId: true },
     });
-    return rows.map((row) => row.orderId);
+    return rows.map((row) => row.orderId).filter((id): id is string => Boolean(id));
   }
 
   paginateVisibleByProduct(
