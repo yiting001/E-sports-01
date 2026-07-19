@@ -36,12 +36,6 @@ const summary = computed(() =>
         :size="64"
         class="emblem"
       />
-      <p class="cover-title">
-        {{ product.coverTitle }}
-      </p>
-      <p class="cover-sub">
-        {{ product.coverSub }}
-      </p>
     </div>
     <div class="info">
       <h3 class="title">
@@ -94,24 +88,6 @@ const summary = computed(() =>
   transform: translate(-50%, -60%);
   color: rgba(61, 255, 155, 0.55);
   filter: drop-shadow(0 0 12px rgba(61, 255, 155, 0.35));
-}
-
-.cover-title {
-  position: relative;
-  font-size: 15px;
-  font-weight: 900;
-  font-style: italic;
-  color: var(--c-neon);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-}
-
-.cover-sub {
-  position: relative;
-  margin-top: 2px;
-  font-size: 13px;
-  font-weight: 700;
-  font-style: italic;
-  color: #fff;
 }
 
 .info {

@@ -15,6 +15,7 @@ import { TraceContextService } from '../../../observability/application/trace-co
 import { PermissionResolver } from '../../../rbac/application/permission-resolver.service';
 import { TokenService } from '../../../rbac/application/token.service';
 import { ChatRealtimeService } from '../../application/chat-realtime.service';
+import { UserPresenceService } from '../../application/user-presence.service';
 import { ConversationAccessService } from '../../application/conversation-access.service';
 import { GetHistoryUseCase } from '../../application/use-cases/get-history.usecase';
 import { MarkReadUseCase } from '../../application/use-cases/mark-read.usecase';
@@ -48,6 +49,7 @@ export class ImGateway
     private readonly markRead: MarkReadUseCase,
     private readonly access: ConversationAccessService,
     private readonly realtime: ChatRealtimeService,
+    private readonly presence: UserPresenceService,
     private readonly trace: TraceContextService,
     private readonly tenant: TenantContextService,
   ) {}
@@ -103,6 +105,10 @@ export class ImGateway
         isSuper: auth.isSuper,
       };
       await socket.join(this.realtime.userRoom(payload.sub));
+      if (!socket.connected) {
+        return;
+      }
+      this.presence.register(socket.id, payload.sub, payload.tenantId ?? null);
       this.logger.debug(`IM 连接已鉴权：${payload.username}`);
     } catch {
       this.deny(socket, '访问令牌无效或已过期');
@@ -111,6 +117,7 @@ export class ImGateway
 
   handleDisconnect(socket: Socket): void {
     this.realtime.unregisterAgent(socket.id);
+    this.presence.unregister(socket.id);
   }
 
   @SubscribeMessage(IM_EVENTS.join)

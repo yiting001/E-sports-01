@@ -9,13 +9,13 @@ import type {
   WithdrawalResultView,
   WithdrawalView,
 } from '@app/contracts';
-import { http } from './http';
+import { http, type RequestOptions } from './http';
 
 /** C 端钱包接口：余额 / 充值 / 提现 / 流水（直连既有后端钱包模块） */
 export const walletApi = {
   /** 我的钱包（不存在自动初始化） */
-  mine(): Promise<WalletView> {
-    return http.get('/wallet/mine');
+  mine(options?: RequestOptions): Promise<WalletView> {
+    return http.get('/wallet/mine', options);
   },
   /** 分页查询我的流水明细 */
   transactions(

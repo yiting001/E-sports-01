@@ -1,10 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { OrderStatus, OrderView } from '@app/contracts';
 import { PaymentResolver } from '../../../wallet/application/payment.resolver';
-import {
-  ORDER_REPOSITORY,
-  OrderRepository,
-} from '../../domain/order-repository.interface';
+import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository.interface';
+import { toPaymentProvider } from '../order-payment-method';
 import { toOrderView } from '../order.mapper';
 import { OrderPaymentSettleService } from '../order-payment.service';
 
@@ -28,17 +26,26 @@ export class QueryOrderPaymentUseCase {
       throw new NotFoundException('订单不存在');
     }
     if (order.status !== OrderStatus.PendingPayment) {
+      await this.settle.ensurePaidOrderGroup(order);
       return toOrderView(order);
     }
-    const port = this.paymentResolver.resolve(order.provider);
+    const provider = toPaymentProvider(order.provider);
+    if (!provider) {
+      return toOrderView(order);
+    }
+    const port = this.paymentResolver.resolve(provider);
     const result = await port.queryTrade(order.orderNo);
     if (result.paid) {
       await this.settle.markPaid(
         order.orderNo,
+        order.provider,
         result.providerTradeNo,
         result.paidAmountFen,
       );
       const settled = await this.orders.findById(id);
+      if (settled) {
+        await this.settle.ensurePaidOrderGroup(settled);
+      }
       return toOrderView(settled ?? order);
     }
     return toOrderView(order);

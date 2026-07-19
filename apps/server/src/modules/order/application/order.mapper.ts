@@ -33,6 +33,12 @@ export function toOrderView(entity: OrderEntity): OrderView {
     accountInfo: entity.accountInfo,
     boosterId: entity.boosterId,
     boosterName: entity.boosterName,
+    gameAccountId: entity.gameAccountId,
+    gameTextId: entity.gameTextId,
+    serviceRegion: entity.serviceRegion,
+    boosterSelectionMode: entity.boosterSelectionMode,
+    requestedBoosterId: entity.requestedBoosterId,
+    requestedBoosterName: entity.requestedBoosterName,
     createdAt: entity.createdAt.toISOString(),
     paidAt: toIso(entity.paidAt),
     dispatchedAt: toIso(entity.dispatchedAt),
@@ -45,7 +51,12 @@ export function toOrderView(entity: OrderEntity): OrderView {
 
 /** 订单实体 → 接单大厅视图：未接单前对打手隐藏账号信息 */
 export function toHallOrderView(entity: OrderEntity): OrderView {
-  return { ...toOrderView(entity), accountInfo: '' };
+  return {
+    ...toOrderView(entity),
+    accountInfo: '',
+    gameAccountId: '',
+    gameTextId: '',
+  };
 }
 
 /** 订单实体 → 管理端视图（补充归属用户/客服快照/渠道交易号） */

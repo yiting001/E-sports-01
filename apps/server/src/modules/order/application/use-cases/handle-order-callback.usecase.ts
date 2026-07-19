@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PaymentProvider } from '@app/contracts';
 import { PaymentCallbackRequest } from '../../../wallet/domain/payment-port.interface';
 import { PaymentResolver } from '../../../wallet/application/payment.resolver';
+import { toOrderPaymentMethod } from '../order-payment-method';
 import { OrderPaymentSettleService } from '../order-payment.service';
 
 /**
@@ -25,6 +26,7 @@ export class HandleOrderCallbackUseCase {
     if (result.success) {
       await this.settle.markPaid(
         result.outTradeNo,
+        toOrderPaymentMethod(provider),
         result.providerTradeNo,
         result.paidAmountFen,
       );

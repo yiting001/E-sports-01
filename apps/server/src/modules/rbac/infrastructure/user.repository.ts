@@ -5,6 +5,7 @@ import type { FindOptionsWhere } from 'typeorm';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
 import { withTenant } from '../../../shared/tenant/tenant-scope.util';
 import { User } from '../domain/user.entity';
+import { UserStatus } from '../domain/user.entity';
 import { UserRepository } from '../domain/user-repository.interface';
 
 /** 用户仓储 TypeORM 实现。读操作按租户上下文自动过滤；写操作 tenantId 由订阅器回填 */
@@ -106,6 +107,7 @@ export class TypeormUserRepository implements UserRepository {
     const qb = this.repo
       .createQueryBuilder('u')
       .innerJoinAndSelect('u.roles', 'role', 'role.code = :roleCode', { roleCode })
+      .andWhere('u.status = :enabled', { enabled: UserStatus.Enabled })
       .orderBy('u.createdAt', 'DESC')
       .skip(skip)
       .take(take);
@@ -114,7 +116,7 @@ export class TypeormUserRepository implements UserRepository {
       qb.andWhere('u.tenantId = :tenantId', { tenantId });
     }
     if (keyword) {
-      qb.andWhere('(u.username ILIKE :kw OR u.nickname ILIKE :kw)', {
+      qb.andWhere('(CAST(u.id AS text) ILIKE :kw OR u.username ILIKE :kw OR u.nickname ILIKE :kw)', {
         kw: `%${keyword}%`,
       });
     }

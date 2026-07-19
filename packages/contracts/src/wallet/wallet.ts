@@ -34,6 +34,8 @@ export enum WalletStatus {
 export enum WalletTxnType {
   Recharge = 'recharge',
   Withdraw = 'withdraw',
+  /** 服务订单余额支付出账 */
+  OrderPayment = 'order_payment',
   /** 平台调整（人工增减），预留 */
   Adjust = 'adjust',
   /** 订单提成入账（打手完成订单按等级费率计提） */
@@ -52,6 +54,7 @@ export enum WalletTxnType {
 export const WALLET_TXN_TYPE_TEXT: Record<WalletTxnType, string> = {
   [WalletTxnType.Recharge]: '充值',
   [WalletTxnType.Withdraw]: '提现',
+  [WalletTxnType.OrderPayment]: '订单支付',
   [WalletTxnType.Adjust]: '平台调整',
   [WalletTxnType.Commission]: '订单提成',
   [WalletTxnType.Deposit]: '押金缴纳',
@@ -135,7 +138,7 @@ export interface WalletTransactionView {
   /** 变更后余额 */
   balanceAfterFen: number;
   balanceAfterYuan: string;
-  /** 关联业务单号（充值/提现订单号） */
+  /** 关联业务单号（充值/提现/服务订单 id） */
   bizOrderId: string | null;
   remark: string;
   createdAt: string;

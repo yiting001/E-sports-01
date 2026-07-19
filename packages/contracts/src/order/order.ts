@@ -1,35 +1,55 @@
-import type { PaymentProvider } from '../wallet/wallet';
+import type { BoosterServiceRegion } from "../booster/booster";
 
 /**
  * 服务订单（前后端共享契约）。
- * 用户在商品详情页下单 → 扫码支付（支付宝/微信）→ 支付成功进入「待客服处理」，
+ * 用户在商品详情页下单 → 支付宝/微信扫码或钱包余额支付 → 支付成功进入「待客服处理」，
  * 后续由客服指派打手或下发接单大厅（后续迭代实现）。
  */
+
+/** 订单支付方式；与钱包充值渠道分离，避免余额被误用于充值。 */
+export enum OrderPaymentMethod {
+  Alipay = "alipay",
+  Wechat = "wechat",
+  Balance = "balance",
+}
+
+/** 订单支付方式展示文案 */
+export const ORDER_PAYMENT_METHOD_TEXT: Record<OrderPaymentMethod, string> = {
+  [OrderPaymentMethod.Alipay]: "支付宝",
+  [OrderPaymentMethod.Wechat]: "微信",
+  [OrderPaymentMethod.Balance]: "钱包余额",
+};
+
+/** 下单时的打手选择方式；specified 锁定指定打手，由客服确认进入服务。 */
+export enum OrderBoosterSelectionMode {
+  Auto = "auto",
+  Specified = "specified",
+}
 
 /** 订单状态（全流程预留，本期实现到「待客服处理」） */
 export enum OrderStatus {
   /** 待付款（已创建未支付） */
-  PendingPayment = 'pending_payment',
+  PendingPayment = "pending_payment",
   /** 已支付，待客服处理（指派打手/下发大厅） */
-  PendingService = 'pending_service',
+  PendingService = "pending_service",
   /** 已下发接单大厅，待打手接单 */
-  Dispatching = 'dispatching',
+  Dispatching = "dispatching",
   /** 服务中（打手已接单） */
-  Serving = 'serving',
+  Serving = "serving",
   /** 已完成 */
-  Completed = 'completed',
+  Completed = "completed",
   /** 已取消（仅待付款可取消） */
-  Cancelled = 'cancelled',
+  Cancelled = "cancelled",
 }
 
 /** 订单状态展示文案 */
 export const ORDER_STATUS_TEXT: Record<OrderStatus, string> = {
-  [OrderStatus.PendingPayment]: '待付款',
-  [OrderStatus.PendingService]: '待客服处理',
-  [OrderStatus.Dispatching]: '待接单',
-  [OrderStatus.Serving]: '服务中',
-  [OrderStatus.Completed]: '已完成',
-  [OrderStatus.Cancelled]: '已取消',
+  [OrderStatus.PendingPayment]: "待付款",
+  [OrderStatus.PendingService]: "待客服处理",
+  [OrderStatus.Dispatching]: "待接单",
+  [OrderStatus.Serving]: "服务中",
+  [OrderStatus.Completed]: "已完成",
+  [OrderStatus.Cancelled]: "已取消",
 };
 
 /** 订单字段约束（DTO 校验与前端输入限制共享） */
@@ -40,10 +60,12 @@ export const ORDER_LIMITS = {
   /** 备注附件（图片/视频）最大数量 */
   remarkMediaMax: 6,
   accountInfoMax: 200,
+  gameAccountIdMax: 32,
+  gameTextIdMax: 64,
 } as const;
 
 /** 备注附件类型 */
-export type RemarkMediaType = 'image' | 'video';
+export type RemarkMediaType = "image" | "video";
 
 /** 备注附件（用户下单时上传的图片/视频） */
 export interface RemarkMediaItem {
@@ -56,8 +78,18 @@ export interface CreateOrderPayload {
   productId: string;
   /** 购买数量（局数/小时数），金额 = 单价 × 数量 */
   quantity: number;
-  /** 支付渠道 */
-  provider: PaymentProvider;
+  /** 订单支付方式 */
+  provider: OrderPaymentMethod;
+  /** 数字游戏 ID，1～32 位数字 */
+  gameAccountId: string;
+  /** 文本游戏 ID（选填） */
+  gameTextId?: string;
+  /** 本单游戏区服 */
+  serviceRegion: BoosterServiceRegion;
+  /** 自动安排或锁定指定打手 */
+  boosterSelectionMode: OrderBoosterSelectionMode;
+  /** specified 时必填，值为 BoosterPublicView.userId */
+  requestedBoosterId?: string;
   /** 用户备注（大区/段位/开黑时间等，选填） */
   remark?: string;
   /** 备注附件（图片/视频，选填） */
@@ -72,10 +104,10 @@ export interface CreateOrderPayload {
 export interface CreateOrderResult {
   orderId: string;
   orderNo: string;
-  provider: PaymentProvider;
-  /** 二维码内容（支付宝 qr_code / 微信 code_url），前端据此渲染二维码；0 元单为空串 */
+  provider: OrderPaymentMethod;
+  /** 二维码内容（支付宝 qr_code / 微信 code_url）；余额支付或 0 元单为空串 */
   qrCode: string;
-  /** 是否已支付完成（优惠抵扣到 0 元时免真实支付直接落账） */
+  /** 是否已支付完成（余额支付或优惠抵扣到 0 元时为 true） */
   paid: boolean;
   amountFen: number;
   amountYuan: string;
@@ -124,7 +156,7 @@ export interface OrderView {
   commissionFen: number;
   /** 打手提成费率快照（万分比，完成结算后回填；未结算为 0） */
   commissionRateBp: number;
-  provider: PaymentProvider;
+  provider: OrderPaymentMethod;
   status: OrderStatus;
   remark: string;
   /** 备注附件（图片/视频） */
@@ -135,6 +167,18 @@ export interface OrderView {
   boosterId: string;
   /** 接单打手显示名快照（接单/被指派时固化；未接单为空串） */
   boosterName: string;
+  /** 数字游戏 ID；接单大厅视图中为空串 */
+  gameAccountId: string;
+  /** 文本游戏 ID；接单大厅视图中为空串 */
+  gameTextId: string;
+  /** 本单游戏区服 */
+  serviceRegion: BoosterServiceRegion | "";
+  /** 下单时选择的打手安排方式 */
+  boosterSelectionMode: OrderBoosterSelectionMode;
+  /** 锁定的指定打手 userId；自动安排为空串 */
+  requestedBoosterId: string;
+  /** 锁定的指定打手显示名快照；自动安排为空串 */
+  requestedBoosterName: string;
   createdAt: string;
   /** 支付时间（未支付为空串） */
   paidAt: string;

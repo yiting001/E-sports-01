@@ -7,9 +7,10 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import QRCode from 'qrcode';
 import {
+  ORDER_PAYMENT_METHOD_TEXT,
   OrderStatus,
-  PaymentProvider,
   type CreateOrderResult,
+  type OrderView,
 } from '@app/contracts';
 import { orderApi } from '@/api/order.api';
 
@@ -20,16 +21,51 @@ const emit = defineEmits<{ paid: []; close: [] }>();
 const POLL_INTERVAL_MS = 3000;
 
 const qrImage = ref('');
+const qrError = ref('');
+const queryMessage = ref('');
 let timer: number | null = null;
+let pollInFlight = false;
+let disposed = false;
 
-const providerText =
-  props.order.provider === PaymentProvider.Alipay ? '支付宝' : '微信';
+const providerText = ORDER_PAYMENT_METHOD_TEXT[props.order.provider];
+
+const PAID_ORDER_STATUSES: ReadonlySet<OrderStatus> = new Set<OrderStatus>([
+  OrderStatus.PendingService,
+  OrderStatus.Dispatching,
+  OrderStatus.Serving,
+  OrderStatus.Completed,
+]);
+
+function isPaid(order: OrderView): boolean {
+  return Boolean(order.paidAt) || PAID_ORDER_STATUSES.has(order.status);
+}
 
 async function poll(): Promise<void> {
-  const order = await orderApi.payQuery(props.order.orderId);
-  if (order.status !== OrderStatus.PendingPayment) {
-    stopPolling();
-    emit('paid');
+  if (pollInFlight || disposed) {
+    return;
+  }
+  pollInFlight = true;
+  try {
+    const order = await orderApi.payQuery(props.order.orderId, { silent: true });
+    if (disposed) {
+      return;
+    }
+    queryMessage.value = '';
+    if (isPaid(order)) {
+      stopPolling();
+      emit('paid');
+      return;
+    }
+    if (order.status === OrderStatus.Cancelled) {
+      stopPolling();
+      queryMessage.value = '订单已取消，未完成支付';
+    }
+  } catch {
+    if (!disposed) {
+      queryMessage.value = '支付状态查询失败，将自动重试';
+    }
+  } finally {
+    pollInFlight = false;
   }
 }
 
@@ -41,11 +77,24 @@ function stopPolling(): void {
 }
 
 onMounted(async () => {
-  qrImage.value = await QRCode.toDataURL(props.order.qrCode, { width: 220 });
+  try {
+    qrImage.value = await QRCode.toDataURL(props.order.qrCode, { width: 220 });
+  } catch {
+    if (!disposed) {
+      qrError.value = '支付二维码生成失败，请关闭后重试';
+    }
+  }
+  if (disposed) {
+    return;
+  }
+  void poll();
   timer = window.setInterval(() => void poll(), POLL_INTERVAL_MS);
 });
 
-onBeforeUnmount(stopPolling);
+onBeforeUnmount(() => {
+  disposed = true;
+  stopPolling();
+});
 </script>
 
 <template>
@@ -69,11 +118,18 @@ onBeforeUnmount(stopPolling);
       <p class="tip">
         请使用{{ providerText }}扫一扫完成支付，支付成功后自动跳转
       </p>
+      <p
+        v-if="qrError || queryMessage"
+        class="feedback"
+        role="alert"
+      >
+        {{ queryMessage || qrError }}
+      </p>
       <button
         class="close"
         @click="emit('close')"
       >
-        取消支付
+        {{ queryMessage.includes('已取消') ? '关闭' : '取消支付' }}
       </button>
     </div>
   </div>
@@ -121,6 +177,13 @@ onBeforeUnmount(stopPolling);
 .tip {
   font-size: 12px;
   color: var(--c-text-secondary);
+  text-align: center;
+}
+
+.feedback {
+  min-height: 18px;
+  font-size: 12px;
+  color: #ff8a8a;
   text-align: center;
 }
 

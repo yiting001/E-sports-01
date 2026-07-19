@@ -5,14 +5,38 @@
  * 已建群订单提供进入订单群入口。
  */
 import {
+  BOOSTER_SERVICE_REGIONS,
   FEE_RATE_BASE,
+  ORDER_PAYMENT_METHOD_TEXT,
   ORDER_STATUS_TEXT,
-  PAYMENT_PROVIDER_TEXT,
+  OrderBoosterSelectionMode,
   fenToYuan,
   type AdminOrderView,
   type OrderStatus,
-  type PaymentProvider,
-} from '@app/contracts';
+  type OrderPaymentMethod,
+} from "@app/contracts";
+
+function serviceRegionText(value: AdminOrderView["serviceRegion"]): string {
+  if (!value) {
+    return "-";
+  }
+  return (
+    BOOSTER_SERVICE_REGIONS.find((item) => item.value === value)?.label ?? value
+  );
+}
+
+function boosterText(name: string, id: string, emptyText: string): string {
+  if (!id) {
+    return emptyText;
+  }
+  return name ? `${name}（ID：${id}）` : `ID：${id}`;
+}
+
+function selectionModeText(mode: OrderBoosterSelectionMode): string {
+  return mode === OrderBoosterSelectionMode.Specified
+    ? "老板指定打手"
+    : "平台自动安排";
+}
 
 /** 会员折扣减免金额（分）= 原价 - 券抵扣 - 实付 */
 function memberDiscountFen(order: AdminOrderView): number {
@@ -33,9 +57,9 @@ defineProps<{
 
 const emit = defineEmits<{
   /** 点击商品 → 由父页弹窗预览商品详情 */
-  'view-product': [productId: string];
+  "view-product": [productId: string];
   /** 点击进入订单群 → 由父页加群并跳转 IM */
-  'enter-group': [order: AdminOrderView];
+  "enter-group": [order: AdminOrderView];
 }>();
 
 const visible = defineModel<boolean>({ required: true });
@@ -70,19 +94,60 @@ const visible = defineModel<boolean>({ required: true });
       <el-descriptions-item label="数量">
         {{ order.quantity }}
       </el-descriptions-item>
+      <el-descriptions-item label="游戏账号 ID">
+        {{ order.gameAccountId || "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item label="游戏文字 ID">
+        {{ order.gameTextId || "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item label="游戏区服">
+        {{ serviceRegionText(order.serviceRegion) }}
+      </el-descriptions-item>
+      <el-descriptions-item label="打手安排方式">
+        <el-tag
+          :type="
+            order.boosterSelectionMode === OrderBoosterSelectionMode.Specified
+              ? 'warning'
+              : 'info'
+          "
+        >
+          {{ selectionModeText(order.boosterSelectionMode) }}
+        </el-tag>
+      </el-descriptions-item>
+      <el-descriptions-item label="老板指定打手">
+        {{
+          boosterText(
+            order.requestedBoosterName,
+            order.requestedBoosterId,
+            order.boosterSelectionMode === OrderBoosterSelectionMode.Specified
+              ? "指定信息缺失"
+              : "未指定"
+          )
+        }}
+      </el-descriptions-item>
+      <el-descriptions-item label="实际接单打手">
+        {{ boosterText(order.boosterName, order.boosterId, "尚未接单") }}
+      </el-descriptions-item>
       <el-descriptions-item label="商品原价（元）">
         {{ fenToYuan(order.originalAmountFen) }}
       </el-descriptions-item>
       <el-descriptions-item label="会员折扣">
         <template v-if="order.discountBp < FEE_RATE_BASE">
-          {{ discountText(order.discountBp) }}（-{{ fenToYuan(memberDiscountFen(order)) }} 元）
+          {{ discountText(order.discountBp) }}（-{{
+            fenToYuan(memberDiscountFen(order))
+          }}
+          元）
         </template>
         <template v-else>
           无折扣
         </template>
       </el-descriptions-item>
       <el-descriptions-item label="优惠券抵扣（元）">
-        {{ order.couponDeductionFen > 0 ? `-${fenToYuan(order.couponDeductionFen)}` : '未用券' }}
+        {{
+          order.couponDeductionFen > 0
+            ? `-${fenToYuan(order.couponDeductionFen)}`
+            : "未用券"
+        }}
       </el-descriptions-item>
       <el-descriptions-item label="实付金额（元）">
         {{ order.amountYuan }}
@@ -100,23 +165,20 @@ const visible = defineModel<boolean>({ required: true });
           未建群（支付成功后自动创建）
         </template>
       </el-descriptions-item>
-      <el-descriptions-item label="支付渠道">
-        {{ PAYMENT_PROVIDER_TEXT[order.provider as PaymentProvider] }}
+      <el-descriptions-item label="支付方式">
+        {{ ORDER_PAYMENT_METHOD_TEXT[order.provider as OrderPaymentMethod] }}
       </el-descriptions-item>
       <el-descriptions-item label="渠道交易号">
-        {{ order.providerTradeNo || '-' }}
+        {{ order.providerTradeNo || "-" }}
       </el-descriptions-item>
       <el-descriptions-item label="下单用户">
         {{ order.userId }}
       </el-descriptions-item>
       <el-descriptions-item label="关联客服">
-        {{ order.serviceAgentId || '未关联' }}
-      </el-descriptions-item>
-      <el-descriptions-item label="接单打手">
-        {{ order.boosterId || '未接单' }}
+        {{ order.serviceAgentId || "未关联" }}
       </el-descriptions-item>
       <el-descriptions-item label="用户备注">
-        {{ order.remark || '-' }}
+        {{ order.remark || "-" }}
       </el-descriptions-item>
       <el-descriptions-item label="备注附件">
         <div
@@ -147,8 +209,8 @@ const visible = defineModel<boolean>({ required: true });
           -
         </template>
       </el-descriptions-item>
-      <el-descriptions-item label="账号信息">
-        {{ order.accountInfo || '-' }}
+      <el-descriptions-item label="其他账号信息">
+        {{ order.accountInfo || "-" }}
       </el-descriptions-item>
       <el-descriptions-item label="下单时间">
         {{ formatDate(order.createdAt) }}

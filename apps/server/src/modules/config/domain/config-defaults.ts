@@ -5,11 +5,12 @@ import {
   DEFAULT_APP_NAME,
   InviteRewardType,
   LogLevel,
-  SmsProvider,
+  PORTAL_BANNER_LIMITS,
   StorageDriver,
   WALLET_DEFAULTS,
   REALNAME_REQUIRED_ROLES_KEY,
 } from '@app/contracts';
+import { SMS_DEFAULT_CONFIGS } from './sms-config-defaults';
 
 /** 默认配置项的形状 */
 export interface ConfigDefault {
@@ -35,7 +36,9 @@ export interface ConfigMigration {
 /**
  * 历史配置迁移清单（幂等）。
  * - upload.maxFileSize：由「字节」改为「MB」，旧默认 10485760 字节 → 10 MB（仅当仍为旧默认值时改写）。
+ * - upload.localBaseUrl：由固定本机端口改为同源路径，兼容反向代理和容器端口映射。
  * - im.service.welcome：由 string 改为 richtext（仅纠正类型，保留已编辑的欢迎语内容）。
+ * - portal.homeBanner：由 image 改为 json（仅纠正类型，读取用例兼容历史图片 URL）。
  */
 export const CONFIG_MIGRATIONS: ConfigMigration[] = [
   {
@@ -44,8 +47,17 @@ export const CONFIG_MIGRATIONS: ConfigMigration[] = [
     newValue: '10',
   },
   {
+    key: CONFIG_KEYS.upload.localBaseUrl,
+    legacyValue: 'http://127.0.0.1:3000/static',
+    newValue: '/static',
+  },
+  {
     key: CONFIG_KEYS.im.serviceWelcome,
     expectedType: ConfigValueType.RichText,
+  },
+  {
+    key: CONFIG_KEYS.portal.homeBanner,
+    expectedType: ConfigValueType.Json,
   },
 ];
 
@@ -71,10 +83,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
   },
   {
     key: CONFIG_KEYS.portal.homeBanner,
-    value: '',
-    type: ConfigValueType.Image,
+    value: JSON.stringify({
+      items: [],
+      intervalSeconds: PORTAL_BANNER_LIMITS.defaultIntervalSeconds,
+    }),
+    type: ConfigValueType.Json,
     group: ConfigGroup.Portal,
-    remark: 'C 端首页运营横幅图片（建议在「运营通知」页维护）',
+    remark: 'C 端首页运营横幅（多图、活动绑定与轮播间隔，在「运营通知」页维护）',
   },
   {
     key: CONFIG_KEYS.portal.showRank,
@@ -82,6 +97,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     type: ConfigValueType.Boolean,
     group: ConfigGroup.Portal,
     remark: 'C 端是否展示排行榜（个人中心入口与排行榜页），关闭后隐藏',
+  },
+  {
+    key: CONFIG_KEYS.booster.onboardingNoticeImage,
+    value: '',
+    type: ConfigValueType.Image,
+    group: ConfigGroup.Booster,
+    remark: 'C 端打手入驻公告图片（在配置中心「打手」分组维护）',
   },
   {
     key: CONFIG_KEYS.auth.accessTokenTtl,
@@ -120,7 +142,7 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
   },
   {
     key: CONFIG_KEYS.upload.localBaseUrl,
-    value: 'http://127.0.0.1:3000/static',
+    value: '/static',
     type: ConfigValueType.String,
     group: ConfigGroup.Upload,
     remark: '本地存储对外访问基础 URL',
@@ -190,166 +212,7 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     group: ConfigGroup.Im,
     remark: '坐席接入客服会话后自动发送的欢迎语（支持富文本/图片/视频）',
   },
-  {
-    key: CONFIG_KEYS.sms.provider,
-    value: SmsProvider.Log,
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '短信服务商：aliyun / tencent / volcano / log（默认 log，仅打日志不真正发送）',
-  },
-  {
-    key: CONFIG_KEYS.sms.codeLength,
-    value: '6',
-    type: ConfigValueType.Number,
-    group: ConfigGroup.Sms,
-    remark: '验证码位数',
-  },
-  {
-    key: CONFIG_KEYS.sms.codeTtl,
-    value: '300',
-    type: ConfigValueType.Number,
-    group: ConfigGroup.Sms,
-    remark: '验证码有效期（秒）',
-  },
-  {
-    key: CONFIG_KEYS.sms.sendInterval,
-    value: '60',
-    type: ConfigValueType.Number,
-    group: ConfigGroup.Sms,
-    remark: '同一手机号两次发送的最小间隔（秒）',
-  },
-  {
-    key: CONFIG_KEYS.sms.countryCode,
-    value: '+86',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '国际区号（E.164），腾讯云等需带区号的服务商使用',
-  },
-  {
-    key: CONFIG_KEYS.sms.aliyunAccessKeyId,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '阿里云短信 AccessKeyId',
-    secret: true,
-  },
-  {
-    key: CONFIG_KEYS.sms.aliyunAccessKeySecret,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '阿里云短信 AccessKeySecret',
-    secret: true,
-  },
-  {
-    key: CONFIG_KEYS.sms.aliyunSignName,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '阿里云短信签名',
-  },
-  {
-    key: CONFIG_KEYS.sms.aliyunTemplateCode,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '阿里云短信模板 Code（模板变量需用 ${code}）',
-  },
-  {
-    key: CONFIG_KEYS.sms.aliyunEndpoint,
-    value: 'dysmsapi.aliyuncs.com',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '阿里云短信服务 Endpoint',
-  },
-  {
-    key: CONFIG_KEYS.sms.tencentSecretId,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '腾讯云 SecretId',
-    secret: true,
-  },
-  {
-    key: CONFIG_KEYS.sms.tencentSecretKey,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '腾讯云 SecretKey',
-    secret: true,
-  },
-  {
-    key: CONFIG_KEYS.sms.tencentSdkAppId,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '腾讯云短信应用 SdkAppId',
-  },
-  {
-    key: CONFIG_KEYS.sms.tencentSignName,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '腾讯云短信签名',
-  },
-  {
-    key: CONFIG_KEYS.sms.tencentTemplateId,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '腾讯云短信模板 ID（模板变量按顺序，第一个为验证码）',
-  },
-  {
-    key: CONFIG_KEYS.sms.tencentRegion,
-    value: 'ap-guangzhou',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '腾讯云短信地域',
-  },
-  {
-    key: CONFIG_KEYS.sms.volcanoAccessKeyId,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '火山引擎 AccessKeyId',
-    secret: true,
-  },
-  {
-    key: CONFIG_KEYS.sms.volcanoSecretAccessKey,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '火山引擎 SecretAccessKey',
-    secret: true,
-  },
-  {
-    key: CONFIG_KEYS.sms.volcanoSmsAccount,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '火山引擎短信账号（SmsAccount）',
-  },
-  {
-    key: CONFIG_KEYS.sms.volcanoSignName,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '火山引擎短信签名',
-  },
-  {
-    key: CONFIG_KEYS.sms.volcanoTemplateId,
-    value: '',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '火山引擎短信模板 ID（模板变量需用 ${code}）',
-  },
-  {
-    key: CONFIG_KEYS.sms.volcanoRegion,
-    value: 'cn-north-1',
-    type: ConfigValueType.String,
-    group: ConfigGroup.Sms,
-    remark: '火山引擎地域',
-  },
+  ...SMS_DEFAULT_CONFIGS,
   {
     key: CONFIG_KEYS.log.persistEnabled,
     value: 'true',
@@ -535,7 +398,8 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     value: '',
     type: ConfigValueType.String,
     group: ConfigGroup.Wallet,
-    remark: '支付宝转账场景名称（商家平台-资金管理-转账场景 中声明的场景，如「业务结算」；留空则不传报备参数）',
+    remark:
+      '支付宝转账场景名称（商家平台-资金管理-转账场景 中声明的场景，如「业务结算」；留空则不传报备参数）',
   },
   {
     key: CONFIG_KEYS.wallet.alipayTransferReportInfoType,

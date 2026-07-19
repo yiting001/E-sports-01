@@ -10,19 +10,22 @@
 实现的功能：
 
 - **握手鉴权**：连接校验 access 令牌，无效则 `im:error` + 断连；连接后自动加入个人房间 `user:<id>`。消息处理前先等待握手鉴权完成（`authReady` 信号），避免客户端连接后立即发消息（如坐席订阅 `im:service:watch`）时身份未就绪被误判无权限。
+- **通用连接在线快照**：鉴权成功的每个 `/im` socket 按 `socketId → userId + tenantId` 登记到 `UserPresenceService`；同一用户任一标签页/设备存活即在线，断开最后一个 socket 才离线。该快照继续用于客服在线坐席等即时连接场景；打手是否接单已改由 booster 模块持久化状态维护，不再复用 socket presence。
 - **会话列表**（REST `GET /im/conversations`）：返回当前用户全部会话，含未读数、最后一条消息、显示标题（私聊解析为对端昵称）。
 - **会话搜索**（REST `GET /im/conversations/search?keyword=`）：在我参与的会话中按显示标题（私聊即对方用户名）忽略大小写模糊匹配，复用列表用例保证口径一致。
 - **聊天记录搜索**（REST `GET /im/messages/search`）：会话内按内容关键词 + 日期范围（`dateFrom`/`dateTo`，YYYY-MM-DD 闭区间，两者均可缺省）分页搜索（新→旧），仅会话成员可搜；不传关键词时即按日期翻阅当天聊天记录。
   - 管理端 UI：IM 页左侧会话列表顶部搜索框（防抖调会话搜索接口，清空回退全量列表）；聊天面板头部「搜索记录」按钮打开 `ImMessageSearchDialog`（关键词 + 日期范围选择器 + 分页结果）。
 - **群聊**：建群、改名、加/移成员、退群；成员变更广播系统消息（xx 加入/退出）。
 - **系统建群门面**：`GroupFacade` 供业务模块（如订单支付成功自动建群、打手接单进群）
-  以系统身份建群/幂等加人并广播系统消息，不做操作者管理权校验。
+  以系统身份建群/幂等加人并广播系统消息，不做操作者管理权校验。`ensureSystemGroup` 接收业务方稳定 UUID，重复调用复用群主体并补齐缺失成员；仅新建群或实际补员时推送会话变更，避免详情查询产生重复实时事件。
 - **客服**：访客发起会话进入待接入队列 → 坐席认领/管理员指派 → 接入对话 → 结束；支持配置自动分配与欢迎语。
   - **客服角色打通工作台**：内置「客服」角色（`service`）由 RbacSeeder 幂等补齐坐席所需菜单与接口权限（`im:menu` / `im:service:menu` / `im:message:history` / `im:service:agent`），管理员在用户管理中为客服人员分配该角色后即可登录管理端接待访客。
   - **C 端联系客服**：用户端 `apps/client` 消息页移动端点击会话进入 `/service` 全屏聊天；PC 端 `/messages` 采用左侧会话列表 + 右侧聊天面板，聊天面板复用 `ServiceChatPanel`，不重复实现 WebSocket 收发。客服聊天复用进行中的客服会话（否则在 `/service` 新发起 `POST /im/service`），经 `/im` WebSocket 拉历史与实时收发；系统富文本消息经 DOMPurify 净化后渲染。
 - **私聊**：按对端用户开启（已存在则复用）。
 - **实时收发**（`im:join` / `im:send` / `im:receive`）：进房成员校验，发送持久化后按房间广播；进房/发送同步刷新已读位点。
 - **未读统计**：每个成员维护 `lastReadAt`，列表未读数 = 该位点之后的消息条数。C 端导航「消息」入口（底部 TabBar 与 PC 顶部导航）展示红色未读总数角标（超 99 显示 99+），由 `stores/unread.store.ts`（基于通用角标工厂 `stores/badge-store.factory.ts`）汇总会话未读数驱动：启动轮询 + 路由切换后刷新，消息页本地列表变化时直接同步。
+
+明确非目标：连接在线状态只表示当前服务实例观察到的 socket 存活，不代表打手接单状态；当前没有跨实例 Redis presence、离线推送或心跳业务指标。
 
 ## 会话状态机
 
@@ -85,6 +88,27 @@ flowchart LR
 - `user:<id>`：个人房间，推送会话新增/变更（被拉群、被分配客服等）`im:conversation`。
 - `agents`：坐席房间，订阅客服队列推送 `im:service:queued`。
 
+### Socket 连接在线状态时序
+
+```mermaid
+sequenceDiagram
+  participant C as C 端/管理端客户端
+  participant G as ImGateway
+  participant T as TokenService + TenantContext
+  participant P as UserPresenceService
+  participant D as 在线坐席消费者
+
+  C->>G: /im handshake + access token
+  G->>T: 校验令牌并解析 userId/tenantId
+  G->>P: register(socketId, userId, tenantId)
+  D->>P: isOnline / onlineUserIds
+  P-->>D: 当前实例、当前租户的 online 快照
+  C-->>G: disconnect
+  G->>P: unregister(socketId)
+```
+
+连接在线快照不写 PostgreSQL，也不通过 `im:receive` 广播；多实例部署需后续引入带租户键的 Redis presence，否则不同实例上的在线坐席可能互相不可见。打手目录的 `online` 字段映射 `booster_application.accepting_orders`，不受 socket 连接或实例重启影响。
+
 ## C 端页面结构
 
 - `client/views/message/MessageView.vue`：消息页。移动端保留会话列表；PC 端为双栏布局，左侧展示会话摘要与未读数，右侧嵌入聊天面板；列表变化时同步导航未读角标。
@@ -104,6 +128,7 @@ modules/im/
 │   └── *-repository.interface.ts               仓储端口
 ├── application/
 │   ├── chat-realtime.service.ts                房间广播/在线坐席跟踪
+│   ├── user-presence.service.ts                按 socket/租户维护在线快照（内存）
 │   ├── system-message.service.ts               系统消息生成
 │   ├── conversation-access.service.ts          成员校验
 │   ├── conversation-view.assembler.ts          列表/详情视图装配(显示标题/未读)
@@ -189,6 +214,8 @@ erDiagram
   }
 ```
 
+Socket 连接状态没有 ER 实体或 migration；`UserPresenceService` 是应用实例生命周期内的内存索引，socket 断开即清理。租户 ID 参与索引和消费查询，不能把不同租户的同一用户 ID 合并。打手接单状态的数据模型与 migration 见 [booster.md](./booster.md)。
+
 ## 配置项（配置中心，无硬编码）
 
 | Key | 说明 |
@@ -205,10 +232,20 @@ erDiagram
 - **claim/assign 复用 ServiceAssignmentService**：坐席接入逻辑(置 active、加成员、欢迎语、推送)单一来源。
 - **显示标题装配**：私聊无存储标题，`ConversationViewAssembler` 批量解析对端昵称，避免 N+1。
 - **事件名/类型共享**：`IM_EVENTS`、各 View/Payload 定义在 `packages/contracts`，前后端复用避免魔法字符串。
+- **系统群可恢复**：系统群的核心会话与成员写入失败会向业务应用服务抛出，由业务方使用同一稳定 UUID 重试；欢迎消息和实时通知属于非核心副作用，失败只记录错误，不让已创建的群丢失关联。
 
 ## 相关端点
 
 详见 [api-reference.md](./api-reference.md#websocket-im)。
+
+## 安全、异常与验证
+
+- 握手失败会发送 `im:error` 后断开；未完成 `authReady` 前的消息会等待鉴权，避免连接竞态把合法用户误判为无权限。
+- `UserPresenceService` 只保存 socket ID、用户 ID 和租户 ID，不保存令牌、昵称或消息正文；断开清理由网关统一执行。
+- 系统群补建只接受服务端业务模块提供的 UUID，不开放新 HTTP 入口；同一租户下重复调用会复用会话并按唯一成员关系补齐，不把实时通知失败伪装成建群失败。
+- Socket presence 当前没有 Redis/数据库持久化和跨实例广播；实例重启或负载均衡切换会暂时影响在线坐席判断，但不会改变打手本人持久化的上线/下线状态。
+- `apps/server/test/im/user-presence.spec.ts` 覆盖多设备任一在线、最后连接离线和租户隔离；尚缺 Socket.IO 握手 + HTTP 端到端、跨实例 presence 和断线重连实测。
+- 根目录 `pnpm test` 当前串行执行服务端与客户端测试，服务端 58 项、客户端 Vitest 6 项全部通过；上述端到端和多实例风险仍未覆盖。
 
 ## 前端即时消息页
 

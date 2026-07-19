@@ -9,7 +9,7 @@ import {
 } from '../../domain/storage-driver.interface';
 
 const FALLBACK_DIR = 'uploads';
-const FALLBACK_BASE_URL = 'http://127.0.0.1:3000/static';
+const FALLBACK_BASE_URL = '/static';
 
 /**
  * 本地存储驱动。

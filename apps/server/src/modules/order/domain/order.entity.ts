@@ -1,10 +1,12 @@
 import {
+  type BoosterServiceRegion,
   FEE_RATE_BASE,
+  OrderBoosterSelectionMode,
+  OrderPaymentMethod,
   OrderStatus,
-  PaymentProvider,
   type RemarkMediaItem,
 } from '@app/contracts';
-import { Column, Entity, Index } from 'typeorm';
+import { Check, Column, Entity, Index } from 'typeorm';
 import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 import { bigintTransformer } from '../../../shared/database/numeric.transformer';
 
@@ -14,6 +16,17 @@ import { bigintTransformer } from '../../../shared/database/numeric.transformer'
  * 以商户订单号 orderNo 全局唯一，作为支付回调的幂等键。
  */
 @Entity('service_order')
+@Index('IDX_service_order_requested_booster', ['tenantId', 'requestedBoosterId'])
+@Check(
+  'CHK_service_order_game_account_id',
+  `"game_account_id" = '' OR "game_account_id" ~ '^[0-9]{1,32}$'`,
+)
+@Check('CHK_service_order_service_region', `"service_region" IN ('', 'delta-mobile', 'delta-pc')`)
+@Check(
+  'CHK_service_order_booster_selection',
+  `("booster_selection_mode" = 'auto' AND "requested_booster_id" = '')
+    OR ("booster_selection_mode" = 'specified' AND "requested_booster_id" <> '')`,
+)
 export class OrderEntity extends TenantScopedEntity {
   /** 下单用户 id */
   @Index()
@@ -51,6 +64,22 @@ export class OrderEntity extends TenantScopedEntity {
   @Column({ name: 'booster_name', length: 64, default: '' })
   boosterName!: string;
 
+  /** 下单时锁定的指定打手；客服确认前不提前写入实际接单人。 */
+  @Column({ name: 'requested_booster_id', length: 36, default: '' })
+  requestedBoosterId!: string;
+
+  /** 指定打手显示名快照 */
+  @Column({ name: 'requested_booster_name', length: 64, default: '' })
+  requestedBoosterName!: string;
+
+  @Column({
+    name: 'booster_selection_mode',
+    type: 'varchar',
+    length: 16,
+    default: OrderBoosterSelectionMode.Auto,
+  })
+  boosterSelectionMode!: OrderBoosterSelectionMode;
+
   /** 订单群会话 id（支付成功自动建群后回填；未建群为空串） */
   @Column({ name: 'conversation_id', length: 36, default: '' })
   conversationId!: string;
@@ -64,7 +93,12 @@ export class OrderEntity extends TenantScopedEntity {
   amountFen!: number;
 
   /** 折前原价（分）= 下单时单价 × 数量 */
-  @Column({ name: 'original_amount_fen', type: 'bigint', default: 0, transformer: bigintTransformer })
+  @Column({
+    name: 'original_amount_fen',
+    type: 'bigint',
+    default: 0,
+    transformer: bigintTransformer,
+  })
   originalAmountFen!: number;
 
   /** 下单时会员折扣快照（万分比，10000 = 未打折） */
@@ -76,7 +110,12 @@ export class OrderEntity extends TenantScopedEntity {
   userCouponId!: string | null;
 
   /** 优惠券抵扣金额快照（分，未用券为 0） */
-  @Column({ name: 'coupon_deduction_fen', type: 'bigint', default: 0, transformer: bigintTransformer })
+  @Column({
+    name: 'coupon_deduction_fen',
+    type: 'bigint',
+    default: 0,
+    transformer: bigintTransformer,
+  })
   couponDeductionFen!: number;
 
   /** 打手提成金额（分，完成结算时回填） */
@@ -87,9 +126,9 @@ export class OrderEntity extends TenantScopedEntity {
   @Column({ name: 'commission_rate_bp', type: 'int', default: 0 })
   commissionRateBp!: number;
 
-  /** 支付渠道 */
+  /** 订单支付方式 */
   @Column({ type: 'varchar', length: 16 })
-  provider!: PaymentProvider;
+  provider!: OrderPaymentMethod;
 
   /** 订单状态 */
   @Index()
@@ -107,6 +146,18 @@ export class OrderEntity extends TenantScopedEntity {
   /** 账号信息（仅本人/接单打手/管理端可见，大厅视图置空） */
   @Column({ name: 'account_info', length: 256, default: '' })
   accountInfo!: string;
+
+  /** 数字游戏 ID；历史订单为空串 */
+  @Column({ name: 'game_account_id', length: 32, default: '' })
+  gameAccountId!: string;
+
+  /** 文本游戏 ID（选填） */
+  @Column({ name: 'game_text_id', length: 64, default: '' })
+  gameTextId!: string;
+
+  /** 本单游戏区服；历史订单为空串 */
+  @Column({ name: 'service_region', type: 'varchar', length: 32, default: '' })
+  serviceRegion!: BoosterServiceRegion | '';
 
   /** 渠道交易号（支付成功后回填） */
   @Column({ name: 'provider_trade_no', type: 'varchar', length: 64, nullable: true })

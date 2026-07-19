@@ -5,21 +5,23 @@
  * （下单/支付/下发大厅/接单/完成/取消）；
  * 已建群订单提供「进入订单群」入口，待付款订单可取消。
  */
-import { computed, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { computed, onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {
+  BOOSTER_SERVICE_REGIONS,
   FEE_RATE_BASE,
+  ORDER_PAYMENT_METHOD_TEXT,
   ORDER_STATUS_TEXT,
+  OrderBoosterSelectionMode,
   OrderStatus,
-  PAYMENT_PROVIDER_TEXT,
   fenToYuan,
   type OrderView,
-} from '@app/contracts';
-import AppIcon from '@/components/common/AppIcon.vue';
-import RemarkMediaGallery from '@/components/order/RemarkMediaGallery.vue';
-import { orderApi } from '@/api/order.api';
-import { useToast } from '@/composables/use-toast';
-import './OrderDetailView.css';
+} from "@app/contracts";
+import AppIcon from "@/components/common/AppIcon.vue";
+import RemarkMediaGallery from "@/components/order/RemarkMediaGallery.vue";
+import { orderApi } from "@/api/order.api";
+import { useToast } from "@/composables/use-toast";
+import "./OrderDetailView.css";
 
 const route = useRoute();
 const router = useRouter();
@@ -27,6 +29,7 @@ const toast = useToast();
 
 const order = ref<OrderView | null>(null);
 const loading = ref(true);
+const loadError = ref(false);
 
 /** 会员折扣减免金额（分）= 原价 - 券抵扣 - 实付 */
 const memberDiscountFen = computed(() => {
@@ -43,19 +46,31 @@ const memberDiscountFen = computed(() => {
 /** 会员折扣文案：万分比 → 几折（如 9500 → 95 折） */
 const discountText = computed(() => {
   if (!order.value) {
-    return '';
+    return "";
   }
   return `${(order.value.discountBp / (FEE_RATE_BASE / 100)).toFixed(0)} 折`;
 });
 
 function formatTime(iso: string): string {
-  return iso ? iso.slice(0, 19).replace('T', ' ') : '-';
+  return iso ? iso.slice(0, 19).replace("T", " ") : "-";
+}
+
+function serviceRegionText(value: OrderView["serviceRegion"]): string {
+  return (
+    BOOSTER_SERVICE_REGIONS.find((item) => item.value === value)?.label ?? "-"
+  );
+}
+
+function openBoosterProfile(userId: string): void {
+  if (userId) {
+    void router.push({ name: "booster-profile", params: { userId } });
+  }
 }
 
 /** 进入订单群（支付成功后自动创建，成员含客服/管理员，打手接单后进群） */
 function enterGroup(): void {
   if (order.value?.conversationId) {
-    router.push({ name: 'chat', params: { id: order.value.conversationId } });
+    router.push({ name: "chat", params: { id: order.value.conversationId } });
   }
 }
 
@@ -64,15 +79,24 @@ async function cancel(): Promise<void> {
     return;
   }
   order.value = await orderApi.cancel(order.value.id);
-  toast.show('订单已取消');
+  toast.show("订单已取消");
 }
 
-onMounted(async () => {
+async function loadOrder(): Promise<void> {
+  loading.value = true;
+  loadError.value = false;
   try {
     order.value = await orderApi.detail(route.params.id as string);
+  } catch {
+    order.value = null;
+    loadError.value = true;
   } finally {
     loading.value = false;
   }
+}
+
+onMounted(() => {
+  void loadOrder();
 });
 </script>
 
@@ -105,7 +129,11 @@ onMounted(async () => {
             <span
               class="thumb"
               :class="{ 'thumb--image': order.productCover }"
-              :style="order.productCover ? { backgroundImage: `url(${order.productCover})` } : undefined"
+              :style="
+                order.productCover
+                  ? { backgroundImage: `url(${order.productCover})` }
+                  : undefined
+              "
             >
               <AppIcon
                 v-if="!order.productCover"
@@ -136,7 +164,15 @@ onMounted(async () => {
           <dl class="rows">
             <div class="row">
               <dt>接单打手</dt>
-              <dd>{{ order.boosterName || order.boosterId }}</dd>
+              <dd>
+                <button
+                  type="button"
+                  class="booster-link"
+                  @click="openBoosterProfile(order.boosterId)"
+                >
+                  {{ order.boosterName || order.boosterId }}
+                </button>
+              </dd>
             </div>
             <div class="row">
               <dt>接单时间</dt>
@@ -148,6 +184,46 @@ onMounted(async () => {
             >
               <dt>完成时间</dt>
               <dd>{{ formatTime(order.completedAt) }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="card block">
+          <h3 class="block-title">
+            打手安排
+          </h3>
+          <dl class="rows">
+            <div class="row">
+              <dt>安排方式</dt>
+              <dd>
+                {{
+                  order.boosterSelectionMode ===
+                    OrderBoosterSelectionMode.Specified
+                    ? "指定打手"
+                    : "自动安排"
+                }}
+              </dd>
+            </div>
+            <div
+              v-if="order.requestedBoosterId"
+              class="row"
+            >
+              <dt>指定打手</dt>
+              <dd>
+                <button
+                  type="button"
+                  class="booster-link"
+                  @click="openBoosterProfile(order.requestedBoosterId)"
+                >
+                  {{ order.requestedBoosterName || order.requestedBoosterId }}
+                </button>
+              </dd>
+            </div>
+            <div
+              v-if="order.requestedBoosterId && !order.boosterId"
+              class="arrangement-note"
+            >
+              已锁定该打手，支付成功后由客服确认接单。
             </div>
           </dl>
         </section>
@@ -233,7 +309,24 @@ onMounted(async () => {
             </div>
             <div class="row">
               <dt>支付方式</dt>
-              <dd>{{ PAYMENT_PROVIDER_TEXT[order.provider] }}</dd>
+              <dd>{{ ORDER_PAYMENT_METHOD_TEXT[order.provider] }}</dd>
+            </div>
+            <div class="row">
+              <dt>数字游戏 ID</dt>
+              <dd class="mono">
+                {{ order.gameAccountId || "-" }}
+              </dd>
+            </div>
+            <div
+              v-if="order.gameTextId"
+              class="row"
+            >
+              <dt>文字游戏 ID</dt>
+              <dd>{{ order.gameTextId }}</dd>
+            </div>
+            <div class="row">
+              <dt>游戏区服</dt>
+              <dd>{{ serviceRegionText(order.serviceRegion) }}</dd>
             </div>
             <div class="row">
               <dt>下单时间</dt>
@@ -307,7 +400,26 @@ onMounted(async () => {
       </div>
 
       <p
-        v-else-if="!loading"
+        v-else-if="loading"
+        class="hint card"
+      >
+        订单加载中…
+      </p>
+      <section
+        v-else-if="loadError"
+        class="hint card"
+        role="alert"
+      >
+        <p>订单详情加载失败</p>
+        <button
+          type="button"
+          @click="loadOrder"
+        >
+          重新加载
+        </button>
+      </section>
+      <p
+        v-else
         class="hint card"
       >
         订单不存在

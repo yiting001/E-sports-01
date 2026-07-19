@@ -21,9 +21,12 @@ export const ACTIVITY_ENTRY_ID = 'activity';
 /** 投诉入口条目 id，点击进入投诉反馈页 */
 export const COMPLAINT_ENTRY_ID = 'complaint';
 
+/** 挑选打手入口条目 id，点击进入打手目录 */
+export const BOOSTER_DIRECTORY_ENTRY_ID = 'booster-directory';
+
 /** 三个运营快捷入口 */
 export const QUICK_ENTRIES: QuickEntry[] = [
   { id: ACTIVITY_ENTRY_ID, icon: 'gift', banner: '老板消费活动', label: '老板消费活动入口' },
   { id: COMPLAINT_ENTRY_ID, icon: 'shield', banner: '投诉客服/打手', label: '投诉客服/打手入口' },
-  { id: 'app', icon: 'download', banner: '官方APP下载', label: '官方APP下载' },
+  { id: BOOSTER_DIRECTORY_ENTRY_ID, icon: 'gamepad', banner: '挑选打手', label: '挑选打手入口' },
 ];

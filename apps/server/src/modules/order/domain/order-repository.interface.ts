@@ -13,6 +13,16 @@ export interface AdminOrderFilter {
 
 export const ORDER_REPOSITORY = Symbol('ORDER_REPOSITORY');
 
+export interface ClaimOrderForServingInput {
+  orderId: string;
+  tenantId: string;
+  allowedStatuses: readonly OrderStatus[];
+  expectedRequestedBoosterId: string;
+  boosterId: string;
+  boosterName: string;
+  acceptedAt: Date;
+}
+
 /** 订单仓储接口（领域层只依赖抽象，实现在基础设施层，读操作按租户上下文过滤） */
 export interface OrderRepository {
   /** 按主键取订单 */
@@ -43,4 +53,6 @@ export interface OrderRepository {
   ): Promise<[OrderEntity[], number]>;
   create(data: Partial<OrderEntity>): OrderEntity;
   save(entity: OrderEntity): Promise<OrderEntity>;
+  /** 行锁内复核订单状态与指定人后原子推进到服务中；竞争失败返回 null。 */
+  claimForServing(input: ClaimOrderForServingInput): Promise<OrderEntity | null>;
 }

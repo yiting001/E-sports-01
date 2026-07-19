@@ -15,6 +15,7 @@
 - 统一**读穿透缓存**（Redis，TTL 300s），并按类型（string/number/boolean/json/richtext/image）安全读取，缓存不可用时降级回源。
 - **富文本配置（richtext）**：值为 HTML 字符串（读取等同 string），配置中心编辑时启用富文本编辑器（AiEditor，图片/视频走 `POST /upload` 返回 URL），渲染前经 DOMPurify 净化防 XSS。如 `im.service.welcome`。
 - **图片配置（image）**：值为图片上传后的可访问 URL（读取等同 string），配置中心编辑时用图片上传控件（走 `POST /upload` 返回 URL）并预览。如软件图标 `system.appLogo`。
+- **打手入驻公告图**：`booster.onboardingNoticeImage` 在「打手」分组维护，默认空串；C 端不直接读取配置列表，而是由打手模块通过 `GET /booster/mine` 下发给登录用户。
 - **品牌信息**：`system.appName`（软件名称）与 `system.appLogo`（软件图标）可在配置中心修改，并经公开接口 `GET /config/branding` 在登录前下发给前端，用于浏览器标题、favicon、登录页与侧边栏 logo。
 - **用户协议**：`auth.userAgreement`（富文本）在配置中心「认证」组编辑，经公开接口 `GET /config/agreement` 登录前下发；C 端登录/注册页需勾选同意后才可提交，弹层查看全文。
 - **历史迁移（幂等）**：`im.service.welcome` 由 string 改为 richtext 仅纠正类型、保留已编辑内容；`upload.maxFileSize` 旧字节默认值迁移为 MB。
@@ -26,7 +27,8 @@ modules/config/
 ├── domain/
 │   ├── config-item.entity.ts           配置项实体（key/value/type/group/remark/secret）
 │   ├── config-repository.interface.ts  仓储端口 + 注入令牌
-│   └── config-defaults.ts              默认配置清单（默认值唯一来源）
+│   ├── config-defaults.ts              默认配置清单（含打手公告图）
+│   └── sms-config-defaults.ts          短信配置清单（由主清单组合）
 ├── application/
 │   ├── config.service.ts               读取服务（Redis 读穿透缓存 + 类型化读取）
 │   ├── config.mapper.ts                实体 ↔ DTO（含密钥脱敏）
@@ -113,11 +115,13 @@ sequenceDiagram
 | --- | --- | --- | --- | --- |
 | `system.appName` | System | `基础设施平台` | 软件名称（标题/登录页/侧边栏） | |
 | `system.appLogo` | System | （空） | 软件图标（image，作 logo 与 favicon） | |
+| `portal.homeBanner` | Portal | `{ "items": [], "intervalSeconds": 3 }` | C 端首页横幅列表、活动关联与 1～3 秒轮播间隔（json） | |
+| `booster.onboardingNoticeImage` | Booster | （空） | C 端打手入驻页公告图片（image） | |
 | `auth.accessTokenTtl` | Auth | `3600` | 访问令牌有效期（秒） | |
 | `auth.refreshTokenTtl` | Auth | `604800` | 刷新令牌有效期（秒） | |
 | `upload.driver` | Upload | `local` | 存储驱动 local/oss | |
 | `upload.maxFileSize` | Upload | `10` | 单文件最大体积（MB） | |
-| `upload.localBaseUrl` | Upload | `http://127.0.0.1:3000/static` | 本地存储访问基础 URL | |
+| `upload.localBaseUrl` | Upload | `/static` | 本地存储同源访问路径；独立 API 域名部署时改为完整 URL | |
 | `upload.localDir` | Upload | `uploads` | 本地存储根目录 | |
 | `upload.ossEndpoint` | Upload | （空） | OSS Endpoint | |
 | `upload.ossBucket` | Upload | （空） | OSS Bucket | |
@@ -137,6 +141,54 @@ sequenceDiagram
 | `sms.volcano.smsAccount` / `signName` / `templateId` / `region` | Sms | — | 火山引擎账号/签名/模板/地域 | |
 
 > 标记为密钥（`secret: true`）的配置项，列表查询时值会被脱敏为 `******`，不会明文返回前端。短信详见 [sms.md](./sms.md)。
+
+## 首页横幅配置迁移
+
+`portal.homeBanner` 的元数据类型由 `image` 升级为 `json`。启动时 `CONFIG_MIGRATIONS` 只纠正类型，不改写已有 `value`；notice 模块读取时兼容空串、历史单图 URL 和当前 JSON，因此升级不需要停机搬迁数据。
+
+```mermaid
+flowchart LR
+  Legacy["历史图片 URL"] --> Parse["parsePortalBannerConfig"]
+  Json["当前 JSON"] --> Parse
+  Dirty["非法或越界配置"] --> Parse
+  Parse --> View["items 最多 10 项 / interval 1～3 秒"]
+```
+
+- 该配置沿用全局 `sys_config`，不带 `tenantId`；活动关联只保存 UUID，不把活动内容复制进配置。
+- 活动数据仍受原活动接口的登录与租户隔离保护。多租户若要求各租户独立横幅，需要建立租户实体和 migration，不应继续扩展此全局键。
+- 管理端通常通过“运营通知”页维护该 JSON；配置中心直接写入的脏值会在公开读取时被归一化或丢弃。
+
+## 打手入驻公告图
+
+管理员在管理端「配置中心 → 打手」编辑 `booster.onboardingNoticeImage`。该项由启动播种器幂等创建，类型为 `image`、默认值为空串、不是敏感配置；已有值不会被启动播种覆盖。
+
+```mermaid
+sequenceDiagram
+  actor Admin as 管理员
+  participant UI as ConfigView
+  participant Upload as Upload模块
+  participant Config as Config中心
+  participant Booster as BoosterPolicyService
+  participant Client as C端入驻页
+
+  Admin->>UI: 选择打手分组并编辑公告图
+  UI->>Upload: POST /api/upload
+  Upload-->>UI: 图片 URL
+  UI->>Config: POST /api/config 保存 image 配置
+  Config->>Config: upsert 并删除 Redis 缓存
+  Client->>Booster: GET /api/booster/mine
+  Booster->>Config: getString(key, "")
+  Config-->>Booster: 图片 URL 或空串
+  Booster-->>Client: onboardingNoticeImage
+```
+
+权限与边界：
+
+- 进入配置页并查看目录需要 `config:menu`、`config:list`；保存需要 `config:save`；上传新图还需要 `upload:file:upload`。
+- 公告图配置是全平台唯一键，`sys_config` 不带租户字段；任一有权管理员的修改会影响全部租户的 C 端入驻页。
+- 管理端图片控件在浏览器侧限制为 `image/*` 且不超过 5 MB；服务端仍以 `upload.maxFileSize` 为最终大小上限，当前不校验真实图片内容。
+- 清空或替换配置只改变 URL，不会删除 Upload 模块中的原文件和元数据；需要在文件管理中显式清理。反向操作也需谨慎，删除仍被配置引用的文件会使 C 端加载失败。
+- 配置为空时 C 端保留公告文字但不显示图片；URL 加载失败时前端显示失败提示，不阻断申请表单。
 
 ## 设计要点
 

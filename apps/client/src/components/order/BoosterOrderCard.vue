@@ -12,6 +12,8 @@ defineProps<{
   order: OrderView;
   /** 主操作按钮文案；为空则不渲染操作区 */
   actionLabel?: string;
+  /** 主操作是否禁用；大厅下线时使用，服务端仍执行最终门禁。 */
+  actionDisabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -95,6 +97,7 @@ function formatTime(iso: string): string {
     >
       <button
         class="action"
+        :disabled="actionDisabled"
         @click.stop="emit('action', order)"
       >
         {{ actionLabel }}
@@ -216,5 +219,10 @@ function formatTime(iso: string): string {
   color: var(--c-bg);
   background: var(--c-accent);
   clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+.action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 </style>

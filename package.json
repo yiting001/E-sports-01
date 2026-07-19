@@ -16,7 +16,8 @@
     "build:web": "pnpm --filter @app/web build",
     "build:client": "pnpm --filter @app/client build",
     "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @app/server test && pnpm --filter @app/client test"
   },
   "packageManager": "pnpm@9.15.1"
 }

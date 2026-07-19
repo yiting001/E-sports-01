@@ -7,6 +7,7 @@ import { withTenant } from '../../../shared/tenant/tenant-scope.util';
 import { OrderEntity } from '../domain/order.entity';
 import {
   AdminOrderFilter,
+  ClaimOrderForServingInput,
   OrderRepository,
 } from '../domain/order-repository.interface';
 
@@ -107,5 +108,30 @@ export class TypeormOrderRepository implements OrderRepository {
 
   save(entity: OrderEntity): Promise<OrderEntity> {
     return this.repo.save(entity);
+  }
+
+  claimForServing(input: ClaimOrderForServingInput): Promise<OrderEntity | null> {
+    return this.repo.manager.transaction(async (manager) => {
+      const repo = manager.getRepository(OrderEntity);
+      const order = await repo.findOne({
+        where: { id: input.orderId, tenantId: input.tenantId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (
+        !order ||
+        !input.allowedStatuses.includes(order.status) ||
+        order.boosterId ||
+        order.userId === input.boosterId ||
+        order.requestedBoosterId !== input.expectedRequestedBoosterId ||
+        (order.requestedBoosterId && order.requestedBoosterId !== input.boosterId)
+      ) {
+        return null;
+      }
+      order.status = OrderStatus.Serving;
+      order.boosterId = input.boosterId;
+      order.boosterName = input.boosterName;
+      order.acceptedAt = input.acceptedAt;
+      return repo.save(order);
+    });
   }
 }

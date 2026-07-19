@@ -1,9 +1,4 @@
-import {
-  CallHandler,
-  ExecutionContext,
-  Injectable,
-  NestInterceptor,
-} from '@nestjs/common';
+import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { HttpException } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
@@ -20,7 +15,40 @@ interface AuthedRequest extends Request {
 /** detail 字段最大长度，避免超长请求体撑爆日志表 */
 const DETAIL_MAX_LENGTH = 4000;
 /** 请求体中需脱敏的字段名（不区分大小写、子串匹配） */
-const SENSITIVE_KEYS = ['password', 'token', 'secret', 'authorization'];
+const SENSITIVE_KEYS = [
+  'password',
+  'token',
+  'secret',
+  'authorization',
+  'applicantname',
+  'gender',
+  'serviceregions',
+  'contacttype',
+  'contactvalue',
+  'invitationcode',
+  'materialimage',
+  'intro',
+];
+
+/** 递归脱敏凭证与个人申请资料，供错误日志写入前统一处理。 */
+export function sanitizeLogValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeLogValue(item));
+  }
+  if (value && typeof value === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+      result[key] = isSensitiveLogKey(key) ? '***' : sanitizeLogValue(item);
+    }
+    return result;
+  }
+  return value;
+}
+
+function isSensitiveLogKey(key: string): boolean {
+  const lower = key.toLowerCase();
+  return SENSITIVE_KEYS.some((sensitiveKey) => lower.includes(sensitiveKey));
+}
 
 /**
  * 访问/错误日志拦截器。
@@ -51,18 +79,12 @@ export class LoggingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: () => this.record(req, res.statusCode, startedAt, null),
-        error: (err: unknown) =>
-          this.record(req, this.statusOf(err), startedAt, err),
+        error: (err: unknown) => this.record(req, this.statusOf(err), startedAt, err),
       }),
     );
   }
 
-  private record(
-    req: AuthedRequest,
-    statusCode: number,
-    startedAt: number,
-    error: unknown,
-  ): void {
+  private record(req: AuthedRequest, statusCode: number, startedAt: number, error: unknown): void {
     void this.persist(req, statusCode, startedAt, error);
   }
 
@@ -116,16 +138,14 @@ export class LoggingInterceptor implements NestInterceptor {
       detail.response = error.getResponse();
     }
     if (this.hasBody(req.body)) {
-      detail.body = this.sanitize(req.body);
+      detail.body = sanitizeLogValue(req.body);
     }
     if (detail.response === undefined && detail.body === undefined) {
       return null;
     }
     try {
       const text = JSON.stringify(detail);
-      return text.length > DETAIL_MAX_LENGTH
-        ? `${text.slice(0, DETAIL_MAX_LENGTH)}…`
-        : text;
+      return text.length > DETAIL_MAX_LENGTH ? `${text.slice(0, DETAIL_MAX_LENGTH)}…` : text;
     } catch {
       return null;
     }
@@ -140,26 +160,6 @@ export class LoggingInterceptor implements NestInterceptor {
       return false;
     }
     return true;
-  }
-
-  /** 递归脱敏：命中敏感字段名的值替换为 ***，避免日志泄露凭证 */
-  private sanitize(value: unknown): unknown {
-    if (Array.isArray(value)) {
-      return value.map((item) => this.sanitize(item));
-    }
-    if (value && typeof value === 'object') {
-      const result: Record<string, unknown> = {};
-      for (const [key, val] of Object.entries(value)) {
-        result[key] = this.isSensitive(key) ? '***' : this.sanitize(val);
-      }
-      return result;
-    }
-    return value;
-  }
-
-  private isSensitive(key: string): boolean {
-    const lower = key.toLowerCase();
-    return SENSITIVE_KEYS.some((s) => lower.includes(s));
   }
 
   private isExcluded(path: string, prefixes: string[]): boolean {

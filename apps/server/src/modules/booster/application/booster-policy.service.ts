@@ -87,6 +87,11 @@ export class BoosterPolicyService {
     );
   }
 
+  /** C 端入驻公告图片（由管理端配置中心维护） */
+  getOnboardingNoticeImage(): Promise<string> {
+    return this.config.getString(CONFIG_KEYS.booster.onboardingNoticeImage, '');
+  }
+
   /** 档位合法性校验：非空、数量上限、名称必填、费率与门槛范围 */
   private validateTiers(tiers: BoosterLevelTier[]): void {
     if (tiers.length === 0 || tiers.length > BOOSTER_LEVEL_LIMITS.tiersMax) {

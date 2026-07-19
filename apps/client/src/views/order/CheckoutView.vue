@@ -1,73 +1,87 @@
 <script setup lang="ts">
 /**
- * 下单页（全屏，独立于商品详情页）：商品摘要 + 数量/备注（含图片视频附件）/
- * 账号信息（仅接单打手可见）/支付方式，确认下单后弹出扫码支付
- * （支付宝/微信），支付成功跳订单详情页。
+ * 下单页：结构化游戏账号/区服 + 自动或指定打手 + 数量/备注/优惠/支付。
+ * 跨页重新挑人时通过内存草稿恢复已填内容，不把敏感账号写入本地持久化。
  */
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
-  ORDER_LIMITS,
-  PaymentProvider,
+  FEE_RATE_BASE,
+  OrderBoosterSelectionMode,
+  OrderPaymentMethod,
   UserCouponStatus,
   calcCouponDeductionFen,
   calcDiscountedFen,
   fenToYuan,
+  type BoosterServiceRegion,
   type CreateOrderResult,
   type ProductPublicView,
   type RemarkMediaItem,
   type UserCouponView,
 } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
+import CheckoutPaymentMethods from '@/components/order/CheckoutPaymentMethods.vue';
+import CheckoutServiceForm from '@/components/order/CheckoutServiceForm.vue';
 import PayDialog from '@/components/order/PayDialog.vue';
-import RemarkMediaUploader from '@/components/order/RemarkMediaUploader.vue';
 import { commerceApi } from '@/api/commerce.api';
 import { couponApi } from '@/api/coupon.api';
 import { memberApi } from '@/api/member.api';
 import { orderApi } from '@/api/order.api';
 import { useToast } from '@/composables/use-toast';
+import { useCheckoutDraftStore } from '@/stores/checkout-draft.store';
+import {
+  resolveCompatibleServiceRegion,
+  resolveCheckoutServiceRegion,
+} from '@/utils/checkout-state';
+import { resolveMediaUrl } from '@/utils/media-url';
 import './CheckoutView.css';
 import './CheckoutView.responsive.css';
-
-/** 支付方式选项（渠道 → 展示文案） */
-const PROVIDERS = [
-  { value: PaymentProvider.Alipay, label: '支付宝' },
-  { value: PaymentProvider.Wechat, label: '微信支付' },
-] as const;
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const checkout = useCheckoutDraftStore();
+const productId = String(route.params.productId);
+const savedDraft = checkout.getDraft(productId);
 
 const product = ref<ProductPublicView | null>(null);
 const loading = ref(true);
-const missing = ref(false);
-
-const quantity = ref(1);
-const remark = ref('');
-/** 备注附件（图片/视频） */
-const remarkMedia = ref<RemarkMediaItem[]>([]);
-/** 账号信息（仅本人、接单打手与管理端可见） */
-const accountInfo = ref('');
-const provider = ref<PaymentProvider>(PaymentProvider.Alipay);
+const loadError = ref(false);
+const gameAccountId = ref(savedDraft?.gameAccountId ?? '');
+const gameTextId = ref(savedDraft?.gameTextId ?? '');
+const accountInfo = ref(savedDraft?.accountInfo ?? '');
+const quantity = ref(savedDraft?.quantity ?? 1);
+const remark = ref(savedDraft?.remark ?? '');
+const remarkMedia = ref<RemarkMediaItem[]>(savedDraft?.remarkMedia ?? []);
+const provider = ref<OrderPaymentMethod>(savedDraft?.provider ?? OrderPaymentMethod.Alipay);
+const serviceRegion = ref<BoosterServiceRegion>(
+  resolveCheckoutServiceRegion(checkout.selectedBooster, savedDraft?.serviceRegion),
+);
 const submitting = ref(false);
 const payOrder = ref<CreateOrderResult | null>(null);
+const completed = ref(false);
 
-/** 我的可用优惠券与所选券（空串 = 不使用） */
 const coupons = ref<UserCouponView[]>([]);
-const selectedCouponId = ref('');
+const selectedCouponId = ref(savedDraft?.selectedCouponId ?? '');
 const couponListOpen = ref(false);
-/** 当前会员折扣（万分比），与后端计价口径一致 */
-const discountBp = ref(0);
+const discountBp = ref(FEE_RATE_BASE);
 
-/** 会员折后金额（分）：优惠券门槛与抵扣都以此为基数（与后端一致） */
+if (savedDraft && !checkout.specifiedBooster) {
+  checkout.setSelectionMode(savedDraft.boosterSelectionMode);
+}
+
+const selectionMode = computed({
+  get: () => checkout.boosterSelectionMode,
+  set: (mode: OrderBoosterSelectionMode) => checkout.setSelectionMode(mode),
+});
+const selectedBooster = computed(() => checkout.selectedBooster);
+const coverUrl = computed(() => resolveMediaUrl(product.value?.cover ?? ''));
+
 const memberAmountFen = computed(() =>
   product.value
     ? calcDiscountedFen(product.value.priceFen * quantity.value, discountBp.value)
     : 0,
 );
-
-/** 按当前金额可用的券（未使用、未过期且达门槛） */
 const usableCoupons = computed(() =>
   coupons.value.filter(
     (item) =>
@@ -76,12 +90,9 @@ const usableCoupons = computed(() =>
       calcCouponDeductionFen(item.type, item.value, item.thresholdFen, memberAmountFen.value) > 0,
   ),
 );
-
 const selectedCoupon = computed(() =>
   usableCoupons.value.find((item) => item.id === selectedCouponId.value) ?? null,
 );
-
-/** 券抵扣金额（分）：最多抵到 0 元，与后端口径一致 */
 const couponDeductionFen = computed(() => {
   const coupon = selectedCoupon.value;
   if (!coupon) {
@@ -95,36 +106,67 @@ const couponDeductionFen = computed(() => {
   );
   return Math.min(Math.max(deduction, 0), memberAmountFen.value);
 });
-
-/** 应付总额（会员折后再减券抵扣，分 → 元展示） */
-const totalYuan = computed(() =>
-  fenToYuan(memberAmountFen.value - couponDeductionFen.value),
-);
-
-/** 优惠券行文案 */
+const totalFen = computed(() => memberAmountFen.value - couponDeductionFen.value);
+const totalYuan = computed(() => fenToYuan(totalFen.value));
 const couponRowText = computed(() => {
   if (selectedCoupon.value) {
     return `-¥${fenToYuan(couponDeductionFen.value)}`;
   }
-  return usableCoupons.value.length
-    ? `${usableCoupons.value.length} 张可用`
-    : '暂无可用';
+  return usableCoupons.value.length ? `${usableCoupons.value.length} 张可用` : '暂无可用';
 });
+
+function saveCurrentDraft(): void {
+  checkout.saveDraft({
+    productId,
+    gameAccountId: gameAccountId.value,
+    gameTextId: gameTextId.value,
+    accountInfo: accountInfo.value,
+    serviceRegion: serviceRegion.value,
+    quantity: quantity.value,
+    remark: remark.value,
+    remarkMedia: remarkMedia.value,
+    provider: provider.value,
+    selectedCouponId: selectedCouponId.value,
+    boosterSelectionMode: selectionMode.value,
+  });
+}
 
 function pickCoupon(id: string): void {
   selectedCouponId.value = selectedCouponId.value === id ? '' : id;
   couponListOpen.value = false;
 }
 
-function changeQuantity(delta: number): void {
-  const next = quantity.value + delta;
-  if (next >= ORDER_LIMITS.quantityMin && next <= ORDER_LIMITS.quantityMax) {
-    quantity.value = next;
+function openBoosterPicker(): void {
+  saveCurrentDraft();
+  void router.push({
+    name: 'booster-list',
+    query: { returnTo: route.fullPath, serviceRegion: serviceRegion.value },
+  });
+}
+
+function validateOrder(): boolean {
+  if (!/^\d+$/.test(gameAccountId.value)) {
+    toast.show('请输入正确的数字游戏 ID');
+    return false;
   }
+  if (selectionMode.value === OrderBoosterSelectionMode.Specified && !checkout.specifiedBooster) {
+    toast.show('请先选择指定打手');
+    openBoosterPicker();
+    return false;
+  }
+  if (
+    checkout.specifiedBooster &&
+    !checkout.specifiedBooster.serviceRegions.includes(serviceRegion.value)
+  ) {
+    toast.show('所选打手不支持当前区服，请重新选择');
+    openBoosterPicker();
+    return false;
+  }
+  return true;
 }
 
 async function submit(): Promise<void> {
-  if (!product.value) {
+  if (!product.value || submitting.value || !validateOrder()) {
     return;
   }
   submitting.value = true;
@@ -133,12 +175,16 @@ async function submit(): Promise<void> {
       productId: product.value.id,
       quantity: quantity.value,
       provider: provider.value,
-      remark: remark.value.trim() || undefined,
+      gameAccountId: gameAccountId.value,
+      gameTextId: gameTextId.value || undefined,
+      accountInfo: accountInfo.value || undefined,
+      serviceRegion: serviceRegion.value,
+      boosterSelectionMode: selectionMode.value,
+      requestedBoosterId: checkout.specifiedBooster?.userId,
+      remark: remark.value || undefined,
       remarkMedia: remarkMedia.value.length ? remarkMedia.value : undefined,
-      accountInfo: accountInfo.value.trim() || undefined,
       userCouponId: selectedCoupon.value?.id || undefined,
     });
-    // 0 元单后端已直接落账，无需扫码支付
     payOrder.value = result;
     if (result.paid) {
       onPaid();
@@ -151,28 +197,74 @@ async function submit(): Promise<void> {
 function onPaid(): void {
   const orderId = payOrder.value?.orderId;
   payOrder.value = null;
+  completed.value = true;
+  checkout.clearOrderContext();
   toast.show('支付成功，客服将尽快为您安排服务');
-  if (orderId) {
-    void router.replace({ name: 'order-detail', params: { id: orderId } });
-  } else {
-    void router.replace('/orders');
-  }
+  void router.replace(orderId
+    ? { name: 'order-detail', params: { id: orderId } }
+    : { name: 'orders' });
 }
 
-onMounted(async () => {
-  try {
-    const [detail, mine, member] = await Promise.all([
-      commerceApi.getProduct(String(route.params.productId)),
-      couponApi.mine(),
-      memberApi.mine(),
-    ]);
-    product.value = detail;
-    coupons.value = mine;
-    discountBp.value = member.discountBp;
-  } catch {
-    missing.value = true;
-  } finally {
-    loading.value = false;
+async function loadCheckout(): Promise<void> {
+  loading.value = true;
+  loadError.value = false;
+  const [detailResult, couponResult, memberResult] = await Promise.allSettled([
+    commerceApi.getProduct(productId),
+    couponApi.mine(),
+    memberApi.mine(),
+  ]);
+  if (detailResult.status === 'fulfilled') {
+    product.value = detailResult.value;
+  } else {
+    product.value = null;
+    loadError.value = true;
+  }
+  coupons.value = couponResult.status === 'fulfilled' ? couponResult.value : [];
+  discountBp.value = memberResult.status === 'fulfilled'
+    ? memberResult.value.discountBp
+    : FEE_RATE_BASE;
+  if (couponResult.status === 'rejected' || memberResult.status === 'rejected') {
+    toast.show('部分优惠信息加载失败，请确认价格后下单');
+  }
+  loading.value = false;
+}
+
+watch(
+  () => checkout.selectedBooster,
+  (booster) => {
+    if (booster && !booster.serviceRegions.includes(serviceRegion.value)) {
+      serviceRegion.value = booster.serviceRegions[0] ?? serviceRegion.value;
+    }
+  },
+  { immediate: true },
+);
+
+watch(serviceRegion, (region) => {
+  const booster = checkout.specifiedBooster;
+  if (!booster) {
+    return;
+  }
+  const compatibleRegion = resolveCompatibleServiceRegion(booster, region);
+  if (compatibleRegion === region) {
+    return;
+  }
+  if (compatibleRegion) {
+    serviceRegion.value = compatibleRegion;
+  }
+  toast.show(
+    compatibleRegion
+      ? '所选打手不支持该区服，请先更换打手'
+      : '所选打手暂未配置接单区服，请重新选择',
+  );
+});
+
+onMounted(() => {
+  void loadCheckout();
+});
+
+onBeforeUnmount(() => {
+  if (!completed.value) {
+    saveCurrentDraft();
   }
 });
 </script>
@@ -182,6 +274,7 @@ onMounted(async () => {
     <header class="bar">
       <div class="bar-inner">
         <button
+          type="button"
           class="back"
           aria-label="返回"
           @click="router.back()"
@@ -191,32 +284,42 @@ onMounted(async () => {
             :size="20"
           />
         </button>
-        <span class="name">确认下单</span>
+        <span class="name">提交订单</span>
       </div>
     </header>
 
-    <div class="scroll">
-      <p
+    <main class="scroll">
+      <section
         v-if="loading"
-        class="hint"
+        class="checkout-state"
+        aria-live="polite"
       >
-        加载中…
-      </p>
-      <p
-        v-else-if="missing || !product"
-        class="hint"
+        <span class="checkout-loader" />
+        <p>订单信息加载中</p>
+      </section>
+      <section
+        v-else-if="loadError || !product"
+        class="checkout-state card"
+        role="alert"
       >
-        商品不存在或已下架
-      </p>
+        <h2>商品信息加载失败</h2>
+        <p>商品可能已下架，请重新加载后再试。</p>
+        <button
+          type="button"
+          @click="loadCheckout"
+        >
+          重新加载
+        </button>
+      </section>
       <template v-else>
         <section class="card summary">
           <div
             class="thumb"
-            :class="{ 'thumb--image': product.cover }"
-            :style="product.cover ? { backgroundImage: `url(${product.cover})` } : undefined"
+            :class="{ 'thumb--image': coverUrl }"
+            :style="coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined"
           >
             <AppIcon
-              v-if="!product.cover"
+              v-if="!coverUrl"
               name="gem"
               :size="26"
               class="thumb-icon"
@@ -227,54 +330,29 @@ onMounted(async () => {
               {{ product.title }}
             </p>
             <p class="sub">
-              {{ product.categoryName }}
+              {{ product.categoryName }} · 单价 ¥{{ fenToYuan(product.priceFen) }}
             </p>
           </div>
-          <span class="price">¥{{ fenToYuan(product.priceFen) }}</span>
+          <span class="price">¥{{ fenToYuan(product.priceFen * quantity) }}</span>
         </section>
 
-        <section class="card form">
-          <div class="row">
-            <span class="label">数量</span>
-            <div class="stepper">
-              <button
-                class="step"
-                :disabled="quantity <= ORDER_LIMITS.quantityMin"
-                @click="changeQuantity(-1)"
-              >
-                −
-              </button>
-              <span class="count">{{ quantity }}</span>
-              <button
-                class="step"
-                :disabled="quantity >= ORDER_LIMITS.quantityMax"
-                @click="changeQuantity(1)"
-              >
-                ＋
-              </button>
-            </div>
-          </div>
-          <div class="row row--col">
-            <span class="label">备注</span>
-            <textarea
-              v-model="remark"
-              class="remark"
-              :maxlength="ORDER_LIMITS.remarkMax"
-              placeholder="大区/段位/开黑时间等（选填）"
-            />
-            <RemarkMediaUploader v-model="remarkMedia" />
-          </div>
-          <div class="row row--col">
-            <span class="label">账号信息</span>
-            <textarea
-              v-model="accountInfo"
-              class="remark"
-              :maxlength="ORDER_LIMITS.accountInfoMax"
-              placeholder="游戏账号等（选填，仅接单打手可见）"
-            />
-          </div>
-          <div class="row row--col">
+        <CheckoutServiceForm
+          v-model:game-account-id="gameAccountId"
+          v-model:game-text-id="gameTextId"
+          v-model:account-info="accountInfo"
+          v-model:service-region="serviceRegion"
+          v-model:selection-mode="selectionMode"
+          v-model:quantity="quantity"
+          v-model:remark="remark"
+          v-model:remark-media="remarkMedia"
+          :selected-booster="selectedBooster"
+          @pick-booster="openBoosterPicker"
+        />
+
+        <section class="card payment-card">
+          <div class="coupon-section">
             <button
+              type="button"
               class="coupon-row"
               :disabled="!usableCoupons.length"
               @click="couponListOpen = !couponListOpen"
@@ -283,9 +361,7 @@ onMounted(async () => {
               <span
                 class="coupon-text"
                 :class="{ active: selectedCoupon }"
-              >
-                {{ couponRowText }}
-              </span>
+              >{{ couponRowText }}</span>
             </button>
             <div
               v-if="couponListOpen"
@@ -294,6 +370,7 @@ onMounted(async () => {
               <button
                 v-for="item in usableCoupons"
                 :key="item.id"
+                type="button"
                 class="coupon-opt"
                 :class="{ picked: item.id === selectedCouponId }"
                 @click="pickCoupon(item.id)"
@@ -305,23 +382,13 @@ onMounted(async () => {
               </button>
             </div>
           </div>
-          <div class="row">
-            <span class="label">支付方式</span>
-            <div class="providers">
-              <button
-                v-for="opt in PROVIDERS"
-                :key="opt.value"
-                class="provider"
-                :class="{ active: provider === opt.value }"
-                @click="provider = opt.value"
-              >
-                {{ opt.label }}
-              </button>
-            </div>
-          </div>
+          <CheckoutPaymentMethods
+            v-model="provider"
+            :amount-fen="totalFen"
+          />
         </section>
       </template>
-    </div>
+    </main>
 
     <footer
       v-if="product"
@@ -332,11 +399,12 @@ onMounted(async () => {
         <span class="total-value">¥{{ totalYuan }}</span>
       </div>
       <button
+        type="button"
         class="buy"
         :disabled="submitting"
         @click="submit"
       >
-        {{ submitting ? '下单中…' : '确认下单' }}
+        {{ submitting ? '提交中…' : '立即下单' }}
       </button>
     </footer>
 

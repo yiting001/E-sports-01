@@ -4,10 +4,11 @@ import {
   FundDirection,
   PAGINATION_DEFAULTS,
   PERMS,
+  WALLET_TXN_TYPE_TEXT,
   WalletStatus,
-  WalletTxnType,
   type WalletAdminView,
   type WalletTransactionView,
+  type WalletTxnType,
 } from '@app/contracts';
 import { ElMessage } from 'element-plus';
 import { Refresh, Search } from '@element-plus/icons-vue';
@@ -23,17 +24,6 @@ const page = ref<number>(PAGINATION_DEFAULTS.page);
 const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const keyword = ref('');
 const loading = ref(false);
-
-const txnTypeText: Record<WalletTxnType, string> = {
-  [WalletTxnType.Recharge]: '充值',
-  [WalletTxnType.Withdraw]: '提现',
-  [WalletTxnType.Adjust]: '调整',
-  [WalletTxnType.Commission]: '订单提成',
-  [WalletTxnType.Deposit]: '缴纳押金',
-  [WalletTxnType.DepositRefund]: '押金退还',
-  [WalletTxnType.Penalty]: '罚款',
-  [WalletTxnType.InviteReward]: '邀请奖励',
-};
 
 async function load(): Promise<void> {
   loading.value = true;
@@ -306,7 +296,7 @@ onMounted(() => {
           width="110"
         >
           <template #default="{ row }">
-            {{ txnTypeText[row.type as WalletTxnType] }}
+            {{ WALLET_TXN_TYPE_TEXT[row.type as WalletTxnType] }}
           </template>
         </el-table-column>
         <el-table-column

@@ -7,7 +7,7 @@ import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   FundDirection,
-  WalletTxnType,
+  WALLET_TXN_TYPE_TEXT,
   type WalletTransactionView,
   type WalletView,
 } from '@app/contracts';
@@ -20,18 +20,6 @@ import { useToast } from '@/composables/use-toast';
 import './WalletView.responsive.css';
 
 const PAGE_SIZE = 10;
-
-/** 流水类型 → 展示文案 */
-const TXN_TEXT: Record<WalletTxnType, string> = {
-  [WalletTxnType.Recharge]: '充值',
-  [WalletTxnType.Withdraw]: '提现',
-  [WalletTxnType.Adjust]: '平台调整',
-  [WalletTxnType.Commission]: '订单提成',
-  [WalletTxnType.Deposit]: '缴纳押金',
-  [WalletTxnType.DepositRefund]: '押金退还',
-  [WalletTxnType.Penalty]: '罚款',
-  [WalletTxnType.InviteReward]: '邀请奖励',
-};
 
 const router = useRouter();
 const toast = useToast();
@@ -178,7 +166,7 @@ onMounted(() => {
           >
             <div class="txn-left">
               <p class="txn-type">
-                {{ TXN_TEXT[txn.type] }}
+                {{ WALLET_TXN_TYPE_TEXT[txn.type] }}
                 <span
                   v-if="txn.remark"
                   class="txn-remark"

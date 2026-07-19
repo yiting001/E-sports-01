@@ -6,13 +6,13 @@
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
+  ORDER_PAYMENT_METHOD_TEXT,
   ORDER_STATUS_TEXT,
   OrderStatus,
   PAGINATION_DEFAULTS,
-  PAYMENT_PROVIDER_TEXT,
   PERMS,
   type AdminOrderView,
-  type PaymentProvider,
+  type OrderPaymentMethod,
 } from '@app/contracts';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Refresh, Search } from '@element-plus/icons-vue';
@@ -234,11 +234,11 @@ onMounted(load);
           </template>
         </el-table-column>
         <el-table-column
-          label="支付渠道"
+          label="支付方式"
           width="90"
         >
           <template #default="{ row }">
-            {{ PAYMENT_PROVIDER_TEXT[row.provider as PaymentProvider] }}
+            {{ ORDER_PAYMENT_METHOD_TEXT[row.provider as OrderPaymentMethod] }}
           </template>
         </el-table-column>
         <el-table-column

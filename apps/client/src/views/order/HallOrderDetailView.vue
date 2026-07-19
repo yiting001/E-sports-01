@@ -9,6 +9,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ORDER_STATUS_TEXT, type OrderView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import RemarkMediaGallery from '@/components/order/RemarkMediaGallery.vue';
+import { boosterApi } from '@/api/booster.api';
 import { orderApi } from '@/api/order.api';
 import { useToast } from '@/composables/use-toast';
 import './OrderDetailView.css';
@@ -20,6 +21,9 @@ const toast = useToast();
 const order = ref<OrderView | null>(null);
 const loading = ref(true);
 const accepting = ref(false);
+const acceptingOrders = ref(false);
+const availabilityLoading = ref(true);
+const availabilityError = ref(false);
 
 function formatTime(iso: string): string {
   return iso ? iso.slice(0, 19).replace('T', ' ') : '-';
@@ -27,7 +31,7 @@ function formatTime(iso: string): string {
 
 /** 接单：成功后提示并返回大厅 */
 async function accept(): Promise<void> {
-  if (!order.value || accepting.value) {
+  if (!order.value || accepting.value || !acceptingOrders.value) {
     return;
   }
   accepting.value = true;
@@ -40,7 +44,19 @@ async function accept(): Promise<void> {
   }
 }
 
+async function loadAvailability(): Promise<void> {
+  try {
+    const mine = await boosterApi.mine();
+    acceptingOrders.value = mine.record?.acceptingOrders ?? false;
+  } catch {
+    availabilityError.value = true;
+  } finally {
+    availabilityLoading.value = false;
+  }
+}
+
 onMounted(async () => {
+  void loadAvailability();
   try {
     order.value = await orderApi.hallDetail(route.params.id as string);
   } finally {
@@ -133,10 +149,18 @@ onMounted(async () => {
         <div class="actions">
           <button
             class="accept"
-            :disabled="accepting"
+            :disabled="accepting || availabilityLoading || !acceptingOrders"
             @click="accept"
           >
-            {{ accepting ? '接单中…' : '接单' }}
+            {{
+              accepting
+                ? '接单中…'
+                : availabilityError
+                  ? '状态加载失败'
+                  : acceptingOrders
+                    ? '接单'
+                    : '当前已下线'
+            }}
           </button>
         </div>
       </div>
@@ -164,5 +188,10 @@ onMounted(async () => {
   color: var(--c-bg);
   background: var(--c-accent);
   clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+.accept:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 </style>

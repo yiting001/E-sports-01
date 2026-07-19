@@ -79,7 +79,7 @@ export const CONFIG_KEYS = {
     appLogo: 'system.appLogo',
   },
   portal: {
-    /** C 端首页运营横幅图片 URL（未配置为空，前端回退默认样式） */
+    /** C 端首页运营横幅 JSON（多图、活动绑定与轮播间隔） */
     homeBanner: 'portal.homeBanner',
     /** C 端是否展示排行榜（个人中心入口与排行榜页） */
     showRank: 'portal.showRank',
@@ -219,6 +219,8 @@ export const CONFIG_KEYS = {
     depositMaxFen: 'booster.depositMaxFen',
     /** 提交入驻申请是否要求已通过实名认证 */
     requireRealname: 'booster.requireRealname',
+    /** C 端打手入驻页顶部公告图片 */
+    onboardingNoticeImage: 'booster.onboardingNoticeImage',
   },
   member: {
     /** 会员等级档位（JSON 数组：等级/名称/累计消费门槛/折扣万分比） */

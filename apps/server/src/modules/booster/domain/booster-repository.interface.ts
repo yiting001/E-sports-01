@@ -9,11 +9,12 @@ export interface BoosterRepository {
   findByUserId(userId: string): Promise<BoosterApplicationEntity | null>;
   /** 按主键取申请记录 */
   findById(id: string): Promise<BoosterApplicationEntity | null>;
-  /** 分页管理列表，可按状态过滤，按提交时间倒序 */
+  /** 分页管理列表，可按状态、名称或注册手机号过滤，按提交时间倒序 */
   paginate(
     skip: number,
     take: number,
     status?: BoosterStatus,
+    keyword?: string,
   ): Promise<[BoosterApplicationEntity[], number]>;
   create(data: Partial<BoosterApplicationEntity>): BoosterApplicationEntity;
   save(entity: BoosterApplicationEntity): Promise<BoosterApplicationEntity>;

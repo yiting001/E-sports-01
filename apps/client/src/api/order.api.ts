@@ -5,11 +5,11 @@ import type {
   OrderView,
   PaginatedResult,
 } from '@app/contracts';
-import { http } from './http';
+import { http, type RequestOptions } from './http';
 
 /** C 端订单接口：下单支付 + 我的订单查询/取消 */
 export const orderApi = {
-  /** 创建订单并发起扫码支付，返回二维码内容 */
+  /** 创建订单并按所选方式支付；支付宝/微信待支付时返回二维码内容 */
   create(payload: CreateOrderPayload): Promise<CreateOrderResult> {
     return http.post('/order', payload);
   },
@@ -18,8 +18,8 @@ export const orderApi = {
     return http.get(`/order/${id}`);
   },
   /** 主动查询支付结果（调渠道官方查单兜底，回调未达也能确认支付） */
-  payQuery(id: string): Promise<OrderView> {
-    return http.get(`/order/${id}/pay/query`);
+  payQuery(id: string, options?: RequestOptions): Promise<OrderView> {
+    return http.get(`/order/${id}/pay/query`, options);
   },
   /** 分页查询我的订单（可按状态过滤） */
   mine(
@@ -34,8 +34,12 @@ export const orderApi = {
     return http.post(`/order/${id}/cancel`);
   },
   /** 接单大厅：分页浏览待接单订单（仅打手） */
-  hall(page: number, pageSize: number): Promise<PaginatedResult<OrderView>> {
-    return http.get('/order/hall', { params: { page, pageSize } });
+  hall(
+    page: number,
+    pageSize: number,
+    options: Pick<RequestOptions, 'silent'> = {},
+  ): Promise<PaginatedResult<OrderView>> {
+    return http.get('/order/hall', { ...options, params: { page, pageSize } });
   },
   /** 接单大厅：查看待接单订单详情（仅打手；账号信息接单前不可见） */
   hallDetail(id: string): Promise<OrderView> {

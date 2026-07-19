@@ -1,28 +1,26 @@
 services:
   postgres:
-    image: postgres:16-alpine
-    container_name: infra-postgres
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: infra
-      POSTGRES_PASSWORD: infra_dev_pwd
-      POSTGRES_DB: infra_platform
-    ports:
-      - '5432:5432'
+      POSTGRES_USER: ${POSTGRES_USER:-infra}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-infra_dev_pwd}
+      POSTGRES_DB: ${POSTGRES_DB:-infra_platform}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U infra -d infra_platform']
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-infra} -d ${POSTGRES_DB:-infra_platform}',
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
 
   redis:
     image: redis:7-alpine
-    container_name: infra-redis
     restart: unless-stopped
-    ports:
-      - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
@@ -31,6 +29,103 @@ services:
       timeout: 5s
       retries: 10
 
+  uploads-init:
+    image: alpine:3.20
+    restart: 'no'
+    command:
+      - /bin/sh
+      - -c
+      - |
+        if [ ! -f /target/.docker-initialized ]; then
+          cp -a /source/. /target/
+          touch /target/.docker-initialized
+        fi
+        chown -R 1000:1000 /target
+    volumes:
+      - ./apps/server/uploads:/source:ro
+      - uploads_data:/target
+
+  server:
+    build:
+      context: .
+      target: server
+    restart: unless-stopped
+    env_file:
+      - apps/server/.env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-infra}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-infra_dev_pwd}
+      DB_NAME: ${POSTGRES_DB:-infra_platform}
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-false}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - '${HOST_BIND:-127.0.0.1}:${SERVER_HOST_PORT:-3003}:3000'
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      uploads-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/commerce/public/categories').then((response) => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_WS_BASE_URL: ''
+    restart: unless-stopped
+    ports:
+      - '${HOST_BIND:-127.0.0.1}:${WEB_HOST_PORT:-8080}:80'
+    depends_on:
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  client:
+    build:
+      context: .
+      target: client
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_WS_BASE_URL: ''
+    restart: unless-stopped
+    ports:
+      - '${HOST_BIND:-127.0.0.1}:${CLIENT_HOST_PORT:-8081}:80'
+    depends_on:
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:

@@ -15,6 +15,7 @@ import { TypeormConversationRepository } from './infrastructure/conversation.rep
 import { TypeormConversationMemberRepository } from './infrastructure/conversation-member.repository';
 
 import { ChatRealtimeService } from './application/chat-realtime.service';
+import { UserPresenceService } from './application/user-presence.service';
 import { SystemMessageService } from './application/system-message.service';
 import { ConversationAccessService } from './application/conversation-access.service';
 import { ConversationViewAssembler } from './application/conversation-view.assembler';
@@ -103,6 +104,7 @@ import { ServiceCloseController } from './interfaces/controllers/service.close.c
       useClass: TypeormConversationMemberRepository,
     },
     ChatRealtimeService,
+    UserPresenceService,
     SystemMessageService,
     ConversationAccessService,
     ConversationViewAssembler,
@@ -129,6 +131,6 @@ import { ServiceCloseController } from './interfaces/controllers/service.close.c
     CloseServiceUseCase,
     ImGateway,
   ],
-  exports: [GroupFacade],
+  exports: [GroupFacade, UserPresenceService],
 })
 export class ImModule {}

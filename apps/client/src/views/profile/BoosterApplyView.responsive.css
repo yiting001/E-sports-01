@@ -1,7 +1,4 @@
-/**
- * 打手入驻页响应式布局：移动端保持全屏申请表单；
- * PC 端将标题栏、状态提示、资料表单和提交按钮统一收敛到内容宽度。
- */
+/** 桌面端：左侧公告/状态，右侧申请资料，提交按钮与表单同轴。 */
 @media (min-width: 768px) {
   .booster-page.booster-page.booster-page {
     position: static;
@@ -19,7 +16,7 @@
 
   .booster-page .bar-inner.bar-inner {
     width: 100%;
-    max-width: 860px;
+    max-width: 980px;
     min-height: 40px;
     margin: 0 auto;
   }
@@ -36,82 +33,51 @@
     letter-spacing: 0;
   }
 
-  .booster-page > .scroll.scroll {
+  .booster-page.booster-page.booster-page > .scroll.scroll {
     width: 100%;
-    max-width: 860px;
+    max-width: 980px;
     margin: 18px auto 0;
     padding: 0;
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
+    grid-template-columns: 300px minmax(0, 1fr);
     align-items: start;
     gap: 16px;
     overflow: visible;
   }
 
-  .booster-page .hint.hint {
-    grid-column: 1 / -1;
-    padding: 28px 0;
-  }
-
-  .booster-page .state.state {
+  .booster-page .side.side {
     grid-column: 1;
     position: sticky;
     top: 24px;
-    min-height: 160px;
-    padding: 20px;
-    justify-content: center;
   }
 
-  .booster-page .state-title.state-title {
-    font-size: 18px;
-  }
-
-  .booster-page .state-tip.state-tip {
-    font-size: 14px;
-  }
-
-  .booster-page .form.form {
-    grid-column: 1 / -1;
-    padding: 0;
-  }
-
-  .booster-page .state + .form.form {
+  .booster-page .application-form.application-form {
     grid-column: 2;
   }
 
-  .booster-page .row.row {
-    min-height: 78px;
-    padding: 20px 24px;
+  .booster-page .load-state.load-state {
+    grid-column: 1 / -1;
+    min-height: 180px;
+    justify-content: center;
   }
 
-  .booster-page .label.label {
-    width: 76px;
+  .booster-page > .footer.footer {
+    width: 100%;
+    max-width: 980px;
+    margin: 16px auto 0;
+    padding: 0;
+    border-top: none;
+    background: transparent;
   }
 
-  .booster-page .input.input {
-    min-height: 40px;
-    padding: 0 12px;
-    border: 1px solid var(--c-border);
-    background: var(--c-bg);
-  }
-
-  .booster-page .textarea.textarea {
-    min-height: 132px;
-    padding: 10px 12px;
-  }
-
-  .booster-page .value.value {
-    line-height: 1.7;
+  .booster-page .footer-inner.footer-inner {
+    max-width: none;
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 16px;
   }
 
   .booster-page .submit.submit {
-    grid-column: 1 / -1;
-    width: 160px;
-    min-height: 44px;
-    padding: 0 18px;
-  }
-
-  .booster-page .submit--with-state.submit--with-state {
     grid-column: 2;
   }
 }

@@ -7,7 +7,7 @@ import type {
 } from '@app/contracts';
 import { http } from './http';
 
-/** 运营通知管理接口：通知 CRUD + 首页横幅图片读写 */
+/** 运营通知管理接口：通知 CRUD + 首页横幅读写 */
 export const noticeApi = {
   /** 分页查询通知列表 */
   list(page: number, pageSize: number): Promise<PaginatedResult<NoticeView>> {
@@ -25,11 +25,11 @@ export const noticeApi = {
   remove(id: string): Promise<void> {
     return http.delete(`/notice/${id}`);
   },
-  /** 读取首页横幅图片 */
+  /** 读取首页横幅配置 */
   getBanner(): Promise<PortalBannerView> {
     return http.get('/notice/banner');
   },
-  /** 更新首页横幅图片（传空串即撤下横幅） */
+  /** 更新首页横幅配置（传空数组即撤下全部横幅） */
   updateBanner(payload: UpdatePortalBannerPayload): Promise<PortalBannerView> {
     return http.put('/notice/banner', payload);
   },

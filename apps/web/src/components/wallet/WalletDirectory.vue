@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { WalletTransactionView } from '@app/contracts';
-import { FundDirection, WalletTxnType } from '@app/contracts';
+import {
+  FundDirection,
+  WALLET_TXN_TYPE_TEXT,
+  type WalletTxnType,
+} from '@app/contracts';
 import { Download, Refresh, Upload } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
@@ -22,16 +26,6 @@ const emit = defineEmits<{
   'update:pageSize': [value: number];
 }>();
 
-const txnTypeText: Record<WalletTxnType, string> = {
-  [WalletTxnType.Recharge]: '充值',
-  [WalletTxnType.Withdraw]: '提现',
-  [WalletTxnType.Adjust]: '调整',
-  [WalletTxnType.Commission]: '订单提成',
-  [WalletTxnType.Deposit]: '缴纳押金',
-  [WalletTxnType.DepositRefund]: '押金退还',
-  [WalletTxnType.Penalty]: '罚款',
-  [WalletTxnType.InviteReward]: '邀请奖励',
-};
 </script>
 
 <template>
@@ -86,7 +80,7 @@ const txnTypeText: Record<WalletTxnType, string> = {
               </el-icon>
             </span>
             <div>
-              <strong>{{ txnTypeText[row.type as WalletTxnType] }}</strong>
+              <strong>{{ WALLET_TXN_TYPE_TEXT[row.type as WalletTxnType] }}</strong>
               <small>{{ row.bizOrderId ?? '系统流水' }}</small>
             </div>
           </div>

@@ -1,0 +1,265 @@
+.booster-list-page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-bg);
+}
+
+.bar {
+  flex: none;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+.bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.back {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  transform: rotate(180deg);
+}
+
+.bar-title {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name {
+  font-size: 16px;
+  font-weight: 800;
+  font-style: italic;
+}
+
+.tip {
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.directory-tools {
+  position: sticky;
+  top: -16px;
+  z-index: 5;
+  padding: 0 0 14px;
+  background: var(--c-bg);
+}
+
+.directory-search {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-left: 13px;
+  color: var(--c-accent);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+}
+
+.directory-search:focus-within {
+  border-color: var(--c-accent);
+}
+
+.directory-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: var(--c-text);
+  background: transparent;
+}
+
+.directory-search button {
+  align-self: stretch;
+  min-width: 68px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-bg);
+  background: var(--c-accent);
+}
+
+.gender-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.gender-tabs button {
+  min-width: 72px;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 12px;
+  color: var(--c-text-secondary);
+  border-bottom: 2px solid transparent;
+}
+
+.gender-tabs button.active {
+  color: var(--c-accent);
+  border-color: var(--c-accent);
+}
+
+.booster-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.booster-skeleton {
+  min-height: 150px;
+  display: grid;
+  grid-template-columns: 94px 1fr;
+  gap: 14px;
+  padding: 14px;
+}
+
+.booster-skeleton > span,
+.booster-skeleton i {
+  display: block;
+  background: linear-gradient(90deg, var(--c-surface-2), rgba(150, 165, 195, 0.16), var(--c-surface-2));
+  background-size: 220% 100%;
+  animation: booster-loading 1.2s linear infinite;
+}
+
+.booster-skeleton > span {
+  width: 94px;
+  height: 94px;
+}
+
+.booster-skeleton > div {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.booster-skeleton i {
+  width: 72%;
+  height: 12px;
+}
+
+.booster-skeleton i:nth-child(2) {
+  width: 45%;
+}
+
+.booster-skeleton i:nth-child(3) {
+  width: 90%;
+}
+
+.directory-state {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 28px;
+  text-align: center;
+  color: var(--c-text-secondary);
+}
+
+.directory-state h2 {
+  font-size: 17px;
+  color: var(--c-text);
+}
+
+.directory-state p {
+  font-size: 13px;
+}
+
+.directory-state button,
+.load-more {
+  min-height: 38px;
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-accent);
+  border: 1px solid var(--c-accent);
+  border-radius: var(--radius-sm);
+}
+
+.load-more-wrap {
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.load-more:disabled {
+  opacity: 0.55;
+}
+
+.more-error {
+  color: var(--c-danger);
+}
+
+@keyframes booster-loading {
+  to {
+    background-position: -220% 0;
+  }
+}
+
+@media (min-width: 768px) {
+  .booster-list-page.client-page {
+    min-height: 100vh;
+  }
+
+  .booster-list-page > .scroll {
+    margin-top: 18px;
+  }
+
+  .directory-tools {
+    top: 0;
+    display: grid;
+    grid-template-columns: minmax(300px, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    border: 1px solid var(--c-border);
+    background: color-mix(in srgb, var(--c-bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+  }
+
+  .gender-tabs {
+    margin-top: 0;
+  }
+
+  .booster-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .booster-grid :deep(.booster-card) {
+    grid-template-columns: 86px minmax(0, 1fr);
+  }
+
+  .booster-grid :deep(.avatar-button),
+  .booster-grid :deep(.avatar) {
+    width: 86px;
+    height: 86px;
+  }
+
+  .booster-grid :deep(.select-button) {
+    grid-column: 2;
+    width: 100%;
+  }
+}

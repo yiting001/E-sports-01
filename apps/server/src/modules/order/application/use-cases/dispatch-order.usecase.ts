@@ -10,6 +10,7 @@ import {
   OrderRepository,
 } from '../../domain/order-repository.interface';
 import { toAdminOrderView } from '../order.mapper';
+import { assertOrderCanDispatch } from '../order-booster-selection';
 import { ServiceAgentScope } from '../service-agent-scope.service';
 
 /** 用例：客服把「待客服处理」订单下发到接单大厅（→ 待接单；客服仅限自己负责的订单） */
@@ -30,6 +31,7 @@ export class DispatchOrderUseCase {
     if (order.status !== OrderStatus.PendingService) {
       throw new BadRequestException('仅「待客服处理」订单可下发大厅');
     }
+    assertOrderCanDispatch(order);
     order.status = OrderStatus.Dispatching;
     order.dispatchedAt = new Date();
     return toAdminOrderView(await this.orders.save(order));

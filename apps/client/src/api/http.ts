@@ -2,6 +2,7 @@ import type { ApiResponse, TokenPair } from '@app/contracts';
 import { BizCode } from '@app/contracts';
 import axios, {
   AxiosError,
+  type AxiosRequestConfig,
   type AxiosInstance,
   type AxiosResponse,
   type InternalAxiosRequestConfig,
@@ -12,7 +13,7 @@ import { resolveHttpErrorMessage } from '@/utils/http-error';
 import { tokenStorage } from './token-storage';
 
 /** 请求级开关：置 true 时本次请求失败不弹全局提示，交由调用方自行处理 */
-export interface RequestOptions {
+export interface RequestOptions extends AxiosRequestConfig {
   silent?: boolean;
 }
 

@@ -5,8 +5,8 @@ import { Permissions } from '../../../rbac/interfaces/auth/permissions.decorator
 import { UpdateBannerDto } from '../dto/update-banner.dto';
 
 /**
- * 路由：更新首页运营横幅图片（PUT /notice/banner）。
- * 需 notice:banner 权限；传空串即撤下横幅（C 端回退默认样式）。
+ * 路由：更新首页运营横幅配置（PUT /notice/banner）。
+ * 需 notice:banner 权限；传空数组即撤下全部横幅。
  */
 @Controller('notice/banner')
 export class BannerUpdateController {

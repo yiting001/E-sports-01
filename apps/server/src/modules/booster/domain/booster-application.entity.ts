@@ -1,5 +1,12 @@
-import { BoosterStatus, BOOSTER_LIMITS } from '@app/contracts';
-import { Column, Entity, Index, Unique } from 'typeorm';
+import {
+  BOOSTER_LEGACY_LIMITS,
+  BOOSTER_LIMITS,
+  BoosterContactType,
+  BoosterGender,
+  BoosterServiceRegion,
+  BoosterStatus,
+} from '@app/contracts';
+import { Check, Column, Entity, Index, Unique } from 'typeorm';
 import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 import { bigintTransformer } from '../../../shared/database/numeric.transformer';
 
@@ -11,27 +18,65 @@ import { bigintTransformer } from '../../../shared/database/numeric.transformer'
  */
 @Entity('booster_application')
 @Unique(['tenantId', 'userId'])
+@Index('IDX_booster_directory', ['tenantId', 'status', 'createdAt'])
+@Check('CHK_booster_application_gender', `"gender" IN ('', 'male', 'female')`)
+@Check('CHK_booster_application_contact_type', `"contact_type" IN ('', 'phone', 'wechat', 'qq')`)
+@Check(
+  'CHK_booster_application_service_regions_array',
+  `jsonb_typeof("service_regions") = 'array'
+    AND jsonb_array_length("service_regions") <= 2
+    AND "service_regions" <@ '["delta-mobile", "delta-pc"]'::jsonb`,
+)
 export class BoosterApplicationEntity extends TenantScopedEntity {
   /** 归属用户 */
   @Index()
   @Column({ length: 36 })
   userId!: string;
 
-  /** 游戏昵称 */
-  @Column({ name: 'game_nickname', length: BOOSTER_LIMITS.gameNicknameMax })
-  gameNickname!: string;
+  /** 旧版游戏昵称列，保留用于历史数据与 migration 回滚 */
+  @Column({
+    name: 'game_nickname',
+    length: BOOSTER_LEGACY_LIMITS.gameNicknameMax,
+    default: '',
+  })
+  legacyGameNickname!: string;
 
-  /** 擅长游戏 */
-  @Column({ name: 'game_name', length: BOOSTER_LIMITS.gameNameMax })
-  gameName!: string;
+  /** 旧版擅长游戏列，保留用于历史数据与 migration 回滚 */
+  @Column({ name: 'game_name', length: BOOSTER_LEGACY_LIMITS.gameNameMax, default: '' })
+  legacyGameName!: string;
 
-  /** 段位/实力描述 */
-  @Column({ length: BOOSTER_LIMITS.rankMax })
-  rank!: string;
+  /** 旧版段位列，保留用于历史数据与 migration 回滚 */
+  @Column({ name: 'rank', length: BOOSTER_LEGACY_LIMITS.rankMax, default: '' })
+  legacyRank!: string;
+
+  @Column({ name: 'applicant_name', length: BOOSTER_LIMITS.applicantNameMax, default: '' })
+  applicantName!: string;
+
+  @Column({ type: 'varchar', length: 16, default: '' })
+  gender!: BoosterGender | '';
+
+  @Column({ name: 'service_regions', type: 'jsonb', default: () => "'[]'" })
+  serviceRegions!: BoosterServiceRegion[];
 
   /** 自我介绍（接单经验、可服务时间等） */
   @Column({ length: BOOSTER_LIMITS.introMax })
   intro!: string;
+
+  @Column({ name: 'contact_type', type: 'varchar', length: 16, default: '' })
+  contactType!: BoosterContactType | '';
+
+  @Column({ name: 'contact_value', length: BOOSTER_LIMITS.contactValueMax, default: '' })
+  contactValue!: string;
+
+  @Column({ name: 'material_image', length: BOOSTER_LIMITS.materialImageMax, default: '' })
+  materialImage!: string;
+
+  /** C 端打手主页公开试听语音 URL；空串表示未上传 */
+  @Column({ name: 'voice_url', length: BOOSTER_LIMITS.voiceUrlMax, default: '' })
+  voiceUrl!: string;
+
+  @Column({ name: 'invitation_code', length: BOOSTER_LIMITS.invitationCodeMax, default: '' })
+  invitationCode!: string;
 
   @Column({ type: 'varchar', length: 16, default: BoosterStatus.Pending })
   status!: BoosterStatus;
@@ -55,4 +100,8 @@ export class BoosterApplicationEntity extends TenantScopedEntity {
   /** 已缴押金（分，平台代管；缴纳增加、退还/罚扣减少） */
   @Column({ name: 'deposit_fen', type: 'bigint', default: 0, transformer: bigintTransformer })
   depositFen!: number;
+
+  /** 是否自主上线接单；默认下线，避免未明确授权时进入派单流程 */
+  @Column({ name: 'accepting_orders', type: 'boolean', default: false })
+  acceptingOrders!: boolean;
 }

@@ -3,10 +3,10 @@ import { http } from './http';
 
 /**
  * C 端运营通知/横幅只读接口。
- * 走后端公开端点（免登录），仅返回启用中的通知与已配置的横幅图。
+ * 走后端公开端点（免登录），仅返回启用中的通知与已配置的横幅。
  */
 export const noticeApi = {
-  /** 首页运营横幅图片（未配置时 image 为空串） */
+  /** 首页运营横幅（未配置时 items 为空数组） */
   getBanner(): Promise<PortalBannerView> {
     return http.get('/notice/banner');
   },

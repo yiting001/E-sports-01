@@ -46,7 +46,7 @@ async function serveLocalUploads(app: NestExpressApplication): Promise<void> {
   const dir = await config.getString(CONFIG_KEYS.upload.localDir, 'uploads');
   const baseUrl = await config.getString(
     CONFIG_KEYS.upload.localBaseUrl,
-    'http://127.0.0.1:3000/static',
+    '/static',
   );
   let prefix = '/static';
   try {

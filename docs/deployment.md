@@ -8,8 +8,8 @@
 - **管理端**：`apps/web`，Vue3 + Pinia + Element Plus。
 - **C 端商城**：`apps/client`，Vue3 + Pinia。
 - **共享契约**：`packages/contracts`，前后端共享 DTO、枚举、权限码，必须先构建。
-- **基础设施**：PostgreSQL 16、Redis 7，可用 `docker-compose.yml` 启动。
-- **进程管理**：推荐使用 PM2 管理后端与前端预览/联调服务。
+- **基础设施**：PostgreSQL 17、Redis 7，由 `docker-compose.yml` 管理。
+- **进程管理**：默认使用 Docker Compose；也可使用 PM2 管理宿主机进程。
 
 ## 架构导图
 
@@ -51,7 +51,62 @@ pm2 -v
 /Users/yuxinxing/.npm-global/lib/node_modules/pm2/bin/pm2 list
 ```
 
-## 首次部署
+## Docker 全栈部署
+
+Compose 会启动 PostgreSQL、Redis、NestJS 后端、管理端 Nginx 和 C 端 Nginx。前端使用同源 `/api`、`/socket.io` 和 `/static` 反代，不依赖写死的宿主机地址。
+
+首次启动前准备后端密钥：
+
+```bash
+cp .env.docker.example .env
+cp apps/server/.env.example apps/server/.env
+```
+
+至少修改根目录 `.env` 中的 `POSTGRES_PASSWORD`，以及 `apps/server/.env` 中的 `JWT_SECRET`、`JWT_REFRESH_SECRET`、`SEED_ADMIN_PASSWORD`。数据库地址和 Redis 地址会由 Compose 覆盖为容器服务名。
+
+构建并启动：
+
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+默认入口仅绑定本机：
+
+- 管理端：`http://127.0.0.1:8080`
+- C 端：`http://127.0.0.1:8081`
+- 后端直连：`http://127.0.0.1:3003/api`
+
+端口和绑定地址可在启动命令中覆盖：
+
+```bash
+HOST_BIND=0.0.0.0 \
+WEB_HOST_PORT=80 \
+CLIENT_HOST_PORT=8081 \
+SERVER_HOST_PORT=3003 \
+docker compose up -d
+```
+
+公网部署应在容器前增加 TLS 反向代理，不要直接暴露 PostgreSQL 或 Redis。
+
+数据持久化：
+
+- PostgreSQL、Redis 和上传文件分别保存在 Compose 命名卷中。
+- `uploads-init` 仅在上传卷首次创建时把 `apps/server/uploads` 的现有文件复制进去。
+- `backups/` 下的 SQL 不会自动导入；恢复历史库时需人工确认目标库后执行。
+- 项目已提供 TypeORM migration 机制；正式环境必须使用 migration 并保持 `DB_SYNCHRONIZE=false`。当前 Docker 镜像尚未打包 migration CLI 与迁移文件，因此现有 Compose 仅适合本地初始化，不能作为正式迁移流程。
+
+常用维护命令：
+
+```bash
+docker compose logs -f server web client
+docker compose up -d --build
+docker compose down
+```
+
+`docker compose down` 保留数据卷；只有明确需要清空全部数据时才使用 `docker compose down -v`。
+
+## 宿主机 / PM2 部署
 
 ### 1. 拉代码与安装依赖
 
@@ -61,21 +116,9 @@ cd E-sports-01
 pnpm install
 ```
 
-### 2. 启动 PostgreSQL / Redis
+### 2. 准备 PostgreSQL / Redis
 
-本地或单机部署可直接使用项目内的 compose：
-
-```bash
-docker compose up -d
-docker compose ps
-```
-
-默认容器：
-
-- PostgreSQL：`127.0.0.1:5432`
-- Redis：`127.0.0.1:6379`
-
-注意：`docker-compose.yml` 默认 PostgreSQL 密码是 `infra_dev_pwd`。如果使用 `ecosystem.config.cjs`，里面当前写的是 `12345678`，需要和实际数据库密码保持一致。
+PM2 方式需要宿主机可访问的 PostgreSQL 和 Redis。当前 Compose 面向全栈容器部署，数据库与 Redis 只开放在 Compose 内网；宿主机部署请使用已安装的服务或单独的基础设施配置，并确保 `.env` 中连接信息一致。
 
 ### 3. 准备环境变量
 
@@ -133,7 +176,16 @@ pnpm --filter @app/client build
 pnpm -r build
 ```
 
-### 5. PM2 启动后端
+### 5. 执行数据库迁移
+
+确认数据库连接配置无误后，在启动后端前执行：
+
+```bash
+pnpm --filter @app/server migration:show
+pnpm --filter @app/server migration:run
+```
+
+### 6. PM2 启动后端
 
 后端运行 `apps/server/dist/main.js`：
 
@@ -152,7 +204,7 @@ pm2 start ecosystem.config.cjs --only e-sports-01-server
 
 说明：`ecosystem.config.cjs` 内有绝对路径和环境变量，换机器部署前需要改成目标机器路径与真实数据库密码。
 
-### 6. 启动前端
+### 7. 启动前端
 
 推荐生产方式是把静态产物交给 Nginx：
 
@@ -194,7 +246,7 @@ pm2 start apps/web/node_modules/vite/bin/vite.js \
   -- --host 127.0.0.1 --port 5174
 ```
 
-### 7. 保存 PM2 进程
+### 8. 保存 PM2 进程
 
 ```bash
 pm2 save
@@ -236,6 +288,7 @@ pnpm --filter @app/contracts build
 pnpm --filter @app/server build
 pnpm --filter @app/client build
 pnpm --filter @app/web build
+pnpm --filter @app/server migration:run
 ```
 
 重启：

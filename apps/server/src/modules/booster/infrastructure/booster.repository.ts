@@ -36,14 +36,45 @@ export class TypeormBoosterRepository implements BoosterRepository {
     skip: number,
     take: number,
     status?: BoosterStatus,
+    keyword?: string,
   ): Promise<[BoosterApplicationEntity[], number]> {
-    const base = status ? { status } : {};
-    return this.repo.findAndCount({
-      where: withTenant<BoosterApplicationEntity>(this.tenant, base),
-      order: { createdAt: 'DESC' },
-      skip,
-      take,
-    });
+    const query = this.repo
+      .createQueryBuilder('booster')
+      .orderBy('booster.createdAt', 'DESC')
+      .skip(skip)
+      .take(take);
+
+    const tenantId = this.tenant.scopeId();
+    if (tenantId) {
+      query.andWhere('"booster"."tenant_id" = :tenantId', { tenantId });
+    }
+    if (status) {
+      query.andWhere('"booster"."status" = :status', { status });
+    }
+
+    const normalizedKeyword = keyword?.trim();
+    if (normalizedKeyword) {
+      query.leftJoin(
+        'rbac_user',
+        'registered_user',
+        'CAST("registered_user"."id" AS text) = "booster"."userId" AND "registered_user"."tenant_id" = "booster"."tenant_id"',
+      );
+      query.andWhere(
+        `(
+          "booster"."applicant_name" ILIKE :keyword
+          OR "registered_user"."nickname" ILIKE :keyword
+          OR "registered_user"."username" ILIKE :keyword
+          OR "registered_user"."phone" ILIKE :keyword
+        )`,
+        { keyword: `%${this.escapeLike(normalizedKeyword)}%` },
+      );
+    }
+
+    return query.getManyAndCount();
+  }
+
+  private escapeLike(value: string): string {
+    return value.replace(/[\\%_]/g, (character) => `\\${character}`);
   }
 
   create(data: Partial<BoosterApplicationEntity>): BoosterApplicationEntity {

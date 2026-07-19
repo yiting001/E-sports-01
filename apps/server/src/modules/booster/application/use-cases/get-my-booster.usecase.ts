@@ -25,12 +25,19 @@ export class GetMyBoosterUseCase {
   ) {}
 
   async execute(userId: string): Promise<BoosterMineView> {
-    const [record, requireRealname, realnameApproved, depositPolicy] =
+    const [
+      record,
+      requireRealname,
+      realnameApproved,
+      depositPolicy,
+      onboardingNoticeImage,
+    ] =
       await Promise.all([
         this.repo.findByUserId(userId),
         this.policy.isRealnameRequired(),
         this.realname.isApproved(userId),
         this.policy.getDepositPolicy(),
+        this.policy.getOnboardingNoticeImage(),
       ]);
     if (!record) {
       return {
@@ -39,6 +46,7 @@ export class GetMyBoosterUseCase {
         requireRealname,
         realnameApproved,
         depositPolicy,
+        onboardingNoticeImage,
       };
     }
     const [profiles, tiers] = await Promise.all([
@@ -51,6 +59,7 @@ export class GetMyBoosterUseCase {
       requireRealname,
       realnameApproved,
       depositPolicy,
+      onboardingNoticeImage,
     };
   }
 }

@@ -1,15 +1,19 @@
 <script setup lang="ts">
 /**
- * 打手入驻页（全屏，入口在「我的」页更多功能）。
- * 按当前申请状态分场景：未申请展示申请表单；待审核展示进度提示；
- * 已入驻展示资料卡；被驳回展示理由并允许修改后重新提交。
- * 开启实名前置时，未通过实名认证不可提交（引导先去实名）。
- * 提交后由管理端审核，通过即授予 booster（打手）角色。
+ * 打手入驻页：按申请状态展示申请表单、审核进度或只读资料。
+ * 公告图由后台配置下发；驳回后保留原资料供修改重提，实名前置规则保持不变。
  */
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { BOOSTER_LIMITS, BoosterStatus, type BoosterMineView } from '@app/contracts';
+import { BoosterStatus, type BoosterMineView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
+import BoosterAnnouncementCard from '@/components/profile/BoosterAnnouncementCard.vue';
+import BoosterApplicationForm from '@/components/profile/BoosterApplicationForm.vue';
+import {
+  createBoosterApplicationForm,
+  toBoosterSubmitPayload,
+  type BoosterApplicationFormModel,
+} from '@/components/profile/booster-application-form';
 import { boosterApi } from '@/api/booster.api';
 import { useToast } from '@/composables/use-toast';
 import './BoosterApplyView.responsive.css';
@@ -18,60 +22,54 @@ const router = useRouter();
 const toast = useToast();
 
 const mine = ref<BoosterMineView | null>(null);
+const form = ref<BoosterApplicationFormModel>(createBoosterApplicationForm());
 const loading = ref(true);
+const loadError = ref(false);
 const submitting = ref(false);
-
-const gameNickname = ref('');
-const gameName = ref('');
-const rank = ref('');
-const intro = ref('');
+const materialUploading = ref(false);
 
 const status = computed(() => mine.value?.status ?? BoosterStatus.None);
-/** 未申请或被驳回时展示表单（驳回场景预填原资料供修改重提） */
 const showForm = computed(
   () => status.value === BoosterStatus.None || status.value === BoosterStatus.Rejected,
 );
-/** 开启实名前置且未通过实名时需先完成实名认证 */
+const showReadonly = computed(
+  () => status.value === BoosterStatus.Pending || status.value === BoosterStatus.Approved,
+);
 const realnameBlocked = computed(
   () => (mine.value?.requireRealname ?? false) && !(mine.value?.realnameApproved ?? false),
 );
+const readonlyForm = computed(() => createBoosterApplicationForm(mine.value?.record));
 const canSubmit = computed(
   () =>
     !realnameBlocked.value &&
-    gameNickname.value.trim() !== '' &&
-    gameName.value.trim() !== '' &&
-    rank.value.trim() !== '' &&
-    intro.value.trim() !== '',
+    !materialUploading.value &&
+    toBoosterSubmitPayload(form.value) !== null,
 );
 
 async function load(): Promise<void> {
   loading.value = true;
+  loadError.value = false;
   try {
-    mine.value = await boosterApi.mine();
-    const record = mine.value.record;
-    if (record) {
-      gameNickname.value = record.gameNickname;
-      gameName.value = record.gameName;
-      rank.value = record.rank;
-      intro.value = record.intro;
-    }
+    const result = await boosterApi.mine();
+    mine.value = result;
+    form.value = createBoosterApplicationForm(result.record);
+  } catch {
+    mine.value = null;
+    loadError.value = true;
   } finally {
     loading.value = false;
   }
 }
 
 async function submit(): Promise<void> {
-  if (!canSubmit.value || submitting.value) {
+  const payload = toBoosterSubmitPayload(form.value);
+  if (!payload || !canSubmit.value || submitting.value) {
     return;
   }
+
   submitting.value = true;
   try {
-    await boosterApi.apply({
-      gameNickname: gameNickname.value.trim(),
-      gameName: gameName.value.trim(),
-      rank: rank.value.trim(),
-      intro: intro.value.trim(),
-    });
+    await boosterApi.apply(payload);
     toast.show('申请已提交，请等待审核');
     await load();
   } finally {
@@ -89,6 +87,7 @@ onMounted(() => {
     <header class="bar">
       <div class="bar-inner">
         <button
+          type="button"
           class="back"
           aria-label="返回"
           @click="router.back()"
@@ -102,145 +101,124 @@ onMounted(() => {
       </div>
     </header>
 
-    <div class="scroll">
-      <p
+    <main class="scroll">
+      <section
         v-if="loading"
-        class="hint"
+        class="load-state"
       >
-        加载中…
-      </p>
+        <p>加载中…</p>
+      </section>
 
-      <template v-else>
-        <section
-          v-if="status === BoosterStatus.Pending"
-          class="card state"
+      <section
+        v-else-if="loadError"
+        class="load-state card"
+      >
+        <h2>入驻信息加载失败</h2>
+        <p>请检查网络后重新加载。</p>
+        <button
+          type="button"
+          class="retry"
+          @click="load"
         >
-          <h3 class="state-title state-title--pending">
-            审核中
-          </h3>
-          <p class="state-tip">
-            入驻申请已提交，请耐心等待管理员审核。
-          </p>
-        </section>
+          重新加载
+        </button>
+      </section>
 
-        <section
-          v-else-if="status === BoosterStatus.Approved"
-          class="card state"
-        >
-          <h3 class="state-title state-title--ok">
-            已入驻
-          </h3>
-          <p class="state-tip">
-            恭喜，你已成为平台打手，可开始接单服务。
-          </p>
-        </section>
+      <template v-else-if="mine">
+        <aside class="side">
+          <BoosterAnnouncementCard
+            v-if="showForm"
+            :image="mine.onboardingNoticeImage"
+          />
 
-        <section
-          v-else-if="status === BoosterStatus.Rejected"
-          class="card state state--reject"
-        >
-          <h3 class="state-title state-title--reject">
-            申请被驳回
-          </h3>
-          <p class="state-tip">
-            驳回理由：{{ mine?.record?.rejectReason || '未填写' }}，请修改资料后重新提交。
-          </p>
-        </section>
-
-        <section
-          v-if="status === BoosterStatus.Pending || status === BoosterStatus.Approved"
-          class="card form form--readonly"
-        >
-          <div class="row">
-            <span class="label">游戏昵称</span>
-            <span class="value">{{ mine?.record?.gameNickname }}</span>
-          </div>
-          <div class="row">
-            <span class="label">擅长游戏</span>
-            <span class="value">{{ mine?.record?.gameName }}</span>
-          </div>
-          <div class="row">
-            <span class="label">段位实力</span>
-            <span class="value">{{ mine?.record?.rank }}</span>
-          </div>
-          <div class="row">
-            <span class="label">自我介绍</span>
-            <span class="value">{{ mine?.record?.intro }}</span>
-          </div>
-        </section>
-
-        <template v-if="showForm">
           <section
-            v-if="realnameBlocked"
-            class="card state state--reject"
+            v-if="status === BoosterStatus.Pending"
+            class="state card"
           >
-            <h3 class="state-title state-title--reject">
-              需先完成实名认证
-            </h3>
+            <h2 class="state-title state-title--pending">
+              审核中
+            </h2>
             <p class="state-tip">
-              平台要求打手实名入驻，请先在实名认证页完成认证后再提交申请。
+              入驻申请已提交，请耐心等待管理员审核。
+            </p>
+          </section>
+
+          <section
+            v-else-if="status === BoosterStatus.Approved"
+            class="state card"
+          >
+            <h2 class="state-title state-title--ok">
+              已入驻
+            </h2>
+            <p class="state-tip">
+              恭喜，你已成为平台打手，可开始接单服务。
+            </p>
+          </section>
+
+          <section
+            v-else-if="status === BoosterStatus.Rejected"
+            class="state card"
+          >
+            <h2 class="state-title state-title--reject">
+              申请被驳回
+            </h2>
+            <p class="state-tip">
+              驳回理由：{{ mine.record?.rejectReason || '未填写' }}，请修改资料后重新提交。
+            </p>
+          </section>
+
+          <section
+            v-if="showForm && realnameBlocked"
+            class="state card"
+          >
+            <h2 class="state-title state-title--reject">
+              需先完成实名认证
+            </h2>
+            <p class="state-tip">
+              平台要求打手实名入驻，请先完成认证后再提交申请。
             </p>
             <button
+              type="button"
               class="goto-realname"
               @click="router.push({ name: 'realname' })"
             >
               去实名认证
             </button>
           </section>
-          <section
-            class="card form form--editable"
-            :class="{ 'form--with-state': status === BoosterStatus.Rejected }"
-          >
-            <div class="row">
-              <span class="label">游戏昵称</span>
-              <input
-                v-model="gameNickname"
-                class="input"
-                :maxlength="BOOSTER_LIMITS.gameNicknameMax"
-                placeholder="填写游戏内昵称"
-              >
-            </div>
-            <div class="row">
-              <span class="label">擅长游戏</span>
-              <input
-                v-model="gameName"
-                class="input"
-                :maxlength="BOOSTER_LIMITS.gameNameMax"
-                placeholder="如：英雄联盟 / 王者荣耀"
-              >
-            </div>
-            <div class="row">
-              <span class="label">段位实力</span>
-              <input
-                v-model="rank"
-                class="input"
-                :maxlength="BOOSTER_LIMITS.rankMax"
-                placeholder="如：王者 50 星 / 最强王者"
-              >
-            </div>
-            <div class="row row--textarea">
-              <span class="label">自我介绍</span>
-              <textarea
-                v-model="intro"
-                class="input textarea"
-                :maxlength="BOOSTER_LIMITS.introMax"
-                rows="4"
-                placeholder="介绍接单经验、可服务时间等"
-              />
-            </div>
-          </section>
+        </aside>
 
-          <button
-            class="submit"
-            :class="{ 'submit--with-state': status === BoosterStatus.Rejected }"
-            :disabled="!canSubmit || submitting"
-            @click="submit"
-          >
-            {{ submitting ? '提交中…' : status === BoosterStatus.Rejected ? '重新提交' : '提交申请' }}
-          </button>
-        </template>
+        <BoosterApplicationForm
+          v-if="showForm"
+          v-model="form"
+          class="application-form"
+          :disabled="submitting"
+          @uploading-change="materialUploading = $event"
+        />
+
+        <BoosterApplicationForm
+          v-else-if="showReadonly && mine.record"
+          class="application-form"
+          :model-value="readonlyForm"
+          readonly
+        />
       </template>
-    </div>
+    </main>
+
+    <footer
+      v-if="mine && showForm && !loading && !loadError"
+      class="footer"
+    >
+      <div class="footer-inner">
+        <button
+          type="button"
+          class="submit"
+          :disabled="!canSubmit || submitting"
+          @click="submit"
+        >
+          {{ submitting ? '提交中…' : status === BoosterStatus.Rejected ? '重新提交' : '提交' }}
+        </button>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -286,34 +264,35 @@ onMounted(() => {
 
 .scroll {
   flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 14px 14px 20px;
   overflow-y: auto;
-  padding: 16px;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 640px;
-  width: 100%;
-  margin: 0 auto;
 }
 
-.hint {
-  text-align: center;
-  font-size: 13px;
-  color: var(--c-text-muted);
-  padding: 24px 0;
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
 }
 
 .state {
-  padding: 18px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 18px 16px;
 }
 
 .state-title {
   font-size: 16px;
   font-weight: 800;
-  font-style: italic;
 }
 
 .state-title--pending {
@@ -321,7 +300,7 @@ onMounted(() => {
 }
 
 .state-title--ok {
-  color: var(--c-success, #4caf50);
+  color: var(--c-neon);
 }
 
 .state-title--reject {
@@ -330,81 +309,75 @@ onMounted(() => {
 
 .state-tip {
   font-size: 13px;
+  line-height: 1.65;
   color: var(--c-text-secondary);
-  line-height: 1.6;
 }
 
-.form {
-  padding: 4px 14px;
+.goto-realname,
+.retry {
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-bg);
+  background: var(--c-accent);
+  border-radius: var(--radius-sm);
 }
 
-.row {
+.load-state {
+  width: 100%;
+  padding: 28px 18px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--c-border);
-}
-
-.row:last-child {
-  border-bottom: none;
-}
-
-.row--textarea {
-  align-items: flex-start;
-}
-
-.label {
-  flex-shrink: 0;
-  width: 64px;
-  font-size: 14px;
+  gap: 10px;
+  text-align: center;
   color: var(--c-text-secondary);
 }
 
-.value {
-  flex: 1;
-  font-size: 14px;
+.load-state h2 {
+  font-size: 16px;
   color: var(--c-text);
-  word-break: break-word;
 }
 
-.input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--c-text);
-  font-size: 14px;
-}
-
-.textarea {
-  resize: none;
+.load-state p {
+  font-size: 13px;
   line-height: 1.6;
-  font-family: inherit;
+}
+
+.retry {
+  align-self: center;
+}
+
+.footer {
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+.footer-inner {
+  width: 100%;
+  max-width: 612px;
+  margin: 0 auto;
 }
 
 .submit {
-  padding: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 18px;
   font-size: 15px;
   font-weight: 800;
-  font-style: italic;
   color: var(--c-bg);
   background: var(--c-accent);
-  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  border-radius: var(--radius-sm);
 }
 
 .submit:disabled {
+  cursor: not-allowed;
   opacity: 0.5;
-}
-
-.goto-realname {
-  align-self: flex-start;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 800;
-  font-style: italic;
-  color: var(--c-bg);
-  background: var(--c-accent);
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
 }
 </style>

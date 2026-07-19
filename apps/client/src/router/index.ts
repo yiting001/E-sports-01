@@ -168,6 +168,18 @@ export const router = createRouter({
       meta: { title: '打手入驻', requiresAuth: true },
     },
     {
+      path: '/boosters',
+      name: 'booster-list',
+      component: () => import('@/views/booster/BoosterListView.vue'),
+      meta: { title: '挑选打手', requiresAuth: true },
+    },
+    {
+      path: '/boosters/:userId',
+      name: 'booster-profile',
+      component: () => import('@/views/booster/BoosterProfileView.vue'),
+      meta: { title: '打手主页', requiresAuth: true },
+    },
+    {
       path: '/',
       component: MainLayout,
       children: [

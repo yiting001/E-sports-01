@@ -1,8 +1,11 @@
 <script setup lang="ts">
 /**
- * 排行榜条目卡：名次编号 + 商品标题 + 销量/热度进度 + 快捷操作。
+ * 排行榜条目卡：名次编号 + 商品明细 + 销量热度 + 单一醒目下单操作。
  */
+import { fenToYuan } from '@app/contracts';
 import type { RankItem } from '@/config/category.mock';
+import AppIcon from '@/components/common/AppIcon.vue';
+import ProductCoverThumb from '@/components/product/ProductCoverThumb.vue';
 import { useRouter } from 'vue-router';
 
 defineProps<{
@@ -33,51 +36,74 @@ function rankNo(index: number): string {
     >
       {{ rankNo(index) }}
     </span>
-    <div class="main">
+    <ProductCoverThumb
+      class="rank-cover"
+      :src="item.product.cover"
+      :fallback="item.product.coverTitle || item.product.title"
+    />
+    <button
+      type="button"
+      class="main"
+      @click="router.push(`/products/${item.product.id}`)"
+    >
       <div class="title-row">
         <h3 class="title">
-          {{ item.title }}
+          {{ item.product.title }}
         </h3>
-        <span class="heat">
-          {{ item.heat > 0 ? `热度 ${item.heat}` : '新上榜' }}
+        <span class="category-tag">
+          {{ item.product.categoryName }}
         </span>
       </div>
+      <p class="summary">
+        <strong v-if="item.product.coverTitle">{{ item.product.coverTitle }}</strong>
+        <span v-if="item.product.coverSub">{{ item.product.coverSub }}</span>
+        <span v-if="!item.product.coverTitle && !item.product.coverSub">查看商品详情</span>
+      </p>
       <div class="stats">
-        <span class="sold">已售 {{ item.sold }}</span>
-        <div class="bar">
+        <span class="price">¥{{ fenToYuan(item.product.priceFen) }}</span>
+        <span
+          v-if="item.product.originPriceFen > item.product.priceFen"
+          class="origin"
+        >¥{{ fenToYuan(item.product.originPriceFen) }}</span>
+        <span class="sold">已售 {{ item.product.sold }}</span>
+        <div
+          class="bar"
+          aria-hidden="true"
+        >
           <div
             class="fill"
             :style="{ width: `${item.heat}%` }"
           />
         </div>
       </div>
-    </div>
-    <div class="actions">
-      <button
-        class="btn ghost"
-        @click="router.push(`/products/${item.id}`)"
-      >
-        查看详情
-      </button>
-      <button
-        class="btn primary"
-        @click="router.push(`/checkout/${item.id}`)"
-      >
-        立即下单
-      </button>
-    </div>
+    </button>
+    <button
+      type="button"
+      class="order-action"
+      @click="router.push(`/checkout/${item.product.id}`)"
+    >
+      <AppIcon
+        name="card"
+        :size="16"
+      />
+      立即下单
+    </button>
   </article>
 </template>
 
 <style scoped>
 .rank {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) auto;
+  grid-template-columns: 52px 72px minmax(0, 1fr) 112px;
   align-items: center;
-  gap: 16px;
-  min-height: 92px;
-  padding: 16px 18px;
+  gap: 12px;
+  min-height: 112px;
+  padding: 14px 16px;
   transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.rank-cover {
+  --product-thumb-size: 72px;
 }
 
 .rank:hover {
@@ -113,6 +139,8 @@ function rankNo(index: number): string {
 
 .main {
   min-width: 0;
+  display: block;
+  text-align: left;
 }
 
 .title-row {
@@ -130,22 +158,39 @@ function rankNo(index: number): string {
   text-overflow: ellipsis;
 }
 
-.heat {
+.category-tag {
   flex-shrink: 0;
+  max-width: 45%;
   padding: 2px 8px;
-  font-family: var(--font-num);
   font-size: 11px;
   color: var(--c-neon);
   border: 1px solid rgba(61, 255, 155, 0.28);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary {
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--c-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summary strong {
+  margin-right: 8px;
+  color: var(--c-neon);
 }
 
 .stats {
-  margin-top: 10px;
+  margin-top: 8px;
   display: grid;
-  grid-template-columns: auto minmax(120px, 1fr);
+  grid-template-columns: auto auto auto minmax(72px, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .bar {
@@ -166,38 +211,46 @@ function rankNo(index: number): string {
   white-space: nowrap;
 }
 
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.price {
+  font-family: var(--font-num);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--c-accent);
+  white-space: nowrap;
 }
 
-.btn {
-  min-width: 82px;
-  padding: 8px 12px;
+.origin {
+  font-family: var(--font-num);
+  font-size: 10px;
+  color: var(--c-text-muted);
+  text-decoration: line-through;
+  white-space: nowrap;
+}
+
+.order-action {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
   font-size: 12px;
   font-weight: 800;
-  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
-}
-
-.btn.primary {
-  background: var(--c-accent);
   color: var(--c-bg);
-  font-weight: 700;
-}
-
-.btn.ghost {
-  background: transparent;
-  border: 1px solid var(--c-border);
-  color: var(--c-text-secondary);
+  background: var(--c-accent);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
 }
 
 @media (max-width: 767px) {
   .rank {
-    grid-template-columns: 48px minmax(0, 1fr);
-    align-items: start;
-    gap: 12px;
+    grid-template-columns: 44px 64px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
     padding: 14px;
+  }
+
+  .rank-cover {
+    --product-thumb-size: 64px;
   }
 
   .no {
@@ -207,25 +260,22 @@ function rankNo(index: number): string {
   }
 
   .title-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
-
-  .stats {
-    grid-template-columns: 1fr;
     gap: 8px;
   }
 
-  .actions {
-    grid-column: 1 / -1;
-    width: 100%;
-    flex-direction: row;
+  .stats {
+    grid-template-columns: auto auto 1fr;
+    gap: 8px;
   }
 
-  .btn {
-    flex: 1;
-    text-align: center;
+  .bar {
+    grid-column: 1 / -1;
+  }
+
+  .order-action {
+    grid-column: 2 / -1;
+    width: 100%;
+    min-height: 44px;
   }
 }
 </style>

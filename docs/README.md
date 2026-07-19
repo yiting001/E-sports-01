@@ -11,18 +11,19 @@
 | RBAC 权限 | [rbac.md](./rbac.md) | 用户/角色/权限三层模型，JWT 双令牌，API/菜单/按钮级颗粒度 |
 | 文件上传 | [upload.md](./upload.md) | 策略模式，local 默认 / oss 可切，驱动由配置中心选择 |
 | 短信登录 | [sms.md](./sms.md) | 策略模式多云短信（阿里/腾讯/火山/日志），配置中心切换，验证码登录 |
-| WebSocket IM | [im.md](./im.md) | JWT 握手鉴权，会话房间收发文字/图片/视频，为群聊/客服预留扩展 |
+| WebSocket IM | [im.md](./im.md) | JWT 握手鉴权、会话房间收发文字/图片/视频，以及登录用户在线状态快照 |
 | 链路追踪与日志 | [observability.md](./observability.md) | AsyncLocalStorage 链路追踪，结构化日志异步落库 + RBAC 查询/链路详情/清理 |
-| 钱包 | [wallet.md](./wallet.md) | RBAC 门控的钱包，支付宝/微信扫码充值 + 支付宝转账提现 + 明细统计，金额以分整数 |
+| 钱包 | [wallet.md](./wallet.md) | 钱包充值/提现/明细，以及服务订单余额支付的锁、流水和一致性边界 |
 | 用户资料自助 | [user-profile.md](./user-profile.md) | 登录用户自助改头像/昵称/手机号，免授权自助上传，个人中心页 |
 | 实名认证 | [realname.md](./realname.md) | 证件提交 + 人工审核状态机，身份证 AES-256-GCM 加密脱敏，超管按角色配置需实名 |
 | 反馈管理 | [feedback.md](./feedback.md) | 投诉客服/打手反馈提交 + 管理端受理回复，状态机闭环，C 端联系客服打通既有 IM |
-| 运营通知 | [notice.md](./notice.md) | 首页横幅后台换图（配置中心存储）+ 通知公告 CRUD，C 端公告条滚动展示、点击查看详情 |
-| 服务订单 | [order.md](./order.md) | C 端商品详情页下单，支付宝/微信扫码支付（复用钱包支付驱动），回调幂等落账进入待客服处理，我的订单列表/取消 |
+| 运营通知 | [notice.md](./notice.md) | 首页多图轮播、活动关联和后台配置（兼容历史单图）+ 通知公告 CRUD |
+| 服务订单 | [order.md](./order.md) | 结构化游戏资料、自动安排/锁定指定打手、三种支付方式及并发安全派单履约 |
 | 商品评论 | [review.md](./review.md) | 订单完成后一单一评（打星 + 文字），商品详情页脱敏展示评论与平均分，管理端隐藏/恢复/删除治理 |
-| 打手入驻 | [booster.md](./booster.md) | C 端个人中心自助申请 + 管理端审核（通过自动授予 booster 角色）/驳回重提/资料编辑 |
-| 商品管理 | [commerce.md](./commerce.md) | 分类 + 商品 CRUD 与上下架，商品可关联负责客服，C 端免登录只读上架商品，金额以分整数 |
+| 打手入驻 | [booster.md](./booster.md) | 入驻审核、打手自主上下线、脱敏挑人目录/主页和安全语音试听，含 migration 与隐私边界 |
+| 商品管理 | [commerce.md](./commerce.md) | 分类 + 商品 CRUD 与上下架，C 端响应式商品详情、动态分类明细与销量榜，金额以分整数 |
 | 前端基座 | [frontend.md](./frontend.md) | Vue3 + Pinia，鉴权 store、动态路由守卫、v-permission 指令 |
+| C 端用户应用 | [client.md](./client.md) | 独立商城、分类与商品、挑选打手、结构化结算、短信登录和个人功能说明 |
 | 登录注册 UI | [auth-ui.md](./auth-ui.md) | 企业级电竞风格登录/注册/短信验证码入口，仅重做 UI 不改鉴权逻辑 |
 | 工作台 UI | [dashboard-ui.md](./dashboard-ui.md) | 响应式账号概览、业务入口、快捷访问和权限摘要 |
 | 数据统计仪表盘 | [dashboard.md](./dashboard.md) | 订单/财务/用户/打手四块只读聚合统计（ECharts），日/月/年时间范围，按权限分块展示 |
@@ -34,11 +35,16 @@
 
 ```mermaid
 flowchart TB
-  subgraph Client[前端 apps/web · Vue3 + Pinia]
-    UI[视图/布局] --> Store[auth.store]
-    UI --> Dir[v-permission 指令]
-    Store --> HTTP[axios http 封装]
-    UI --> WS[socket.io 客户端]
+  subgraph Web[管理端 apps/web · Vue3 + Pinia]
+    WebUI[管理视图/布局] --> WebStore[管理端 auth.store]
+    WebUI --> Dir[v-permission 指令]
+    WebStore --> WebHTTP[axios http 封装]
+    WebUI --> WebWS[socket.io 客户端]
+  end
+  subgraph Client[用户端 apps/client · Vue3 + Pinia]
+    ClientUI[C端视图/布局] --> ClientStore[C端 auth.store]
+    ClientStore --> ClientHTTP[axios http 封装]
+    ClientUI --> ClientWS[socket.io 客户端]
   end
 
   subgraph Contracts[packages/contracts · 前后端共享类型]
@@ -59,8 +65,10 @@ flowchart TB
   PG[(PostgreSQL)]
   RD[(Redis)]
 
-  HTTP -->|REST /api| IF
-  WS -->|/im namespace| IF
+  WebHTTP -->|REST /api| IF
+  ClientHTTP -->|REST /api| IF
+  WebWS -->|/im namespace| IF
+  ClientWS -->|/im namespace| IF
   Client -. import .-> Contracts
   Server -. import .-> Contracts
   INFRA --> PG
@@ -92,11 +100,12 @@ modules/<module>/
 E-sports-01/
 ├── apps/
 │   ├── server/        NestJS 后端（DDD 四层）
-│   └── web/           Vue3 + Pinia 前端基座
+│   ├── web/           Vue3 + Pinia 管理端
+│   └── client/        Vue3 + Pinia C 端商城
 ├── packages/
 │   └── contracts/     前后端共享 DTO / 枚举 / 权限码（双 CJS+ESM 产物）
 ├── docs/              本文档目录
-└── docker-compose.yml PostgreSQL 16 + Redis 7
+└── docker-compose.yml PostgreSQL 17 + Redis 7
 ```
 
 ## 本地启动
@@ -105,7 +114,7 @@ E-sports-01/
 # 1. 依赖
 pnpm install
 
-# 2. 基础设施（PostgreSQL 16 + Redis 7）
+# 2. 准备 PostgreSQL 17 / Redis 7（以下仅示例启动依赖，不是应用容器部署；也可连接已有本地服务）
 docker compose up -d
 
 # 3. 后端环境变量（仅连接信息 + 密钥）
@@ -115,6 +124,7 @@ cp apps/server/.env.example apps/server/.env
 pnpm --filter @app/contracts build
 pnpm --filter @app/server start:dev     # http://127.0.0.1:3000/api
 pnpm --filter @app/web dev              # http://127.0.0.1:5173
+pnpm --filter @app/client dev           # http://127.0.0.1:5174
 ```
 
 默认初始管理员：`admin / admin123456`（首次启动播种，超级管理员角色 `admin`，请尽快改密）。

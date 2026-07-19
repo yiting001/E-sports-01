@@ -1,5 +1,6 @@
 import { BoosterLevelTier, BoosterView, resolveBoosterLevel } from '@app/contracts';
 import { BoosterApplicationEntity } from '../domain/booster-application.entity';
+import { normalizeBoosterServiceRegions } from './booster-compatibility';
 
 /** 用户简要信息（用于在管理列表上展示申请人） */
 export interface BoosterUserBrief {
@@ -19,10 +20,15 @@ export function toBoosterView(
     userId: entity.userId,
     username: user.username,
     nickname: user.nickname,
-    gameNickname: entity.gameNickname,
-    gameName: entity.gameName,
-    rank: entity.rank,
+    applicantName: entity.applicantName,
+    gender: entity.gender,
+    serviceRegions: normalizeBoosterServiceRegions(entity.serviceRegions),
     intro: entity.intro,
+    contactType: entity.contactType,
+    contactValue: entity.contactValue,
+    materialImage: entity.materialImage,
+    voiceUrl: entity.voiceUrl,
+    invitationCode: entity.invitationCode,
     status: entity.status,
     rejectReason: entity.rejectReason,
     reviewedBy: entity.reviewedBy,
@@ -34,5 +40,6 @@ export function toBoosterView(
     levelName: tier.name,
     commissionRateBp: tier.commissionRateBp,
     depositFen: entity.depositFen,
+    acceptingOrders: entity.acceptingOrders,
   };
 }

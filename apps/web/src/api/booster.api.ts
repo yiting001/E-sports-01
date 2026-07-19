@@ -11,13 +11,16 @@ import { http } from './http';
 
 /** 打手入驻接口：管理端审核列表 / 审核 / 资料编辑 / 等级档位 / 押金退还 */
 export const boosterApi = {
-  /** 分页查询入驻申请，可按状态过滤 */
+  /** 分页查询入驻申请，可按状态、名称或注册手机号过滤 */
   list(
     page: number,
     pageSize: number,
     status?: BoosterStatus,
+    keyword?: string,
   ): Promise<PaginatedResult<BoosterView>> {
-    return http.get('/booster', { params: { page, pageSize, status } });
+    return http.get('/booster', {
+      params: { page, pageSize, status, keyword },
+    });
   },
   /** 审核（通过即授予 booster 角色 / 驳回） */
   review(id: string, payload: ReviewBoosterPayload): Promise<BoosterView> {
@@ -26,6 +29,16 @@ export const boosterApi = {
   /** 编辑打手资料（仅更新传入字段） */
   update(id: string, payload: UpdateBoosterPayload): Promise<BoosterView> {
     return http.put(`/booster/${id}`, payload);
+  },
+  /** 上传并立即保存指定打手的试听语音（服务端校验 MIME 与文件头） */
+  uploadVoice(id: string, file: File): Promise<BoosterView> {
+    const form = new FormData();
+    form.append('file', file);
+    return http.put(`/booster/${id}/voice`, form);
+  },
+  /** 清空指定打手的试听语音 */
+  clearVoice(id: string): Promise<BoosterView> {
+    return http.delete(`/booster/${id}/voice`);
   },
   /** 查询等级档位 */
   getLevels(): Promise<BoosterLevelTier[]> {

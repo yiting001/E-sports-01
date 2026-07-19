@@ -1,6 +1,14 @@
 import type { TokenPair } from '@app/contracts';
 import { STORAGE_KEYS } from '@/config/env';
 
+type TokenChangeListener = () => void;
+
+const tokenChangeListeners = new Set<TokenChangeListener>();
+
+function notifyTokenChange(): void {
+  tokenChangeListeners.forEach((listener) => listener());
+}
+
 /**
  * 令牌持久化。
  * 单一职责：只负责 access/refresh token 的读写清理，
@@ -16,9 +24,15 @@ export const tokenStorage = {
   save(pair: Pick<TokenPair, 'accessToken' | 'refreshToken'>): void {
     localStorage.setItem(STORAGE_KEYS.accessToken, pair.accessToken);
     localStorage.setItem(STORAGE_KEYS.refreshToken, pair.refreshToken);
+    notifyTokenChange();
   },
   clear(): void {
     localStorage.removeItem(STORAGE_KEYS.accessToken);
     localStorage.removeItem(STORAGE_KEYS.refreshToken);
+    notifyTokenChange();
+  },
+  onChange(listener: TokenChangeListener): () => void {
+    tokenChangeListeners.add(listener);
+    return () => tokenChangeListeners.delete(listener);
   },
 };

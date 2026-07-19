@@ -56,5 +56,6 @@ import { FileRemoveController } from './interfaces/controllers/file.remove.contr
     ListFilesUseCase,
     RemoveFileUseCase,
   ],
+  exports: [UploadFileUseCase],
 })
 export class UploadModule {}

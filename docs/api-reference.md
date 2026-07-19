@@ -88,6 +88,10 @@
 ```jsonc
 // POST /api/config 请求
 { "key": "upload.driver", "value": "oss", "type": "string", "group": "upload", "remark": "存储驱动" }
+
+// 打手入驻公告图：管理员上传图片后保存返回的 URL
+{ "key": "booster.onboardingNoticeImage", "value": "/static/2026/07/notice.png",
+  "type": "image", "group": "booster", "remark": "C 端打手入驻公告图片", "secret": false }
 ```
 
 ## 文件上传
@@ -95,11 +99,11 @@
 | 方法 | 路径 | 权限码 | 说明 |
 | --- | --- | --- | --- |
 | POST | `/api/upload` | `upload:file:upload` | multipart 上传，返回元数据 + URL |
-| POST | `/api/upload/self` | 登录 | 登录用户自助上传（无需上传权限），供头像/实名证件等场景，返回同上 |
+| POST | `/api/upload/self` | 登录 | 登录用户自助上传（无需上传权限），供头像、实名证件、打手材料等场景，返回同上 |
 | GET | `/api/upload/files` | `upload:file:list` | 分页列表 |
 | DELETE | `/api/upload/files/:id` | `upload:file:remove` | 删对象 + 删记录，204 |
 
-静态访问：本地驱动文件经 `upload.localBaseUrl`（默认 `http://127.0.0.1:3000/static`）对外提供。
+静态访问：本地驱动文件经 `upload.localBaseUrl`（默认同源 `/static`）对外提供；独立 API 域名部署时应配置完整 URL。
 
 ## WebSocket IM
 
@@ -139,7 +143,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | --- | --- | --- | --- |
 | GET | `/api/wallet/mine` | 登录态 | 当前用户钱包，不存在则自动初始化 → `{ id, balanceFen, balanceYuan, status }` |
 | GET | `/api/wallet/stats` | 登录态 | 钱包统计（余额、累计充值/提现、成功笔数） |
-| GET | `/api/wallet/transactions` | 登录态 | 分页查询本人收支明细，`?page&pageSize`，按时间倒序 |
+| GET | `/api/wallet/transactions` | 登录态 | 分页查询本人收支明细，`?page&pageSize`，按时间倒序；订单余额支付记录类型为 `order_payment` |
 | POST | `/api/wallet/recharge` | 登录态 | 发起充值 `{ amountFen, provider }`（provider: alipay/wechat）→ `{ orderId, outTradeNo, provider, qrCode, amountFen, amountYuan }` |
 | POST | `/api/wallet/recharge/callback/:provider` | 公开 | 支付渠道异步回调（验签后幂等入账），返回渠道要求的原始应答 |
 | POST | `/api/wallet/withdrawal` | 登录态 | 发起提现 `{ amountFen, provider, account, accountName }`（provider 仅 alipay；wechat 预留）→ `{ orderId, status, failReason }` |
@@ -183,6 +187,83 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 > 身份证号以密文存储（密钥首次启动随机生成并存于配置中心 `realname.idCipherKey`，secret），对外一律返回脱敏串。「需实名的角色」存于配置中心 `realname.requiredRoleCodes`（实名组），建议在「实名管理」页维护。
 
+## 打手入驻
+
+个人侧接口仅需登录，申请记录按当前租户和用户隔离；管理侧接口由 RBAC 门控。`none` 只出现在本人概览中，数据库记录状态为 `pending`、`approved` 或 `rejected`。
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/booster/mine` | 登录 | 本人概览 `{ status, record, requireRealname, realnameApproved, depositPolicy, onboardingNoticeImage }` |
+| PUT | `/api/booster/mine/availability` | 登录且本人已审核通过 | `{ acceptingOrders: boolean }`；幂等切换上线/下线并返回 `BoosterView` |
+| POST | `/api/booster` | 登录 | 首次提交或驳回重提完整资料；待审核 / 已通过时重复提交返回 409 |
+| GET | `/api/booster/directory` | 登录 | C 端脱敏挑人目录；`?page&pageSize&keyword&gender&serviceRegion` |
+| GET | `/api/booster/directory/:userId` | 登录 | C 端打手脱敏主页；跨租户、未审核、禁用或非打手角色均返回 404 |
+| PUT | `/api/booster/mine/voice` | 登录且本人已审核通过 | multipart `file` 上传/更换试听语音 |
+| DELETE | `/api/booster/mine/voice` | 登录且本人已审核通过 | 清空本人试听语音 |
+| GET | `/api/booster` | `booster:list` | 管理端分页列表 `?page&pageSize&status&keyword`；关键词匹配申请姓名、昵称、用户名或注册手机号 |
+| POST | `/api/booster/:id/review` | `booster:review` | 审核 `{ approve, rejectReason? }`；仅待审核可操作，通过后授予 `booster` 角色 |
+| PUT | `/api/booster/:id` | `booster:update` | 管理端编辑资料；所有字段可选，只更新传入项且不改变审核状态 |
+| PUT | `/api/booster/:id/voice` | `booster:update` | 管理端 multipart `file` 上传/更换指定打手试听语音 |
+| DELETE | `/api/booster/:id/voice` | `booster:update` | 管理端清空指定打手试听语音 |
+| GET | `/api/booster/levels` | 登录 | 等级档位列表 |
+| PUT | `/api/booster/levels` | `booster:level:set` | 保存等级档位 `{ tiers }` |
+| GET | `/api/booster/deposit/policy` | 登录 | 押金策略 `{ minFen, maxFen }` |
+| PUT | `/api/booster/deposit/policy` | `booster:deposit:policy:set` | 保存押金策略 `{ minFen, maxFen }` |
+| POST | `/api/booster/deposit/pay` | 登录 | 已入驻打手从钱包缴纳 `{ amountFen }` |
+| POST | `/api/booster/:id/deposit/refund` | `booster:deposit:refund` | 管理端全额退还押金 |
+
+```jsonc
+// POST /api/booster 请求
+{
+  "applicantName": "张三",
+  "gender": "male",
+  "serviceRegions": ["delta-mobile", "delta-pc"],
+  "intro": "熟悉手机端和电脑端接单流程",
+  "contactType": "wechat",
+  "contactValue": "booster_wechat",
+  "materialImage": "/static/2026/07/material.png",
+  "invitationCode": "INVITE01"
+}
+
+// GET /api/booster/mine 的 data（未申请时 record 为 null）
+{
+  "status": "pending",
+  "record": {
+    "id": "...",
+    "applicantName": "张三",
+    "status": "pending",
+    "acceptingOrders": false
+  },
+  "requireRealname": true,
+  "realnameApproved": true,
+  "depositPolicy": { "minFen": 10000, "maxFen": 100000 },
+  "onboardingNoticeImage": "/static/2026/07/notice.png"
+}
+```
+
+字段约束：姓名 1～64；性别 `male/female`；区服须从 `delta-mobile/delta-pc` 中选择 1～2 个且不重复；简介 3～500；联系方式类型 `phone/wechat/qq`，内容 1～128；材料图为空串或 `/`、HTTP(S) URL，最长 2048；邀请码选填，最长 64。试听语音最大 5 MB，仅支持 MP3、M4A、WAV、WebM，服务端同时校验声明 MIME 与文件头并规范化扩展名。邀请码不触发邀请绑定或奖励。
+
+> 姓名、联系方式和邀请码当前明文存储，只在本人接口及有权限的管理接口返回；目录/主页仅返回安全显示名、头像、区服、等级、完成单数、语音 URL、接单状态和可选结果。`online` 映射打手本人持久化的 `acceptingOrders`；下线时不能被选择、列为后台候选、指派或接单，`selectable` 仍不是授权凭据。公告图没有公开配置端点，而是随登录后的本人概览下发。详细状态、migration 和安全边界见 [booster.md](./booster.md)。
+
+```jsonc
+// GET /api/booster/directory?keyword=一霆&serviceRegion=delta-mobile 的 data.list 项
+{
+  "userId": "11111111-1111-4111-8111-111111111111",
+  "displayName": "一霆",
+  "avatar": "/static/avatar.png",
+  "gender": "male",
+  "serviceRegions": ["delta-mobile"],
+  "intro": "熟悉手机端接单",
+  "completedOrders": 12,
+  "level": 1,
+  "levelName": "新秀",
+  "voiceUrl": "/static/voice.mp3",
+  "online": true,
+  "selectable": true,
+  "unavailableReason": ""
+}
+```
+
 ## 反馈管理
 
 | 方法 | 路径 | 权限 | 说明 |
@@ -204,8 +285,8 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| GET | `/api/notice/banner` | 公开 | 首页横幅图片 `{ image }`（未配置为空串，C 端不展示横幅） |
-| PUT | `/api/notice/banner` | `notice:banner` | 更新横幅 `{ image }`，传空串即撤下 |
+| GET | `/api/notice/banner` | 公开 | 首页横幅 `{ items: [{ image, activityId }], intervalSeconds }`；空数组时不展示 |
+| PUT | `/api/notice/banner` | `notice:banner` | 保存完整横幅配置；最多 10 张、间隔 1～3 秒，`items: []` 撤下全部 |
 | GET | `/api/notice/public` | 公开 | 启用中的通知列表（sort 升序 + 创建时间倒序） |
 | GET | `/api/notice/public/:id` | 公开 | 单条通知详情（仅启用中的可见） |
 | GET | `/api/notice` | `notice:list` | 管理端分页列表 `?page&pageSize` |
@@ -218,11 +299,23 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
 | GET | `/api/commerce/public/products/:id` | 公开 | 单个上架商品详情（下架/不存在均 404） |
-| POST | `/api/order` | 登录 | 创建订单并发起扫码支付 `{ productId, quantity, provider, remark? }` → `{ orderId, orderNo, qrCode, amountFen, amountYuan }` |
+| POST | `/api/order` | 登录 | 创建订单并支付 `{ productId, quantity, provider, gameAccountId, gameTextId?, serviceRegion, boosterSelectionMode, requestedBoosterId?, accountInfo?, remark?, remarkMedia?, userCouponId? }`；provider 为 `alipay/wechat/balance`。渠道支付返回二维码，余额/0 元支付返回 `paid: true` 并直接落账 |
 | POST | `/api/order/pay/callback/:provider` | 公开 | 支付渠道异步回调（验签后幂等落账：待付款 → 待客服处理，并累加销量） |
 | GET | `/api/order/mine` | 登录 | 分页查询我的订单 `?page&pageSize&status`（status 可选，tabs 按状态过滤），按创建时间倒序 |
-| GET | `/api/order/:id` | 登录 | 我的单笔订单（支付结果轮询/详情），仅本人可见 |
+| GET | `/api/order/:id` | 登录 | 我的单笔订单，仅本人可见；已支付但无群时幂等补建订单群 |
+| GET | `/api/order/:id/pay/query` | 登录 | 支付渠道主动查单兜底，仅本人可查；已支付空群同步补建 |
 | POST | `/api/order/:id/cancel` | 登录 | 取消待付款订单（已支付订单不可取消） |
+| GET | `/api/order/hall` / `/api/order/hall/:id` | `booster` 角色 | 接单大厅列表/详情；接单前隐藏数字 ID、文字 ID 和账号信息 |
+| POST | `/api/order/hall/:id/accept` | `booster` 角色且当前上线 | 原子接单；下线拒绝，锁定打手订单只能由锁定人领取，竞争失败返回 409 |
+| GET | `/api/order/booster/mine` / `/api/order/booster/mine/:id` | `booster` 角色 | 本人接单订单及详情，接单后可见敏感账号字段 |
+| POST | `/api/order/booster/:id/complete` | `booster` 角色 | 完成服务并结算提成 |
+| GET | `/api/order/admin` / `/api/order/admin/:id` | `order:admin:list` / `order:admin:detail` | 管理端订单列表/详情，客服按负责商品隔离 |
+| POST | `/api/order/admin/:id/group/join` | `order:admin:detail` | 幂等加入订单群并返回 `conversationId` |
+| POST | `/api/order/admin/:id/dispatch` | `order:admin:dispatch` | 自动安排订单下发大厅；锁定指定打手订单返回业务错误 |
+| GET | `/api/order/admin/booster-candidates` | `order:admin:assign` | 管理端候选打手搜索，仅返回同租户当前上线且资格有效的打手 |
+| POST | `/api/order/admin/:id/assign` | `order:admin:assign` | 指派并原子推进服务中；锁定订单禁止改派，竞争失败 409 |
+
+下单约束：`gameAccountId` 为 1～32 位数字；`serviceRegion` 只能为 `delta-mobile` / `delta-pc`；`boosterSelectionMode=specified` 必须提供可选打手 ID。锁定打手在创建、指派/接单时均由服务端复核上线状态、目录可见性、启用状态、booster 角色、区服（历史空区服仅跳过此项）、实名、押金和本人排除。订单群使用订单 UUID 作为确定性会话 ID；首次失败不回滚支付，查单、详情和后台进群会幂等补建。
 
 ## 商品评论
 
@@ -248,6 +341,8 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | 日志 | `observability:log:list` `observability:log:detail` `observability:log:purge` |
 | 钱包管理 | `wallet:admin:list` `wallet:admin:transaction` `wallet:admin:adjust` |
 | 实名 | `realname:list` `realname:review` `realname:policy` |
+| 打手 | `booster:list` `booster:review` `booster:update` `booster:level:set` `booster:deposit:refund` `booster:deposit:policy:set` |
+| 订单管理 | `order:admin:list` `order:admin:detail` `order:admin:dispatch` `order:admin:assign` |
 | 反馈 | `feedback:list` `feedback:handle` |
 | 评论 | `review:admin:list` `review:admin:moderate` `review:admin:remove` |
 | 通知 | `notice:list` `notice:save` `notice:remove` `notice:banner` |

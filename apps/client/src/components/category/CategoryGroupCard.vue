@@ -1,31 +1,40 @@
 <script setup lang="ts">
 /**
- * 分类分组卡：分组标题（金色斜切标记）+ 商品入口小卡网格（综合页签用）。
- * 商品入口点击进入商品详情；无商品时显示紧凑空态，不撑满大屏。
+ * 综合分类卡：后台分类名作为大标题，下面展示该分类的真实商品封面与关键明细。
+ * 商品入口点击进入详情；图片失败回退封面标语，无商品时保持紧凑空态。
  */
+import { ref } from 'vue';
+import { fenToYuan } from '@app/contracts';
 import type { CategoryGroup } from '@/config/category.mock';
+import ProductCoverThumb from '@/components/product/ProductCoverThumb.vue';
+import { resolveMediaUrl } from '@/utils/media-url';
 import { useRouter } from 'vue-router';
 
 defineProps<{ group: CategoryGroup }>();
 
 const router = useRouter();
+const iconFailed = ref(false);
 </script>
 
 <template>
   <section class="group card">
-    <h2 class="sec-title">
-      <img
-        v-if="group.icon"
-        :src="group.icon"
-        :alt="group.title"
-        class="cat-icon"
-      >
-      <span
-        v-else-if="group.iconText"
-        class="cat-icon-text"
-      >{{ group.iconText }}</span>
-      {{ group.title }}
-    </h2>
+    <header class="group-head">
+      <h2 class="sec-title">
+        <img
+          v-if="group.icon && !iconFailed"
+          :src="resolveMediaUrl(group.icon)"
+          alt=""
+          class="cat-icon"
+          @error="iconFailed = true"
+        >
+        <span
+          v-else
+          class="cat-icon-text"
+        >{{ group.iconText || group.title.slice(0, 2) }}</span>
+        <span class="group-title">{{ group.title }}</span>
+      </h2>
+      <span class="item-count">{{ group.items.length }} 项</span>
+    </header>
     <div
       v-if="group.items.length"
       class="grid"
@@ -33,13 +42,29 @@ const router = useRouter();
       <button
         v-for="item in group.items"
         :key="item.id"
+        type="button"
         class="item"
         @click="router.push(`/products/${item.id}`)"
       >
-        <div class="thumb">
-          <span class="thumb-text">{{ item.cover }}</span>
+        <ProductCoverThumb
+          :src="item.cover"
+          :fallback="item.coverTitle || group.iconText || '商品'"
+        />
+        <div class="item-info">
+          <strong class="name">{{ item.title }}</strong>
+          <span
+            v-if="item.coverTitle"
+            class="cover-label"
+          >{{ item.coverTitle }}</span>
+          <span
+            v-if="item.coverSub"
+            class="subtitle"
+          >{{ item.coverSub }}</span>
+          <span class="meta">
+            <b>¥{{ fenToYuan(item.priceFen) }}</b>
+            <small>已售 {{ item.sold }}</small>
+          </span>
         </div>
-        <span class="name">{{ item.name }}</span>
       </button>
     </div>
     <p
@@ -53,15 +78,43 @@ const router = useRouter();
 
 <style scoped>
 .group {
-  min-height: 132px;
-  padding: 14px;
+  min-height: 156px;
+  padding: 16px;
+}
+
+.group-head {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sec-title {
+  min-width: 0;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.group-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-count {
+  flex-shrink: 0;
+  font-family: var(--font-num);
+  font-size: 11px;
+  color: var(--c-text-muted);
 }
 
 .grid {
-  margin-top: 14px;
+  margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  column-gap: 16px;
 }
 
 .group-empty {
@@ -74,78 +127,92 @@ const router = useRouter();
 }
 
 .cat-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
   object-fit: cover;
 }
 
 .cat-icon-text {
-  padding: 1px 6px;
+  max-width: 84px;
+  padding: 2px 6px;
   font-size: 11px;
   font-style: normal;
   font-weight: 700;
   letter-spacing: 0;
   color: var(--c-neon);
   border: 1px solid rgba(61, 255, 155, 0.45);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .item {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
-  min-height: 92px;
-  padding: 10px 8px;
-  border: 1px solid rgba(150, 165, 195, 0.14);
-  background: rgba(11, 14, 20, 0.24);
-  transition: border-color 0.2s ease, background 0.2s ease;
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  min-height: 94px;
+  padding: 10px 4px;
+  border-top: 1px solid var(--c-border);
+  text-align: left;
+  transition: background 0.2s ease;
 }
 
 .item:hover {
-  border-color: rgba(61, 255, 155, 0.45);
   background: rgba(61, 255, 155, 0.06);
 }
 
-.thumb {
-  width: 50px;
-  height: 50px;
-  display: grid;
-  place-items: center;
-  padding: 4px;
-  background: var(--c-cover-bg);
-  border: 1px solid rgba(61, 255, 155, 0.45);
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
-  transition: border-color 0.2s ease;
-}
-
-.item:hover .thumb {
-  border-color: var(--c-neon);
-}
-
-.thumb-text {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--c-neon);
-  text-align: center;
-  line-height: 1.3;
+.item-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .name {
-  max-width: 100%;
-  font-size: 12px;
-  color: var(--c-text-secondary);
+  font-size: 14px;
+  color: var(--c-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-@media (min-width: 768px) {
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
-  }
+.cover-label,
+.subtitle {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cover-label {
+  font-weight: 700;
+  color: var(--c-neon);
+}
+
+.subtitle {
+  color: var(--c-text-secondary);
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.meta b {
+  font-family: var(--font-num);
+  font-size: 15px;
+  color: var(--c-accent);
+}
+
+.meta small {
+  font-size: 10px;
+  color: var(--c-text-muted);
+  white-space: nowrap;
 }
 </style>

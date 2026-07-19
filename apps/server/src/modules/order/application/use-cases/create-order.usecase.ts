@@ -8,6 +8,7 @@ import {
   CONFIG_KEYS,
   CreateOrderPayload,
   CreateOrderResult,
+  OrderBoosterSelectionMode,
   OrderStatus,
   ProductStatus,
   calcDiscountedFen,
@@ -19,6 +20,10 @@ import {
   ProductRepository,
 } from '../../../commerce/domain/product-repository.interface';
 import { CouponRedeemService } from '../../../coupon/application/coupon-redeem.service';
+import {
+  BoosterSelectionService,
+  SelectedBoosterSnapshot,
+} from '../../../booster/application/booster-selection.service';
 import { MemberLevelService } from '../../../member/application/member-level.service';
 import { PaymentResolver } from '../../../wallet/application/payment.resolver';
 import { buildOrderNo } from '../../../wallet/application/order-no.util';
@@ -26,6 +31,7 @@ import {
   ORDER_REPOSITORY,
   OrderRepository,
 } from '../../domain/order-repository.interface';
+import { toPaymentProvider } from '../order-payment-method';
 import { OrderPaymentSettleService } from '../order-payment.service';
 
 /** 0 元单免支付落账时的渠道单号占位 */
@@ -50,6 +56,7 @@ export class CreateOrderUseCase {
     private readonly memberLevels: MemberLevelService,
     private readonly couponRedeem: CouponRedeemService,
     private readonly settle: OrderPaymentSettleService,
+    private readonly boosterSelection: BoosterSelectionService,
   ) {}
 
   async execute(
@@ -60,6 +67,7 @@ export class CreateOrderUseCase {
     if (!product || product.status !== ProductStatus.OnShelf) {
       throw new NotFoundException('商品不存在或已下架');
     }
+    const requestedBooster = await this.resolveRequestedBooster(userId, payload);
     const originalAmountFen = product.priceFen * payload.quantity;
     if (originalAmountFen <= 0) {
       throw new BadRequestException('订单金额异常');
@@ -85,7 +93,8 @@ export class CreateOrderUseCase {
       throw new BadRequestException('订单金额异常');
     }
 
-    const port = this.paymentResolver.resolve(payload.provider);
+    const channelProvider = toPaymentProvider(payload.provider);
+    const port = channelProvider ? this.paymentResolver.resolve(channelProvider) : null;
     const orderNo = buildOrderNo('O');
 
     const saved = await this.orders.save(
@@ -96,6 +105,9 @@ export class CreateOrderUseCase {
         productTitle: product.title,
         productCover: product.cover,
         serviceAgentId: product.serviceAgentId,
+        requestedBoosterId: requestedBooster?.userId ?? '',
+        requestedBoosterName: requestedBooster?.displayName ?? '',
+        boosterSelectionMode: payload.boosterSelectionMode,
         quantity: payload.quantity,
         amountFen,
         originalAmountFen,
@@ -107,6 +119,9 @@ export class CreateOrderUseCase {
         remark: payload.remark?.trim() ?? '',
         remarkMedia: payload.remarkMedia ?? [],
         accountInfo: payload.accountInfo?.trim() ?? '',
+        gameAccountId: payload.gameAccountId.trim(),
+        gameTextId: payload.gameTextId?.trim() ?? '',
+        serviceRegion: payload.serviceRegion,
         providerTradeNo: null,
         paidAt: null,
       }),
@@ -118,6 +133,7 @@ export class CreateOrderUseCase {
         await this.couponRedeem.redeem(payload.userCouponId, saved.id);
       } catch (err) {
         saved.status = OrderStatus.Cancelled;
+        saved.cancelledAt = new Date();
         await this.orders.save(saved);
         throw err;
       }
@@ -125,7 +141,12 @@ export class CreateOrderUseCase {
 
     // 0 元单：不调支付渠道，直接走唯一落账口标记已支付（幂等）
     if (amountFen === 0) {
-      await this.settle.markPaid(orderNo, ZERO_AMOUNT_TRADE_NO, 0);
+      try {
+        await this.settle.markPaid(orderNo, payload.provider, ZERO_AMOUNT_TRADE_NO, 0);
+      } catch (error) {
+        await this.compensateFailedCreation(saved.id);
+        throw error;
+      }
       return {
         orderId: saved.id,
         orderNo,
@@ -140,18 +161,47 @@ export class CreateOrderUseCase {
       };
     }
 
-    const notifyBaseUrl = await this.config.getString(
-      CONFIG_KEYS.wallet.notifyBaseUrl,
-      '',
-    );
-    const { qrCode } = await port.createRecharge({
-      outTradeNo: orderNo,
-      amountFen,
-      subject: product.title,
-      notifyUrl: notifyBaseUrl
-        ? `${notifyBaseUrl}/order/pay/callback/${payload.provider}`
-        : '',
-    });
+    // 余额支付不创建渠道二维码；事务内扣款成功即直接完成支付。
+    if (!port) {
+      try {
+        await this.settle.payWithBalance(saved.id, userId, amountFen);
+      } catch (error) {
+        await this.compensateFailedCreation(saved.id);
+        throw error;
+      }
+      return {
+        orderId: saved.id,
+        orderNo,
+        provider: payload.provider,
+        qrCode: '',
+        paid: true,
+        amountFen,
+        amountYuan: fenToYuan(amountFen),
+        originalAmountFen,
+        discountBp: memberTier.discountBp,
+        couponDeductionFen,
+      };
+    }
+
+    let qrCode: string;
+    try {
+      const notifyBaseUrl = await this.config.getString(
+        CONFIG_KEYS.wallet.notifyBaseUrl,
+        '',
+      );
+      const result = await port.createRecharge({
+        outTradeNo: orderNo,
+        amountFen,
+        subject: product.title,
+        notifyUrl: notifyBaseUrl
+          ? `${notifyBaseUrl}/order/pay/callback/${payload.provider}`
+          : '',
+      });
+      qrCode = result.qrCode;
+    } catch (error) {
+      await this.compensateFailedCreation(saved.id);
+      throw error;
+    }
 
     return {
       orderId: saved.id,
@@ -165,5 +215,40 @@ export class CreateOrderUseCase {
       discountBp: memberTier.discountBp,
       couponDeductionFen,
     };
+  }
+
+  private async resolveRequestedBooster(
+    userId: string,
+    payload: CreateOrderPayload,
+  ): Promise<SelectedBoosterSnapshot | null> {
+    const requestedId = payload.requestedBoosterId?.trim() ?? '';
+    if (payload.boosterSelectionMode === OrderBoosterSelectionMode.Auto) {
+      if (requestedId) {
+        throw new BadRequestException('自动安排不能同时指定打手');
+      }
+      return null;
+    }
+    if (!requestedId) {
+      throw new BadRequestException('请选择要指定的打手');
+    }
+    return this.boosterSelection.assertSelectable(
+      userId,
+      requestedId,
+      payload.serviceRegion,
+    );
+  }
+
+  /** 支付未落账时作废新订单，并回退该订单已经核销的优惠券。 */
+  private async compensateFailedCreation(orderId: string): Promise<void> {
+    const order = await this.orders.findById(orderId);
+    if (!order || order.status !== OrderStatus.PendingPayment) {
+      return;
+    }
+    order.status = OrderStatus.Cancelled;
+    order.cancelledAt = new Date();
+    await this.orders.save(order);
+    if (order.userCouponId) {
+      await this.couponRedeem.restoreByOrder(order.id);
+    }
   }
 }

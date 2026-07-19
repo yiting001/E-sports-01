@@ -12,6 +12,16 @@ export const NOTICE_LIMITS = {
   contentMax: 10000,
 } as const;
 
+/** 首页横幅配置约束（管理端、DTO 与 C 端共享） */
+export const PORTAL_BANNER_LIMITS = {
+  itemsMax: 10,
+  imageMax: 512,
+  activityIdMax: 36,
+  intervalMinSeconds: 1,
+  intervalMaxSeconds: 3,
+  defaultIntervalSeconds: 3,
+} as const;
+
 /** 新建/编辑通知入参 */
 export interface UpsertNoticePayload {
   /** 通知标题（公告条滚动展示） */
@@ -44,13 +54,21 @@ export interface NoticePublicView {
   createdAt: string;
 }
 
+/** 首页运营横幅条目 */
+export interface PortalBannerItem {
+  /** 横幅图片 URL */
+  image: string;
+  /** 关联活动 ID；空串表示仅展示图片，不执行跳转 */
+  activityId: string;
+}
+
 /** 首页运营横幅公开视图（C 端） */
 export interface PortalBannerView {
-  /** 横幅图片 URL；未配置为空串，前端回退默认样式 */
-  image: string;
+  /** 轮播条目；未配置或全部无效时为空数组 */
+  items: PortalBannerItem[];
+  /** 自动轮播间隔（秒） */
+  intervalSeconds: number;
 }
 
 /** 更新首页横幅入参（管理端） */
-export interface UpdatePortalBannerPayload {
-  image: string;
-}
+export type UpdatePortalBannerPayload = PortalBannerView;

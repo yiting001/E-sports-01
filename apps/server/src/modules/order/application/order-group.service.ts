@@ -1,15 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { GroupFacade } from '../../im/application/group-facade.service';
 import { UserDirectory } from '../../rbac/application/user-directory.service';
-import {
-  SUPER_ADMIN_ROLE,
-  TENANT_ADMIN_ROLE,
-} from '../../rbac/domain/rbac.constants';
+import { SUPER_ADMIN_ROLE, TENANT_ADMIN_ROLE } from '../../rbac/domain/rbac.constants';
 import { OrderEntity } from '../domain/order.entity';
-import {
-  ORDER_REPOSITORY,
-  OrderRepository,
-} from '../domain/order-repository.interface';
+import { ORDER_REPOSITORY, OrderRepository } from '../domain/order-repository.interface';
 
 /** 拉入订单群的平台管理员人数上限（避免管理员过多时全员进群刷屏） */
 const MAX_ADMIN_MEMBERS = 5;
@@ -34,11 +28,7 @@ export class OrderGroupService {
   /** 拉平台管理员入群：优先租户管理员，无租户管理员时回退超管，保证后台可见订单群 */
   private async resolveAdminIds(): Promise<string[]> {
     for (const role of [TENANT_ADMIN_ROLE, SUPER_ADMIN_ROLE]) {
-      const [admins] = await this.users.paginateProfilesByRole(
-        role,
-        0,
-        MAX_ADMIN_MEMBERS,
-      );
+      const [admins] = await this.users.paginateProfilesByRole(role, 0, MAX_ADMIN_MEMBERS);
       if (admins.length > 0) {
         return admins.map((a) => a.id);
       }
@@ -51,25 +41,19 @@ export class OrderGroupService {
     if (order.conversationId) {
       return;
     }
-    try {
-      const adminIds = await this.resolveAdminIds();
-      const memberIds = [order.userId, order.serviceAgentId, ...adminIds];
-      const ownerId = order.serviceAgentId || adminIds[0] || order.userId;
-      const title = `订单群·${order.productTitle}`;
-      const conversationId = await this.groups.createGroup(
-        ownerId,
-        title,
-        memberIds,
-        `订单 ${order.orderNo} 已支付成功，客服将尽快为您安排服务`,
-      );
-      order.conversationId = conversationId;
-      await this.orders.save(order);
-    } catch (err) {
-      this.logger.error(
-        `订单 ${order.orderNo} 自动创建订单群失败`,
-        err instanceof Error ? err.stack : String(err),
-      );
-    }
+    const adminIds = await this.resolveAdminIds();
+    const memberIds = [order.userId, order.serviceAgentId, order.boosterId, ...adminIds];
+    const ownerId = order.serviceAgentId || adminIds[0] || order.userId;
+    const title = `订单群·${order.productTitle}`;
+    const conversationId = await this.groups.ensureSystemGroup(
+      order.id,
+      ownerId,
+      title,
+      memberIds,
+      `订单 ${order.orderNo} 已支付成功，客服将尽快为您安排服务`,
+    );
+    order.conversationId = conversationId;
+    await this.orders.save(order);
   }
 
   /** 打手接单/被指派后加入订单群并广播系统消息 */

@@ -7,11 +7,11 @@
 实现的功能：
 
 - **分类 CRUD**：管理端分页查询、创建、更新、删除；同租户下分类名唯一；删除时若分类下仍有商品则拒绝，避免商品失去归属。
-- **分类图标（图片 / 文字两种形式）**：分类含图标图片 `icon`（走 `/upload`）与文字图标 `cover`。C 端分类页「综合」分组标题优先按图片图标展示，未设图片则回退文字图标（`cover`，为空则用分类名）。
+- **分类图标（图片 / 文字两种形式）**：分类含图标图片 `icon`（走 `/upload`）与文字图标 `cover`。C 端分类页「综合」把分类名作为可配置大标题，优先展示图片图标，未设图片或加载失败则回退文字图标（`cover`，为空再取分类名前两字）。
 - **商品 CRUD + 上下架**：管理端分页查询（按分类 / 状态 / 关键字过滤）、创建、更新、删除、上下架切换。新建商品默认「下架」，需显式上架后 C 端才可见。
-- **封面图片 + 富文本详情**：商品含封面图片（`cover`，走现有 `/upload` 上传返回 URL）与富文本详情（`description` 存 HTML，管理端用 AiEditor 编辑，图片/视频复用上传接口）。C 端卡片封面优先展示图片、详情预览取去标签纯文本。
+- **封面图片 + 富文本详情**：商品含封面图片（`cover`，走现有 `/upload` 上传返回 URL）与富文本详情（`description` 存 HTML，管理端用 AiEditor 编辑，图片/视频复用上传接口）。C 端详情主图只展示封面，`coverTitle / coverSub` 在图下独立展示；富文本先净化再转换历史本机媒体地址。
 - **关联负责客服（仅客服角色）**：商品可选关联一名「负责客服」（`serviceAgentId`，可空），为后续「下单拉群只拉指定客服」打基础。候选人**仅取拥有内置「客服」角色（`service`）的用户**（非全部用户），管理端表单经 `/commerce/service-agents` 按用户名/昵称远程搜索。客服角色由 `RbacSeeder` 幂等播种，管理员在用户管理中为客服人员分配。
-- **C 端只读公开接口**：`/commerce/public/categories`（启用分类）与 `/commerce/public/products`（上架商品，可按分类过滤），免登录，供首页 / 分类页渲染。
+- **C 端只读公开接口**：`/commerce/public/categories`（启用分类）、`/commerce/public/products`（上架商品，可按分类过滤）与 `/commerce/public/products/:id`（单个上架商品），免登录，供首页、分类和详情页渲染。
 - **营销工具**：商品列表「营销」入口弹窗，可编辑已售销量（`sold` 走商品更新接口，需 `commerce:product:update`），并可为商品添加自定义评论（昵称/头像自设，走 `POST /review/marketing`，详见 `docs/review.md`）。
 - **金额以「分」存储**：`priceFen` / `originPriceFen` 为整数分，杜绝浮点误差；展示层统一 `fenToYuan` 转元。
 
@@ -46,7 +46,7 @@ modules/commerce/
   - `product/ProductStats.vue`、`ProductDirectory.vue`、`ProductFormDrawer.vue`
   - `commerce-ui.types.ts` 收口分类/商品表单与筛选模型
 - 管理端 API 门面：`apps/web/src/api/commerce.api.ts`。
-- 用户端 `apps/client`：`views/home/HomeView.vue`（分类签 + 商品网格）、`views/category/CategoryView.vue`（分组 + 排行榜）接入公开接口，API 门面 `apps/client/src/api/commerce.api.ts`。
+- 用户端 `apps/client`：`views/home/HomeView.vue`（分类签 + 商品网格）、`views/category/CategoryView.vue`（分类大标题 + 商品明细 / 销量榜）、`views/product/ProductDetailView.vue`（主图 / 介绍 / 保障 / 富文本）接入公开接口，API 门面 `apps/client/src/api/commerce.api.ts`；分类卡和榜单条目分别由 `CategoryGroupCard.vue`、`RankItemCard.vue` 承载，共用 `ProductCoverThumb.vue`。
 
 ## 权限（RBAC）
 
@@ -82,6 +82,30 @@ modules/commerce/
 | GET | `/commerce/service-agents` | `commerce:product:list` | 负责客服候选 `?page&pageSize&keyword` |
 | GET | `/commerce/public/categories` | 公开 | 启用中的分类（C 端） |
 | GET | `/commerce/public/products` | 公开 | 上架商品分页 `?page&pageSize&categoryId&keyword` |
+| GET | `/commerce/public/products/:id` | 公开 | 单个上架商品详情；不存在或下架均返回 404 |
+
+## C 端分类目录
+
+`/category` 保留「综合 / 排行榜」双模式。综合模式按公开分类顺序输出分组，每个分类名称就是管理端可维护的大标题，组内显示真实商品封面、主副标语、价格和销量；排行榜将已加载商品按销量降序取前 10 项，正文进入详情，主按钮进入既有下单流程。
+
+```mermaid
+flowchart LR
+  Admin["管理端分类 / 商品维护"] --> CategoryAPI["公开启用分类"]
+  Admin --> ProductAPI["公开上架商品分页"]
+  CategoryAPI --> Catalog["综合分类目录"]
+  ProductAPI --> Catalog
+  ProductAPI --> Rank["销量排行榜"]
+  Catalog --> Detail["商品详情"]
+  Rank --> Detail
+  Rank --> Checkout["下单"]
+```
+
+- 分类页首先并发读取分类与商品第一页，若总数超过 100 则按总页数继续读取，合并时按商品 ID 去重并只保留归属启用分类的商品；任一请求失败进入可重试错误态。
+- 启用但暂无上架商品的分类仍展示空态；无分类与无排行榜商品使用不同文案。
+- 综合缩略图为稳定 `68px` 方形，排行榜桌面 / 移动分别为 `72px / 64px`，均使用 `object-fit: cover`；图片失败回退封面文字，分类 / 商品长标题均截断，不改变卡片尺寸。
+- 综合与排行榜都渲染真实商品图片，并分别展示 `coverTitle` 与 `coverSub`，不会因存在副标语而隐藏主标语。
+- 桌面综合为两列分组、榜单为单列；小于 `768px` 后统一单列，固定底部导航仍由 `MainLayout` 负责留白。
+- 本次只调整 C 端展示与状态编排，不改变分类 / 商品契约、公开 API、RBAC、管理端表单或数据库结构。
 
 ## 设计要点（无硬编码 / 最小化）
 

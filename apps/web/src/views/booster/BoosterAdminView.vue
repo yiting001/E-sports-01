@@ -2,11 +2,11 @@
 /**
  * 打手管理页（菜单 booster:menu）。
  * 分页展示入驻申请（可按状态过滤），支持审核通过（自动授予 booster 角色）/
- * 驳回（填写理由），以及对打手资料（游戏昵称/擅长游戏/段位/自我介绍）的编辑维护；
+ * 驳回（填写理由），以及对申请资料、联系方式和材料图片的编辑维护；
  * 另支持等级档位配置（booster:level:set）、押金交付配置（booster:deposit:policy:set）
  * 与押金退还（booster:deposit:refund）。
  */
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import {
   BOOSTER_LIMITS,
   BoosterStatus,
@@ -34,13 +34,16 @@ import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { boosterApi } from '@/api/booster.api';
 import BoosterLevelDialog from './BoosterLevelDialog.vue';
 import BoosterDepositPolicyDialog from './BoosterDepositPolicyDialog.vue';
+import BoosterProfileEditDrawer from './BoosterProfileEditDrawer.vue';
+import { contactTypeLabel, genderLabel, serviceRegionLabel } from './booster-profile';
 import './BoosterAdminView.css';
 
 const list = ref<BoosterView[]>([]);
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
-const statusFilter = ref<BoosterStatus | undefined>(undefined);
+const statusFilter = ref<BoosterStatus | ''>('');
+const keyword = ref('');
 const loading = ref(false);
 
 const statusMeta: Record<
@@ -54,11 +57,15 @@ const statusMeta: Record<
 };
 
 const statusOptions = [
-  { label: '全部状态', value: undefined },
+  { label: '全部状态', value: '' },
   { label: '待审核', value: BoosterStatus.Pending },
   { label: '已入驻', value: BoosterStatus.Approved },
   { label: '已驳回', value: BoosterStatus.Rejected },
 ];
+
+function statusDisplay(status: BoosterStatus): (typeof statusMeta)[BoosterStatus] {
+  return statusMeta[status];
+}
 
 function formatDate(value: string): string {
   if (!value) {
@@ -76,7 +83,12 @@ function formatDate(value: string): string {
 async function load(): Promise<void> {
   loading.value = true;
   try {
-    const res = await boosterApi.list(page.value, pageSize.value, statusFilter.value);
+    const res = await boosterApi.list(
+      page.value,
+      pageSize.value,
+      statusFilter.value || undefined,
+      keyword.value.trim() || undefined,
+    );
     list.value = res.list;
     total.value = res.total;
   } finally {
@@ -97,6 +109,11 @@ async function changePageSize(value: number): Promise<void> {
 
 async function onFilterChange(): Promise<void> {
   page.value = 1;
+  await load();
+}
+
+async function onSearch(): Promise<void> {
+  page.value = PAGINATION_DEFAULTS.page;
   await load();
 }
 
@@ -137,40 +154,13 @@ async function refundDeposit(row: BoosterView): Promise<void> {
 }
 
 const editVisible = ref(false);
-const editSaving = ref(false);
-const editingId = ref('');
-const editForm = reactive({ gameNickname: '', gameName: '', rank: '', intro: '' });
+const editingBooster = ref<BoosterView | null>(null);
 const penaltyVisible = ref(false);
 const penaltyTarget = ref<BoosterView | null>(null);
 
 function openEdit(row: BoosterView): void {
-  editingId.value = row.id;
-  editForm.gameNickname = row.gameNickname;
-  editForm.gameName = row.gameName;
-  editForm.rank = row.rank;
-  editForm.intro = row.intro;
+  editingBooster.value = row;
   editVisible.value = true;
-}
-
-async function saveEdit(): Promise<void> {
-  if (
-    !editForm.gameNickname.trim() ||
-    !editForm.gameName.trim() ||
-    !editForm.rank.trim() ||
-    !editForm.intro.trim()
-  ) {
-    ElMessage.warning('各字段均不能为空');
-    return;
-  }
-  editSaving.value = true;
-  try {
-    await boosterApi.update(editingId.value, { ...editForm });
-    ElMessage.success('打手资料已更新');
-    editVisible.value = false;
-    await load();
-  } finally {
-    editSaving.value = false;
-  }
 }
 
 function openPenalty(row: BoosterView): void {
@@ -192,20 +182,6 @@ onMounted(() => {
     >
       <template #actions>
         <div class="admin-actions">
-          <el-select
-            v-model="statusFilter"
-            class="booster-filter"
-            placeholder="按状态筛选"
-            :prefix-icon="Search"
-            @change="onFilterChange"
-          >
-            <el-option
-              v-for="opt in statusOptions"
-              :key="opt.value ?? 'all'"
-              :label="opt.label"
-              :value="opt.value"
-            />
-          </el-select>
           <el-button
             v-permission="PERMS.booster.levelSet"
             :icon="Setting"
@@ -229,16 +205,51 @@ onMounted(() => {
         </div>
       </template>
 
+      <template #toolbar>
+        <div class="admin-toolbar">
+          <el-input
+            v-model="keyword"
+            class="booster-search"
+            clearable
+            :maxlength="BOOSTER_LIMITS.directoryKeywordMax"
+            :prefix-icon="Search"
+            placeholder="搜索打手名称或注册手机号"
+            @keyup.enter="onSearch"
+            @clear="onSearch"
+          />
+          <el-select
+            v-model="statusFilter"
+            class="booster-filter"
+            placeholder="按状态筛选"
+            @change="onFilterChange"
+          >
+            <el-option
+              v-for="opt in statusOptions"
+              :key="opt.value || 'all'"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
+          <el-button
+            type="primary"
+            :icon="Search"
+            @click="onSearch"
+          >
+            搜索
+          </el-button>
+        </div>
+      </template>
+
       <app-data-table
         :data="list"
         :loading="loading"
-        :min-width="980"
+        :min-width="1420"
         table-class="booster-table"
         empty-text="暂无入驻申请"
       >
         <el-table-column
-          label="打手信息"
-          min-width="240"
+          label="申请人"
+          min-width="220"
         >
           <template #default="{ row }">
             <div class="booster-user">
@@ -246,22 +257,65 @@ onMounted(() => {
                 <el-icon><Trophy /></el-icon>
               </span>
               <div>
-                <strong>{{ row.nickname || row.username }}</strong>
-                <small>{{ row.username }}</small>
-                <span>{{ row.gameNickname || '未填写游戏昵称' }}</span>
+                <strong>{{ row.applicantName || '未填写姓名' }}</strong>
+                <small>{{ row.nickname || row.username }} · {{ row.username }}</small>
+                <span>{{ genderLabel(row.gender) }}</span>
               </div>
             </div>
           </template>
         </el-table-column>
         <el-table-column
-          label="能力资料"
-          min-width="300"
+          label="服务资料"
+          min-width="310"
         >
           <template #default="{ row }">
             <div class="booster-profile">
-              <span>擅长：{{ row.gameName || '-' }}</span>
-              <span>段位：{{ row.rank || '-' }}</span>
+              <div class="booster-regions">
+                <el-tag
+                  v-for="region in row.serviceRegions"
+                  :key="region"
+                  size="small"
+                  effect="plain"
+                >
+                  {{ serviceRegionLabel(region) }}
+                </el-tag>
+                <span v-if="row.serviceRegions.length === 0">未选择接单区服</span>
+              </div>
               <span class="booster-content">{{ row.intro || '-' }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="联系方式与材料"
+          min-width="280"
+        >
+          <template #default="{ row }">
+            <div class="booster-contact-material">
+              <div class="booster-contact-material__text">
+                <span>
+                  {{ contactTypeLabel(row.contactType) }}：{{ row.contactValue || '-' }}
+                </span>
+                <span>邀请码：{{ row.invitationCode || '未填写' }}</span>
+              </div>
+              <el-image
+                v-if="row.materialImage"
+                :src="row.materialImage"
+                :preview-src-list="[row.materialImage]"
+                preview-teleported
+                fit="contain"
+                class="booster-material-image"
+                alt="申请材料"
+              >
+                <template #error>
+                  <span class="booster-material-image__error">加载失败</span>
+                </template>
+              </el-image>
+              <span
+                v-else
+                class="booster-muted"
+              >
+                未上传材料
+              </span>
             </div>
           </template>
         </el-table-column>
@@ -291,9 +345,9 @@ onMounted(() => {
               <el-tag
                 round
                 effect="light"
-                :type="statusMeta[row.status as BoosterStatus].type"
+                :type="statusDisplay(row.status).type"
               >
-                {{ statusMeta[row.status as BoosterStatus].text }}
+                {{ statusDisplay(row.status).text }}
               </el-tag>
               <span class="booster-muted">提交：{{ formatDate(row.createdAt) }}</span>
               <span
@@ -378,70 +432,18 @@ onMounted(() => {
       </div>
     </app-panel>
 
-    <el-drawer
+    <booster-profile-edit-drawer
       v-model="editVisible"
-      title="编辑打手资料"
-      size="520px"
-      class="admin-drawer booster-edit-drawer"
-      destroy-on-close
-    >
-      <el-form
-        label-width="90px"
-        @submit.prevent
-      >
-        <el-form-item label="游戏昵称">
-          <el-input
-            v-model="editForm.gameNickname"
-            :maxlength="BOOSTER_LIMITS.gameNicknameMax"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item label="擅长游戏">
-          <el-input
-            v-model="editForm.gameName"
-            :maxlength="BOOSTER_LIMITS.gameNameMax"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item label="段位/实力">
-          <el-input
-            v-model="editForm.rank"
-            :maxlength="BOOSTER_LIMITS.rankMax"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item label="自我介绍">
-          <el-input
-            v-model="editForm.intro"
-            type="textarea"
-            :rows="4"
-            :maxlength="BOOSTER_LIMITS.introMax"
-            show-word-limit
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="admin-drawer__footer">
-          <el-button @click="editVisible = false">
-            取消
-          </el-button>
-          <el-button
-            type="primary"
-            :loading="editSaving"
-            @click="saveEdit"
-          >
-            保存
-          </el-button>
-        </div>
-      </template>
-    </el-drawer>
+      :booster="editingBooster"
+      @saved="load"
+    />
 
     <booster-level-dialog v-model="levelDialogVisible" />
     <booster-deposit-policy-dialog v-model="depositPolicyVisible" />
     <penalty-create-drawer
       v-model="penaltyVisible"
       :booster-user-id="penaltyTarget?.userId"
-      :booster-name="penaltyTarget ? (penaltyTarget.nickname || penaltyTarget.username) : undefined"
+      :booster-name="penaltyTarget ? penaltyTarget.nickname || penaltyTarget.username : undefined"
       @saved="load"
     />
   </section>

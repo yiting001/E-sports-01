@@ -9,6 +9,11 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
+    "migration:show": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:show",
+    "migration:run": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:run",
+    "migration:revert": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:revert",
+    "pretest": "pnpm --filter @app/contracts build",
+    "test": "node --test --require ts-node/register test/*/*.spec.ts",
     "lint": "eslint \"src/**/*.ts\" --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

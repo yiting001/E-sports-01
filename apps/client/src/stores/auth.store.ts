@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { authApi } from '@/api/auth.api';
 import { tokenStorage } from '@/api/token-storage';
+import { useCheckoutDraftStore } from '@/stores/checkout-draft.store';
 
 /**
  * C 端鉴权状态。
@@ -17,6 +18,18 @@ export const useAuthStore = defineStore('auth', () => {
 
   /** 是否已登录 */
   const isAuthenticated = computed(() => authed.value);
+
+  function clearSessionState(): void {
+    authed.value = false;
+    profile.value = null;
+    useCheckoutDraftStore().clearOrderContext();
+  }
+
+  tokenStorage.onChange(() => {
+    if (!tokenStorage.getAccess()) {
+      clearSessionState();
+    }
+  });
 
   /** 保存令牌对并标记为已登录 */
   function acceptTokens(tokens: TokenPair): void {
@@ -48,8 +61,7 @@ export const useAuthStore = defineStore('auth', () => {
   /** 登出：清空令牌与内存资料 */
   function logout(): void {
     tokenStorage.clear();
-    authed.value = false;
-    profile.value = null;
+    clearSessionState();
   }
 
   return { isAuthenticated, profile, smsLogin, smsRegister, loadProfile, logout };

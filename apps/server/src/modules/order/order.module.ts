@@ -12,6 +12,8 @@ import { ImModule } from '../im/im.module';
 import { OrderEntity } from './domain/order.entity';
 import { ORDER_REPOSITORY } from './domain/order-repository.interface';
 import { TypeormOrderRepository } from './infrastructure/order.repository';
+import { ORDER_PAYMENT_SETTLEMENT } from './domain/order-payment-settlement.interface';
+import { TypeormOrderPaymentSettlement } from './infrastructure/order-payment.settlement';
 
 import { CreateOrderUseCase } from './application/use-cases/create-order.usecase';
 import { HandleOrderCallbackUseCase } from './application/use-cases/handle-order-callback.usecase';
@@ -96,6 +98,10 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
   ],
   providers: [
     { provide: ORDER_REPOSITORY, useClass: TypeormOrderRepository },
+    {
+      provide: ORDER_PAYMENT_SETTLEMENT,
+      useClass: TypeormOrderPaymentSettlement,
+    },
     CreateOrderUseCase,
     HandleOrderCallbackUseCase,
     OrderPaymentSettleService,

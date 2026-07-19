@@ -4,8 +4,8 @@ import {
   FundDirection,
   PaymentProvider,
   PayoutProvider,
+  WALLET_TXN_TYPE_TEXT,
   WalletStatus,
-  WalletTxnType,
   WithdrawalStatus,
 } from '@app/contracts';
 import { ElMessage } from 'element-plus';
@@ -47,17 +47,6 @@ const withdrawForm = reactive<WalletWithdrawForm>({
   accountName: '',
 });
 
-const txnTypeText: Record<WalletTxnType, string> = {
-  [WalletTxnType.Recharge]: '充值',
-  [WalletTxnType.Withdraw]: '提现',
-  [WalletTxnType.Adjust]: '调整',
-  [WalletTxnType.Commission]: '订单提成',
-  [WalletTxnType.Deposit]: '缴纳押金',
-  [WalletTxnType.DepositRefund]: '押金退还',
-  [WalletTxnType.Penalty]: '罚款',
-  [WalletTxnType.InviteReward]: '邀请奖励',
-};
-
 const walletStatusLabel = computed(() =>
   wallet.value?.status === WalletStatus.Frozen ? '冻结' : '正常',
 );
@@ -66,7 +55,7 @@ const latestTransactionText = computed(() => {
   if (!first) {
     return '暂无流水';
   }
-  return `${txnTypeText[first.type]} ${first.direction === FundDirection.In ? '+' : '-'}${first.amountYuan} 元`;
+  return `${WALLET_TXN_TYPE_TEXT[first.type]} ${first.direction === FundDirection.In ? '+' : '-'}${first.amountYuan} 元`;
 });
 const balanceYuan = computed(() => wallet.value?.balanceYuan ?? '0.00');
 const totalRechargeYuan = computed(() => stats.value?.totalRechargeYuan ?? '0.00');

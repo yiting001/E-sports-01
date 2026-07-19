@@ -5,19 +5,24 @@ import { ConfigModule } from '../config/config.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { RealnameModule } from '../realname/realname.module';
 import { WalletModule } from '../wallet/wallet.module';
+import { UploadModule } from '../upload/upload.module';
 
 import { BoosterApplicationEntity } from './domain/booster-application.entity';
 import { BoosterPenaltyEntity } from './domain/booster-penalty.entity';
 import { BOOSTER_REPOSITORY } from './domain/booster-repository.interface';
+import { BOOSTER_DIRECTORY_QUERY } from './domain/booster-directory.query';
 import { BOOSTER_PENALTY_REPOSITORY } from './domain/penalty-repository.interface';
 
 import { TypeormBoosterRepository } from './infrastructure/booster.repository';
+import { TypeormBoosterDirectoryQuery } from './infrastructure/booster-directory.query';
 import { TypeormBoosterPenaltyRepository } from './infrastructure/penalty.repository';
 
 import { BoosterPolicyService } from './application/booster-policy.service';
 import { BoosterProgressService } from './application/booster-progress.service';
 import { BoosterDepositGuard } from './application/booster-deposit.service';
 import { BoosterRealnameGuard } from './application/booster-realname.service';
+import { BoosterSelectionService } from './application/booster-selection.service';
+import { BoosterCandidateService } from './application/booster-candidate.service';
 import { GetMyBoosterUseCase } from './application/use-cases/get-my-booster.usecase';
 import { SubmitBoosterUseCase } from './application/use-cases/submit-booster.usecase';
 import { ListBoosterUseCase } from './application/use-cases/list-booster.usecase';
@@ -31,6 +36,10 @@ import { SetDepositPolicyUseCase } from './application/use-cases/set-deposit-pol
 import { RefundDepositUseCase } from './application/use-cases/refund-deposit.usecase';
 import { CreatePenaltyUseCase } from './application/use-cases/create-penalty.usecase';
 import { ListPenaltiesUseCase } from './application/use-cases/list-penalties.usecase';
+import { ListBoosterDirectoryUseCase } from './application/use-cases/list-booster-directory.usecase';
+import { GetBoosterPublicProfileUseCase } from './application/use-cases/get-booster-public-profile.usecase';
+import { UpdateMyBoosterVoiceUseCase } from './application/use-cases/update-my-booster-voice.usecase';
+import { UpdateMyBoosterAvailabilityUseCase } from './application/use-cases/update-my-booster-availability.usecase';
 
 import { BoosterMineController } from './interfaces/controllers/booster.mine.controller';
 import { BoosterSubmitController } from './interfaces/controllers/booster.submit.controller';
@@ -45,6 +54,13 @@ import { BoosterDepositPolicySetController } from './interfaces/controllers/boos
 import { BoosterDepositRefundController } from './interfaces/controllers/booster.deposit.refund.controller';
 import { PenaltyCreateController } from './interfaces/controllers/penalty.create.controller';
 import { PenaltyListController } from './interfaces/controllers/penalty.list.controller';
+import { BoosterDirectoryListController } from './interfaces/controllers/booster.directory.list.controller';
+import { BoosterDirectoryDetailController } from './interfaces/controllers/booster.directory.detail.controller';
+import { BoosterMineVoiceUpdateController } from './interfaces/controllers/booster.mine.voice.update.controller';
+import { BoosterMineVoiceRemoveController } from './interfaces/controllers/booster.mine.voice.remove.controller';
+import { BoosterVoiceUpdateController } from './interfaces/controllers/booster.voice.update.controller';
+import { BoosterVoiceRemoveController } from './interfaces/controllers/booster.voice.remove.controller';
+import { BoosterMineAvailabilityController } from './interfaces/controllers/booster.mine.availability.controller';
 
 /**
  * 打手模块。
@@ -60,10 +76,18 @@ import { PenaltyListController } from './interfaces/controllers/penalty.list.con
     RbacModule,
     RealnameModule,
     WalletModule,
+    UploadModule,
     TypeOrmModule.forFeature([BoosterApplicationEntity, BoosterPenaltyEntity]),
   ],
   controllers: [
     BoosterMineController,
+    BoosterMineAvailabilityController,
+    BoosterDirectoryListController,
+    BoosterDirectoryDetailController,
+    BoosterMineVoiceUpdateController,
+    BoosterMineVoiceRemoveController,
+    BoosterVoiceUpdateController,
+    BoosterVoiceRemoveController,
     BoosterLevelsGetController,
     BoosterLevelsSetController,
     BoosterDepositPayController,
@@ -80,6 +104,10 @@ import { PenaltyListController } from './interfaces/controllers/penalty.list.con
   providers: [
     { provide: BOOSTER_REPOSITORY, useClass: TypeormBoosterRepository },
     {
+      provide: BOOSTER_DIRECTORY_QUERY,
+      useClass: TypeormBoosterDirectoryQuery,
+    },
+    {
       provide: BOOSTER_PENALTY_REPOSITORY,
       useClass: TypeormBoosterPenaltyRepository,
     },
@@ -87,6 +115,8 @@ import { PenaltyListController } from './interfaces/controllers/penalty.list.con
     BoosterProgressService,
     BoosterDepositGuard,
     BoosterRealnameGuard,
+    BoosterSelectionService,
+    BoosterCandidateService,
     GetMyBoosterUseCase,
     SubmitBoosterUseCase,
     ListBoosterUseCase,
@@ -100,6 +130,10 @@ import { PenaltyListController } from './interfaces/controllers/penalty.list.con
     RefundDepositUseCase,
     CreatePenaltyUseCase,
     ListPenaltiesUseCase,
+    ListBoosterDirectoryUseCase,
+    GetBoosterPublicProfileUseCase,
+    UpdateMyBoosterVoiceUseCase,
+    UpdateMyBoosterAvailabilityUseCase,
   ],
   // 供订单模块：完成结算时定级取费率、接单时校验押金与实名
   exports: [
@@ -107,6 +141,8 @@ import { PenaltyListController } from './interfaces/controllers/penalty.list.con
     BoosterDepositGuard,
     BoosterRealnameGuard,
     BoosterPolicyService,
+    BoosterSelectionService,
+    BoosterCandidateService,
   ],
 })
 export class BoosterModule {}

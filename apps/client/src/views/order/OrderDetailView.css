@@ -178,6 +178,22 @@
   word-break: break-all;
 }
 
+.order-detail .booster-link {
+  color: var(--c-accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.order-detail .arrangement-note {
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--c-text-muted);
+  border-left: 2px solid var(--c-accent);
+  background: var(--c-accent-dim);
+}
+
 .order-detail .mono {
   font-family: var(--font-num);
 }
@@ -216,6 +232,14 @@
   font-size: 13px;
   color: var(--c-text-secondary);
   padding: 32px 16px;
+}
+
+.order-detail .hint button {
+  margin-top: 12px;
+  padding: 8px 18px;
+  color: var(--c-accent);
+  border: 1px solid var(--c-accent);
+  border-radius: var(--radius-sm);
 }
 
 @media (min-width: 768px) {

@@ -2,6 +2,7 @@ import type {
   BoosterMineView,
   BoosterView,
   SubmitBoosterPayload,
+  UpdateBoosterAvailabilityPayload,
 } from '@app/contracts';
 import { http } from './http';
 
@@ -18,5 +19,9 @@ export const boosterApi = {
   /** 从钱包余额缴纳押金（区间内自选金额，仅限已入驻打手） */
   payDeposit(amountFen: number): Promise<BoosterView> {
     return http.post('/booster/deposit/pay', { amountFen });
+  },
+  /** 审核通过的打手自主切换是否接单。 */
+  updateAvailability(payload: UpdateBoosterAvailabilityPayload): Promise<BoosterView> {
+    return http.put('/booster/mine/availability', payload);
   },
 };

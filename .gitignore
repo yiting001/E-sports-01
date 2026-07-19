@@ -20,6 +20,7 @@ pnpm-debug.log*
 
 # runtime upload dir (local storage driver)
 uploads/
+backups/
 
 # editor / os
 .DS_Store

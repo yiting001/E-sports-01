@@ -1,11 +1,14 @@
 import {
   CreateOrderPayload,
+  BOOSTER_SERVICE_REGION_VALUES,
   ORDER_LIMITS,
-  PaymentProvider,
+  BoosterServiceRegion,
+  OrderBoosterSelectionMode,
+  OrderPaymentMethod,
   RemarkMediaItem,
   RemarkMediaType,
 } from '@app/contracts';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -16,9 +19,13 @@ import {
   IsString,
   Max,
   MaxLength,
+  Matches,
   Min,
+  ValidateIf,
   ValidateNested,
+  IsUUID,
 } from 'class-validator';
+import { trimStringValue } from '../../../../shared/http/trim-string.transformer';
 
 /** 备注附件项校验（图片/视频 URL） */
 export class RemarkMediaItemDto implements RemarkMediaItem {
@@ -41,8 +48,34 @@ export class CreateOrderDto implements CreateOrderPayload {
   @Max(ORDER_LIMITS.quantityMax)
   quantity!: number;
 
-  @IsEnum(PaymentProvider)
-  provider!: PaymentProvider;
+  @IsEnum(OrderPaymentMethod)
+  provider!: OrderPaymentMethod;
+
+  @Transform(trimStringValue)
+  @IsString()
+  @Matches(/^\d{1,32}$/, { message: '数字游戏 ID 必须为 1～32 位数字' })
+  gameAccountId!: string;
+
+  @IsOptional()
+  @Transform(trimStringValue)
+  @IsString()
+  @MaxLength(ORDER_LIMITS.gameTextIdMax)
+  gameTextId?: string;
+
+  @IsIn(BOOSTER_SERVICE_REGION_VALUES)
+  serviceRegion!: BoosterServiceRegion;
+
+  @IsEnum(OrderBoosterSelectionMode)
+  boosterSelectionMode!: OrderBoosterSelectionMode;
+
+  @ValidateIf(
+    (dto: CreateOrderDto) =>
+      dto.boosterSelectionMode === OrderBoosterSelectionMode.Specified ||
+      dto.requestedBoosterId !== undefined,
+  )
+  @Transform(trimStringValue)
+  @IsUUID()
+  requestedBoosterId?: string;
 
   @IsOptional()
   @IsString()
