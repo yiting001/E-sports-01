@@ -1,13 +1,14 @@
 <script setup lang="ts">
 /**
- * 投诉反馈页（全屏）：选择反馈类型 → 填写被投诉对象与内容提交，
- * 下方展示我的历史反馈及处理进度/回复。首页「投诉客服/打手」入口进入。
+ * 投诉反馈页（全屏）：投诉打手时关联本人履约订单，投诉客服/其他时填写对象，
+ * 提交内容后展示历史反馈及处理进度/回复。首页「投诉客服/打手」入口进入。
  */
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   FEEDBACK_LIMITS,
   FEEDBACK_TYPE_TEXT,
+  ORDER_STATUS_TEXT,
   FeedbackStatus,
   FeedbackType,
   PAGINATION_DEFAULTS,
@@ -16,15 +17,17 @@ import {
 import AppIcon from '@/components/common/AppIcon.vue';
 import SegmentTabs from '@/components/common/SegmentTabs.vue';
 import { feedbackApi } from '@/api/feedback.api';
+import { orderApi } from '@/api/order.api';
 import { useToast } from '@/composables/use-toast';
+import {
+  buildSubmitFeedbackPayload,
+  loadFeedbackOrderOptions,
+  type FeedbackOrderOption,
+} from '@/utils/feedback-orders';
 import './FeedbackView.responsive.css';
 
 /** 页签下标 → 反馈类型（与 SegmentTabs 的 tabs 顺序一致） */
-const TYPE_ORDER: FeedbackType[] = [
-  FeedbackType.Booster,
-  FeedbackType.Service,
-  FeedbackType.Other,
-];
+const TYPE_ORDER: FeedbackType[] = [FeedbackType.Booster, FeedbackType.Service, FeedbackType.Other];
 const TYPE_TABS = TYPE_ORDER.map((t) => FEEDBACK_TYPE_TEXT[t]);
 
 const router = useRouter();
@@ -34,9 +37,24 @@ const typeIndex = ref(0);
 const target = ref('');
 const content = ref('');
 const submitting = ref(false);
+const orderOptions = ref<FeedbackOrderOption[]>([]);
+const selectedOrderId = ref('');
+const loadingOrders = ref(true);
+const orderLoadError = ref(false);
 
 const records = ref<FeedbackRecord[]>([]);
 const loadingRecords = ref(true);
+const recordLoadError = ref(false);
+
+const currentType = computed(() => TYPE_ORDER[typeIndex.value] ?? FeedbackType.Booster);
+const isBoosterFeedback = computed(() => currentType.value === FeedbackType.Booster);
+const selectedOrder = computed(
+  () => orderOptions.value.find((order) => order.id === selectedOrderId.value) ?? null,
+);
+const submitDisabled = computed(
+  () =>
+    submitting.value || !content.value.trim() || (isBoosterFeedback.value && !selectedOrder.value),
+);
 
 function statusText(record: FeedbackRecord): string {
   return record.status === FeedbackStatus.Resolved ? '已处理' : '处理中';
@@ -53,14 +71,35 @@ function formatDate(iso: string): string {
 
 async function loadRecords(): Promise<void> {
   loadingRecords.value = true;
+  recordLoadError.value = false;
   try {
-    const res = await feedbackApi.mine(
-      PAGINATION_DEFAULTS.page,
-      PAGINATION_DEFAULTS.pageSize,
-    );
+    const res = await feedbackApi.mine(PAGINATION_DEFAULTS.page, PAGINATION_DEFAULTS.pageSize);
     records.value = res.list;
+  } catch {
+    records.value = [];
+    recordLoadError.value = true;
   } finally {
     loadingRecords.value = false;
+  }
+}
+
+async function loadOrders(): Promise<void> {
+  loadingOrders.value = true;
+  orderLoadError.value = false;
+  try {
+    orderOptions.value = await loadFeedbackOrderOptions(
+      orderApi.mine,
+      PAGINATION_DEFAULTS.maxPageSize,
+    );
+    if (!selectedOrder.value) {
+      selectedOrderId.value = '';
+    }
+  } catch {
+    orderOptions.value = [];
+    selectedOrderId.value = '';
+    orderLoadError.value = true;
+  } finally {
+    loadingOrders.value = false;
   }
 }
 
@@ -70,15 +109,20 @@ async function submit(): Promise<void> {
     toast.show(`请至少填写 ${FEEDBACK_LIMITS.contentMin} 个字的反馈内容`);
     return;
   }
+  if (isBoosterFeedback.value && !selectedOrder.value) {
+    toast.show('请选择要投诉的订单');
+    return;
+  }
+
+  const type = currentType.value;
   submitting.value = true;
   try {
-    await feedbackApi.submit({
-      type: TYPE_ORDER[typeIndex.value],
-      target: target.value.trim() || undefined,
-      content: text,
-    });
+    await feedbackApi.submit(
+      buildSubmitFeedbackPayload(type, selectedOrderId.value, target.value, text),
+    );
     toast.show('反馈已提交，我们会尽快处理');
     target.value = '';
+    selectedOrderId.value = '';
     content.value = '';
     await loadRecords();
   } finally {
@@ -90,7 +134,10 @@ function goBack(): void {
   router.back();
 }
 
-onMounted(loadRecords);
+onMounted(() => {
+  void loadRecords();
+  void loadOrders();
+});
 </script>
 
 <template>
@@ -123,12 +170,74 @@ onMounted(loadRecords);
           v-model="typeIndex"
           :tabs="TYPE_TABS"
         />
+        <div
+          v-if="isBoosterFeedback"
+          class="order-picker"
+        >
+          <p
+            v-if="loadingOrders"
+            class="order-picker-state"
+            aria-live="polite"
+          >
+            正在加载可投诉订单…
+          </p>
+          <div
+            v-else-if="orderLoadError"
+            class="order-picker-state order-picker-state--error"
+            role="alert"
+          >
+            <span>订单加载失败</span>
+            <button
+              type="button"
+              class="retry"
+              @click="loadOrders"
+            >
+              重试
+            </button>
+          </div>
+          <p
+            v-else-if="!orderOptions.length"
+            class="order-picker-state"
+          >
+            暂无服务中或已完成的可投诉订单
+          </p>
+          <template v-else>
+            <label class="order-field">
+              <span class="field-label">关联订单</span>
+              <select
+                v-model="selectedOrderId"
+                class="select"
+              >
+                <option
+                  disabled
+                  value=""
+                >请选择订单</option>
+                <option
+                  v-for="order in orderOptions"
+                  :key="order.id"
+                  :value="order.id"
+                >
+                  {{ order.orderNo }} · {{ order.boosterName || '打手名称未记录' }} ·
+                  {{ ORDER_STATUS_TEXT[order.status] }}
+                </option>
+              </select>
+            </label>
+            <div
+              v-if="selectedOrder"
+              class="order-summary"
+            >
+              <span>订单号<strong>{{ selectedOrder.orderNo }}</strong></span>
+              <span>实际打手<strong>{{ selectedOrder.boosterName || '名称未记录' }}</strong></span>
+            </div>
+          </template>
+        </div>
         <input
+          v-else
           v-model="target"
           class="input"
           type="text"
           :maxlength="FEEDBACK_LIMITS.targetMax"
-          placeholder="被投诉对象（昵称/单号，选填）"
+          placeholder="被投诉对象（昵称，选填）"
         >
         <textarea
           v-model="content"
@@ -138,7 +247,7 @@ onMounted(loadRecords);
         />
         <button
           class="submit"
-          :disabled="submitting || !content.trim()"
+          :disabled="submitDisabled"
           @click="submit"
         >
           {{ submitting ? '提交中…' : '提交反馈' }}
@@ -155,6 +264,20 @@ onMounted(loadRecords);
         >
           加载中…
         </p>
+        <div
+          v-else-if="recordLoadError"
+          class="order-picker-state order-picker-state--error"
+          role="alert"
+        >
+          <span>反馈记录加载失败</span>
+          <button
+            type="button"
+            class="retry"
+            @click="loadRecords"
+          >
+            重试
+          </button>
+        </div>
         <p
           v-else-if="!records.length"
           class="hint"
@@ -174,8 +297,15 @@ onMounted(loadRecords);
               :class="{ resolved: record.status === FeedbackStatus.Resolved }"
             >{{ statusText(record) }}</span>
           </div>
+          <div
+            v-if="record.orderNo"
+            class="record-order"
+          >
+            <span>订单：{{ record.orderNo }}</span>
+            <span>实际打手：{{ record.boosterName || '名称未记录' }}</span>
+          </div>
           <p
-            v-if="record.target"
+            v-else-if="record.target"
             class="record-target"
           >
             对象：{{ record.target }}
@@ -202,8 +332,7 @@ onMounted(loadRecords);
   inset: 0;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(70% 36% at 50% 0%, rgba(255, 176, 32, 0.07), transparent 70%),
+  background: radial-gradient(70% 36% at 50% 0%, rgba(255, 176, 32, 0.07), transparent 70%),
     var(--c-bg);
 }
 
@@ -267,6 +396,7 @@ onMounted(loadRecords);
 }
 
 .input,
+.select,
 .textarea {
   width: 100%;
   padding: 10px 12px;
@@ -301,63 +431,5 @@ onMounted(loadRecords);
   font-size: 13px;
   color: var(--c-text-muted);
   padding: 12px 0;
-}
-
-.record {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px;
-  background: var(--c-surface-2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-}
-
-.record-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.record-type {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--c-accent);
-}
-
-.record-status {
-  font-size: 12px;
-  color: var(--c-text-muted);
-}
-
-.record-status.resolved {
-  color: var(--c-accent);
-}
-
-.record-target {
-  font-size: 12px;
-  color: var(--c-text-secondary);
-}
-
-.record-content {
-  font-size: 14px;
-  line-height: 1.5;
-  word-break: break-word;
-  white-space: pre-wrap;
-}
-
-.record-reply {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--c-text-secondary);
-  padding: 8px 10px;
-  background: var(--c-accent-dim);
-  border-radius: var(--radius-sm);
-}
-
-.record-time {
-  font-size: 11px;
-  color: var(--c-text-muted);
-  text-align: right;
 }
 </style>

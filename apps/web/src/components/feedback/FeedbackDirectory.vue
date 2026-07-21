@@ -6,7 +6,7 @@ import {
   PERMS,
   type FeedbackView,
 } from '@app/contracts';
-import { ChatLineSquare, EditPen, Refresh, Search } from '@element-plus/icons-vue';
+import { ChatLineSquare, EditPen, Money, Refresh, Search } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
@@ -31,9 +31,17 @@ const emit = defineEmits<{
   filter: [];
   refresh: [];
   handle: [row: FeedbackView];
+  penalty: [row: FeedbackView];
   'update:page': [value: number];
   'update:pageSize': [value: number];
 }>();
+
+function hasPenaltyContext(row: FeedbackView): boolean {
+  return (
+    row.type === FeedbackType.Booster &&
+    Boolean(row.orderId && row.orderNo && row.boosterUserId && row.boosterName)
+  );
+}
 </script>
 
 <template>
@@ -85,7 +93,7 @@ const emit = defineEmits<{
     <app-data-table
       :data="list"
       :loading="loading"
-      :min-width="1020"
+      :min-width="1260"
       table-class="feedback-table"
       empty-text="暂无反馈"
     >
@@ -119,11 +127,24 @@ const emit = defineEmits<{
         </template>
       </el-table-column>
       <el-table-column
-        label="被投诉对象"
-        min-width="130"
+        label="关联订单"
+        min-width="160"
       >
         <template #default="{ row }">
-          <span class="feedback-muted">{{ row.target || '-' }}</span>
+          <span class="feedback-related__primary">{{ row.orderNo || '-' }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        label="被投诉对象"
+        min-width="180"
+      >
+        <template #default="{ row }">
+          <div class="feedback-related">
+            <span class="feedback-related__primary">
+              {{ row.boosterName || row.target || '-' }}
+            </span>
+            <small v-if="row.boosterUserId">{{ row.boosterUserId }}</small>
+          </div>
         </template>
       </el-table-column>
       <el-table-column
@@ -173,25 +194,45 @@ const emit = defineEmits<{
       </el-table-column>
       <el-table-column
         label="操作"
-        width="110"
+        width="180"
       >
         <template #default="{ row }">
-          <el-button
-            v-if="row.status === FeedbackStatus.Pending"
-            v-permission="PERMS.feedback.handle"
-            link
-            type="primary"
-            :icon="EditPen"
-            @click="emit('handle', row)"
-          >
-            处理
-          </el-button>
-          <span
-            v-else
-            class="feedback-muted"
-          >
-            已完成
-          </span>
+          <div class="feedback-row-actions">
+            <el-tag
+              v-if="row.penaltyId"
+              type="danger"
+              effect="light"
+              round
+            >
+              已扣款
+            </el-tag>
+            <el-button
+              v-else-if="row.status === FeedbackStatus.Pending && hasPenaltyContext(row)"
+              v-permission="[PERMS.feedback.handle, PERMS.finance.penaltyCreate]"
+              link
+              type="danger"
+              :icon="Money"
+              @click="emit('penalty', row)"
+            >
+              扣款
+            </el-button>
+            <el-button
+              v-if="row.status === FeedbackStatus.Pending && !row.penaltyId"
+              v-permission="PERMS.feedback.handle"
+              link
+              type="primary"
+              :icon="EditPen"
+              @click="emit('handle', row)"
+            >
+              处理
+            </el-button>
+            <span
+              v-if="row.status !== FeedbackStatus.Pending && !row.penaltyId"
+              class="feedback-muted"
+            >
+              已完成
+            </span>
+          </div>
         </template>
       </el-table-column>
     </app-data-table>

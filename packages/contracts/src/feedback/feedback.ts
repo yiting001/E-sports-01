@@ -4,6 +4,8 @@
  * 状态机：pending（待处理）→ resolved（已处理，附处理回复）。
  */
 
+import type { PenaltySource } from '../booster/penalty';
+
 /** 反馈类型：投诉对象分类 */
 export enum FeedbackType {
   /** 投诉打手 */
@@ -40,19 +42,43 @@ export const FEEDBACK_LIMITS = {
   replyMax: 500,
 } as const;
 
-/** 提交反馈入参 */
-export interface SubmitFeedbackPayload {
-  /** 反馈类型 */
-  type: FeedbackType;
-  /** 被投诉对象（打手/客服的昵称或单号等线索，可空） */
-  target?: string;
+interface SubmitFeedbackPayloadBase {
   /** 反馈内容 */
   content: string;
 }
 
+/** 投诉打手时必须关联结构化订单，禁止提交自由文本对象。 */
+export interface SubmitBoosterFeedbackPayload extends SubmitFeedbackPayloadBase {
+  type: FeedbackType.Booster;
+  orderId: string;
+  target?: never;
+}
+
+/** 投诉客服或其他反馈不允许夹带订单关联。 */
+export interface SubmitGeneralFeedbackPayload extends SubmitFeedbackPayloadBase {
+  type: FeedbackType.Service | FeedbackType.Other;
+  target?: string;
+  orderId?: never;
+}
+
+/** 提交反馈入参；类型决定订单关联是否必填。 */
+export type SubmitFeedbackPayload = SubmitBoosterFeedbackPayload | SubmitGeneralFeedbackPayload;
+
 /** 处理反馈入参 */
 export interface HandleFeedbackPayload {
   /** 处理回复（告知用户处理结果） */
+  replyContent: string;
+}
+
+/** 从投诉记录直接对关联订单打手扣款的入参 */
+export interface CreateFeedbackPenaltyBody {
+  /** 罚款金额（分，正整数） */
+  amountFen: number;
+  /** 从钱包余额或押金扣除 */
+  source: PenaltySource;
+  /** 内部处罚原因，写入罚款审计记录 */
+  reason: string;
+  /** 用户可见的处理回复 */
   replyContent: string;
 }
 
@@ -66,6 +92,16 @@ export interface FeedbackView {
   nickname: string;
   type: FeedbackType;
   target: string;
+  /** 关联服务订单 id；非打手投诉或历史未识别记录为空串 */
+  orderId: string;
+  /** 服务端固化的订单号 */
+  orderNo: string;
+  /** 服务端从订单固化的实际接单打手用户 id */
+  boosterUserId: string;
+  /** 服务端从订单固化的实际接单打手显示名 */
+  boosterName: string;
+  /** 直接扣款生成的罚款记录 id；尚未扣款为空串 */
+  penaltyId: string;
   content: string;
   status: FeedbackStatus;
   /** 处理回复；未处理为空串 */

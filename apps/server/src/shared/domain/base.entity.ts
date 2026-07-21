@@ -19,7 +19,7 @@ export abstract class BaseEntity {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 
-  /** 乐观锁版本号，防并发覆盖 */
+  /** 持久化版本标记；并发安全仍须由仓储条件更新或事务行锁保证。 */
   @VersionColumn()
   version!: number;
 }

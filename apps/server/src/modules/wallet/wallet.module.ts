@@ -21,6 +21,10 @@ import { TypeormTransactionRepository } from './infrastructure/transaction.repos
 import { TypeormRechargeRepository } from './infrastructure/recharge.repository';
 import { TypeormWithdrawalRepository } from './infrastructure/withdrawal.repository';
 import { TypeormWalletLedger } from './infrastructure/wallet.ledger';
+import {
+  TypeormWalletTransactionParticipant,
+  WALLET_TRANSACTION_PARTICIPANT,
+} from './infrastructure/wallet-transaction.participant';
 import { AlipayClientFactory } from './infrastructure/drivers/alipay-client.factory';
 import { AlipayPaymentDriver } from './infrastructure/drivers/alipay-payment.driver';
 import { WechatPayConfigFactory } from './infrastructure/drivers/wechat-pay.config';
@@ -107,6 +111,10 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
       useClass: TypeormWithdrawalRepository,
     },
     { provide: WALLET_LEDGER, useClass: TypeormWalletLedger },
+    {
+      provide: WALLET_TRANSACTION_PARTICIPANT,
+      useClass: TypeormWalletTransactionParticipant,
+    },
 
     AlipayClientFactory,
     AlipayPaymentDriver,
@@ -116,18 +124,12 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
     WechatPayoutDriver,
     {
       provide: PAYMENT_PORTS,
-      useFactory: (alipay: AlipayPaymentDriver, wechat: WechatPaymentDriver) => [
-        alipay,
-        wechat,
-      ],
+      useFactory: (alipay: AlipayPaymentDriver, wechat: WechatPaymentDriver) => [alipay, wechat],
       inject: [AlipayPaymentDriver, WechatPaymentDriver],
     },
     {
       provide: PAYOUT_PORTS,
-      useFactory: (alipay: AlipayPayoutDriver, wechat: WechatPayoutDriver) => [
-        alipay,
-        wechat,
-      ],
+      useFactory: (alipay: AlipayPayoutDriver, wechat: WechatPayoutDriver) => [alipay, wechat],
       inject: [AlipayPayoutDriver, WechatPayoutDriver],
     },
 
@@ -150,6 +152,6 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
     RejectWithdrawalUseCase,
   ],
   // 导出支付渠道解析器，供订单等其他收款场景复用同一套支付宝/微信驱动
-  exports: [PaymentResolver, WalletService, WALLET_LEDGER],
+  exports: [PaymentResolver, WalletService, WALLET_LEDGER, WALLET_TRANSACTION_PARTICIPANT],
 })
 export class WalletModule {}

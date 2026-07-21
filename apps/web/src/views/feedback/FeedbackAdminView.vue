@@ -9,6 +9,7 @@ import {
 } from '@app/contracts';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import FeedbackDirectory from '@/components/feedback/FeedbackDirectory.vue';
+import FeedbackPenaltyDrawer from '@/components/feedback/FeedbackPenaltyDrawer.vue';
 import FeedbackStats from '@/components/feedback/FeedbackStats.vue';
 import { feedbackApi } from '@/api/feedback.api';
 import './FeedbackAdminView.css';
@@ -21,11 +22,11 @@ const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const statusFilter = ref<FeedbackStatus | undefined>(undefined);
 const typeFilter = ref<FeedbackType | undefined>(undefined);
 const loading = ref(false);
+const penaltyVisible = ref(false);
+const penaltyFeedback = ref<FeedbackView | null>(null);
+let latestLoadId = 0;
 
-const statusMeta: Record<
-  FeedbackStatus,
-  { text: string; type: 'warning' | 'success' }
-> = {
+const statusMeta: Record<FeedbackStatus, { text: string; type: 'warning' | 'success' }> = {
   [FeedbackStatus.Pending]: { text: '待处理', type: 'warning' },
   [FeedbackStatus.Resolved]: { text: '已处理', type: 'success' },
 };
@@ -65,6 +66,7 @@ function formatDate(value: string): string {
 }
 
 async function load(): Promise<void> {
+  const loadId = ++latestLoadId;
   loading.value = true;
   try {
     const res = await feedbackApi.list(
@@ -73,10 +75,14 @@ async function load(): Promise<void> {
       statusFilter.value,
       typeFilter.value,
     );
-    list.value = res.list;
-    total.value = res.total;
+    if (loadId === latestLoadId) {
+      list.value = res.list;
+      total.value = res.total;
+    }
   } finally {
-    loading.value = false;
+    if (loadId === latestLoadId) {
+      loading.value = false;
+    }
   }
 }
 
@@ -111,6 +117,20 @@ async function handle(row: FeedbackView): Promise<void> {
   await load();
 }
 
+function openPenalty(row: FeedbackView): void {
+  penaltyFeedback.value = row;
+  penaltyVisible.value = true;
+}
+
+async function onPenaltySaved(updated: FeedbackView): Promise<void> {
+  const index = list.value.findIndex((item) => item.id === updated.id);
+  if (index >= 0) {
+    list.value[index] = updated;
+  }
+  penaltyFeedback.value = updated;
+  await load();
+}
+
 onMounted(() => {
   void load();
 });
@@ -138,8 +158,14 @@ onMounted(() => {
       @filter="onFilterChange"
       @refresh="load"
       @handle="handle"
+      @penalty="openPenalty"
       @update:page="changePage"
       @update:page-size="changePageSize"
+    />
+    <feedback-penalty-drawer
+      v-model="penaltyVisible"
+      :feedback="penaltyFeedback"
+      @saved="onPenaltySaved"
     />
   </section>
 </template>

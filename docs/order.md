@@ -10,7 +10,7 @@
 - C 端商品详情页：固定比例主图只展示商品封面，封面主副标语位于图片下方的独立介绍区，并展示四项服务保障；富文本经净化后渲染且兼容历史本机媒体地址。PC 端导航与详情主体同轴收敛，移动端滚动区避让固定下单栏；进入结算页选择数量、备注、优惠券与支付方式后下单，结算页复用同类顶部返回栏，基础样式拆分到 `CheckoutView.css`
 - 备注附件：下单备注支持上传图片/视频（`RemarkMediaUploader`，复用 `/upload/self` 自助上传，最多 `ORDER_LIMITS.remarkMediaMax` 个），订单固化 `remarkMedia` jsonb 快照，详情页/大厅详情/管理端抽屉以缩略图展示（`RemarkMediaGallery`）
 - 账号信息：下单可选填 `accountInfo`（游戏账号等敏感信息）；仅本人、接单后的打手与管理端可见，接单大厅列表/详情经 `toHallOrderView` 置空不下发
-- 结构化游戏资料：数字游戏 ID（1～32 位数字，必填）、文字游戏 ID（选填，最多 64）、本单区服（`delta-mobile` / `delta-pc`）和其他账号信息分字段收集；历史订单字段为空串兼容，不把大厅可见数据与接单后敏感数据混用
+- 结构化游戏资料：数字游戏 ID（1 ～ 32 位数字，必填）、文字游戏 ID（选填，最多 64）、本单区服（`delta-mobile` / `delta-pc`）和其他账号信息分字段收集；历史订单字段为空串兼容，不把大厅可见数据与接单后敏感数据混用
 - 打手选择：结算页可选「自动安排」或「指定打手」；指定时从 C 端脱敏目录选择，服务端复核打手支持区服、本人排除、实名和押金门禁，并固化 `requestedBoosterId` / `requestedBoosterName` 快照
 - 指定打手履约约束：指定订单支付成功后仍处于「待客服处理」，不能下发公共接单大厅；客服只能确认老板锁定的打手，不能改派他人，实际 `boosterId` / `boosterName` 仅在确认接单时写入
 - 下单支付：订单使用独立 `OrderPaymentMethod`（`alipay` / `wechat` / `balance`）。支付宝、微信复用钱包收款驱动并返回二维码；余额支付在创建订单请求内完成扣款并直接进入详情，不生成二维码
@@ -114,7 +114,8 @@ apps/server/src/modules/order/
 │   └── order-payment-settlement.interface.ts # 支付事务端口
 ├── infrastructure/
 │   ├── order.repository.ts                  # TypeORM 实现（租户过滤 + 悲观写锁领取）
-│   └── order-payment.settlement.ts          # 订单/钱包/流水/销量原子落账
+│   ├── order-payment.settlement.ts          # 订单/钱包/流水/销量原子落账
+│   └── order-feedback-penalty.transaction.ts # 反馈事务中的订单快照复核
 ├── application/
 │   ├── order.mapper.ts                      # 实体 → 视图
 │   ├── order-booster-selection.ts            # 指定订单大厅/改派约束
@@ -210,14 +211,14 @@ apps/web/src/
 
 订单新增字段与原订单快照同属 `service_order` 聚合，不创建额外的打手选择表：
 
-| 字段 | 数据库列 / 类型 | 规则与可见性 |
-| --- | --- | --- |
-| `gameAccountId` | `game_account_id` varchar(32) | 必填数字，1～32 位；大厅视图隐藏 |
-| `gameTextId` | `game_text_id` varchar(64) | 选填；大厅视图隐藏 |
-| `serviceRegion` | `service_region` varchar(32) | `delta-mobile` / `delta-pc`；历史订单为空串 |
-| `boosterSelectionMode` | `booster_selection_mode` varchar(16) | `auto` 或 `specified` |
-| `requestedBoosterId` / `requestedBoosterName` | varchar(36) / varchar(64) | 锁定打手及下单时显示名快照；自动安排为空 |
-| `boosterId` / `boosterName` | 既有列 | 实际接单或客服指派后才写入，名称固化不随用户改名变化 |
+| 字段                                          | 数据库列 / 类型                      | 规则与可见性                                         |
+| --------------------------------------------- | ------------------------------------ | ---------------------------------------------------- |
+| `gameAccountId`                               | `game_account_id` varchar(32)        | 必填数字，1 ～ 32 位；大厅视图隐藏                   |
+| `gameTextId`                                  | `game_text_id` varchar(64)           | 选填；大厅视图隐藏                                   |
+| `serviceRegion`                               | `service_region` varchar(32)         | `delta-mobile` / `delta-pc`；历史订单为空串          |
+| `boosterSelectionMode`                        | `booster_selection_mode` varchar(16) | `auto` 或 `specified`                                |
+| `requestedBoosterId` / `requestedBoosterName` | varchar(36) / varchar(64)            | 锁定打手及下单时显示名快照；自动安排为空             |
+| `boosterId` / `boosterName`                   | 既有列                               | 实际接单或客服指派后才写入，名称固化不随用户改名变化 |
 
 ```mermaid
 erDiagram
@@ -260,9 +261,11 @@ ER 图中的打手关系是通过租户内 `userId` 的逻辑关联，订单表�
 - **回调租户恢复**：支付渠道回调是公开入口，事务返回订单后以 `paidOrder.tenantId` 重建非超管租户上下文，再累计会员消费和解析订单群管理员，防止无上下文查询跨租户成员
 - **快照固化**：订单固化商品标题/封面/关联客服，商品后续改动不影响历史订单；
   `serviceAgentId` 快照用于建群拉客服、客服可见性过滤与指派打手归属判定
+- **投诉关联**：C 端投诉打手只提交本人订单 ID；反馈用例按当前租户复核订单属于提交人、状态为服务中/已完成且已有实际打手，再固化 `orderId/orderNo/boosterUserId/boosterName`（`boosterUserId` 来源于订单 `boosterId`）。处罚事务通过订单模块公开的事务参与端口重新锁定订单并校验快照，不能用昵称、前端打手 ID 或过期关系扣款；处罚不改变订单状态。
 - **指定打手两阶段语义**：创建订单用 `requestedBooster*` 锁定唯一履约人，不提前写实际 `booster*`；客服确认该打手后才进入服务中。`assertOrderCanDispatch` 阻止指定订单进入公共大厅，`assertRequestedBooster` 同时约束后台指派和大厅接单，禁止改派或被其他打手领取
 - **服务端再次校验**：C 端目录的 `selectable` 只用于交互提示；`CreateOrderUseCase`、大厅接单与后台指派必须重新校验打手仍上线、可见、支持本单区服、不是本人且实名/押金满足要求，防止使用过期或篡改的前端状态
 - **原子领取**：`OrderRepository.claimForServing` 在 PostgreSQL 短事务中对订单行加 `pessimistic_write` 锁，锁内复核租户、允许状态、`boosterId` 为空、下单人不是打手、`expectedRequestedBoosterId` 未变化及锁定人一致；竞争失败返回 `null`，用例转换为 409，只有成功者进入订单群
+- **完成进度并发**：打手累计完成单数通过 `BoosterRepository.recordCompletedOrder` 在 `booster_application` 行锁事务内递增，不再用旧实体整行保存；与投诉押金处罚并发时完成单数和押金字段均不会丢失。
 - **指派门禁**：管理端在 `tenant.run` 中复用 `BoosterSelectionService`；有区服订单校验目录、区服、启用账号、booster 角色、实名和押金，历史空区服订单只跳过区服匹配。门禁未知异常继续上抛，不被伪装成“不可选”
 - **订单群编排**：`OrderGroupService` 复用 im 模块 `GroupFacade` 建群/进群，
   订单 UUID 同时作为系统群 UUID，首次写入、补成员、订单回填任一步失败后均可定位原群重试，不会创建重复群；欢迎消息与实时通知失败不阻断群主体和订单关联；
@@ -307,22 +310,22 @@ sequenceDiagram
 
 所有路径带全局 `/api` 前缀。老板侧创建/查询接口只允许当前用户；大厅和打手订单接口还需 `booster` 角色，后台订单接口由 `order:admin:*` 权限与客服商品归属范围共同门控。
 
-| 方法 | 路径 | 权限 | 说明 |
-| --- | --- | --- | --- |
-| POST | `/api/order` | 登录 | `{ productId, quantity, provider, gameAccountId, gameTextId?, serviceRegion, boosterSelectionMode, requestedBoosterId?, accountInfo?, remark?, remarkMedia?, userCouponId? }`；`provider` 为 `alipay/wechat/balance` |
-| GET | `/api/order/:id` | 登录，本人 | 订单详情；含实际/指定打手快照与时间线 |
-| GET | `/api/order/:id/pay/query` | 登录，本人 | 渠道支付主动查单兜底 |
-| GET | `/api/order/mine` | 登录，本人 | 我的订单分页 |
-| POST | `/api/order/:id/cancel` | 登录，本人 | 仅待付款可取消 |
-| GET | `/api/order/hall` / `/api/order/hall/:id` | 打手角色 | 待接单大厅列表/详情，账号字段隐藏 |
-| POST | `/api/order/hall/:id/accept` | 打手角色且当前上线 | 原子接单；指定订单只能由指定人接单，下线返回业务错误 |
-| GET | `/api/order/booster/mine` / `/api/order/booster/mine/:id` | 打手角色 | 本人接单订单及详情，接单后可见账号字段 |
-| POST | `/api/order/booster/:id/complete` | 打手角色 | 完成服务并结算提成 |
-| GET | `/api/order/admin` / `/api/order/admin/:id` | `order:admin:list` / `order:admin:detail` | 管理端列表/详情；客服仅能看自己负责商品 |
-| POST | `/api/order/admin/:id/group/join` | `order:admin:detail` | 幂等加入订单群并返回 `conversationId` |
-| POST | `/api/order/admin/:id/dispatch` | `order:admin:dispatch` | 自动安排订单下发大厅；指定订单拒绝 |
-| GET | `/api/order/admin/booster-candidates` | `order:admin:assign` | 仅搜索当前上线且资格有效的指派候选 |
-| POST | `/api/order/admin/:id/assign` | `order:admin:assign` | 指派打手；指定订单只能指派老板选定者 |
+| 方法 | 路径                                                      | 权限                                      | 说明                                                                                                                                                                                                                 |
+| ---- | --------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST | `/api/order`                                              | 登录                                      | `{ productId, quantity, provider, gameAccountId, gameTextId?, serviceRegion, boosterSelectionMode, requestedBoosterId?, accountInfo?, remark?, remarkMedia?, userCouponId? }`；`provider` 为 `alipay/wechat/balance` |
+| GET  | `/api/order/:id`                                          | 登录，本人                                | 订单详情；含实际/指定打手快照与时间线                                                                                                                                                                                |
+| GET  | `/api/order/:id/pay/query`                                | 登录，本人                                | 渠道支付主动查单兜底                                                                                                                                                                                                 |
+| GET  | `/api/order/mine`                                         | 登录，本人                                | 我的订单分页                                                                                                                                                                                                         |
+| POST | `/api/order/:id/cancel`                                   | 登录，本人                                | 仅待付款可取消                                                                                                                                                                                                       |
+| GET  | `/api/order/hall` / `/api/order/hall/:id`                 | 打手角色                                  | 待接单大厅列表/详情，账号字段隐藏                                                                                                                                                                                    |
+| POST | `/api/order/hall/:id/accept`                              | 打手角色且当前上线                        | 原子接单；指定订单只能由指定人接单，下线返回业务错误                                                                                                                                                                 |
+| GET  | `/api/order/booster/mine` / `/api/order/booster/mine/:id` | 打手角色                                  | 本人接单订单及详情，接单后可见账号字段                                                                                                                                                                               |
+| POST | `/api/order/booster/:id/complete`                         | 打手角色                                  | 完成服务并结算提成                                                                                                                                                                                                   |
+| GET  | `/api/order/admin` / `/api/order/admin/:id`               | `order:admin:list` / `order:admin:detail` | 管理端列表/详情；客服仅能看自己负责商品                                                                                                                                                                              |
+| POST | `/api/order/admin/:id/group/join`                         | `order:admin:detail`                      | 幂等加入订单群并返回 `conversationId`                                                                                                                                                                                |
+| POST | `/api/order/admin/:id/dispatch`                           | `order:admin:dispatch`                    | 自动安排订单下发大厅；指定订单拒绝                                                                                                                                                                                   |
+| GET  | `/api/order/admin/booster-candidates`                     | `order:admin:assign`                      | 仅搜索当前上线且资格有效的指派候选                                                                                                                                                                                   |
+| POST | `/api/order/admin/:id/assign`                             | `order:admin:assign`                      | 指派打手；指定订单只能指派老板选定者                                                                                                                                                                                 |
 
 数字游戏 ID、区服和指定模式由 DTO 与数据库约束双重校验；账号信息和游戏 ID 不会返回给未接单的大厅打手。实际打手显示名使用昵称或安全 ID 后缀快照，避免向老板暴露登录用户名。
 
@@ -330,7 +333,7 @@ sequenceDiagram
 
 - `service_order.provider`、`wallet_transaction.type` 仍是 `varchar`，但本次结构化游戏资料、锁定打手和语音字段由 `1784332800000-add-booster-directory-order-selection.ts` 正式迁移管理。
 - 后端测试覆盖 DTO 支付方式/游戏资料校验、指定订单大厅与改派约束、余额不足/冻结/金额或归属不符、同订单幂等、原子并发接单/指派（`order-assignment.spec.ts`，两请求仅一方成功）以及提交后副作用失败不回滚；`order-group-recovery.spec.ts` 覆盖成功建群、重复确保、成员写入中断后补齐、首次失败后查询补建和支付状态不回滚；真实数据库 migration 往返和 PostgreSQL 行锁竞争已验证。
-- 根目录 `pnpm test` 当前串行执行服务端与客户端测试，服务端 58 项、客户端 Vitest 6 项全部通过。
+- 根目录 `pnpm test` 串行执行服务端与客户端测试；本次实际结果与数量见交付汇报及反馈模块文档，避免在多个文档复制易漂移计数。
 - C 端支付弹层只把明确的已支付状态或非空 `paidAt` 视为成功；`cancelled` 会停止轮询并提示未支付，请求失败采用单请求保护后自动重试。
 - `POST /order` 仍沿用既有“每次请求创建一个新订单”的语义，尚未提供客户端幂等键；网络响应丢失后自动重放请求可能生成第二张订单。客户端通过提交中禁用降低重复点击，但生产接入自动重试前应补充租户 + 用户 + 幂等键唯一约束。
 

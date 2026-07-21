@@ -12,10 +12,16 @@ import { BoosterPenaltyEntity } from './domain/booster-penalty.entity';
 import { BOOSTER_REPOSITORY } from './domain/booster-repository.interface';
 import { BOOSTER_DIRECTORY_QUERY } from './domain/booster-directory.query';
 import { BOOSTER_PENALTY_REPOSITORY } from './domain/penalty-repository.interface';
+import { BOOSTER_FINANCE_SETTLEMENT } from './domain/booster-finance-settlement.interface';
 
 import { TypeormBoosterRepository } from './infrastructure/booster.repository';
 import { TypeormBoosterDirectoryQuery } from './infrastructure/booster-directory.query';
 import { TypeormBoosterPenaltyRepository } from './infrastructure/penalty.repository';
+import {
+  BOOSTER_FEEDBACK_PENALTY_TRANSACTION,
+  TypeormBoosterFeedbackPenaltyTransaction,
+} from './infrastructure/booster-feedback-penalty.transaction';
+import { TypeormBoosterFinanceSettlement } from './infrastructure/booster-finance.settlement';
 
 import { BoosterPolicyService } from './application/booster-policy.service';
 import { BoosterProgressService } from './application/booster-progress.service';
@@ -111,6 +117,14 @@ import { BoosterMineAvailabilityController } from './interfaces/controllers/boos
       provide: BOOSTER_PENALTY_REPOSITORY,
       useClass: TypeormBoosterPenaltyRepository,
     },
+    {
+      provide: BOOSTER_FEEDBACK_PENALTY_TRANSACTION,
+      useClass: TypeormBoosterFeedbackPenaltyTransaction,
+    },
+    {
+      provide: BOOSTER_FINANCE_SETTLEMENT,
+      useClass: TypeormBoosterFinanceSettlement,
+    },
     BoosterPolicyService,
     BoosterProgressService,
     BoosterDepositGuard,
@@ -143,6 +157,7 @@ import { BoosterMineAvailabilityController } from './interfaces/controllers/boos
     BoosterPolicyService,
     BoosterSelectionService,
     BoosterCandidateService,
+    BOOSTER_FEEDBACK_PENALTY_TRANSACTION,
   ],
 })
 export class BoosterModule {}

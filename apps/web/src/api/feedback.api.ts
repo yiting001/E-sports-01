@@ -1,4 +1,5 @@
 import type {
+  CreateFeedbackPenaltyBody,
   FeedbackStatus,
   FeedbackType,
   FeedbackView,
@@ -21,5 +22,9 @@ export const feedbackApi = {
   /** 处理反馈（填写处理回复并标记已处理） */
   handle(id: string, payload: HandleFeedbackPayload): Promise<FeedbackView> {
     return http.post(`/feedback/${id}/handle`, payload);
+  },
+  /** 根据结构化打手投诉创建罚款，并同步完成反馈回复 */
+  createPenalty(id: string, payload: CreateFeedbackPenaltyBody): Promise<FeedbackView> {
+    return http.post(`/feedback/${id}/penalty`, payload);
   },
 };

@@ -1,14 +1,5 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import {
-  FeedbackStatus,
-  FeedbackView,
-  HandleFeedbackPayload,
-} from '@app/contracts';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { FeedbackView, HandleFeedbackPayload } from '@app/contracts';
 import { UserDirectory } from '../../../rbac/application/user-directory.service';
 import {
   FEEDBACK_REPOSITORY,
@@ -30,18 +21,14 @@ export class HandleFeedbackUseCase {
     id: string,
     payload: HandleFeedbackPayload,
   ): Promise<FeedbackView> {
-    const record = await this.repo.findById(id);
-    if (!record) {
+    const result = await this.repo.resolvePending(id, handlerId, payload.replyContent.trim());
+    if (result.outcome === 'not_found') {
       throw new NotFoundException('反馈记录不存在');
     }
-    if (record.status !== FeedbackStatus.Pending) {
+    if (result.outcome === 'already_resolved') {
       throw new ConflictException('该反馈已处理');
     }
-    record.status = FeedbackStatus.Resolved;
-    record.replyContent = payload.replyContent.trim();
-    record.handledBy = handlerId;
-    record.handledAt = new Date();
-    const saved = await this.repo.save(record);
+    const saved = result.entity;
     const profiles = await this.users.resolveProfiles([saved.userId]);
     return toFeedbackView(saved, profiles.get(saved.userId));
   }

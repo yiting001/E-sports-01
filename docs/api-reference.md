@@ -268,17 +268,25 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| POST | `/api/feedback` | 登录 | 提交投诉反馈 `{ type, target?, content }`（type：`booster` 投诉打手 / `service` 投诉客服 / `other` 其他）→ `FeedbackView` |
+| POST | `/api/feedback` | 登录 | 提交投诉反馈：打手投诉 `{ type:'booster', orderId, content }`；客服/其他 `{ type, target?, content }`。服务端校验本人订单并固化实际打手快照 → `FeedbackView` |
 | GET | `/api/feedback/mine` | 登录 | 分页查询我的反馈 `?page&pageSize`，按提交时间倒序 |
 | GET | `/api/feedback` | `feedback:list` | 管理端分页列表 `?page&pageSize&status&type`，按提交时间倒序 |
-| POST | `/api/feedback/:id/handle` | `feedback:handle` | 处理反馈 `{ replyContent }`（仅待处理记录可处理，处理后不可重复处理） |
+| POST | `/api/feedback/:id/handle` | `feedback:handle` | 普通处理 `{ replyContent }`；锁行执行 `pending -> resolved` |
+| POST | `/api/feedback/:id/penalty` | `feedback:handle` + `finance:penalty:create` | 对结构化订单的实际打手直接扣款 `{ amountFen, source, reason, replyContent }`；来源为 `balance/deposit`，同反馈幂等并同步完成回复 |
 
 ```jsonc
-// POST /api/feedback  请求
-{ "type": "booster", "target": "打手小王", "content": "态度恶劣，拒绝沟通" }
-// data
-{ "id": "...", "type": "booster", "target": "打手小王", "content": "...",
-  "status": "pending", "replyContent": "", "handledBy": "", "handledAt": "" }
+// POST /api/feedback  请求（订单与实际打手由服务端复核）
+{ "type": "booster", "orderId": "11111111-1111-4111-8111-111111111111", "content": "态度恶劣，拒绝沟通" }
+// data（节选；完整结构见 packages/contracts 的 FeedbackView）
+{ "id": "...", "type": "booster", "target": "O202607210001",
+  "orderId": "11111111-1111-4111-8111-111111111111", "orderNo": "O202607210001",
+  "boosterUserId": "22222222-2222-4222-8222-222222222222", "boosterName": "打手小王",
+  "penaltyId": "", "content": "...", "status": "pending", "replyContent": "",
+  "handledBy": "", "handledAt": "" }
+
+// POST /api/feedback/:id/penalty 请求
+{ "amountFen": 1000, "source": "balance", "reason": "服务态度不符合要求",
+  "replyContent": "投诉已核实，平台已完成扣款处理。" }
 ```
 
 ## 运营通知与首页横幅
@@ -340,6 +348,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | IM | `im:message:history` |
 | 日志 | `observability:log:list` `observability:log:detail` `observability:log:purge` |
 | 钱包管理 | `wallet:admin:list` `wallet:admin:transaction` `wallet:admin:adjust` |
+| 财务 | `finance:withdrawal:list` `finance:withdrawal:review` `finance:penalty:list` `finance:penalty:create` |
 | 实名 | `realname:list` `realname:review` `realname:policy` |
 | 打手 | `booster:list` `booster:review` `booster:update` `booster:level:set` `booster:deposit:refund` `booster:deposit:policy:set` |
 | 订单管理 | `order:admin:list` `order:admin:detail` `order:admin:dispatch` `order:admin:assign` |

@@ -32,15 +32,18 @@
 
 **管理侧**菜单与功能权限纳入权限树（`MENU_DEFINITIONS` / `PERMS.wallet`），默认仅超级管理员拥有，其他角色在「角色管理」按需分配：
 
-| 权限码 | 名称 | 类型 | 守卫 |
-| --- | --- | --- | --- |
-| `wallet:admin:menu` | 钱包管理 | 菜单 | 侧边栏「钱包管理」动态路由 `/wallet/admin`（系统管理组） |
-| `wallet:admin:list` | 钱包-用户列表 | 接口 | `GET /wallet/admin/wallets` |
-| `wallet:admin:transaction` | 钱包-明细查看 | 接口/按钮 | `GET /wallet/admin/wallets/:userId/transactions`（前端「明细」按钮 `v-permission`） |
-| `wallet:admin:adjust` | 钱包-余额调整 | 接口/按钮 | `POST /wallet/admin/wallets/:userId/adjust`（前端「调整余额」按钮 `v-permission`） |
-| `finance:withdrawal:menu` | 提现管理 | 菜单 | 侧边栏「财务 → 提现管理」动态路由 `/finance/withdrawals` |
-| `finance:withdrawal:list` | 财务-提现工单列表 | 接口 | `GET /wallet/admin/withdrawals` |
-| `finance:withdrawal:review` | 财务-提现审核 | 接口/按钮 | `POST /wallet/admin/withdrawals/:id/approve`、`POST /wallet/admin/withdrawals/:id/reject`（前端「通过/驳回」按钮 `v-permission`） |
+| 权限码                      | 名称              | 类型      | 守卫                                                                                                                              |
+| --------------------------- | ----------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `wallet:admin:menu`         | 钱包管理          | 菜单      | 侧边栏「钱包管理」动态路由 `/wallet/admin`（系统管理组）                                                                          |
+| `wallet:admin:list`         | 钱包-用户列表     | 接口      | `GET /wallet/admin/wallets`                                                                                                       |
+| `wallet:admin:transaction`  | 钱包-明细查看     | 接口/按钮 | `GET /wallet/admin/wallets/:userId/transactions`（前端「明细」按钮 `v-permission`）                                               |
+| `wallet:admin:adjust`       | 钱包-余额调整     | 接口/按钮 | `POST /wallet/admin/wallets/:userId/adjust`（前端「调整余额」按钮 `v-permission`）                                                |
+| `finance:withdrawal:menu`   | 提现管理          | 菜单      | 侧边栏「财务 → 提现管理」动态路由 `/finance/withdrawals`                                                                          |
+| `finance:withdrawal:list`   | 财务-提现工单列表 | 接口      | `GET /wallet/admin/withdrawals`                                                                                                   |
+| `finance:withdrawal:review` | 财务-提现审核     | 接口/按钮 | `POST /wallet/admin/withdrawals/:id/approve`、`POST /wallet/admin/withdrawals/:id/reject`（前端「通过/驳回」按钮 `v-permission`） |
+| `finance:penalty:menu`      | 罚款管理          | 菜单      | 侧边栏「财务 → 罚款管理」动态路由 `/finance/penalties`                                                                            |
+| `finance:penalty:list`      | 财务-罚款记录列表 | 接口      | `GET /finance/penalties`                                                                                                          |
+| `finance:penalty:create`    | 财务-创建罚款     | 接口/按钮 | `POST /finance/penalties`；与 `feedback:handle` 共同保护投诉直接扣款                                                              |
 
 > 充值异步回调 `POST /wallet/recharge/callback/:provider` 为 `@Public()` 渠道回调端点，不受权限控制（靠验签保障）。
 >
@@ -48,9 +51,11 @@
 
 ## 不变量与一致性
 
-- **余额写入边界**：充值、提现、调整、提成和押金仍统一经 `WalletLedger`；服务订单余额支付经订单模块公开的 `OrderPaymentSettlement` 事务端口。两种基础设施实现都在同一事务内对钱包行加悲观写锁并同步写流水，业务用例不直接修改余额。
+- **余额写入边界**：充值、提现、调整和提成经 `WalletLedger`；服务订单余额支付经 `OrderPaymentSettlement`；缴押、退款、通用罚款和投诉处罚经调用方事务复用 `WalletTransactionParticipant`。三种基础设施入口都对钱包行加悲观写锁并同步写流水，业务用例不直接修改余额。
 - **充值入账幂等**：以 `outTradeNo` 为幂等键；订单已支付则重复回调直接返回成功；金额不符则拒绝。
 - **订单支付并发安全**：按订单行再钱包行的固定顺序加锁；锁内校验租户、用户、待付款状态、支付方式、金额、钱包启用状态和余额。同一订单只扣一次，同一钱包并发支付不能透支。
+- **投诉直接扣款**：反馈模块通过 `FeedbackPenaltySettlement` 和各模块公开的事务参与端口执行。余额分支按“反馈 → 订单 → wallet”加锁，扣余额并写 `penalty` 出账流水；押金分支按“反馈 → 订单 → booster_application”加锁且不写钱包流水。两条路径都在同一事务内保存罚款并完成反馈，`bizOrderId` 保存反馈 ID，同反馈重试不会重复扣款。该路径不调用管理端人工调账接口。
+- **打手资金事务**：缴押、退款和通用罚款由打手模块先锁 `booster_application`，再通过钱包参与端口锁 `wallet`；押金、钱包余额、流水和罚款任一步失败都会整体回滚。
 - **提现资金安全**：申请即冻结扣减；审核通过时先在事务内「待审核 → 处理中」占位（防并发重复转账）再发起转账；转账失败/审核驳回在事务内全额回滚余额并写补偿入账流水。
 - **提现状态机**：`pending`（待审核）→ `processing`（转账中）→ `success` / `failed`；`pending` → `rejected`（驳回）。
 
@@ -105,6 +110,7 @@ modules/wallet/
 │   ├── recharge.repository.ts
 │   ├── withdrawal.repository.ts
 │   ├── wallet.ledger.ts                  账务单元实现（事务 + 悲观锁）
+│   ├── wallet-transaction.participant.ts 调用方事务中的钱包锁、余额调整与流水
 │   └── drivers/
 │       ├── alipay-client.factory.ts      支付宝 SDK 工厂（证书/公钥双模式，凭证取自配置中心）
 │       ├── alipay-payment.driver.ts      支付宝扫码下单 + 回调验签
@@ -236,28 +242,28 @@ sequenceDiagram
 
 ## 配置项（ConfigGroup.Wallet）
 
-| Key | 说明 | 敏感 |
-| --- | --- | --- |
-| `wallet.payment.provider` | 默认充值渠道（alipay/wechat） | |
-| `wallet.payout.provider` | 默认提现渠道（alipay） | |
-| `wallet.minRechargeFen` | 最小充值金额（分） | |
-| `wallet.minWithdrawFen` | 最小提现金额（分） | |
-| `wallet.withdrawFeeRateBp` | 提现手续费率（万分比，100 = 1%，0 免费） | |
-| `wallet.notifyBaseUrl` | 回调公网基础地址（拼接异步通知 URL） | |
-| `wallet.alipay.appId` | 支付宝应用 AppId | |
-| `wallet.alipay.privateKey` | 支付宝应用私钥（PEM） | ✓ |
-| `wallet.alipay.publicKey` | 支付宝公钥（PEM，回调验签） | ✓ |
-| `wallet.alipay.gateway` | 支付宝网关（留空用官方默认） | |
-| `wallet.alipay.appCert` | 证书模式：应用公钥证书 appCertPublicKey_xxx.crt 内容 | ✓ |
-| `wallet.alipay.publicCert` | 证书模式：支付宝公钥证书 alipayCertPublicKey_RSA2.crt 内容 | ✓ |
-| `wallet.alipay.rootCert` | 证书模式：支付宝根证书 alipayRootCert.crt 内容 | ✓ |
-| `wallet.wechat.appId` | 微信支付 AppId | |
-| `wallet.wechat.mchId` | 微信商户号 | |
-| `wallet.wechat.serialNo` | 商户证书序列号 | |
-| `wallet.wechat.privateKey` | 商户私钥（PEM） | ✓ |
-| `wallet.wechat.apiV3Key` | APIv3 密钥（回调解密） | ✓ |
-| `wallet.wechat.platformPublicKey` | 平台证书公钥（PEM，回调验签） | ✓ |
-| `wallet.wechat.platformSerialNo` | 平台证书序列号 | |
+| Key                               | 说明                                                       | 敏感 |
+| --------------------------------- | ---------------------------------------------------------- | ---- |
+| `wallet.payment.provider`         | 默认充值渠道（alipay/wechat）                              |      |
+| `wallet.payout.provider`          | 默认提现渠道（alipay）                                     |      |
+| `wallet.minRechargeFen`           | 最小充值金额（分）                                         |      |
+| `wallet.minWithdrawFen`           | 最小提现金额（分）                                         |      |
+| `wallet.withdrawFeeRateBp`        | 提现手续费率（万分比，100 = 1%，0 免费）                   |      |
+| `wallet.notifyBaseUrl`            | 回调公网基础地址（拼接异步通知 URL）                       |      |
+| `wallet.alipay.appId`             | 支付宝应用 AppId                                           |      |
+| `wallet.alipay.privateKey`        | 支付宝应用私钥（PEM）                                      | ✓    |
+| `wallet.alipay.publicKey`         | 支付宝公钥（PEM，回调验签）                                | ✓    |
+| `wallet.alipay.gateway`           | 支付宝网关（留空用官方默认）                               |      |
+| `wallet.alipay.appCert`           | 证书模式：应用公钥证书 appCertPublicKey_xxx.crt 内容       | ✓    |
+| `wallet.alipay.publicCert`        | 证书模式：支付宝公钥证书 alipayCertPublicKey_RSA2.crt 内容 | ✓    |
+| `wallet.alipay.rootCert`          | 证书模式：支付宝根证书 alipayRootCert.crt 内容             | ✓    |
+| `wallet.wechat.appId`             | 微信支付 AppId                                             |      |
+| `wallet.wechat.mchId`             | 微信商户号                                                 |      |
+| `wallet.wechat.serialNo`          | 商户证书序列号                                             |      |
+| `wallet.wechat.privateKey`        | 商户私钥（PEM）                                            | ✓    |
+| `wallet.wechat.apiV3Key`          | APIv3 密钥（回调解密）                                     | ✓    |
+| `wallet.wechat.platformPublicKey` | 平台证书公钥（PEM，回调验签）                              | ✓    |
+| `wallet.wechat.platformSerialNo`  | 平台证书序列号                                             |      |
 
 > 真实到账需在配置中心填入对应商户凭证；未配置时下单/转账会如实返回「渠道未配置」。
 > 回调地址需公网可达：`{notifyBaseUrl}/wallet/recharge/callback/{provider}`。
@@ -277,6 +283,7 @@ flowchart LR
   D --> E["完整工单信息"]
   D --> F["通过/驳回"]
 ```
+
 - `views/wallet/WalletView.vue`：余额卡片、统计卡片、明细表格分页；充值弹窗（金额+渠道，下单后用 `qrcode` 渲染二维码，支付完成点「我已支付」刷新）；提现弹窗（金额+支付宝账号+姓名，提交后进入待审核）。
 - `views/finance/WithdrawalAdminView.vue`（菜单 `finance:withdrawal:menu`，财务分组）：提现工单分页（状态筛选），表格保留扫描所需的关键列，右侧详情抽屉展示完整金额、收款、渠道与失败信息；待审核工单可「通过」（二次确认后立即转账）/「驳回」（填写理由，退回余额）；`api/finance.api.ts` 封装列表/审核接口。
 
@@ -296,4 +303,4 @@ flowchart LR
 - `WalletTxnType.OrderPayment` 的存储值为 `order_payment`，沿用 `wallet_transaction.type` 的现有 `varchar(16)`；没有表结构变化和 migration。
 - 钱包不存在、冻结或余额不足会使余额事务完整回滚，订单创建用例随后取消仍为待付款的新订单并回退已核销优惠券；前端展示服务端返回的最终校验结果。
 - 会员累计消费和订单建群属于事务提交后的副作用，失败不会退回余额或把已支付订单改回未付款；错误会记录供后续补偿排查。
-- 测试范围包括订单支付方式与充值渠道隔离、钱包状态/余额/金额校验、重复支付幂等、并发锁顺序、流水余额快照，以及 C 端冻结/不足/刷新/充值交互；实际执行结果以本次交付汇报为准。
+- 测试范围包括订单支付方式与充值渠道隔离、钱包状态/余额/金额校验、重复支付幂等、并发锁顺序、流水余额快照，以及 C 端冻结/不足/刷新/充值交互。`pnpm test:e2e:postgres` 另在随机隔离 schema 验证投诉与通用罚款的钱包原子性和故障回滚；最终结果以本次交付汇报为准。

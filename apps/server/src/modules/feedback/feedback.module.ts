@@ -2,21 +2,28 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { RbacModule } from '../rbac/rbac.module';
+import { OrderModule } from '../order/order.module';
+import { WalletModule } from '../wallet/wallet.module';
+import { BoosterModule } from '../booster/booster.module';
 
 import { FeedbackEntity } from './domain/feedback.entity';
 import { FEEDBACK_REPOSITORY } from './domain/feedback-repository.interface';
+import { FEEDBACK_PENALTY_SETTLEMENT } from './domain/feedback-penalty-settlement.interface';
 
 import { TypeormFeedbackRepository } from './infrastructure/feedback.repository';
+import { TypeormFeedbackPenaltySettlement } from './infrastructure/feedback-penalty.settlement';
 
 import { SubmitFeedbackUseCase } from './application/use-cases/submit-feedback.usecase';
 import { ListMyFeedbackUseCase } from './application/use-cases/list-my-feedback.usecase';
 import { ListFeedbackUseCase } from './application/use-cases/list-feedback.usecase';
 import { HandleFeedbackUseCase } from './application/use-cases/handle-feedback.usecase';
+import { CreateFeedbackPenaltyUseCase } from './application/use-cases/create-feedback-penalty.usecase';
 
 import { FeedbackSubmitController } from './interfaces/controllers/feedback.submit.controller';
 import { FeedbackMineController } from './interfaces/controllers/feedback.mine.controller';
 import { FeedbackListController } from './interfaces/controllers/feedback.list.controller';
 import { FeedbackHandleController } from './interfaces/controllers/feedback.handle.controller';
+import { FeedbackPenaltyController } from './interfaces/controllers/feedback.penalty.controller';
 
 /**
  * 反馈/投诉模块。
@@ -24,19 +31,31 @@ import { FeedbackHandleController } from './interfaces/controllers/feedback.hand
  * 管理端按状态/类型检索反馈列表、填写处理回复完成闭环。
  */
 @Module({
-  imports: [RbacModule, TypeOrmModule.forFeature([FeedbackEntity])],
+  imports: [
+    RbacModule,
+    OrderModule,
+    WalletModule,
+    BoosterModule,
+    TypeOrmModule.forFeature([FeedbackEntity]),
+  ],
   controllers: [
     FeedbackSubmitController,
     FeedbackMineController,
     FeedbackListController,
     FeedbackHandleController,
+    FeedbackPenaltyController,
   ],
   providers: [
     { provide: FEEDBACK_REPOSITORY, useClass: TypeormFeedbackRepository },
+    {
+      provide: FEEDBACK_PENALTY_SETTLEMENT,
+      useClass: TypeormFeedbackPenaltySettlement,
+    },
     SubmitFeedbackUseCase,
     ListMyFeedbackUseCase,
     ListFeedbackUseCase,
     HandleFeedbackUseCase,
+    CreateFeedbackPenaltyUseCase,
   ],
 })
 export class FeedbackModule {}

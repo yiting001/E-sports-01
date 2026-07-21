@@ -17,7 +17,8 @@
     "build:client": "pnpm --filter @app/client build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm --filter @app/server test && pnpm --filter @app/client test"
+    "test": "pnpm --filter @app/server test && pnpm --filter @app/client test",
+    "test:e2e:postgres": "pnpm --filter @app/server test:e2e:postgres"
   },
   "packageManager": "pnpm@9.15.1"
 }

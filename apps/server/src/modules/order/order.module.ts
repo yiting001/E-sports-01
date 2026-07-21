@@ -14,6 +14,10 @@ import { ORDER_REPOSITORY } from './domain/order-repository.interface';
 import { TypeormOrderRepository } from './infrastructure/order.repository';
 import { ORDER_PAYMENT_SETTLEMENT } from './domain/order-payment-settlement.interface';
 import { TypeormOrderPaymentSettlement } from './infrastructure/order-payment.settlement';
+import {
+  ORDER_FEEDBACK_PENALTY_TRANSACTION,
+  TypeormOrderFeedbackPenaltyTransaction,
+} from './infrastructure/order-feedback-penalty.transaction';
 
 import { CreateOrderUseCase } from './application/use-cases/create-order.usecase';
 import { HandleOrderCallbackUseCase } from './application/use-cases/handle-order-callback.usecase';
@@ -102,6 +106,10 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
       provide: ORDER_PAYMENT_SETTLEMENT,
       useClass: TypeormOrderPaymentSettlement,
     },
+    {
+      provide: ORDER_FEEDBACK_PENALTY_TRANSACTION,
+      useClass: TypeormOrderFeedbackPenaltyTransaction,
+    },
     CreateOrderUseCase,
     HandleOrderCallbackUseCase,
     OrderPaymentSettleService,
@@ -125,6 +133,6 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     OrderGroupService,
     ServiceAgentScope,
   ],
-  exports: [ORDER_REPOSITORY],
+  exports: [ORDER_REPOSITORY, ORDER_FEEDBACK_PENALTY_TRANSACTION],
 })
 export class OrderModule {}

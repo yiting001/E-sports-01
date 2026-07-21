@@ -81,7 +81,53 @@ export class TypeormBoosterRepository implements BoosterRepository {
     return this.repo.create(data);
   }
 
-  save(entity: BoosterApplicationEntity): Promise<BoosterApplicationEntity> {
-    return this.repo.save(entity);
+  async save(entity: BoosterApplicationEntity): Promise<BoosterApplicationEntity> {
+    if (!entity.id) {
+      return this.repo.save(entity);
+    }
+
+    const where = { id: entity.id, tenantId: entity.tenantId };
+    await this.repo.update(where, {
+      userId: entity.userId,
+      legacyGameNickname: entity.legacyGameNickname,
+      legacyGameName: entity.legacyGameName,
+      legacyRank: entity.legacyRank,
+      applicantName: entity.applicantName,
+      gender: entity.gender,
+      serviceRegions: entity.serviceRegions,
+      intro: entity.intro,
+      contactType: entity.contactType,
+      contactValue: entity.contactValue,
+      materialImage: entity.materialImage,
+      voiceUrl: entity.voiceUrl,
+      invitationCode: entity.invitationCode,
+      status: entity.status,
+      rejectReason: entity.rejectReason,
+      reviewedBy: entity.reviewedBy,
+      reviewedAt: entity.reviewedAt,
+      acceptingOrders: entity.acceptingOrders,
+    });
+    return this.repo.findOneOrFail({ where });
+  }
+
+  recordCompletedOrder(userId: string): Promise<number | null> {
+    return this.repo.manager.transaction(async (manager) => {
+      const repository = manager.getRepository(BoosterApplicationEntity);
+      const record = await repository.findOne({
+        where: withTenant<BoosterApplicationEntity>(this.tenant, {
+          userId,
+        }) as FindOptionsWhere<BoosterApplicationEntity>,
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!record) {
+        return null;
+      }
+      const previousCompletedOrders = record.completedOrders;
+      await repository.update(
+        { id: record.id, tenantId: record.tenantId },
+        { completedOrders: previousCompletedOrders + 1 },
+      );
+      return previousCompletedOrders;
+    });
   }
 }

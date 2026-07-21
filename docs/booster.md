@@ -14,7 +14,7 @@ C 端登录用户在个人中心提交完整打手入驻资料，管理员在管
 - **下单与派单约束**：老板可在自动安排和指定打手之间切换；指定、后台候选、指派和大厅接单都只允许当前上线且支持所选区服、不是下单人本人、实名和押金门禁通过的打手。锁定后不能下发公共大厅或改派他人，支付成功后由客服确认该打手接单。
 - **管理端搜索**：打手管理列表支持服务端分页搜索申请姓名、昵称、用户名和注册手机号；关键词、状态和租户条件在同一查询中计算总数。
 - **实名前置**：`booster.requireRealname` 开启时，未通过实名认证的用户不能提交；接单和指派继续复用 `BoosterRealnameGuard`。
-- **既有履约能力**：保留等级、提成、押金和罚款流程，不改变其接口和资金规则。
+- **既有履约能力**：保留等级、提成、押金和罚款接口与资金规则；缴押、退款、通用罚款已收敛为同一 PostgreSQL 事务，避免与投诉处罚并发时丢失押金更新。
 
 明确非目标：
 
@@ -121,7 +121,7 @@ stateDiagram-v2
 
 - `pending` 和 `approved` 状态下，用户重复提交返回 `409 Conflict`。
 - 只有 `pending` 可以审核；重复审核或审核非待审记录返回 `409 Conflict`。
-- 驳回理由必填，长度为 1～255；通过时清空历史驳回理由。
+- 驳回理由必填，长度为 1 ～ 255；通过时清空历史驳回理由。
 - 管理端编辑只更新传入字段，不改变状态、审核人或审核时间。
 
 ## DDD 分层与复用
@@ -133,7 +133,8 @@ apps/server/src/modules/booster/
 │   ├── booster-repository.interface.ts     申请仓储端口
 │   ├── booster-directory.query.ts          跨 Booster/RBAC 的只读公开查询端口
 │   ├── booster-penalty.entity.ts           罚款记录
-│   └── penalty-repository.interface.ts     罚款仓储端口
+│   ├── penalty-repository.interface.ts     罚款仓储端口
+│   └── booster-finance-settlement.interface.ts 押金、钱包与罚款原子结算端口
 ├── application/
 │   ├── booster.mapper.ts                   聚合映射为 BoosterView
 │   ├── booster-compatibility.ts            旧列安全截断与历史自由文本区服过滤
@@ -148,9 +149,11 @@ apps/server/src/modules/booster/
 │   └── use-cases/                            mine / submit / list / review / update /
 │                                               directory / public-profile / voice / availability
 ├── infrastructure/
-│   ├── booster.repository.ts                TypeORM 仓储，查询自动附加租户条件
+│   ├── booster.repository.ts                TypeORM 仓储；非资金字段更新与完成单数行锁递增
 │   ├── booster-directory.query.ts           approved/角色/账号状态交集查询
-│   └── penalty.repository.ts                罚款仓储实现
+│   ├── penalty.repository.ts                罚款仓储实现
+│   ├── booster-finance.settlement.ts         缴押、退款、通用罚款事务
+│   └── booster-feedback-penalty.transaction.ts 反馈事务中的押金与处罚记录
 └── interfaces/
     ├── dto/                                  class-validator 协议校验
     └── controllers/                          一路由一控制器
@@ -186,24 +189,24 @@ flowchart TB
 
 ### 申请字段
 
-| 字段 | 数据库列 / 类型 | 必填与限制 | 对外含义 |
-| --- | --- | --- | --- |
-| `tenantId` + `userId` | varchar(36) + varchar(36) | 联合唯一 | 租户内每位用户一条申请 |
-| `applicantName` | `applicant_name` varchar(64) | 1～64 | 申请人姓名 |
-| `gender` | varchar(16) | `male` / `female` | 性别 |
-| `serviceRegions` | `service_regions` jsonb | 1～2 项、去重 | `delta-mobile`（三角洲手机端）、`delta-pc`（三角洲电脑端） |
-| `intro` | varchar(500) | 3～500 | 自我介绍、经验和可服务时间 |
-| `contactType` | `contact_type` varchar(16) | `phone` / `wechat` / `qq` | 联系方式类型 |
-| `contactValue` | `contact_value` varchar(128) | 1～128 | 手机号、微信号或 QQ 号；当前只校验长度 |
-| `materialImage` | `material_image` varchar(2048) | 选填；空串或 `/`、`http://`、`https://` 开头 | 单张材料图片 URL |
-| `voiceUrl` | `voice_url` varchar(2048) | 已审核打手可维护；空串表示未上传 | C 端试听语音 URL |
-| `invitationCode` | `invitation_code` varchar(64) | 选填，最多 64 | 仅供审核追溯 |
-| `status` | varchar(16) | `pending` / `approved` / `rejected` | 持久化审核状态 |
-| `rejectReason` | `reject_reason` varchar(255) | 驳回时必填 | 驳回理由 |
-| `reviewedBy` / `reviewedAt` | varchar(36) / timestamptz | 未审核为空 | 审核人和时间 |
-| `completedOrders` / `depositFen` | int / bigint | 非负业务值 | 既有等级与押金数据 |
-| `acceptingOrders` | `accepting_orders` boolean | 默认 `false` | 打手本人维护；下线时不可选择、指派或接单 |
-| `legacyGameNickname` / `legacyGameName` / `legacyRank` | 旧三列 | 仅兼容 | 不进入 `BoosterView` |
+| 字段                                                   | 数据库列 / 类型                | 必填与限制                                   | 对外含义                                                   |
+| ------------------------------------------------------ | ------------------------------ | -------------------------------------------- | ---------------------------------------------------------- |
+| `tenantId` + `userId`                                  | varchar(36) + varchar(36)      | 联合唯一                                     | 租户内每位用户一条申请                                     |
+| `applicantName`                                        | `applicant_name` varchar(64)   | 1 ～ 64                                      | 申请人姓名                                                 |
+| `gender`                                               | varchar(16)                    | `male` / `female`                            | 性别                                                       |
+| `serviceRegions`                                       | `service_regions` jsonb        | 1 ～ 2 项、去重                              | `delta-mobile`（三角洲手机端）、`delta-pc`（三角洲电脑端） |
+| `intro`                                                | varchar(500)                   | 3 ～ 500                                     | 自我介绍、经验和可服务时间                                 |
+| `contactType`                                          | `contact_type` varchar(16)     | `phone` / `wechat` / `qq`                    | 联系方式类型                                               |
+| `contactValue`                                         | `contact_value` varchar(128)   | 1 ～ 128                                     | 手机号、微信号或 QQ 号；当前只校验长度                     |
+| `materialImage`                                        | `material_image` varchar(2048) | 选填；空串或 `/`、`http://`、`https://` 开头 | 单张材料图片 URL                                           |
+| `voiceUrl`                                             | `voice_url` varchar(2048)      | 已审核打手可维护；空串表示未上传             | C 端试听语音 URL                                           |
+| `invitationCode`                                       | `invitation_code` varchar(64)  | 选填，最多 64                                | 仅供审核追溯                                               |
+| `status`                                               | varchar(16)                    | `pending` / `approved` / `rejected`          | 持久化审核状态                                             |
+| `rejectReason`                                         | `reject_reason` varchar(255)   | 驳回时必填                                   | 驳回理由                                                   |
+| `reviewedBy` / `reviewedAt`                            | varchar(36) / timestamptz      | 未审核为空                                   | 审核人和时间                                               |
+| `completedOrders` / `depositFen`                       | int / bigint                   | 非负业务值                                   | 既有等级与押金数据                                         |
+| `acceptingOrders`                                      | `accepting_orders` boolean     | 默认 `false`                                 | 打手本人维护；下线时不可选择、指派或接单                   |
+| `legacyGameNickname` / `legacyGameName` / `legacyRank` | 旧三列                         | 仅兼容                                       | 不进入 `BoosterView`                                       |
 
 数据库 Check Constraint 限制 `gender`、`contact_type` 的枚举或历史空值，并确保 `service_regions` 是只包含开放区服且最多两项的 JSON 数组；至少选择一项和区服去重由接口 DTO 继续校验。
 
@@ -290,26 +293,26 @@ pnpm --filter @app/server migration:revert
 
 所有路径均带全局 `/api` 前缀。
 
-| 方法 | 路径 | 权限 | 说明 |
-| --- | --- | --- | --- |
-| GET | `/api/booster/mine` | 登录 | 返回 `{ status, record, requireRealname, realnameApproved, depositPolicy, onboardingNoticeImage }` |
-| PUT | `/api/booster/mine/availability` | 登录且本人已审核通过 | `{ acceptingOrders: boolean }`，幂等切换上线/下线并返回 `BoosterView` |
-| POST | `/api/booster` | 登录 | 首次提交或驳回重提完整资料 |
-| GET | `/api/booster/directory` | 登录 | 脱敏目录；支持 `page`、`pageSize`、`keyword`、`gender`、`serviceRegion` |
-| GET | `/api/booster/directory/:userId` | 登录 | 同租户打手脱敏主页；不存在或已不可见返回 404 |
-| PUT | `/api/booster/mine/voice` | 登录且本人已审核通过 | multipart `file` 上传或更换语音 |
-| DELETE | `/api/booster/mine/voice` | 登录且本人已审核通过 | 清空本人语音 URL |
-| GET | `/api/booster` | `booster:list` | 分页查询，支持 `page`、`pageSize`、`status`、`keyword`；关键词匹配姓名、昵称、用户名或注册手机号 |
-| POST | `/api/booster/:id/review` | `booster:review` | `{ approve, rejectReason? }`；通过时授予角色 |
-| PUT | `/api/booster/:id` | `booster:update` | 管理端按传入字段更新资料，不改状态 |
-| PUT | `/api/booster/:id/voice` | `booster:update` | 管理端 multipart `file` 上传或更换语音 |
-| DELETE | `/api/booster/:id/voice` | `booster:update` | 管理端清空语音 URL |
-| GET | `/api/booster/levels` | 登录 | 获取等级档位 |
-| PUT | `/api/booster/levels` | `booster:level:set` | 保存 `{ tiers }` |
-| GET | `/api/booster/deposit/policy` | 登录 | 获取最低 / 最高押金 |
-| PUT | `/api/booster/deposit/policy` | `booster:deposit:policy:set` | 保存 `{ minFen, maxFen }` |
-| POST | `/api/booster/deposit/pay` | 登录 | 已入驻用户从钱包缴纳 `{ amountFen }` |
-| POST | `/api/booster/:id/deposit/refund` | `booster:deposit:refund` | 全额退还押金 |
+| 方法   | 路径                              | 权限                         | 说明                                                                                               |
+| ------ | --------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| GET    | `/api/booster/mine`               | 登录                         | 返回 `{ status, record, requireRealname, realnameApproved, depositPolicy, onboardingNoticeImage }` |
+| PUT    | `/api/booster/mine/availability`  | 登录且本人已审核通过         | `{ acceptingOrders: boolean }`，幂等切换上线/下线并返回 `BoosterView`                              |
+| POST   | `/api/booster`                    | 登录                         | 首次提交或驳回重提完整资料                                                                         |
+| GET    | `/api/booster/directory`          | 登录                         | 脱敏目录；支持 `page`、`pageSize`、`keyword`、`gender`、`serviceRegion`                            |
+| GET    | `/api/booster/directory/:userId`  | 登录                         | 同租户打手脱敏主页；不存在或已不可见返回 404                                                       |
+| PUT    | `/api/booster/mine/voice`         | 登录且本人已审核通过         | multipart `file` 上传或更换语音                                                                    |
+| DELETE | `/api/booster/mine/voice`         | 登录且本人已审核通过         | 清空本人语音 URL                                                                                   |
+| GET    | `/api/booster`                    | `booster:list`               | 分页查询，支持 `page`、`pageSize`、`status`、`keyword`；关键词匹配姓名、昵称、用户名或注册手机号   |
+| POST   | `/api/booster/:id/review`         | `booster:review`             | `{ approve, rejectReason? }`；通过时授予角色                                                       |
+| PUT    | `/api/booster/:id`                | `booster:update`             | 管理端按传入字段更新资料，不改状态                                                                 |
+| PUT    | `/api/booster/:id/voice`          | `booster:update`             | 管理端 multipart `file` 上传或更换语音                                                             |
+| DELETE | `/api/booster/:id/voice`          | `booster:update`             | 管理端清空语音 URL                                                                                 |
+| GET    | `/api/booster/levels`             | 登录                         | 获取等级档位                                                                                       |
+| PUT    | `/api/booster/levels`             | `booster:level:set`          | 保存 `{ tiers }`                                                                                   |
+| GET    | `/api/booster/deposit/policy`     | 登录                         | 获取最低 / 最高押金                                                                                |
+| PUT    | `/api/booster/deposit/policy`     | `booster:deposit:policy:set` | 保存 `{ minFen, maxFen }`                                                                          |
+| POST   | `/api/booster/deposit/pay`        | 登录                         | 已入驻用户从钱包缴纳 `{ amountFen }`                                                               |
+| POST   | `/api/booster/:id/deposit/refund` | `booster:deposit:refund`     | 全额退还押金                                                                                       |
 
 管理端菜单还需 `booster:menu`。修改公告图片通过既有配置接口，页面访问和操作分别需要 `config:menu`、`config:list`、`config:save`，上传新图另需 `upload:file:upload`。
 
@@ -347,7 +350,8 @@ flowchart LR
 - 顺序重复提交会返回 `409`；首次提交采用“先查后存”，未加显式事务或幂等键，并发首次提交可能触发数据库唯一约束错误。
 - 订单确认阶段由 order 模块的 `claimForServing` 在数据库行锁内复核锁定打手、订单状态和实际 `boosterId`；竞争请求返回 `409`，只有成功请求才会写入实际打手并加入订单群。
 - 审核通过中的角色授予与申请状态保存不是同一数据库事务；极端保存失败时需人工核对角色和申请状态。
-- 审核和管理端编辑未显式使用版本条件锁；并发 review / update 可能发生覆盖或由后到达者基于旧状态操作。这些状态一致性边界为既有流程遗留，并非本次字段改造新增。
+- 审核和管理端编辑未显式使用版本条件锁；并发 review / update 仍可能覆盖非资金资料或由后到达者基于旧状态操作。但既有记录保存已排除 `depositFen` / `completedOrders`，不会再恢复并发处罚后的押金；完成单数在行锁事务内递增。
+- 缴押、退款和通用罚款统一经 `BoosterFinanceSettlement`，按“打手 → 钱包”加锁，并在单事务内写押金、余额、流水和罚款。反馈处罚按“反馈 → 订单 → 打手或钱包”加锁；两类入口共享相同资金行锁协议。
 - 更换、清空公告图、材料图或语音只更新 URL，不自动清理旧对象；需要文件管理的 `upload:file:remove` 显式删除。删除仍被引用的文件会导致前端媒体加载失败。
 
 ## 测试、验证与残余风险
@@ -364,9 +368,10 @@ flowchart LR
 - `order-selection.spec.ts` 覆盖指定订单禁止进大厅、禁止改派，以及大厅视图隐藏游戏账号字段。
 - `order-assignment.spec.ts` 覆盖接单/后台指派竞争只有一方成功，失败方不进订单群且返回 409。
 - `logging-sanitizer.spec.ts` 覆盖嵌套错误日志中的入驻个人资料递归脱敏。
+- `apps/server/test-e2e/feedback-penalty.postgres.e2e.ts` 覆盖押金与资料保存、缴押、退款、完成单数的真实行锁竞争；`booster-finance.postgres.e2e.ts` 覆盖通用罚款原子落账与故障回滚。
 - 三份 migration 均提供 `up` / `down` 和 CLI 数据源；新增挑人/结构化订单 migration 已完成 `down → up`，自主上下线 migration 已执行，索引、约束和预期字段可重建。
 
-根目录 `pnpm test` 现在串行执行服务端与客户端测试；当前服务端 58 项、客户端 Vitest 6 项全部通过。
+根目录 `pnpm test` 串行执行服务端与客户端测试；本次实际结果与数量见交付汇报及反馈模块文档，避免在多个文档复制易漂移计数。
 
 本地浏览器已确认 C 端大厅上下线切换、刷新后持久状态、手动刷新成功反馈及 `390×844` 无横向溢出；测试账号已恢复下线。管理端分别按注册手机号和申请姓名搜索均只返回目标记录，清空后恢复完整列表。横幅轮播和语音试听仍受实际配置数据、浏览器媒体策略与存储跨域配置影响。
 
@@ -376,5 +381,5 @@ flowchart LR
 
 - 等级档位存 `booster.levels`，按累计完成单数实时解析；订单完成时按当前万分比提成经 `WalletLedger` 入账。
 - 押金策略读 `booster.depositMinFen` / `booster.depositMaxFen`，接单前由 `BoosterDepositGuard` 校验最低额，管理端可全额退还。
-- 财务罚款经钱包余额或押金扣除并保留记录；打手管理页与罚款管理页复用 `PenaltyCreateDrawer`。
+- 财务罚款经 `BoosterFinanceSettlement` 从钱包余额或押金原子扣除并保留记录；打手管理页与罚款管理页复用 `PenaltyCreateDrawer`。结构化打手投诉另由反馈模块的事务端口锁定订单和资金来源，以 `feedbackId` 幂等扣款并写入 `booster_penalty.feedback_id`，不信任管理端传入打手 ID。
 - `booster.requireRealname` 缺失时回退共享契约默认值 `true`；等级与押金配置缺失时也回退 `BOOSTER_LEVEL_DEFAULTS` / `BOOSTER_DEFAULTS`。

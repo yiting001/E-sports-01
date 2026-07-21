@@ -29,7 +29,9 @@
 
 .feedback-user strong,
 .feedback-user small,
-.feedback-muted {
+.feedback-muted,
+.feedback-related__primary,
+.feedback-related small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -43,9 +45,33 @@
 
 .feedback-user small,
 .feedback-muted,
+.feedback-related small,
 .feedback-pager__summary {
   color: var(--app-text-color-secondary);
   font-size: 12px;
+}
+
+.feedback-related {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.feedback-related__primary {
+  display: block;
+  color: var(--app-text-color);
+}
+
+.feedback-row-actions {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.feedback-row-actions .el-button + .el-button {
+  margin-left: 0;
 }
 
 .feedback-content {

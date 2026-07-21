@@ -17,5 +17,8 @@ export interface BoosterRepository {
     keyword?: string,
   ): Promise<[BoosterApplicationEntity[], number]>;
   create(data: Partial<BoosterApplicationEntity>): BoosterApplicationEntity;
+  /** 新记录插入；既有记录只更新非资金、非进度字段。 */
   save(entity: BoosterApplicationEntity): Promise<BoosterApplicationEntity>;
+  /** 行锁内登记完成单数，返回递增前的完成单数。 */
+  recordCompletedOrder(userId: string): Promise<number | null>;
 }

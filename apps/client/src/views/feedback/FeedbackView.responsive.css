@@ -2,6 +2,140 @@
  * 投诉反馈页响应式布局：移动端保持全屏单列；
  * PC 端将标题栏、提交表单与反馈历史统一收敛到内容宽度。
  */
+.feedback .order-picker,
+.feedback .order-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feedback .field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-text-secondary);
+}
+
+.feedback .select {
+  min-height: 42px;
+}
+
+.feedback .order-picker-state {
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--c-text-muted);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+}
+
+.feedback .order-picker-state--error {
+  color: var(--c-text-secondary);
+}
+
+.feedback .retry {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  color: var(--c-accent);
+  border: 1px solid var(--c-accent);
+  border-radius: var(--radius-sm);
+}
+
+.feedback .order-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--c-accent-dim);
+  border-radius: var(--radius-sm);
+}
+
+.feedback .order-summary span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+.feedback .order-summary strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  color: var(--c-text);
+}
+
+.feedback .record-order {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12px;
+  color: var(--c-text-secondary);
+}
+
+.feedback .record {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+}
+
+.feedback .record-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.feedback .record-type {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-accent);
+}
+
+.feedback .record-status {
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.feedback .record-status.resolved {
+  color: var(--c-accent);
+}
+
+.feedback .record-target {
+  font-size: 12px;
+  color: var(--c-text-secondary);
+}
+
+.feedback .record-content {
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.feedback .record-reply {
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--c-text-secondary);
+  background: var(--c-accent-dim);
+  border-radius: var(--radius-sm);
+}
+
+.feedback .record-time {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  text-align: right;
+}
+
 @media (min-width: 768px) {
   .feedback.feedback.feedback {
     position: static;

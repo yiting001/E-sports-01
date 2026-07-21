@@ -1,9 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { BoosterLevelTier, resolveBoosterLevel } from '@app/contracts';
-import {
-  BOOSTER_REPOSITORY,
-  BoosterRepository,
-} from '../domain/booster-repository.interface';
+import { BOOSTER_REPOSITORY, BoosterRepository } from '../domain/booster-repository.interface';
 import { BoosterPolicyService } from './booster-policy.service';
 
 /**
@@ -25,13 +22,7 @@ export class BoosterProgressService {
    */
   async recordCompletedOrder(userId: string): Promise<BoosterLevelTier> {
     const tiers = await this.policy.getLevelTiers();
-    const record = await this.repo.findByUserId(userId);
-    if (!record) {
-      return resolveBoosterLevel(tiers, 0);
-    }
-    const tier = resolveBoosterLevel(tiers, record.completedOrders);
-    record.completedOrders += 1;
-    await this.repo.save(record);
-    return tier;
+    const previousCompletedOrders = await this.repo.recordCompletedOrder(userId);
+    return resolveBoosterLevel(tiers, previousCompletedOrders ?? 0);
   }
 }

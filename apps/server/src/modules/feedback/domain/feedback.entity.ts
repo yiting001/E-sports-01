@@ -22,6 +22,31 @@ export class FeedbackEntity extends TenantScopedEntity {
   @Column({ length: 64, default: '' })
   target!: string;
 
+  /** 关联服务订单；仅结构化打手投诉有值 */
+  @Index('IDX_feedback_order_id')
+  @Column({ name: 'order_id', length: 36, default: '' })
+  orderId!: string;
+
+  /** 提交时从订单固化的订单号 */
+  @Column({ name: 'order_no', length: 64, default: '' })
+  orderNo!: string;
+
+  /** 提交时从订单固化的实际接单打手用户 id */
+  @Column({ name: 'booster_user_id', length: 36, default: '' })
+  boosterUserId!: string;
+
+  /** 提交时从订单固化的实际接单打手显示名 */
+  @Column({ name: 'booster_name', length: 64, default: '' })
+  boosterName!: string;
+
+  /** 直接扣款生成的罚款记录 id；为空表示尚未扣款 */
+  @Index('UQ_feedback_penalty_id', {
+    unique: true,
+    where: '"penalty_id" IS NOT NULL',
+  })
+  @Column({ name: 'penalty_id', type: 'varchar', length: 36, nullable: true })
+  penaltyId!: string | null;
+
   /** 反馈内容 */
   @Column({ length: 500 })
   content!: string;

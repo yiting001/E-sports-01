@@ -10,6 +10,14 @@ import { bigintTransformer } from '../../../shared/database/numeric.transformer'
  */
 @Entity('booster_penalty')
 export class BoosterPenaltyEntity extends TenantScopedEntity {
+  /** 来源反馈 id；通用人工罚款为空，投诉直接扣款时唯一 */
+  @Index('UQ_booster_penalty_feedback_id', {
+    unique: true,
+    where: '"feedback_id" IS NOT NULL',
+  })
+  @Column({ name: 'feedback_id', type: 'varchar', length: 36, nullable: true })
+  feedbackId!: string | null;
+
   /** 被罚打手的用户 id */
   @Index()
   @Column({ name: 'booster_user_id', length: 36 })

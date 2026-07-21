@@ -1,4 +1,4 @@
-import { FundDirection, WalletTxnType } from '@app/contracts';
+import { FundDirection, WALLET_TRANSACTION_LIMITS, WalletTxnType } from '@app/contracts';
 import { Column, Entity, Index } from 'typeorm';
 import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 import { bigintTransformer } from '../../../shared/database/numeric.transformer';
@@ -33,6 +33,6 @@ export class WalletTransactionEntity extends TenantScopedEntity {
   @Column({ type: 'varchar', length: 36, nullable: true })
   bizOrderId!: string | null;
 
-  @Column({ length: 255, default: '' })
+  @Column({ length: WALLET_TRANSACTION_LIMITS.remarkMax, default: '' })
   remark!: string;
 }

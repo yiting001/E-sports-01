@@ -63,6 +63,11 @@ export const WALLET_TXN_TYPE_TEXT: Record<WalletTxnType, string> = {
   [WalletTxnType.InviteReward]: '邀请奖励',
 };
 
+/** 钱包流水持久化字段限制 */
+export const WALLET_TRANSACTION_LIMITS = {
+  remarkMax: 255,
+} as const;
+
 /** 资金方向 */
 export enum FundDirection {
   /** 入账（余额增加） */
