@@ -14,6 +14,7 @@
 | WebSocket IM | [im.md](./im.md) | JWT 握手鉴权、会话房间收发、登录用户在线快照、订单群标题更新，以及 C 端实时消息未读角标 |
 | 链路追踪与日志 | [observability.md](./observability.md) | AsyncLocalStorage 链路追踪，结构化日志异步落库 + RBAC 查询/链路详情/清理 |
 | 钱包 | [wallet.md](./wallet.md) | 钱包充值/提现/明细，以及服务订单余额支付的锁、流水和一致性边界 |
+| 用户会员等级 | [member.md](./member.md) | 累计消费实时定级、下单折扣，以及 C 端头像徽标与会员卡的单一数据源 |
 | 用户资料自助 | [user-profile.md](./user-profile.md) | 登录用户自助改头像/昵称/手机号，免授权自助上传，个人中心页 |
 | 实名认证 | [realname.md](./realname.md) | 证件提交 + 人工审核状态机，身份证 AES-256-GCM 加密脱敏，超管按角色配置需实名 |
 | 反馈管理 | [feedback.md](./feedback.md) | 投诉关联真实订单/打手，管理端原子幂等扣款 + 回复，C 端联系客服复用既有 IM |

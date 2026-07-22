@@ -11,9 +11,13 @@ import FeatureGrid from '@/components/profile/FeatureGrid.vue';
 import OrderEntries from '@/components/profile/OrderEntries.vue';
 import ProfileHeader from '@/components/profile/ProfileHeader.vue';
 import { APP_VERSION_TEXT } from '@/config/profile.mock';
+import { useMemberStore } from '@/stores/member.store';
 import { useRoleStore } from '@/stores/role.store';
 
+const member = useMemberStore();
 const role = useRoleStore();
+
+void member.refresh();
 </script>
 
 <template>

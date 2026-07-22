@@ -33,7 +33,29 @@ modules/member/
 前端：
 
 - 管理端 `web/views/member/MemberLevelAdminView.vue`（菜单 `member:menu` 会员等级，电竞运营分组）：档位表格编辑（名称/消费门槛（元）/折扣万分比，增删行 + 保存）。
-- C 端 `client/components/profile/MemberLevelCard.vue`（「我的」页购物身份）：当前等级/折扣/累计消费与晋升进度展示。
+- C 端 `client/stores/member.store.ts` 以 `GET /member/mine` 为个人中心唯一会员数据源；`ProfileHeader.vue` 的头像旁等级徽标和 `MemberLevelCard.vue` 的会员卡共享同一概览，避免徽标与会员卡等级漂移。
+
+### C 端个人中心同步流程
+
+```mermaid
+sequenceDiagram
+  participant Profile as ProfileView
+  participant Store as member.store
+  participant API as GET /member/mine
+  participant Header as ProfileHeader
+  participant Card as MemberLevelCard
+
+  Profile->>Store: refresh()
+  Store->>API: 读取当前登录用户会员概览
+  API-->>Store: MemberMineView(level, levelName, spendFen...)
+  Store-->>Header: mine.level
+  Store-->>Card: 同一份 mine
+  alt 请求失败
+    Store-->>Card: loadError=true，展示重试
+    Note over Header: 不显示伪造的默认等级
+  end
+  Note over Store: 登出/reset 递增版本，废弃旧账号晚到响应
+```
 
 ## 权限（RBAC）
 
@@ -58,3 +80,9 @@ modules/member/
 - **金额契约**：金额一律以分（整数）存取；折扣/费率一律万分比（`FEE_RATE_BASE = 10000`），与钱包模块口径一致。
 - **最小写口**：仅导出 `MemberLevelService`（定级/折扣解析）与 `MemberProgressService`（消费累计）给 order 模块，避免跨模块直接操作仓储。
 - **多租户**：实体继承 `TenantScopedEntity`，仓储经 `withTenant` 行级隔离。
+- **前端会话隔离**：会员 store 在登出时清空快照并废弃在途响应，不能把旧账号等级带入下一次登录；加载失败保留明确错误和重试入口，不回退为固定 `Lv.1`。
+
+## 测试与非目标
+
+- C 端 store 单测覆盖 3 级权威数据发布、失败后重试和会话重置后丢弃晚到响应；头像徽标与会员卡只消费 store 数据，不各自重复请求。
+- 本次不改变会员定级、支付后累计、折扣计算、档位配置或数据库结构，也不定义打手身份下头像徽标是否切换为打手等级。
