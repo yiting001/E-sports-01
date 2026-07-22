@@ -24,9 +24,9 @@ const emit = defineEmits<{ pick: [member: ConversationMemberView] }>();
       @click="emit('pick', member)"
     >
       <span class="mention-picker__avatar">
-        {{ member.username.slice(0, 1).toUpperCase() }}
+        {{ member.displayName.slice(0, 1).toUpperCase() }}
       </span>
-      <span class="mention-picker__name">{{ member.username }}</span>
+      <span class="mention-picker__name">{{ member.displayName }}</span>
     </button>
   </div>
 </template>

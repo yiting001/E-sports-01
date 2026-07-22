@@ -17,14 +17,12 @@ export class GetServiceQueueUseCase {
 
   async execute(): Promise<ServiceQueueItemView[]> {
     const waiting = await this.conversations.findWaitingService();
-    const visitorIds = waiting
-      .map((c) => c.ownerId)
-      .filter((id): id is string => Boolean(id));
-    const names = await this.users.resolveNames(visitorIds);
+    const visitorIds = waiting.map((c) => c.ownerId).filter((id): id is string => Boolean(id));
+    const names = await this.users.resolveDisplayNames(visitorIds);
     return waiting.map((c) => ({
       conversationId: c.id,
       visitorId: c.ownerId ?? '',
-      visitorName: c.ownerId ? names.get(c.ownerId) ?? c.ownerId : '访客',
+      visitorName: c.ownerId ? (names.get(c.ownerId) ?? '访客') : '访客',
       subject: c.subject,
       waitingSince: c.createdAt.getTime(),
     }));

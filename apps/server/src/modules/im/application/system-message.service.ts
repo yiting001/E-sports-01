@@ -4,13 +4,23 @@ import {
   CONVERSATION_MEMBER_REPOSITORY,
   ConversationMemberRepository,
 } from '../domain/conversation-member-repository.interface';
-import {
-  MESSAGE_REPOSITORY,
-  MessageRepository,
-} from '../domain/message-repository.interface';
+import { MESSAGE_REPOSITORY, MessageRepository } from '../domain/message-repository.interface';
 import { ChatMessageEntity } from '../domain/message.entity';
 import { toChatMessage } from './message.mapper';
 import { ChatRealtimeService } from './chat-realtime.service';
+
+const HTML_TEXT_REPLACEMENTS: Readonly<Record<string, string>> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
+/** 把动态系统文案编码为 HTML 纯文本，避免富文本渲染时解释用户输入。 */
+export function escapeSystemMessageText(content: string): string {
+  return content.replace(/[&<>"']/g, (character) => HTML_TEXT_REPLACEMENTS[character] ?? character);
+}
 
 /**
  * 系统消息服务。
@@ -36,11 +46,12 @@ export class SystemMessageService {
     entity.content = content;
     const saved = await this.messages.save(entity);
     await this.notifyUnreadChanged(conversationId);
-    this.realtime.emitToConversation(
-      conversationId,
-      IM_EVENTS.receive,
-      toChatMessage(saved),
-    );
+    this.realtime.emitToConversation(conversationId, IM_EVENTS.receive, toChatMessage(saved));
+  }
+
+  /** 写入包含昵称、群名等动态字段的纯文本系统提示。 */
+  async postText(conversationId: string, content: string): Promise<void> {
+    await this.post(conversationId, escapeSystemMessageText(content));
   }
 
   /** 系统消息同样计入未读；信号失败时由 30 秒轮询降级发现。 */

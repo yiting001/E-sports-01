@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { UserView } from '@app/contracts';
+import { formatPublicUserDisplayName, type UserView } from '@app/contracts';
 import { CircleCheckFilled } from '@element-plus/icons-vue';
 
 defineProps<{
@@ -17,7 +17,7 @@ const emit = defineEmits<{
 }>();
 
 function userName(user: UserView): string {
-  return user.nickname || user.username;
+  return formatPublicUserDisplayName(user.id, user.nickname);
 }
 </script>
 

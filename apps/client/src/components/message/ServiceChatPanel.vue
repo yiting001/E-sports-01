@@ -16,7 +16,7 @@ import ChatConversationHeader from '@/components/message/ChatConversationHeader.
 import ChatMessageFeed from '@/components/message/ChatMessageFeed.vue';
 import ChatMentionPicker from '@/components/message/ChatMentionPicker.vue';
 import ChatReplyQuote from '@/components/message/ChatReplyQuote.vue';
-import { useChatCompose } from '@/composables/use-chat-compose';
+import { resolveChatMemberName, useChatCompose } from '@/composables/use-chat-compose';
 import { imApi } from '@/api/im.api';
 import { uploadApi } from '@/api/upload.api';
 import { createImSocket } from '@/composables/use-im-socket';
@@ -92,8 +92,7 @@ function senderNameOf(message: ChatMessage): string {
   if (message.senderId === auth.profile?.id) {
     return '我';
   }
-  const member = compose.members.value.find((m) => m.userId === message.senderId);
-  return member?.username ?? '对方';
+  return resolveChatMemberName(compose.members.value, message.senderId);
 }
 
 async function scrollToBottom(): Promise<void> {
@@ -312,6 +311,7 @@ onBeforeUnmount(() => {
         :empty-text="emptyText"
         :can-send="canSend"
         :self-id="auth.profile?.id"
+        :members="compose.members.value"
         @reply="compose.setReply"
       />
     </div>

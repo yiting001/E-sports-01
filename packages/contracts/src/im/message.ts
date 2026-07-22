@@ -25,7 +25,7 @@ export interface MessageReplyPreview {
   id: string;
   /** 被引用消息发送者 id */
   senderId: string;
-  /** 被引用消息发送者用户名 */
+  /** 被引用消息发送者的隐私安全展示名 */
   senderName: string;
   /** 被引用消息类型 */
   type: MessageType;

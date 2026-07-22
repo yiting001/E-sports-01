@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { ConversationDetailView, ConversationMemberView, UserView } from '@app/contracts';
+import {
+  formatPublicUserDisplayName,
+  type ConversationDetailView,
+  type ConversationMemberView,
+  type UserView,
+} from '@app/contracts';
 import { UserFilled } from '@element-plus/icons-vue';
 
 defineProps<{
@@ -18,7 +23,7 @@ const emit = defineEmits<{
 }>();
 
 function userName(user: UserView): string {
-  return user.nickname || user.username;
+  return formatPublicUserDisplayName(user.id, user.nickname);
 }
 
 function memberRoleLabel(role: ConversationMemberView['role']): string {
@@ -88,8 +93,8 @@ function memberRoleLabel(role: ConversationMemberView['role']): string {
       >
         <template #default="{ row }">
           <div class="im-member">
-            <span>{{ row.username.slice(0, 2).toUpperCase() }}</span>
-            <strong>{{ row.username }}</strong>
+            <span>{{ row.displayName.slice(0, 1).toUpperCase() }}</span>
+            <strong>{{ row.displayName }}</strong>
           </div>
         </template>
       </el-table-column>

@@ -1,8 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import {
-  GroupFacade,
-  SystemGroupTitleSyncResult,
-} from '../../im/application/group-facade.service';
+import { formatPublicUserDisplayName } from '@app/contracts';
+import { GroupFacade, SystemGroupTitleSyncResult } from '../../im/application/group-facade.service';
 import { UserDirectory } from '../../rbac/application/user-directory.service';
 import { SUPER_ADMIN_ROLE, TENANT_ADMIN_ROLE } from '../../rbac/domain/rbac.constants';
 import { OrderEntity } from '../domain/order.entity';
@@ -79,8 +77,15 @@ export class OrderGroupService {
       if (!order.conversationId) {
         return;
       }
-      const names = await this.users.resolveNames([boosterId]);
-      const name = names.get(boosterId) ?? boosterId;
+      const snapshotName = order.boosterName.trim();
+      let name = snapshotName ? formatPublicUserDisplayName(boosterId, snapshotName) : '';
+      if (name !== snapshotName) {
+        name = '';
+      }
+      if (!name) {
+        const names = await this.users.resolveDisplayNames([boosterId]);
+        name = names.get(boosterId) ?? '打手';
+      }
       await this.groups.joinGroup(
         order.conversationId,
         boosterId,
@@ -100,10 +105,7 @@ export class OrderGroupService {
       for (let attempt = 0; attempt < TITLE_SYNC_MAX_ATTEMPTS; attempt += 1) {
         const latest = await this.ensureLinkedGroup(order);
         const expectedTitle = buildOrderGroupTitle(latest.productTitle, latest.status);
-        const result = await this.groups.syncSystemGroupTitle(
-          latest.conversationId,
-          expectedTitle,
-        );
+        const result = await this.groups.syncSystemGroupTitle(latest.conversationId, expectedTitle);
         const confirmed = await this.orders.findById(order.id);
         if (!confirmed) {
           return;

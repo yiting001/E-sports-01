@@ -77,11 +77,43 @@ test('订单群使用订单 ID 创建一次，并在延迟补建时包含已接�
   assert.equal(groupWrites, 1);
   assert.equal(conversationLinkWrites, 1);
   assert.equal(receivedTitle, '[待接单] 订单群·陪玩服务');
-  assert.deepEqual(synchronizedTitles, [
-    '[待接单] 订单群·陪玩服务',
-    '[待接单] 订单群·陪玩服务',
-  ]);
+  assert.deepEqual(synchronizedTitles, ['[待接单] 订单群·陪玩服务', '[待接单] 订单群·陪玩服务']);
   assert.deepEqual(receivedMembers, ['user-1', 'agent-1', 'booster-1', 'admin-1']);
+});
+
+test('打手加入订单群时使用订单安全显示名，不写入手机号派生用户名', async () => {
+  const order = Object.assign(new OrderEntity(), {
+    id: '55555555-5555-4555-8555-555555555555',
+    orderNo: 'ORDER-GROUP-PRIVACY',
+    userId: 'user-1',
+    productTitle: '陪玩服务',
+    serviceAgentId: 'agent-1',
+    boosterId: 'booster-1',
+    boosterName: 'sms_18500000942',
+    conversationId: 'conversation-1',
+    status: OrderStatus.Serving,
+  });
+  let notice = '';
+  const groups = {
+    syncSystemGroupTitle: async () => SystemGroupTitleSyncResult.Unchanged,
+    joinGroup: async (_conversationId: string, _userId: string, text: string) => {
+      notice = text;
+    },
+  } as unknown as GroupFacade;
+  const orders = {
+    findById: async () => order,
+  } as unknown as OrderRepository;
+  const users = {
+    async resolveDisplayNames() {
+      return new Map([['booster-1', '用户0942']]);
+    },
+  } as unknown as UserDirectory;
+  const service = new OrderGroupService(orders, groups, users);
+
+  await service.joinBooster(order, 'booster-1');
+
+  assert.equal(notice, '打手 用户0942 已接单，加入群聊为您服务');
+  assert.doesNotMatch(notice, /1\d{10}|sms_/);
 });
 
 test('系统订单群成功创建且重复确保时复用同一会话', async (t) => {

@@ -12,7 +12,7 @@
 - **握手鉴权**：连接校验 access 令牌，无效则 `im:error` + 断连；连接后自动加入个人房间 `user:<id>`。消息处理前先等待握手鉴权完成（`authReady` 信号），避免客户端连接后立即发消息（如坐席订阅 `im:service:watch`）时身份未就绪被误判无权限。
 - **通用连接在线快照**：鉴权成功的每个 `/im` socket 按 `socketId → userId + tenantId` 登记到 `UserPresenceService`；同一用户任一标签页/设备存活即在线，断开最后一个 socket 才离线。该快照继续用于客服在线坐席等即时连接场景；打手是否接单已改由 booster 模块持久化状态维护，不再复用 socket presence。
 - **会话列表**（REST `GET /im/conversations`）：返回当前用户全部会话，含未读数、最后一条消息、显示标题（私聊解析为对端昵称）。
-- **会话搜索**（REST `GET /im/conversations/search?keyword=`）：在我参与的会话中按显示标题（私聊即对方用户名）忽略大小写模糊匹配，复用列表用例保证口径一致。
+- **会话搜索**（REST `GET /im/conversations/search?keyword=`）：在我参与的会话中按显示标题（私聊即对方安全展示名）忽略大小写模糊匹配，复用列表用例保证口径一致。
 - **聊天记录搜索**（REST `GET /im/messages/search`）：会话内按内容关键词 + 日期范围（`dateFrom`/`dateTo`，YYYY-MM-DD 闭区间，两者均可缺省）分页搜索（新 → 旧），仅会话成员可搜；不传关键词时即按日期翻阅当天聊天记录。
   - 管理端 UI：IM 页左侧会话列表顶部搜索框（防抖调会话搜索接口，清空回退全量列表）；聊天面板头部「搜索记录」按钮打开 `ImMessageSearchDialog`（关键词 + 日期范围选择器 + 分页结果）。
 - **群聊**：建群、改名、加/移成员、退群；成员变更广播系统消息（xx 加入/退出）。
@@ -24,9 +24,40 @@
   - **C 端联系客服**：用户端 `apps/client` 消息页移动端点击会话进入 `/service` 全屏聊天；PC 端 `/messages` 采用左侧会话列表 + 右侧聊天面板，聊天面板复用 `ServiceChatPanel`，不重复实现 WebSocket 收发。客服聊天复用进行中的客服会话（否则在 `/service` 新发起 `POST /im/service`），经 `/im` WebSocket 拉历史与实时收发；系统富文本消息经 DOMPurify 净化后渲染。
 - **私聊**：按对端用户开启（已存在则复用）。
 - **实时收发**（`im:join` / `im:send` / `im:receive`）：进房成员校验，发送持久化后按房间广播；本人发送成功时推进已读位点，历史和实时来信由客户端在页面可见后显式确认。
+- **成员安全展示名**：会话成员、普通消息发送者、@候选、成员抽屉与引用统一使用 `ConversationMemberView.displayName`。服务端只采用通过隐私校验的昵称，昵称为空或包含手机号形态时回退稳定用户编号；登录 `username`、手机号、历史引用快照和用户 ID 均不作为聊天 UI 的名称来源。
 - **未读统计**：每个成员维护 `lastReadAt`，列表未读数 = 该位点之后的消息条数。C 端导航「消息」入口（底部 TabBar 与 PC 顶部导航）展示红色未读总数角标（超 99 显示 99+）；普通消息和系统消息持久化后均向成员个人房间发送不含正文的 `im:unread:changed`，全局连接据此静默刷新权威会话列表。30 秒轮询、路由切换和页面恢复可见继续兜底，消息页本地列表变化后仍读取服务端权威未读数。
 
-明确非目标：连接在线状态只表示当前服务实例观察到的 socket 存活，不代表打手接单状态；当前没有跨实例 Redis presence、离线推送或心跳业务指标。
+明确非目标：本次展示名治理不修改手机号登录、用户昵称资料、聊天权限或消息正文输入规则；连接在线状态只表示当前服务实例观察到的 socket 存活，不代表打手接单状态；当前没有跨实例 Redis presence、离线推送或心跳业务指标。
+
+## 成员展示名与历史隐私清理
+
+目标是让订单群和其他会话只显示业务昵称，不再把短信账号的 `sms_<手机号>` 登录用户名暴露到成员详情、系统提示、普通消息、@提及或引用中。该能力复用 RBAC `UserDirectory`、订单固化的 `boosterName` 和既有 IM 详情接口，不增加新依赖、配置项、权限码、路由或数据库字段。
+
+```mermaid
+flowchart LR
+  User["RBAC User<br/>id / nickname / username"] --> Directory["UserDirectory<br/>resolveDisplayNames"]
+  Directory --> Policy{"昵称为空或含手机号?"}
+  Policy -->|否| Nickname["安全 nickname"]
+  Policy -->|是| StableId["用户 + 稳定 ID 后缀"]
+  Nickname --> MemberView["ConversationMemberView.displayName"]
+  StableId --> MemberView
+  Order["Order.boosterName 快照"] --> SnapshotCheck["同一安全策略"]
+  SnapshotCheck --> Notice["接单系统提示"]
+  MemberView --> Client["C 端消息 / @ / 引用"]
+  MemberView --> Web["管理端消息 / 成员抽屉 / @ / 引用"]
+```
+
+业务与状态流转边界：
+
+- 订单接单仍按原事务和状态机完成；成功后的进群副作用优先使用订单固化打手名，快照为空或不安全时才查询 `UserDirectory.resolveDisplayNames()`。展示名解析失败只使用不含账号的角色兜底，不影响已完成的接单事务。
+- `GET /im/conversations/:id` 的成员字段由 `username` 收口为 `displayName`；C 端与管理端同仓升级，不保留会继续外发手机号的兼容字段。
+- 管理端建群和加成员候选同样使用共享安全展示名，不以登录账号作昵称兜底。包含昵称、群名等动态字段的系统提示统一按 HTML 纯文本编码后落库；配置中心的受控富文本欢迎语仍走原有 DOMPurify 净化链路。
+- 新引用快照的 `senderName` 写入安全展示名；前端渲染历史引用时仍按 `senderId` 从当前成员清单解析，成员已离开则显示“成员”，不信任旧快照文本。
+- 数据模型和会话状态机不变。`1784736300000-redact-im-phone-system-messages` 是数据脱敏 migration：同租户订单群优先用订单打手名修复接单提示；快照为空或不安全时，通过订单 `booster_id` 读取同租户 RBAC 昵称，仍不可用则回退稳定用户编号。migration 同时清理消息正文、会话标题和引用快照中精确的手机号派生账号 token。
+- 脱敏 migration 可重复执行且不跨租户读取名称；已被旧版本降级为通用接单提示的记录也会在安全资料补齐后再次收敛，内容不变时不会推进消息版本或更新时间。`down` 有意不恢复已删除的手机号，因为恢复隐私数据会重新引入漏洞。发布时先运行 migration，再启动新服务，避免旧服务继续写入不安全提示。
+- IM WebSocket 链路追踪只记录用户 ID，不再把短信派生用户名写入调试日志。展示名不参与鉴权、成员校验、提及 ID、幂等键或并发控制。
+
+测试覆盖安全昵称与稳定编号回退、手机号形态昵称拒绝、订单接单提示、会话成员/私聊标题、引用快照、C 端和管理端 @/发送者解析，以及 PostgreSQL 历史数据脱敏和租户隔离。尚未实现跨实例 presence、离线推送；这些能力与本次展示名治理无关。
 
 ## 会话状态机
 
@@ -117,6 +148,7 @@ sequenceDiagram
 - `client/App.vue`：按登录态管理全局 `/im` 连接、角标轮询、路由与页面恢复刷新；登出时断连并清零。
 - `client/composables/use-presence-socket.ts`：复用在线快照连接订阅个人未读与会话变化；令牌刷新重建连接时重新绑定事件。
 - `client/composables/use-visible-message-read.ts`：集中处理页面可见性、当前会话校验和恢复可见后的最后消息已读补偿。
+- `client/composables/use-chat-compose.ts`：统一 @提及、引用状态和成员安全展示名解析；成员缺失时使用“成员”兜底。
 - `client/stores/badge-store.factory.ts`：导航角标 store 工厂，封装数量拉取、单飞/尾随刷新、旧响应抑制、轮询与本地同步（消息未读与大厅待接单角标共用）。
 - `client/stores/unread.store.ts`：未读消息状态，汇总全部会话未读数供导航角标（`AppTabBar` / `AppTopNav`）展示。
 - `client/views/message/ServiceChatView.vue`：在线客服全屏页，只承载全屏版 `ServiceChatPanel`。
@@ -161,24 +193,24 @@ modules/im/
 
 ## REST 端点
 
-| 方法   | 路径                                    | 权限                        | 说明                                  |
-| ------ | --------------------------------------- | --------------------------- | ------------------------------------- |
-| GET    | `/im/messages`                          | `im:message:history`        | 拉取会话历史                          |
-| GET    | `/im/messages/search`                   | `im:message:history` + 成员 | 搜索聊天记录（关键词/日期范围，分页） |
-| GET    | `/im/conversations/search`              | 登录                        | 搜索我的会话（标题关键词）            |
-| GET    | `/im/conversations`                     | 登录                        | 我的会话列表                          |
-| POST   | `/im/conversations`                     | `im:conversation:create`    | 建群                                  |
-| POST   | `/im/conversations/private`             | 登录                        | 开启/复用私聊                         |
-| GET    | `/im/conversations/:id`                 | 成员                        | 会话详情(含成员)                      |
-| PUT    | `/im/conversations/:id`                 | `im:conversation:manage`    | 群改名                                |
-| POST   | `/im/conversations/:id/members`         | `im:conversation:manage`    | 加成员                                |
-| DELETE | `/im/conversations/:id/members/:userId` | `im:conversation:manage`    | 移成员                                |
-| POST   | `/im/conversations/:id/leave`           | 成员                        | 退群                                  |
-| POST   | `/im/service`                           | 登录                        | 访客发起客服                          |
-| GET    | `/im/service/queue`                     | `im:service:agent`          | 待接入队列                            |
-| POST   | `/im/service/:id/claim`                 | `im:service:agent`          | 坐席认领                              |
-| POST   | `/im/service/:id/assign`                | `im:service:agent`          | 指派坐席                              |
-| POST   | `/im/service/:id/close`                 | `im:service:agent`          | 结束会话                              |
+| 方法   | 路径                                    | 权限                        | 说明                                   |
+| ------ | --------------------------------------- | --------------------------- | -------------------------------------- |
+| GET    | `/im/messages`                          | `im:message:history`        | 拉取会话历史                           |
+| GET    | `/im/messages/search`                   | `im:message:history` + 成员 | 搜索聊天记录（关键词/日期范围，分页）  |
+| GET    | `/im/conversations/search`              | 登录                        | 搜索我的会话（标题关键词）             |
+| GET    | `/im/conversations`                     | 登录                        | 我的会话列表                           |
+| POST   | `/im/conversations`                     | `im:conversation:create`    | 建群                                   |
+| POST   | `/im/conversations/private`             | 登录                        | 开启/复用私聊                          |
+| GET    | `/im/conversations/:id`                 | 成员                        | 会话详情（成员仅含安全 `displayName`） |
+| PUT    | `/im/conversations/:id`                 | `im:conversation:manage`    | 群改名                                 |
+| POST   | `/im/conversations/:id/members`         | `im:conversation:manage`    | 加成员                                 |
+| DELETE | `/im/conversations/:id/members/:userId` | `im:conversation:manage`    | 移成员                                 |
+| POST   | `/im/conversations/:id/leave`           | 成员                        | 退群                                   |
+| POST   | `/im/service`                           | 登录                        | 访客发起客服                           |
+| GET    | `/im/service/queue`                     | `im:service:agent`          | 待接入队列                             |
+| POST   | `/im/service/:id/claim`                 | `im:service:agent`          | 坐席认领                               |
+| POST   | `/im/service/:id/assign`                | `im:service:agent`          | 指派坐席                               |
+| POST   | `/im/service/:id/close`                 | `im:service:agent`          | 结束会话                               |
 
 ## WS 事件（contracts 共享）
 
@@ -240,7 +272,7 @@ Socket 连接状态没有 ER 实体或 migration；`UserPresenceService` 是应�
 - **会话为统一抽象**：私聊/群聊/客服复用同一消息、成员、房间与广播链路，仅状态机/语义不同，避免三套实现。
 - **成员校验前移到 WS 边界**：进房 `assertMember`，发送在用例内复核，安全与业务解耦。
 - **claim/assign 复用 ServiceAssignmentService**：坐席接入逻辑(置 active、加成员、欢迎语、推送)单一来源。
-- **显示标题装配**：私聊无存储标题，`ConversationViewAssembler` 批量解析对端昵称，避免 N+1；同时下发会话实体 `version` 作为实时视图的单调顺序标记。
+- **显示标题与成员装配**：私聊无存储标题，`ConversationViewAssembler` 批量解析对端安全展示名；详情成员只投影 `displayName`，不外发登录账号。会话实体 `version` 继续作为实时视图的单调顺序标记。
 - **事件名/类型共享**：`IM_EVENTS`、各 View/Payload 定义在 `packages/contracts`，前后端复用避免魔法字符串。
 - **个人事件只作刷新信号**：未读事件不包含消息正文、会话 ID 或其他用户数据；客户端收到后重新读取本人会话列表，不直接信任事件载荷。
 - **系统群可恢复**：系统群的核心会话与成员写入失败会向业务应用服务抛出，由业务方使用同一稳定 UUID 重试；欢迎消息和实时通知属于非核心副作用，失败只记录错误，不让已创建的群丢失关联。
@@ -254,6 +286,8 @@ Socket 连接状态没有 ER 实体或 migration；`UserPresenceService` 是应�
 
 - 握手失败会发送 `im:error` 后断开；未完成 `authReady` 前的消息会等待鉴权，避免连接竞态把合法用户误判为无权限。
 - `UserPresenceService` 只保存 socket ID、用户 ID 和租户 ID，不保存令牌、昵称或消息正文；断开清理由网关统一执行。
+- `UserDirectory.resolveDisplayNames()` 不回退登录用户名；昵称包含手机号或 `sms_<手机号>` 时按用户 UUID 生成稳定编号。订单群接单提示、成员变更提示、客服接入提示和引用快照共用该安全边界。
+- 历史消息、标题与引用快照由数据脱敏 migration 清理；订单快照缺失时只允许关联同租户 RBAC 昵称或稳定用户编号，写回系统提示前按纯文本编码，无法关联安全名称时宁可显示“成员”或无身份提示，也不保留手机号。该数据修复不可逆，回滚代码不会恢复隐私字段。
 - 系统消息个人信号查询失败不会回滚已持久化消息，服务端记录固定警告，C 端在下一次轮询、路由切换或页面恢复时发现未读。
 - 系统群补建只接受服务端业务模块提供的 UUID，不开放新 HTTP 入口；同一租户下重复调用会复用会话并按唯一成员关系补齐，不把实时通知失败伪装成建群失败。
 - 系统标题同步不新增 REST/WS 事件、权限码、配置项、数据库字段或 migration；会话仓储继续受租户上下文约束，通知只发送给当前群成员。实时通知失败时标题已经持久化，客户端下次读取会话列表即可收敛。
@@ -357,6 +391,7 @@ sequenceDiagram
 - 客户端测试覆盖全局连接订阅、令牌重连/删除、`markRead` ack、`im:conversation` 标题更新订阅、列表请求期间多会话事件保留、逆序版本拒绝、同一 tick 批量消费、失败保留、突发刷新合并、旧响应抑制、本地更新和轮询清理。
 - 服务端测试覆盖普通消息排除发送者、系统消息通知全部成员、个人信号失败不回滚消息，以及真实 PostgreSQL 微秒时间精确推进并归零未读。
 - `im-conversation-title.postgres.e2e.ts` 覆盖标题 CAS 并发竞争、错误期望值和租户隔离；订单用例测试覆盖 CAS 冲突后重读最新订单状态。
+- `im-phone-system-message-migration.postgres.e2e.ts` 覆盖同租户订单名优先、RBAC 昵称恢复、动态昵称纯文本编码、稳定编号回退、重复执行幂等、跨租户隔离、无安全名称降级、随机后缀账号、普通文本不误伤、会话标题和引用快照脱敏。
 - 真实浏览器验证需覆盖移动 TabBar 的 0 隐藏、正数展示、新消息实时增加与进入会话后清除，并检查应用控制台错误。
 - 多实例仍没有 Redis Socket adapter；连接落在不同实例时实时信号可能缺失，但持久化未读与轮询结果保持正确。完整会话列表聚合在会话规模增大后仍可能产生额外查询，应在出现真实性能数据后再优化。
 

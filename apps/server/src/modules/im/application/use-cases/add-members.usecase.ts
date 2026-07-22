@@ -41,24 +41,20 @@ export class AddMembersUseCase {
     payload: AddMembersPayload,
   ): Promise<ConversationDetailView> {
     await this.access.assertManager(conversationId, operatorId);
-    const conversation =
-      await this.access.getConversationOrFail(conversationId);
+    const conversation = await this.access.getConversationOrFail(conversationId);
     if (conversation.type !== ConversationType.Group) {
       throw new BadRequestException('仅群聊支持添加成员');
     }
 
-    const additions = await this.resolveAdditions(
-      conversationId,
-      payload?.userIds ?? [],
-    );
+    const additions = await this.resolveAdditions(conversationId, payload?.userIds ?? []);
     const rows = additions.map((b) =>
       buildMember(conversationId, b.id, ConversationMemberRole.Member),
     );
     await this.members.saveMany(rows);
 
-    await this.systemMessage.post(
+    await this.systemMessage.postText(
       conversationId,
-      `${additions.map((b) => b.username).join('、')} 加入了群聊`,
+      `${additions.map((b) => b.displayName).join('、')} 加入了群聊`,
     );
     await this.notifier.pushToMembers(conversation);
     return this.assembler.toDetail(conversation, operatorId);
@@ -68,7 +64,7 @@ export class AddMembersUseCase {
   private async resolveAdditions(
     conversationId: string,
     requested: string[],
-  ): Promise<{ id: string; username: string }[]> {
+  ): Promise<{ id: string; username: string; displayName: string }[]> {
     const ids = [...new Set(requested.filter(Boolean))];
     if (ids.length === 0) {
       throw new BadRequestException('请选择要添加的成员');
@@ -83,10 +79,7 @@ export class AddMembersUseCase {
     if (additions.length === 0) {
       throw new BadRequestException('所选用户均已在群中');
     }
-    const max = await this.config.getNumber(
-      CONFIG_KEYS.im.groupMaxMembers,
-      FALLBACK_MAX_MEMBERS,
-    );
+    const max = await this.config.getNumber(CONFIG_KEYS.im.groupMaxMembers, FALLBACK_MAX_MEMBERS);
     if (existing.length + additions.length > max) {
       throw new BadRequestException(`群成员数不能超过 ${max}`);
     }

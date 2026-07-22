@@ -11,10 +11,7 @@ import {
   CONVERSATION_MEMBER_REPOSITORY,
   ConversationMemberRepository,
 } from '../../domain/conversation-member-repository.interface';
-import {
-  MESSAGE_REPOSITORY,
-  MessageRepository,
-} from '../../domain/message-repository.interface';
+import { MESSAGE_REPOSITORY, MessageRepository } from '../../domain/message-repository.interface';
 import { ChatMessageEntity } from '../../domain/message.entity';
 import { ChatRealtimeService } from '../chat-realtime.service';
 import { toChatMessage } from '../message.mapper';
@@ -35,10 +32,7 @@ export class SendMessageUseCase {
     private readonly realtime: ChatRealtimeService,
   ) {}
 
-  async execute(
-    payload: SendMessagePayload,
-    senderId: string,
-  ): Promise<ChatMessage> {
+  async execute(payload: SendMessagePayload, senderId: string): Promise<ChatMessage> {
     const content = payload?.content?.trim();
     if (!payload?.conversationId || !content) {
       throw new BadRequestException('会话与消息内容不能为空');
@@ -47,9 +41,7 @@ export class SendMessageUseCase {
       throw new BadRequestException('系统消息不可由客户端发送');
     }
     await this.access.assertMember(payload.conversationId, senderId);
-    const conversationMembers = await this.members.findByConversation(
-      payload.conversationId,
-    );
+    const conversationMembers = await this.members.findByConversation(payload.conversationId);
     const entity = new ChatMessageEntity();
     entity.conversationId = payload.conversationId;
     entity.senderId = senderId;
@@ -59,10 +51,7 @@ export class SendMessageUseCase {
       payload.mentions,
       conversationMembers.map((member) => member.userId),
     );
-    entity.replyTo = await this.resolveReply(
-      payload.conversationId,
-      payload.replyToId,
-    );
+    entity.replyTo = await this.resolveReply(payload.conversationId, payload.replyToId);
     const saved = await this.repo.save(entity);
     for (const member of conversationMembers) {
       if (member.userId !== senderId) {
@@ -73,10 +62,7 @@ export class SendMessageUseCase {
   }
 
   /** 提及列表去重后仅保留会话成员，为空则存 null */
-  private resolveMentions(
-    mentions?: string[],
-    memberIds: string[] = [],
-  ): string[] | null {
+  private resolveMentions(mentions?: string[], memberIds: string[] = []): string[] | null {
     if (!Array.isArray(mentions) || mentions.length === 0) {
       return null;
     }
@@ -97,7 +83,7 @@ export class SendMessageUseCase {
     if (!target || target.conversationId !== conversationId) {
       throw new BadRequestException('引用的消息不存在或不属于该会话');
     }
-    const names = await this.users.resolveNames([target.senderId]);
+    const names = await this.users.resolveDisplayNames([target.senderId]);
     const preview =
       target.type === MessageType.Text
         ? target.content.slice(0, REPLY_PREVIEW_MAX_LENGTH)
@@ -105,7 +91,7 @@ export class SendMessageUseCase {
     return {
       id: target.id,
       senderId: target.senderId,
-      senderName: names.get(target.senderId) ?? target.senderId,
+      senderName: names.get(target.senderId) ?? '成员',
       type: target.type,
       content: preview,
     };

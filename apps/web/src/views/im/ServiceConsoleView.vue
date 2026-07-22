@@ -33,6 +33,7 @@ const queue = ref<ServiceQueueItemView[]>([]);
 const activeId = ref<string | null>(null);
 const activeTitle = ref("");
 const activeVisitor = ref("");
+const activeVisitorId = ref("");
 const messages = ref<ChatMessage[]>([]);
 const draft = ref("");
 const listRef = ref<HTMLElement | null>(null);
@@ -73,6 +74,7 @@ async function claim(item: ServiceQueueItemView): Promise<void> {
   activeId.value = view.id;
   activeTitle.value = view.title;
   activeVisitor.value = item.visitorName;
+  activeVisitorId.value = item.visitorId;
   messages.value = await im.join(view.id);
   await menuBadges.refresh([MENU_BADGE_CODES.service]);
   await scrollToBottom();
@@ -103,6 +105,7 @@ async function close(): Promise<void> {
   activeId.value = null;
   activeTitle.value = "";
   activeVisitor.value = "";
+  activeVisitorId.value = "";
   messages.value = [];
   draft.value = "";
   await menuBadges.refresh([MENU_BADGE_CODES.service]);
@@ -114,6 +117,17 @@ function isSelf(message: ChatMessage): boolean {
 
 function isSystem(message: ChatMessage): boolean {
   return message.senderId === SYSTEM_SENDER_ID;
+}
+
+/** 客服工作台只展示安全角色名，不回退登录名、历史引用快照或内部用户 ID。 */
+function senderNameForId(senderId: string): string {
+  if (senderId === auth.profile?.id) {
+    return "客服";
+  }
+  if (senderId === activeVisitorId.value) {
+    return activeVisitor.value || "访客";
+  }
+  return "成员";
 }
 
 function waitingText(value: number): string {
@@ -305,11 +319,11 @@ onBeforeUnmount(() => {
                   :class="['service-message', { 'is-self': isSelf(message) }]"
                 >
                   <span class="service-message__avatar">
-                    {{ conversationInitial(message.senderId) }}
+                    {{ conversationInitial(senderNameForId(message.senderId)) }}
                   </span>
                   <div class="service-message__content">
                     <div class="service-message__meta">
-                      <span>{{ message.senderId.slice(0, 8) }}</span>
+                      <span>{{ senderNameForId(message.senderId) }}</span>
                       <span>{{ messageTypeLabel(message.type) }}</span>
                       <time>{{ formatImTime(message.createdAt) }}</time>
                     </div>
@@ -318,7 +332,7 @@ onBeforeUnmount(() => {
                       class="service-reply-quote"
                     >
                       <span class="service-reply-quote__sender">{{
-                        message.replyTo.senderName
+                        senderNameForId(message.replyTo.senderId)
                       }}</span>
                       <span class="service-reply-quote__content">
                         {{

@@ -1,7 +1,30 @@
 /** 用户状态 */
 export enum UserStatusEnum {
-  Enabled = 'enabled',
-  Disabled = 'disabled',
+  Enabled = "enabled",
+  Disabled = "disabled",
+}
+
+const PUBLIC_DISPLAY_NAME_ID_SUFFIX_LENGTH = 6;
+const SENSITIVE_PHONE_DISPLAY_PATTERN =
+  /(?:sms_)?1[3-9]\d{9}(?:_[0-9a-f]{4})?/i;
+
+/** 对外安全展示名：只使用安全昵称，否则回退稳定用户编号。 */
+export function formatPublicUserDisplayName(
+  userId: string,
+  nickname: string
+): string {
+  const normalizedNickname = nickname.trim();
+  if (
+    normalizedNickname &&
+    !SENSITIVE_PHONE_DISPLAY_PATTERN.test(normalizedNickname)
+  ) {
+    return normalizedNickname;
+  }
+  const suffix = userId
+    .replace(/-/g, "")
+    .slice(-PUBLIC_DISPLAY_NAME_ID_SUFFIX_LENGTH)
+    .toUpperCase();
+  return suffix ? `用户${suffix}` : "用户";
 }
 
 /** 用户所属角色的精简视图 */

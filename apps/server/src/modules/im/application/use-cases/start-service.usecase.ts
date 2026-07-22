@@ -46,10 +46,7 @@ export class StartServiceUseCase {
     private readonly tenant: TenantContextService,
   ) {}
 
-  async execute(
-    visitorId: string,
-    payload: StartServicePayload,
-  ): Promise<ConversationView> {
+  async execute(visitorId: string, payload: StartServicePayload): Promise<ConversationView> {
     const subject = payload?.subject?.trim() || DEFAULT_SUBJECT;
     const visitorName = await this.visitorName(visitorId);
 
@@ -62,8 +59,7 @@ export class StartServiceUseCase {
     await this.notifier.pushToMembers(conversation, [visitorId]);
 
     await this.dispatch(conversation, visitorId, visitorName, subject);
-    const latest =
-      (await this.conversations.findById(conversation.id)) ?? conversation;
+    const latest = (await this.conversations.findById(conversation.id)) ?? conversation;
     return this.assembler.toView(latest, visitorId);
   }
 
@@ -78,10 +74,7 @@ export class StartServiceUseCase {
     if (!tenantId) {
       throw new Error('客服会话缺少租户信息');
     }
-    const autoAssign = await this.config.getBoolean(
-      CONFIG_KEYS.im.serviceAutoAssign,
-      false,
-    );
+    const autoAssign = await this.config.getBoolean(CONFIG_KEYS.im.serviceAutoAssign, false);
     const agents = this.realtime.onlineAgents(tenantId);
     if (autoAssign && agents.length > 0) {
       await this.assignment.attachAgent(conversation, agents[0]);
@@ -98,15 +91,11 @@ export class StartServiceUseCase {
   }
 
   private async visitorName(visitorId: string): Promise<string> {
-    const names = await this.users.resolveNames([visitorId]);
-    return names.get(visitorId) ?? visitorId;
+    const names = await this.users.resolveDisplayNames([visitorId]);
+    return names.get(visitorId) ?? '访客';
   }
 
-  private newService(
-    visitorId: string,
-    subject: string,
-    visitorName: string,
-  ): ConversationEntity {
+  private newService(visitorId: string, subject: string, visitorName: string): ConversationEntity {
     const conversation = new ConversationEntity();
     conversation.type = ConversationType.Service;
     conversation.title = `客服 · ${visitorName}`;
