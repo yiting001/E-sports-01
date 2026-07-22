@@ -6,8 +6,8 @@ import type {
   PaginatedResult,
   ReviewBoosterPayload,
   UpdateBoosterPayload,
-} from '@app/contracts';
-import { http } from './http';
+} from "@app/contracts";
+import { http, type RequestOptions } from "./http";
 
 /** 打手入驻接口：管理端审核列表 / 审核 / 资料编辑 / 等级档位 / 押金退还 */
 export const boosterApi = {
@@ -17,9 +17,11 @@ export const boosterApi = {
     pageSize: number,
     status?: BoosterStatus,
     keyword?: string,
+    options: RequestOptions = {}
   ): Promise<PaginatedResult<BoosterView>> {
-    return http.get('/booster', {
+    return http.get("/booster", {
       params: { page, pageSize, status, keyword },
+      ...options,
     });
   },
   /** 审核（通过即授予 booster 角色 / 驳回） */
@@ -33,7 +35,7 @@ export const boosterApi = {
   /** 上传并立即保存指定打手的试听语音（服务端校验 MIME 与文件头） */
   uploadVoice(id: string, file: File): Promise<BoosterView> {
     const form = new FormData();
-    form.append('file', file);
+    form.append("file", file);
     return http.put(`/booster/${id}/voice`, form);
   },
   /** 清空指定打手的试听语音 */
@@ -42,19 +44,21 @@ export const boosterApi = {
   },
   /** 查询等级档位 */
   getLevels(): Promise<BoosterLevelTier[]> {
-    return http.get('/booster/levels');
+    return http.get("/booster/levels");
   },
   /** 保存等级档位（booster:level:set） */
   setLevels(tiers: BoosterLevelTier[]): Promise<BoosterLevelTier[]> {
-    return http.put('/booster/levels', { tiers });
+    return http.put("/booster/levels", { tiers });
   },
   /** 查询押金交付策略（最低/最高交付额） */
   getDepositPolicy(): Promise<BoosterDepositPolicy> {
-    return http.get('/booster/deposit/policy');
+    return http.get("/booster/deposit/policy");
   },
   /** 保存押金交付策略（booster:deposit:policy:set） */
-  setDepositPolicy(policy: BoosterDepositPolicy): Promise<BoosterDepositPolicy> {
-    return http.put('/booster/deposit/policy', policy);
+  setDepositPolicy(
+    policy: BoosterDepositPolicy
+  ): Promise<BoosterDepositPolicy> {
+    return http.put("/booster/deposit/policy", policy);
   },
   /** 退还押金（booster:deposit:refund，全额退回打手钱包余额） */
   refundDeposit(id: string): Promise<BoosterView> {

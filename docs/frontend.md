@@ -345,6 +345,12 @@ flowchart LR
 - **图标**：`main.ts` 全量注册 `@element-plus/icons-vue`，模板以 `<component :is="icon">` 按图标名动态渲染；叶子图标取后端下发（可在权限管理里改），分组图标取 `MENU_GROUPS`。
 - `AppLayout` 据树渲染：含 `children` 的节点渲染为 `el-sub-menu`，叶子渲染为 `el-menu-item`（`router` 模式按 `path` 导航）。
 
+### 管理端菜单待办角标
+
+`stores/menu-badge.store.ts` 在动态菜单和接口权限双重约束下，复用实名、订单、打手与 IM Gateway 计算五项待办；`AppLayout` 订阅个人未读与租户客服队列变化，并统一管理 30 秒兜底轮询、路由/可见性刷新和退出清理，`AppMenu` 同时服务桌面侧栏与移动抽屉。单项失败保留旧值，请求代次阻止旧响应覆盖。
+
+详细计数口径、模块图、状态流转、安全边界和测试见 [menu-badges.md](./menu-badges.md)。
+
 ## 设计要点
 
 - **单一判定入口**：所有鉴权收敛到 `hasPermission`，避免分散判断逻辑漂移。

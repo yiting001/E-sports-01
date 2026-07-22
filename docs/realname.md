@@ -40,25 +40,25 @@ C 端：`client/views/profile/RealnameView.vue`（路由 `/profile/realname`，�
 
 ## 权限（RBAC）
 
-| 权限码 | 名称 | 守卫接口 |
-| --- | --- | --- |
-| `realname:menu` | 实名管理（菜单） | 前端动态路由 `/realname`（管理后台） |
-| `realname:list` | 实名-审核列表 | `GET /realname` |
-| `realname:review` | 实名-审核 | `POST /realname/:id/review` |
-| `realname:policy` | 实名-策略配置 | `GET|PUT /realname/policy` |
+| 权限码            | 名称             | 守卫接口                                            |
+| ----------------- | ---------------- | --------------------------------------------------- |
+| `realname:menu`   | 实名管理（菜单） | 前端动态路由 `/realname`（管理后台）                |
+| `realname:list`   | 实名-审核列表    | `GET /realname`                                     |
+| `realname:review` | 实名-审核        | `POST /realname/:id/review`                         |
+| `realname:policy` | 实名-策略配置    | `GET /realname/policy`、`PUT /realname/policy`      |
 
 > `GET /realname/mine`、`POST /realname` 仅需登录态，所有角色可用（自助）。管理类接口默认仅超管，其余角色在「角色管理」按需分配。
 
 ## 接口
 
-| 方法 | 路径 | 权限 | 说明 |
-| --- | --- | --- | --- |
-| GET | `/realname/mine` | 登录 | `{ required, status, record }` |
-| POST | `/realname` | 登录 | 提交/重提 `{ realName, idCardNo, frontImage, backImage }` |
-| GET | `/realname` | `realname:list` | 分页 `?page&pageSize&status` |
-| POST | `/realname/:id/review` | `realname:review` | `{ approve, rejectReason? }` |
-| GET | `/realname/policy` | `realname:policy` | `{ requiredRoleCodes }` |
-| PUT | `/realname/policy` | `realname:policy` | `{ requiredRoleCodes }` |
+| 方法 | 路径                   | 权限              | 说明                                                      |
+| ---- | ---------------------- | ----------------- | --------------------------------------------------------- |
+| GET  | `/realname/mine`       | 登录              | `{ required, status, record }`                            |
+| POST | `/realname`            | 登录              | 提交/重提 `{ realName, idCardNo, frontImage, backImage }` |
+| GET  | `/realname`            | `realname:list`   | 分页 `?page&pageSize&status`                              |
+| POST | `/realname/:id/review` | `realname:review` | `{ approve, rejectReason? }`                              |
+| GET  | `/realname/policy`     | `realname:policy` | `{ requiredRoleCodes }`                                   |
+| PUT  | `/realname/policy`     | `realname:policy` | `{ requiredRoleCodes }`                                   |
 
 ## 设计要点（无硬编码 / 最小化）
 
@@ -66,3 +66,7 @@ C 端：`client/views/profile/RealnameView.vue`（路由 `/profile/realname`，�
 - **策略入配置中心**：`realname.requiredRoleCodes`（实名组，JSON 数组）为单一来源，由 `RealnamePolicyService` 收口读写；命中判定集中一处。
 - **多租户**：实体继承 `TenantScopedEntity`，仓储经 `withTenant` 行级隔离。
 - **契约共享**：`RealnameStatus`、`RealnameView`、`SubmitRealnamePayload`、`maskIdCard` 等在 `@app/contracts`，前后端共用同一脱敏与校验规则（`CHINA_ID_CARD_PATTERN`）。
+
+## 管理端菜单角标
+
+具备 `realname:menu` 与 `realname:list` 的账号会看到当前页面可见范围内的待审核数量角标（普通账号为本租户，超级管理员为全局）。管理端以 `page=1&pageSize=1&status=pending` 复用列表接口的 `total`；审核通过或驳回成功后页面立即定向刷新该角标。完整刷新、失败和权限语义见 [menu-badges.md](./menu-badges.md)。

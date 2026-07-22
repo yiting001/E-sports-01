@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { PERMS } from "@app/contracts";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {
   ArrowDown,
   Fold,
@@ -10,48 +11,140 @@ import {
   User,
   UserFilled,
   Wallet,
-} from '@element-plus/icons-vue';
-import AppMenu from './AppMenu.vue';
-import { useMenus } from '@/composables/use-menus';
-import { useAuthStore } from '@/stores/auth.store';
-import { useMenuStore } from '@/stores/menu.store';
-import { useBrandingStore } from '@/stores/branding.store';
-import './AppLayout.css';
+} from "@element-plus/icons-vue";
+import AppMenu from "./AppMenu.vue";
+import { AUTH_SESSION_EXPIRED_EVENT } from "@/api/http";
+import { createImSocket } from "@/composables/use-im-socket";
+import { useMenus } from "@/composables/use-menus";
+import { STORAGE_KEYS } from "@/config/env";
+import { useAuthStore } from "@/stores/auth.store";
+import { useMenuStore } from "@/stores/menu.store";
+import { MENU_BADGE_CODES, useMenuBadgeStore } from "@/stores/menu-badge.store";
+import { useBrandingStore } from "@/stores/branding.store";
+import "./AppLayout.css";
 
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
 const menuStore = useMenuStore();
+const menuBadges = useMenuBadgeStore();
 const branding = useBrandingStore();
+const im = createImSocket();
 const { menus } = useMenus();
 
 const mobileMenuVisible = ref(false);
 const activePath = computed(() => route.path);
-const userName = computed(() => auth.profile?.nickname || auth.profile?.username || '-');
-const roleText = computed(() => (auth.profile?.isSuper ? '超级管理员' : '授权账号'));
-const avatarUrl = computed(() => auth.profile?.avatar || '');
+const userName = computed(
+  () => auth.profile?.nickname || auth.profile?.username || "-"
+);
+const roleText = computed(() =>
+  auth.profile?.isSuper ? "超级管理员" : "授权账号"
+);
+const avatarUrl = computed(() => auth.profile?.avatar || "");
+let sessionExpiryHandled = false;
 
-function onLogout(): void {
+function clearAuthenticatedSession(): void {
+  im.disconnect();
+  menuBadges.stopPolling();
+  menuBadges.reset();
   auth.logout();
   menuStore.reset();
-  void router.push({ name: 'login' });
+}
+
+function onLogout(): void {
+  clearAuthenticatedSession();
+  void router.push({ name: "login" });
+}
+
+function onSessionExpired(): void {
+  if (sessionExpiryHandled) {
+    return;
+  }
+  sessionExpiryHandled = true;
+  clearAuthenticatedSession();
+  void router.replace({ name: "login" });
+}
+
+function onAuthStorageChange(event: StorageEvent): void {
+  const isTokenRemoval =
+    event.newValue === null &&
+    (event.key === STORAGE_KEYS.accessToken ||
+      event.key === STORAGE_KEYS.refreshToken);
+  if (isTokenRemoval) {
+    onSessionExpired();
+  }
+}
+
+function hasMenu(code: string): boolean {
+  return menuStore.menus.some((menu) => menu.code === code);
+}
+
+function startBadgeRealtime(): void {
+  const watchesIm = hasMenu(MENU_BADGE_CODES.im);
+  const watchesService =
+    hasMenu(MENU_BADGE_CODES.service) &&
+    auth.hasPermission(PERMS.im.serviceAgent);
+  if (!watchesIm && !watchesService) {
+    return;
+  }
+  im.connect();
+  im.onUnreadChanged(() => {
+    void menuBadges.refreshConversationBadges();
+  });
+  im.onConversation(() => {
+    void menuBadges.refreshConversationBadges();
+  });
+  if (watchesService) {
+    im.observeService();
+    im.onServiceQueued(() => {
+      void menuBadges.refreshServiceQueue();
+    });
+  }
 }
 
 function goProfile(): void {
-  void router.push({ name: 'profile' });
+  void router.push({ name: "profile" });
 }
 
 function goWallet(): void {
-  void router.push({ name: 'wallet-mine' });
+  void router.push({ name: "wallet-mine" });
 }
 
 function goRealname(): void {
-  void router.push({ name: 'realname-me' });
+  void router.push({ name: "realname-me" });
 }
 
 function closeMobileMenu(): void {
   mobileMenuVisible.value = false;
 }
+
+function refreshVisibleBadges(): void {
+  if (document.visibilityState === "visible") {
+    void menuBadges.refresh();
+  }
+}
+
+const removeAfterEach = router.afterEach(() => {
+  void menuBadges.refresh();
+});
+
+onMounted(() => {
+  menuBadges.startPolling();
+  startBadgeRealtime();
+  document.addEventListener("visibilitychange", refreshVisibleBadges);
+  window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, onSessionExpired);
+  window.addEventListener("storage", onAuthStorageChange);
+});
+
+onBeforeUnmount(() => {
+  removeAfterEach();
+  menuBadges.stopPolling();
+  menuBadges.reset();
+  im.disconnect();
+  document.removeEventListener("visibilitychange", refreshVisibleBadges);
+  window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, onSessionExpired);
+  window.removeEventListener("storage", onAuthStorageChange);
+});
 </script>
 
 <template>
@@ -76,6 +169,7 @@ function closeMobileMenu(): void {
       <app-menu
         :menus="menus"
         :active-path="activePath"
+        :badge-counts="menuBadges.counts"
       />
 
       <div class="aside-user">
@@ -105,7 +199,7 @@ function closeMobileMenu(): void {
             @click="mobileMenuVisible = true"
           />
           <div>
-            <p>{{ route.meta.title || '工作台' }}</p>
+            <p>{{ route.meta.title || "工作台" }}</p>
             <span>{{ branding.appName }}</span>
           </div>
         </div>
@@ -201,6 +295,7 @@ function closeMobileMenu(): void {
       <app-menu
         :menus="menus"
         :active-path="activePath"
+        :badge-counts="menuBadges.counts"
         class="drawer-menu"
         @select="closeMobileMenu"
       />

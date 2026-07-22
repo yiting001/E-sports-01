@@ -1,22 +1,27 @@
-import type { ApiResponse, TokenPair } from '@app/contracts';
-import { BizCode } from '@app/contracts';
+import type { ApiResponse, TokenPair } from "@app/contracts";
+import { BizCode } from "@app/contracts";
 import axios, {
   AxiosError,
+  type AxiosRequestConfig,
   type AxiosInstance,
   type AxiosResponse,
   type InternalAxiosRequestConfig,
-} from 'axios';
-import { ElMessage } from 'element-plus';
-import { ENV } from '@/config/env';
-import { resolveHttpErrorMessage } from '@/utils/http-error';
-import { tokenStorage } from './token-storage';
+} from "axios";
+import { ElMessage } from "element-plus";
+import { ENV } from "@/config/env";
+import { resolveHttpErrorMessage } from "@/utils/http-error";
+import { tokenStorage } from "./token-storage";
 
 /** 请求级开关：置 true 时本次请求失败不弹全局提示，交由调用方自行处理 */
-export interface RequestOptions {
+export interface RequestOptions extends AxiosRequestConfig {
   silent?: boolean;
 }
 
-type RequestConfig = InternalAxiosRequestConfig & RequestOptions & { _retried?: boolean };
+type RequestConfig = InternalAxiosRequestConfig &
+  RequestOptions & { _retried?: boolean };
+
+/** 刷新令牌失败时通知应用壳立即清理内存状态与常驻连接。 */
+export const AUTH_SESSION_EXPIRED_EVENT = "app:auth-session-expired";
 
 /**
  * HTTP 客户端。
@@ -42,11 +47,11 @@ let refreshing: Promise<string> | null = null;
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = tokenStorage.getRefresh();
   if (!refreshToken) {
-    throw new Error('NO_REFRESH_TOKEN');
+    throw new Error("NO_REFRESH_TOKEN");
   }
   const { data } = await axios.post<ApiResponse<TokenPair>>(
     `${ENV.apiBaseUrl}/auth/refresh`,
-    { refreshToken },
+    { refreshToken }
   );
   tokenStorage.save(data.data);
   return data.data.accessToken;
@@ -55,7 +60,7 @@ async function refreshAccessToken(): Promise<string> {
 instance.interceptors.response.use(
   (response) => {
     const body = response.data as ApiResponse;
-    const data = body && typeof body.code === 'number' ? body.data : body;
+    const data = body && typeof body.code === "number" ? body.data : body;
     return data as unknown as AxiosResponse;
   },
   async (error: AxiosError<ApiResponse>) => {
@@ -73,17 +78,21 @@ instance.interceptors.response.use(
       } catch (refreshError) {
         refreshing = null;
         tokenStorage.clear();
+        window.dispatchEvent(new Event(AUTH_SESSION_EXPIRED_EVENT));
         notifyError(error, original);
         return Promise.reject(refreshError);
       }
     }
     notifyError(error, original);
     return Promise.reject(error);
-  },
+  }
 );
 
 /** 统一弹出接口错误提示（单一来源），调用方可用 silent 关闭 */
-function notifyError(error: AxiosError<ApiResponse>, config?: RequestConfig): void {
+function notifyError(
+  error: AxiosError<ApiResponse>,
+  config?: RequestConfig
+): void {
   if (config?.silent) {
     return;
   }

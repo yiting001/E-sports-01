@@ -11,6 +11,7 @@ import {
 } from '@app/contracts';
 import { ConfigService } from '../../../config/application/config.service';
 import { UserDirectory } from '../../../rbac/application/user-directory.service';
+import { TenantContextService } from '../../../../shared/tenant/tenant-context.service';
 import { ConversationEntity } from '../../domain/conversation.entity';
 import {
   CONVERSATION_REPOSITORY,
@@ -42,6 +43,7 @@ export class StartServiceUseCase {
     private readonly assembler: ConversationViewAssembler,
     private readonly notifier: ConversationNotifier,
     private readonly assignment: ServiceAssignmentService,
+    private readonly tenant: TenantContextService,
   ) {}
 
   async execute(
@@ -72,11 +74,15 @@ export class StartServiceUseCase {
     visitorName: string,
     subject: string,
   ): Promise<void> {
+    const tenantId = conversation.tenantId || this.tenant.tenantId;
+    if (!tenantId) {
+      throw new Error('客服会话缺少租户信息');
+    }
     const autoAssign = await this.config.getBoolean(
       CONFIG_KEYS.im.serviceAutoAssign,
       false,
     );
-    const agents = this.realtime.onlineAgents();
+    const agents = this.realtime.onlineAgents(tenantId);
     if (autoAssign && agents.length > 0) {
       await this.assignment.attachAgent(conversation, agents[0]);
       return;
@@ -88,7 +94,7 @@ export class StartServiceUseCase {
       subject,
       waitingSince: conversation.createdAt.getTime(),
     };
-    this.realtime.emitToAgents(IM_EVENTS.serviceQueued, item);
+    this.realtime.emitToAgents(tenantId, IM_EVENTS.serviceQueued, item);
   }
 
   private async visitorName(visitorId: string): Promise<string> {

@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from "vue";
 import {
   PAGINATION_DEFAULTS,
   RealnameStatus,
   type RealnameView,
   type RoleView,
-} from '@app/contracts';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import RealnamePolicyPanel from '@/components/realname/RealnamePolicyPanel.vue';
-import RealnameReviewDirectory from '@/components/realname/RealnameReviewDirectory.vue';
-import RealnameStats from '@/components/realname/RealnameStats.vue';
-import { realnameApi } from '@/api/realname.api';
-import { roleApi } from '@/api/role.api';
-import './RealnameAdminView.css';
-import './RealnameAdminView.responsive.css';
+} from "@app/contracts";
+import { ElMessage, ElMessageBox } from "element-plus";
+import RealnamePolicyPanel from "@/components/realname/RealnamePolicyPanel.vue";
+import RealnameReviewDirectory from "@/components/realname/RealnameReviewDirectory.vue";
+import RealnameStats from "@/components/realname/RealnameStats.vue";
+import { realnameApi } from "@/api/realname.api";
+import { roleApi } from "@/api/role.api";
+import { MENU_BADGE_CODES, useMenuBadgeStore } from "@/stores/menu-badge.store";
+import "./RealnameAdminView.css";
+import "./RealnameAdminView.responsive.css";
 
 const list = ref<RealnameView[]>([]);
+const menuBadges = useMenuBadgeStore();
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
@@ -24,45 +26,51 @@ const loading = ref(false);
 
 const statusMeta: Record<
   RealnameStatus,
-  { text: string; type: 'info' | 'warning' | 'success' | 'danger' }
+  { text: string; type: "info" | "warning" | "success" | "danger" }
 > = {
-  [RealnameStatus.None]: { text: '未认证', type: 'info' },
-  [RealnameStatus.Pending]: { text: '审核中', type: 'warning' },
-  [RealnameStatus.Approved]: { text: '已通过', type: 'success' },
-  [RealnameStatus.Rejected]: { text: '已驳回', type: 'danger' },
+  [RealnameStatus.None]: { text: "未认证", type: "info" },
+  [RealnameStatus.Pending]: { text: "审核中", type: "warning" },
+  [RealnameStatus.Approved]: { text: "已通过", type: "success" },
+  [RealnameStatus.Rejected]: { text: "已驳回", type: "danger" },
 };
 
 const statusOptions = [
-  { label: '全部', value: undefined },
-  { label: '审核中', value: RealnameStatus.Pending },
-  { label: '已通过', value: RealnameStatus.Approved },
-  { label: '已驳回', value: RealnameStatus.Rejected },
+  { label: "全部", value: undefined },
+  { label: "审核中", value: RealnameStatus.Pending },
+  { label: "已通过", value: RealnameStatus.Approved },
+  { label: "已驳回", value: RealnameStatus.Rejected },
 ];
 
 const pendingCount = computed(
-  () => list.value.filter((item) => item.status === RealnameStatus.Pending).length,
+  () =>
+    list.value.filter((item) => item.status === RealnameStatus.Pending).length
 );
 const approvedCount = computed(
-  () => list.value.filter((item) => item.status === RealnameStatus.Approved).length,
+  () =>
+    list.value.filter((item) => item.status === RealnameStatus.Approved).length
 );
 
 function formatDate(value: string): string {
   if (!value) {
-    return '-';
+    return "-";
   }
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(new Date(value));
 }
 
 async function load(): Promise<void> {
   loading.value = true;
   try {
-    const res = await realnameApi.list(page.value, pageSize.value, statusFilter.value);
+    const res = await realnameApi.list(
+      page.value,
+      pageSize.value,
+      statusFilter.value
+    );
     list.value = res.list;
     total.value = res.total;
   } finally {
@@ -87,22 +95,30 @@ async function onFilterChange(): Promise<void> {
 }
 
 async function approve(row: RealnameView): Promise<void> {
-  await ElMessageBox.confirm(`确认通过 ${row.username} 的实名认证？`, '审核通过', {
-    type: 'warning',
-  });
+  await ElMessageBox.confirm(
+    `确认通过 ${row.username} 的实名认证？`,
+    "审核通过",
+    {
+      type: "warning",
+    }
+  );
   await realnameApi.review(row.id, { approve: true });
-  ElMessage.success('已通过');
-  await load();
+  ElMessage.success("已通过");
+  await Promise.all([load(), menuBadges.refresh([MENU_BADGE_CODES.realname])]);
 }
 
 async function reject(row: RealnameView): Promise<void> {
-  const { value } = await ElMessageBox.prompt(`请输入驳回 ${row.username} 的理由`, '驳回', {
-    inputPattern: /\S+/,
-    inputErrorMessage: '驳回理由不能为空',
-  });
+  const { value } = await ElMessageBox.prompt(
+    `请输入驳回 ${row.username} 的理由`,
+    "驳回",
+    {
+      inputPattern: /\S+/,
+      inputErrorMessage: "驳回理由不能为空",
+    }
+  );
   await realnameApi.review(row.id, { approve: false, rejectReason: value });
-  ElMessage.success('已驳回');
-  await load();
+  ElMessage.success("已驳回");
+  await Promise.all([load(), menuBadges.refresh([MENU_BADGE_CODES.realname])]);
 }
 
 const roles = ref<RoleView[]>([]);
@@ -128,7 +144,7 @@ async function savePolicy(): Promise<void> {
   policySaving.value = true;
   try {
     await realnameApi.setPolicy({ requiredRoleCodes: selectedRoleCodes.value });
-    ElMessage.success('实名策略已保存');
+    ElMessage.success("实名策略已保存");
   } finally {
     policySaving.value = false;
   }

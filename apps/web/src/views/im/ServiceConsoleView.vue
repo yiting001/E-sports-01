@@ -1,44 +1,48 @@
 <script setup lang="ts">
-import type { ChatMessage, ServiceQueueItemView } from '@app/contracts';
-import { MessageType, SYSTEM_SENDER_ID } from '@app/contracts';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import type { ChatMessage, ServiceQueueItemView } from "@app/contracts";
+import { MessageType, SYSTEM_SENDER_ID } from "@app/contracts";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   CloseBold,
   Headset,
   Promotion,
   Refresh,
   UserFilled,
-} from '@element-plus/icons-vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import { imApi } from '@/api/im.api';
-import { replyContentText } from '@/composables/use-chat-compose';
-import { createImSocket } from '@/composables/use-im-socket';
-import { useAuthStore } from '@/stores/auth.store';
-import { sanitizeHtml } from '@/utils/sanitize-html';
+} from "@element-plus/icons-vue";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { imApi } from "@/api/im.api";
+import { replyContentText } from "@/composables/use-chat-compose";
+import { createImSocket } from "@/composables/use-im-socket";
+import { useAuthStore } from "@/stores/auth.store";
+import { MENU_BADGE_CODES, useMenuBadgeStore } from "@/stores/menu-badge.store";
+import { sanitizeHtml } from "@/utils/sanitize-html";
 import {
   conversationInitial,
   formatImTime,
   messageTypeLabel,
-} from '@/components/im/im-ui';
-import './ServiceConsoleChat.css';
-import './ServiceConsoleView.css';
-import './ServiceConsoleView.responsive.css';
+} from "@/components/im/im-ui";
+import "./ServiceConsoleChat.css";
+import "./ServiceConsoleView.css";
+import "./ServiceConsoleView.responsive.css";
 
 const auth = useAuthStore();
+const menuBadges = useMenuBadgeStore();
 const im = createImSocket();
 
 const queue = ref<ServiceQueueItemView[]>([]);
 const activeId = ref<string | null>(null);
-const activeTitle = ref('');
-const activeVisitor = ref('');
+const activeTitle = ref("");
+const activeVisitor = ref("");
 const messages = ref<ChatMessage[]>([]);
-const draft = ref('');
+const draft = ref("");
 const listRef = ref<HTMLElement | null>(null);
 
 const waitingCount = computed(() => queue.value.length);
-const activeLabel = computed(() => activeVisitor.value || activeTitle.value || '访客');
+const activeLabel = computed(
+  () => activeVisitor.value || activeTitle.value || "访客"
+);
 const activeMessageCount = computed(
-  () => messages.value.filter((message) => !isSystem(message)).length,
+  () => messages.value.filter((message) => !isSystem(message)).length
 );
 
 function waitForFrame(): Promise<void> {
@@ -57,17 +61,20 @@ async function scrollToBottom(): Promise<void> {
 
 async function loadQueue(): Promise<void> {
   queue.value = await imApi.serviceQueue();
+  menuBadges.setServiceWaitingCount(queue.value.length);
 }
 
 async function claim(item: ServiceQueueItemView): Promise<void> {
   const view = await imApi.claimService(item.conversationId);
   queue.value = queue.value.filter(
-    (q) => q.conversationId !== item.conversationId,
+    (q) => q.conversationId !== item.conversationId
   );
+  menuBadges.setServiceWaitingCount(queue.value.length);
   activeId.value = view.id;
   activeTitle.value = view.title;
   activeVisitor.value = item.visitorName;
   messages.value = await im.join(view.id);
+  await menuBadges.refresh([MENU_BADGE_CODES.service]);
   await scrollToBottom();
 }
 
@@ -80,23 +87,24 @@ function send(): void {
     type: MessageType.Text,
     content: draft.value,
   });
-  draft.value = '';
+  draft.value = "";
 }
 
 async function close(): Promise<void> {
   if (!activeId.value) {
     return;
   }
-  await ElMessageBox.confirm('确认结束该客服会话？', '结束会话', {
-    type: 'warning',
+  await ElMessageBox.confirm("确认结束该客服会话？", "结束会话", {
+    type: "warning",
   });
   await imApi.closeService(activeId.value);
-  ElMessage.success('会话已结束');
+  ElMessage.success("会话已结束");
   activeId.value = null;
-  activeTitle.value = '';
-  activeVisitor.value = '';
+  activeTitle.value = "";
+  activeVisitor.value = "";
   messages.value = [];
-  draft.value = '';
+  draft.value = "";
+  await menuBadges.refresh([MENU_BADGE_CODES.service]);
 }
 
 function isSelf(message: ChatMessage): boolean {
@@ -110,7 +118,7 @@ function isSystem(message: ChatMessage): boolean {
 function waitingText(value: number): string {
   const minutes = Math.max(0, Math.floor((Date.now() - value) / 60000));
   if (minutes < 1) {
-    return '刚刚';
+    return "刚刚";
   }
   if (minutes < 60) {
     return `${minutes} 分钟`;
@@ -119,28 +127,52 @@ function waitingText(value: number): string {
 }
 
 function queueInitial(item: ServiceQueueItemView): string {
-  return conversationInitial(item.visitorName || item.subject || '访客');
+  return conversationInitial(item.visitorName || item.subject || "访客");
+}
+
+async function markActiveConversationRead(): Promise<void> {
+  const lastVisibleMessage = messages.value.at(-1);
+  if (
+    !activeId.value ||
+    !lastVisibleMessage ||
+    document.visibilityState !== "visible"
+  ) {
+    return;
+  }
+  const marked = await im.markRead(activeId.value, lastVisibleMessage.id);
+  if (marked) {
+    await menuBadges.refreshConversationBadges();
+  }
+}
+
+function handleVisibilityChange(): void {
+  void markActiveConversationRead();
 }
 
 onMounted(async () => {
   im.connect();
   im.onError((error) => ElMessage.error(error.message));
   im.watchService();
-  im.onServiceQueued((item) => {
-    if (!queue.value.some((q) => q.conversationId === item.conversationId)) {
-      queue.value.unshift(item);
-    }
-  });
+  im.onServiceQueued(() => void loadQueue());
   im.onReceive((message) => {
     if (message.conversationId === activeId.value) {
       messages.value.push(message);
       void scrollToBottom();
+      if (document.visibilityState === "visible") {
+        void markActiveConversationRead();
+      } else {
+        void menuBadges.refreshConversationBadges();
+      }
     }
   });
   await loadQueue();
+  document.addEventListener("visibilitychange", handleVisibilityChange);
 });
 
-onBeforeUnmount(() => im.disconnect());
+onBeforeUnmount(() => {
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
+  im.disconnect();
+});
 </script>
 
 <template>
@@ -192,7 +224,7 @@ onBeforeUnmount(() => im.disconnect());
                 <small>{{ formatImTime(item.waitingSince) }}</small>
               </div>
             </div>
-            <p>{{ item.subject || '咨询' }}</p>
+            <p>{{ item.subject || "咨询" }}</p>
             <div class="service-ticket__foot">
               <span>等待 {{ waitingText(item.waitingSince) }}</span>
               <el-button
@@ -236,7 +268,7 @@ onBeforeUnmount(() => im.disconnect());
                 <span class="service-panel__meta">
                   <span class="service-status">接待中</span>
                   <small>{{ activeMessageCount }} 条消息</small>
-                  <small>{{ activeTitle || '客服会话' }}</small>
+                  <small>{{ activeTitle || "客服会话" }}</small>
                 </span>
               </div>
             </div>
@@ -283,9 +315,16 @@ onBeforeUnmount(() => im.disconnect());
                       v-if="message.replyTo"
                       class="service-reply-quote"
                     >
-                      <span class="service-reply-quote__sender">{{ message.replyTo.senderName }}</span>
+                      <span class="service-reply-quote__sender">{{
+                        message.replyTo.senderName
+                      }}</span>
                       <span class="service-reply-quote__content">
-                        {{ replyContentText(message.replyTo.type, message.replyTo.content) }}
+                        {{
+                          replyContentText(
+                            message.replyTo.type,
+                            message.replyTo.content
+                          )
+                        }}
                       </span>
                     </div>
                     <div
@@ -335,7 +374,7 @@ onBeforeUnmount(() => im.disconnect());
               />
               <div class="service-composer__footer">
                 <span class="service-composer__state">
-                  {{ draft.trim() ? '已输入内容' : '等待输入' }}
+                  {{ draft.trim() ? "已输入内容" : "等待输入" }}
                 </span>
                 <el-button
                   type="primary"

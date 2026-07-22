@@ -10,8 +10,8 @@ import type {
   SearchMessagesQuery,
   ServiceQueueItemView,
   StartServicePayload,
-} from '@app/contracts';
-import { http } from './http';
+} from "@app/contracts";
+import { http, type RequestOptions } from "./http";
 
 /**
  * IM REST 接口集合。
@@ -20,21 +20,23 @@ import { http } from './http';
  */
 export const imApi = {
   history(conversationId: string): Promise<ChatMessage[]> {
-    return http.get('/im/messages', { params: { conversationId } });
+    return http.get("/im/messages", { params: { conversationId } });
   },
 
-  listConversations(): Promise<ConversationView[]> {
-    return http.get('/im/conversations');
+  listConversations(options: RequestOptions = {}): Promise<ConversationView[]> {
+    return http.get("/im/conversations", options);
   },
 
   /** 按标题关键词搜索我的会话 */
   searchConversations(keyword: string): Promise<ConversationView[]> {
-    return http.get('/im/conversations/search', { params: { keyword } });
+    return http.get("/im/conversations/search", { params: { keyword } });
   },
 
   /** 会话内搜索聊天记录（关键词 + 日期范围，分页） */
-  searchMessages(query: SearchMessagesQuery): Promise<PaginatedResult<ChatMessage>> {
-    return http.get('/im/messages/search', { params: query });
+  searchMessages(
+    query: SearchMessagesQuery
+  ): Promise<PaginatedResult<ChatMessage>> {
+    return http.get("/im/messages/search", { params: query });
   },
 
   conversationDetail(id: string): Promise<ConversationDetailView> {
@@ -42,11 +44,11 @@ export const imApi = {
   },
 
   createGroup(payload: CreateGroupPayload): Promise<ConversationView> {
-    return http.post('/im/conversations', payload);
+    return http.post("/im/conversations", payload);
   },
 
   openPrivate(peerId: string): Promise<ConversationView> {
-    return http.post('/im/conversations/private', { peerId });
+    return http.post("/im/conversations/private", { peerId });
   },
 
   rename(id: string, payload: RenameGroupPayload): Promise<ConversationView> {
@@ -55,7 +57,7 @@ export const imApi = {
 
   addMembers(
     id: string,
-    payload: AddMembersPayload,
+    payload: AddMembersPayload
   ): Promise<ConversationDetailView> {
     return http.post(`/im/conversations/${id}/members`, payload);
   },
@@ -69,18 +71,21 @@ export const imApi = {
   },
 
   startService(payload: StartServicePayload): Promise<ConversationView> {
-    return http.post('/im/service', payload);
+    return http.post("/im/service", payload);
   },
 
-  serviceQueue(): Promise<ServiceQueueItemView[]> {
-    return http.get('/im/service/queue');
+  serviceQueue(options: RequestOptions = {}): Promise<ServiceQueueItemView[]> {
+    return http.get("/im/service/queue", options);
   },
 
   claimService(id: string): Promise<ConversationView> {
     return http.post(`/im/service/${id}/claim`);
   },
 
-  assignService(id: string, payload: AssignAgentPayload): Promise<ConversationView> {
+  assignService(
+    id: string,
+    payload: AssignAgentPayload
+  ): Promise<ConversationView> {
     return http.post(`/im/service/${id}/assign`, payload);
   },
 

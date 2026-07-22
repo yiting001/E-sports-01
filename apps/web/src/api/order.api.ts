@@ -4,8 +4,8 @@ import type {
   OrderStatus,
   PaginatedResult,
   ServiceAgentOption,
-} from '@app/contracts';
-import { http } from './http';
+} from "@app/contracts";
+import { http, type RequestOptions } from "./http";
 
 /** 订单管理接口：管理端检索订单列表 + 查看单笔详情 */
 export const orderApi = {
@@ -15,9 +15,11 @@ export const orderApi = {
     pageSize: number,
     status?: OrderStatus,
     orderNo?: string,
+    options: RequestOptions = {}
   ): Promise<PaginatedResult<AdminOrderView>> {
-    return http.get('/order/admin', {
+    return http.get("/order/admin", {
       params: { page, pageSize, status, orderNo: orderNo || undefined },
+      ...options,
     });
   },
   /** 查询单笔订单详情 */
@@ -40,9 +42,9 @@ export const orderApi = {
   boosterCandidates(
     page: number,
     pageSize: number,
-    keyword?: string,
+    keyword?: string
   ): Promise<PaginatedResult<ServiceAgentOption>> {
-    return http.get('/order/admin/booster-candidates', {
+    return http.get("/order/admin/booster-candidates", {
       params: { page, pageSize, keyword: keyword || undefined },
     });
   },

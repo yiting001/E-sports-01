@@ -6,15 +6,15 @@
  * 另支持等级档位配置（booster:level:set）、押金交付配置（booster:deposit:policy:set）
  * 与押金退还（booster:deposit:refund）。
  */
-import { onMounted, ref } from 'vue';
+import { onMounted, ref } from "vue";
 import {
   BOOSTER_LIMITS,
   BoosterStatus,
   PAGINATION_DEFAULTS,
   PERMS,
   type BoosterView,
-} from '@app/contracts';
-import { ElMessage, ElMessageBox } from 'element-plus';
+} from "@app/contracts";
+import { ElMessage, ElMessageBox } from "element-plus";
 import {
   Check,
   Close,
@@ -26,57 +26,65 @@ import {
   Setting,
   Trophy,
   Warning,
-} from '@element-plus/icons-vue';
-import AppDataTable from '@/components/common/AppDataTable.vue';
-import AppPanel from '@/components/common/AppPanel.vue';
-import PenaltyCreateDrawer from '@/components/finance/PenaltyCreateDrawer.vue';
-import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
-import { boosterApi } from '@/api/booster.api';
-import BoosterLevelDialog from './BoosterLevelDialog.vue';
-import BoosterDepositPolicyDialog from './BoosterDepositPolicyDialog.vue';
-import BoosterProfileEditDrawer from './BoosterProfileEditDrawer.vue';
-import { contactTypeLabel, genderLabel, serviceRegionLabel } from './booster-profile';
-import './BoosterAdminView.css';
+} from "@element-plus/icons-vue";
+import AppDataTable from "@/components/common/AppDataTable.vue";
+import AppPanel from "@/components/common/AppPanel.vue";
+import PenaltyCreateDrawer from "@/components/finance/PenaltyCreateDrawer.vue";
+import { PAGE_SIZE_OPTIONS } from "@/config/pagination";
+import { boosterApi } from "@/api/booster.api";
+import { MENU_BADGE_CODES, useMenuBadgeStore } from "@/stores/menu-badge.store";
+import BoosterLevelDialog from "./BoosterLevelDialog.vue";
+import BoosterDepositPolicyDialog from "./BoosterDepositPolicyDialog.vue";
+import BoosterProfileEditDrawer from "./BoosterProfileEditDrawer.vue";
+import {
+  contactTypeLabel,
+  genderLabel,
+  serviceRegionLabel,
+} from "./booster-profile";
+import "./BoosterAdminView.css";
 
 const list = ref<BoosterView[]>([]);
+const menuBadges = useMenuBadgeStore();
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
-const statusFilter = ref<BoosterStatus | ''>('');
-const keyword = ref('');
+const statusFilter = ref<BoosterStatus | "">("");
+const keyword = ref("");
 const loading = ref(false);
 
 const statusMeta: Record<
   BoosterStatus,
-  { text: string; type: 'info' | 'warning' | 'success' | 'danger' }
+  { text: string; type: "info" | "warning" | "success" | "danger" }
 > = {
-  [BoosterStatus.None]: { text: '未申请', type: 'info' },
-  [BoosterStatus.Pending]: { text: '待审核', type: 'warning' },
-  [BoosterStatus.Approved]: { text: '已入驻', type: 'success' },
-  [BoosterStatus.Rejected]: { text: '已驳回', type: 'danger' },
+  [BoosterStatus.None]: { text: "未申请", type: "info" },
+  [BoosterStatus.Pending]: { text: "待审核", type: "warning" },
+  [BoosterStatus.Approved]: { text: "已入驻", type: "success" },
+  [BoosterStatus.Rejected]: { text: "已驳回", type: "danger" },
 };
 
 const statusOptions = [
-  { label: '全部状态', value: '' },
-  { label: '待审核', value: BoosterStatus.Pending },
-  { label: '已入驻', value: BoosterStatus.Approved },
-  { label: '已驳回', value: BoosterStatus.Rejected },
+  { label: "全部状态", value: "" },
+  { label: "待审核", value: BoosterStatus.Pending },
+  { label: "已入驻", value: BoosterStatus.Approved },
+  { label: "已驳回", value: BoosterStatus.Rejected },
 ];
 
-function statusDisplay(status: BoosterStatus): (typeof statusMeta)[BoosterStatus] {
+function statusDisplay(
+  status: BoosterStatus
+): (typeof statusMeta)[BoosterStatus] {
   return statusMeta[status];
 }
 
 function formatDate(value: string): string {
   if (!value) {
-    return '-';
+    return "-";
   }
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(new Date(value));
 }
 
@@ -87,7 +95,7 @@ async function load(): Promise<void> {
       page.value,
       pageSize.value,
       statusFilter.value || undefined,
-      keyword.value.trim() || undefined,
+      keyword.value.trim() || undefined
     );
     list.value = res.list;
     total.value = res.total;
@@ -119,24 +127,26 @@ async function onSearch(): Promise<void> {
 
 async function approve(row: BoosterView): Promise<void> {
   await ElMessageBox.confirm(
-    `确认通过 ${row.nickname || row.username} 的入驻申请？通过后将授予打手角色。`,
-    '审核通过',
-    { type: 'warning' },
+    `确认通过 ${
+      row.nickname || row.username
+    } 的入驻申请？通过后将授予打手角色。`,
+    "审核通过",
+    { type: "warning" }
   );
   await boosterApi.review(row.id, { approve: true });
-  ElMessage.success('已通过并授予打手角色');
-  await load();
+  ElMessage.success("已通过并授予打手角色");
+  await Promise.all([load(), menuBadges.refresh([MENU_BADGE_CODES.booster])]);
 }
 
 async function reject(row: BoosterView): Promise<void> {
   const { value } = await ElMessageBox.prompt(
     `请输入驳回 ${row.nickname || row.username} 的理由`,
-    '驳回申请',
-    { inputPattern: /\S+/, inputErrorMessage: '驳回理由不能为空' },
+    "驳回申请",
+    { inputPattern: /\S+/, inputErrorMessage: "驳回理由不能为空" }
   );
   await boosterApi.review(row.id, { approve: false, rejectReason: value });
-  ElMessage.success('已驳回');
-  await load();
+  ElMessage.success("已驳回");
+  await Promise.all([load(), menuBadges.refresh([MENU_BADGE_CODES.booster])]);
 }
 
 const levelDialogVisible = ref(false);
@@ -145,11 +155,11 @@ const depositPolicyVisible = ref(false);
 async function refundDeposit(row: BoosterView): Promise<void> {
   await ElMessageBox.confirm(
     `确认退还 ${row.nickname || row.username} 的押金？将全额退回其钱包余额。`,
-    '退还押金',
-    { type: 'warning' },
+    "退还押金",
+    { type: "warning" }
   );
   await boosterApi.refundDeposit(row.id);
-  ElMessage.success('押金已退还');
+  ElMessage.success("押金已退还");
   await load();
 }
 
@@ -257,8 +267,9 @@ onMounted(() => {
                 <el-icon><Trophy /></el-icon>
               </span>
               <div>
-                <strong>{{ row.applicantName || '未填写姓名' }}</strong>
-                <small>{{ row.nickname || row.username }} · {{ row.username }}</small>
+                <strong>{{ row.applicantName || "未填写姓名" }}</strong>
+                <small>{{ row.nickname || row.username }} ·
+                  {{ row.username }}</small>
                 <span>{{ genderLabel(row.gender) }}</span>
               </div>
             </div>
@@ -281,7 +292,7 @@ onMounted(() => {
                 </el-tag>
                 <span v-if="row.serviceRegions.length === 0">未选择接单区服</span>
               </div>
-              <span class="booster-content">{{ row.intro || '-' }}</span>
+              <span class="booster-content">{{ row.intro || "-" }}</span>
             </div>
           </template>
         </el-table-column>
@@ -293,9 +304,11 @@ onMounted(() => {
             <div class="booster-contact-material">
               <div class="booster-contact-material__text">
                 <span>
-                  {{ contactTypeLabel(row.contactType) }}：{{ row.contactValue || '-' }}
+                  {{ contactTypeLabel(row.contactType) }}：{{
+                    row.contactValue || "-"
+                  }}
                 </span>
-                <span>邀请码：{{ row.invitationCode || '未填写' }}</span>
+                <span>邀请码：{{ row.invitationCode || "未填写" }}</span>
               </div>
               <el-image
                 v-if="row.materialImage"
@@ -313,9 +326,7 @@ onMounted(() => {
               <span
                 v-else
                 class="booster-muted"
-              >
-                未上传材料
-              </span>
+              > 未上传材料 </span>
             </div>
           </template>
         </el-table-column>
@@ -443,7 +454,11 @@ onMounted(() => {
     <penalty-create-drawer
       v-model="penaltyVisible"
       :booster-user-id="penaltyTarget?.userId"
-      :booster-name="penaltyTarget ? penaltyTarget.nickname || penaltyTarget.username : undefined"
+      :booster-name="
+        penaltyTarget
+          ? penaltyTarget.nickname || penaltyTarget.username
+          : undefined
+      "
       @saved="load"
     />
   </section>

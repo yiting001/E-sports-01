@@ -9,7 +9,7 @@ import {
   WebSocketGateway,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { ChatMessage, IM_EVENTS, PERMS, SendMessagePayload } from '@app/contracts';
+import { ChatMessage, IM_EVENTS, MarkReadPayload, PERMS, SendMessagePayload } from '@app/contracts';
 import { TenantContextService } from '../../../../shared/tenant/tenant-context.service';
 import { TraceContextService } from '../../../observability/application/trace-context.service';
 import { PermissionResolver } from '../../../rbac/application/permission-resolver.service';
@@ -33,9 +33,7 @@ interface AuthedSocket extends Socket {
  * 进房/发消息均做会话成员校验；坐席可订阅客服队列房间接收待接入推送。
  */
 @WebSocketGateway({ namespace: '/im', cors: { origin: '*' } })
-export class ImGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(ImGateway.name);
 
   /** 连接 → 握手鉴权完成信号：消息处理前先等待，避免身份未就绪导致误判无权限 */
@@ -136,9 +134,13 @@ export class ImGateway
         return [];
       }
       await socket.join(this.realtime.conversationRoom(conversationId));
-      await this.markRead.execute(conversationId, socket.data.userId);
+      const history = await this.getHistory.execute(conversationId);
+      const lastVisibleMessage = history.at(-1);
+      if (lastVisibleMessage) {
+        await this.markRead.execute(conversationId, socket.data.userId, lastVisibleMessage.id);
+      }
       socket.emit(IM_EVENTS.joined, { conversationId });
-      return this.getHistory.execute(conversationId);
+      return history;
     });
   }
 
@@ -149,36 +151,78 @@ export class ImGateway
   ): Promise<void> {
     await this.runInTrace(socket, async () => {
       try {
-        const message = await this.sendMessage.execute(
-          payload,
-          socket.data.userId,
-        );
-        await this.markRead.execute(message.conversationId, socket.data.userId);
-        this.realtime.emitToConversation(
-          message.conversationId,
-          IM_EVENTS.receive,
-          message,
-        );
+        const message = await this.sendMessage.execute(payload, socket.data.userId);
+        await this.markRead.execute(message.conversationId, socket.data.userId, message.id);
+        this.realtime.emitToConversation(message.conversationId, IM_EVENTS.receive, message);
       } catch (error) {
         this.emitError(socket, error, '发送失败');
       }
     });
   }
 
-  /** 坐席订阅客服队列：校验权限后加入坐席房间并登记在线 */
+  /** 活动页面确认消息可见后显式推进已读位点，避免轮询时未读数反弹。 */
+  @SubscribeMessage(IM_EVENTS.markRead)
+  async onMarkRead(
+    @ConnectedSocket() socket: AuthedSocket,
+    @MessageBody() payload: MarkReadPayload,
+  ): Promise<boolean> {
+    return this.runInTrace(socket, async () => {
+      if (
+        !payload ||
+        typeof payload.conversationId !== 'string' ||
+        typeof payload.messageId !== 'string' ||
+        !payload.conversationId ||
+        !payload.messageId
+      ) {
+        return false;
+      }
+      try {
+        await this.access.assertMember(payload.conversationId, socket.data.userId);
+        await this.markRead.execute(payload.conversationId, socket.data.userId, payload.messageId);
+        return true;
+      } catch (error) {
+        this.emitError(socket, error, '标记已读失败');
+        return false;
+      }
+    });
+  }
+
+  /** 管理端布局只观察队列变化，不进入自动分配在线索引。 */
+  @SubscribeMessage(IM_EVENTS.observeService)
+  async onObserveService(@ConnectedSocket() socket: AuthedSocket): Promise<void> {
+    await this.runInTrace(socket, () => this.subscribeService(socket, false));
+  }
+
+  /** 客服工作台订阅队列：校验权限后加入租户房间并登记在线。 */
   @SubscribeMessage(IM_EVENTS.watchService)
   async onWatchService(@ConnectedSocket() socket: AuthedSocket): Promise<void> {
-    await this.runInTrace(socket, async () => {
-      const context = await this.permissions.resolve(socket.data.userId);
-      const allowed =
-        context.isSuper || context.permissions.includes(PERMS.im.serviceAgent);
-      if (!allowed) {
-        socket.emit(IM_EVENTS.error, { message: '无客服坐席权限' });
-        return;
-      }
-      await socket.join(this.realtime.agentsRoom());
-      this.realtime.registerAgent(socket.id, socket.data.userId);
-    });
+    await this.runInTrace(socket, () => this.subscribeService(socket, true));
+  }
+
+  private async subscribeService(
+    socket: AuthedSocket,
+    registerForAssignment: boolean,
+  ): Promise<void> {
+    const context = await this.permissions.resolve(socket.data.userId);
+    const allowed = context.isSuper || context.permissions.includes(PERMS.im.serviceAgent);
+    if (!allowed) {
+      socket.emit(IM_EVENTS.error, { message: '无客服坐席权限' });
+      return;
+    }
+    const room = this.realtime.agentsRoom(socket.data.tenantId, context.isSuper);
+    if (!room) {
+      socket.emit(IM_EVENTS.error, { message: '缺少租户上下文' });
+      return;
+    }
+    await socket.join(room);
+    if (registerForAssignment) {
+      this.realtime.registerAgent(
+        socket.id,
+        socket.data.userId,
+        socket.data.tenantId,
+        context.isSuper,
+      );
+    }
   }
 
   private emitError(socket: Socket, error: unknown, fallback: string): void {
