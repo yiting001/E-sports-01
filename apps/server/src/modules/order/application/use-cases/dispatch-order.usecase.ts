@@ -11,6 +11,7 @@ import {
 } from '../../domain/order-repository.interface';
 import { toAdminOrderView } from '../order.mapper';
 import { assertOrderCanDispatch } from '../order-booster-selection';
+import { OrderGroupService } from '../order-group.service';
 import { ServiceAgentScope } from '../service-agent-scope.service';
 
 /** 用例：客服把「待客服处理」订单下发到接单大厅（→ 待接单；客服仅限自己负责的订单） */
@@ -20,6 +21,7 @@ export class DispatchOrderUseCase {
     @Inject(ORDER_REPOSITORY)
     private readonly orders: OrderRepository,
     private readonly scope: ServiceAgentScope,
+    private readonly orderGroup: OrderGroupService,
   ) {}
 
   async execute(operatorId: string, id: string): Promise<AdminOrderView> {
@@ -34,6 +36,8 @@ export class DispatchOrderUseCase {
     assertOrderCanDispatch(order);
     order.status = OrderStatus.Dispatching;
     order.dispatchedAt = new Date();
-    return toAdminOrderView(await this.orders.save(order));
+    const saved = await this.orders.save(order);
+    await this.orderGroup.syncTitle(saved);
+    return toAdminOrderView(saved);
   }
 }

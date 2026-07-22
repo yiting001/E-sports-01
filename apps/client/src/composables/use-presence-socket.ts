@@ -1,10 +1,10 @@
-import { IM_EVENTS } from '@app/contracts';
+import { IM_EVENTS, type ConversationView } from '@app/contracts';
 import { io, type Socket } from 'socket.io-client';
 import { tokenStorage } from '@/api/token-storage';
 import { ENV } from '@/config/env';
 
 export interface PresenceSocketHandlers {
-  onConversationChanged?: () => void;
+  onConversationChanged?: (conversation: ConversationView) => void;
   onUnreadChanged?: () => void;
 }
 

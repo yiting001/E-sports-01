@@ -64,4 +64,14 @@ describe('createImSocket markRead', () => {
 
     await expect(im.markRead('conversation-1', 'message-1')).resolves.toBe(false);
   });
+
+  it('转发服务端会话更新以同步订单群标题', () => {
+    const handler = vi.fn();
+    const im = createImSocket();
+    im.connect();
+
+    im.onConversation(handler);
+
+    expect(socketMocks.on).toHaveBeenCalledWith(IM_EVENTS.conversation, handler);
+  });
 });

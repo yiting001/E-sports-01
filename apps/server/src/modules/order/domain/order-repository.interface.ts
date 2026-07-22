@@ -53,6 +53,8 @@ export interface OrderRepository {
   ): Promise<[OrderEntity[], number]>;
   create(data: Partial<OrderEntity>): OrderEntity;
   save(entity: OrderEntity): Promise<OrderEntity>;
+  /** 仅回填订单群关联，禁止用支付后的旧实体整行保存覆盖并发状态。 */
+  updateConversationId(id: string, conversationId: string): Promise<void>;
   /** 行锁内复核订单状态与指定人后原子推进到服务中；竞争失败返回 null。 */
   claimForServing(input: ClaimOrderForServingInput): Promise<OrderEntity | null>;
 }

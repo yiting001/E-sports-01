@@ -47,6 +47,7 @@ export class ConversationViewAssembler {
     ]);
     return {
       id: conversation.id,
+      version: conversation.version,
       type: conversation.type,
       viewerRole: viewer?.role ?? null,
       title: await this.displayTitle(conversation, viewerId),

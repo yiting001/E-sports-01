@@ -53,9 +53,9 @@ export class OrderPaymentSettleService {
     await this.runPostCommitEffects(paidOrder, paidAmountFen);
   }
 
-  /** 查询入口补偿：已支付但未关联群的订单幂等补建，不重复累计消费。 */
+  /** 查询入口补偿：已支付订单幂等补建群或校正状态标题，不重复累计消费。 */
   async ensurePaidOrderGroup(order: OrderEntity): Promise<void> {
-    if (!order.paidAt || order.conversationId) {
+    if (!order.paidAt) {
       return;
     }
     await this.tenant.run({ tenantId: order.tenantId, isSuper: false }, () =>

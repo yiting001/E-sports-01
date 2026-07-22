@@ -23,6 +23,7 @@ import {
   OrderRepository,
 } from '../../domain/order-repository.interface';
 import { BoosterAccess } from '../booster-access.service';
+import { OrderGroupService } from '../order-group.service';
 import { toOrderView } from '../order.mapper';
 
 /**
@@ -40,6 +41,7 @@ export class CompleteBoosterOrderUseCase {
     @Inject(WALLET_LEDGER)
     private readonly ledger: WalletLedger,
     private readonly walletService: WalletService,
+    private readonly orderGroup: OrderGroupService,
   ) {}
 
   async execute(userId: string, id: string): Promise<OrderView> {
@@ -70,6 +72,8 @@ export class CompleteBoosterOrderUseCase {
     order.completedAt = new Date();
     order.commissionFen = commissionFen;
     order.commissionRateBp = tier.commissionRateBp;
-    return toOrderView(await this.orders.save(order));
+    const saved = await this.orders.save(order);
+    await this.orderGroup.syncTitle(saved);
+    return toOrderView(saved);
   }
 }

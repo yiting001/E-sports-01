@@ -8,13 +8,12 @@ import {
   ConversationStatus,
   ConversationType,
   MessageType,
-  SYSTEM_SENDER_ID,
   type ChatMessage,
   type ConversationView,
 } from '@app/contracts';
-import DOMPurify from 'dompurify';
 import AppIcon from '@/components/common/AppIcon.vue';
-import ChatMedia from '@/components/message/ChatMedia.vue';
+import ChatConversationHeader from '@/components/message/ChatConversationHeader.vue';
+import ChatMessageFeed from '@/components/message/ChatMessageFeed.vue';
 import ChatMentionPicker from '@/components/message/ChatMentionPicker.vue';
 import ChatReplyQuote from '@/components/message/ChatReplyQuote.vue';
 import { useChatCompose } from '@/composables/use-chat-compose';
@@ -59,6 +58,10 @@ const auth = useAuthStore();
 const unread = useUnreadStore();
 const toast = useToast();
 let socket = createImSocket();
+let setupRevision = 0;
+let joinRevision = 0;
+let joiningConversationId = '';
+let disposed = false;
 
 const activeConversation = ref<ConversationView | null>(null);
 const activeConversationId = ref('');
@@ -77,24 +80,6 @@ const visibleRead = createVisibleMessageRead({
   onMarked: () => void unread.refresh(),
 });
 
-/** 会话状态文案：待接入 / 服务中 / 已结束 */
-const statusText = computed(() => {
-  if (!activeConversation.value) {
-    return '等待选择会话';
-  }
-  if (activeConversation.value.type === ConversationType.Group) {
-    return '群聊会话';
-  }
-  switch (activeConversation.value.status) {
-    case ConversationStatus.Active:
-      return '客服服务中';
-    case ConversationStatus.Closed:
-      return '会话已结束';
-    default:
-      return '正在为你接入客服…';
-  }
-});
-
 /** 会话已结束或未选择会话时禁止继续发送 */
 const canSend = computed(
   () =>
@@ -102,41 +87,13 @@ const canSend = computed(
     activeConversation.value?.status !== ConversationStatus.Closed,
 );
 
-const titleText = computed(() => activeConversation.value?.title || '三角洲客服');
-
-function isSelf(message: ChatMessage): boolean {
-  return message.senderId === auth.profile?.id;
-}
-
-function isSystem(message: ChatMessage): boolean {
-  return message.senderId === SYSTEM_SENDER_ID;
-}
-
-/** 消息是否 @ 了当前用户，命中时气泡高亮 */
-function mentionedMe(message: ChatMessage): boolean {
-  const selfId = auth.profile?.id;
-  return Boolean(selfId && message.mentions?.includes(selfId));
-}
-
 /** 引用预览里的发送者名：自己显「我」，其他人从成员清单解析 */
 function senderNameOf(message: ChatMessage): string {
-  if (isSelf(message)) {
+  if (message.senderId === auth.profile?.id) {
     return '我';
   }
   const member = compose.members.value.find((m) => m.userId === message.senderId);
   return member?.username ?? '对方';
-}
-
-/** 系统富文本消息净化后渲染，防止 XSS */
-function safeHtml(content: string): string {
-  return DOMPurify.sanitize(content);
-}
-
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 async function scrollToBottom(): Promise<void> {
@@ -163,6 +120,8 @@ function resetSocket(): void {
 
 async function joinConversation(target: ConversationView | null): Promise<void> {
   if (!target) {
+    joinRevision += 1;
+    joiningConversationId = '';
     socket.disconnect();
     activeConversationId.value = '';
     activeConversation.value = null;
@@ -170,12 +129,20 @@ async function joinConversation(target: ConversationView | null): Promise<void> 
     loading.value = false;
     return;
   }
-  if (target.id === activeConversationId.value) {
-    activeConversation.value = target;
-    loading.value = false;
+  if (
+    target.id === activeConversationId.value ||
+    target.id === joiningConversationId
+  ) {
+    const current = activeConversation.value;
+    if (!current || target.version >= current.version) {
+      activeConversation.value = target;
+    }
     return;
   }
 
+  const currentRevision = joinRevision + 1;
+  joinRevision = currentRevision;
+  joiningConversationId = target.id;
   loading.value = true;
   resetSocket();
   try {
@@ -189,41 +156,72 @@ async function joinConversation(target: ConversationView | null): Promise<void> 
         await visibleRead.confirm(message);
       }
     });
+    socket.onConversation((conversation) => {
+      const current = activeConversation.value;
+      if (
+        conversation.id === current?.id &&
+        conversation.version >= current.version
+      ) {
+        activeConversation.value = conversation;
+        emit('ready', conversation);
+      }
+    });
     socket.onError((err) => toast.show(err.message));
-    messages.value = await socket.join(target.id);
+    const history = await socket.join(target.id);
+    if (currentRevision !== joinRevision) {
+      return;
+    }
+    messages.value = history;
     activeConversationId.value = target.id;
+    joiningConversationId = '';
     void unread.refresh();
-    void loadMembers(target.id);
-    emit('ready', target);
+    void loadMembers(target.id, currentRevision);
+    emit('ready', activeConversation.value ?? target);
     await scrollToBottom();
     await visibleRead.confirm();
   } catch {
-    toast.show('客服接入失败，请稍后重试');
+    if (currentRevision === joinRevision) {
+      joiningConversationId = '';
+      toast.show('客服接入失败，请稍后重试');
+    }
   } finally {
-    loading.value = false;
+    if (currentRevision === joinRevision) {
+      loading.value = false;
+    }
   }
 }
 
 /** 拉取会话成员供 @选择（失败不阻断聊天，仅不可 @） */
-async function loadMembers(conversationId: string): Promise<void> {
+async function loadMembers(conversationId: string, revision: number): Promise<void> {
   try {
     const detail = await imApi.conversationDetail(conversationId);
-    compose.setMembers(detail.members, auth.profile?.id);
+    if (revision === joinRevision) {
+      compose.setMembers(detail.members, auth.profile?.id);
+    }
   } catch {
-    compose.setMembers([]);
+    if (revision === joinRevision) {
+      compose.setMembers([]);
+    }
   }
 }
 
 async function setupConversation(): Promise<void> {
+  const currentSetupRevision = setupRevision + 1;
+  setupRevision = currentSetupRevision;
   try {
     if (!auth.profile) {
       await auth.loadProfile();
     }
     const target = props.conversation ?? (props.autoStart ? await resolveConversation() : null);
+    if (disposed || currentSetupRevision !== setupRevision) {
+      return;
+    }
     await joinConversation(target);
   } catch {
-    loading.value = false;
-    toast.show('客服接入失败，请稍后重试');
+    if (!disposed && currentSetupRevision === setupRevision) {
+      loading.value = false;
+      toast.show('客服接入失败，请稍后重试');
+    }
   }
 }
 
@@ -273,13 +271,17 @@ onMounted(() => {
 });
 
 watch(
-  () => [props.conversation?.id ?? '', props.autoStart] as const,
+  [() => props.conversation, () => props.autoStart],
   () => {
     void setupConversation();
   },
 );
 
 onBeforeUnmount(() => {
+  disposed = true;
+  setupRevision += 1;
+  joinRevision += 1;
+  joiningConversationId = '';
   visibleRead.dispose();
   socket.disconnect();
 });
@@ -293,113 +295,25 @@ onBeforeUnmount(() => {
       'chat-panel--embedded': embedded,
     }"
   >
-    <header class="bar">
-      <div class="bar-inner">
-        <button
-          v-if="showBack"
-          class="back"
-          aria-label="返回"
-          @click="emit('back')"
-        >
-          <AppIcon
-            name="chevron"
-            :size="20"
-          />
-        </button>
-        <div class="bar-title">
-          <span class="name">{{ titleText }}</span>
-          <span class="status">{{ statusText }}</span>
-        </div>
-      </div>
-    </header>
+    <ChatConversationHeader
+      :conversation="activeConversation"
+      :show-back="showBack"
+      @back="emit('back')"
+    />
 
     <div
       ref="scrollArea"
       class="scroll"
     >
-      <p
-        v-if="loading"
-        class="hint"
-      >
-        接入中…
-      </p>
-      <p
-        v-else-if="!activeConversation"
-        class="hint"
-      >
-        {{ emptyText }}
-      </p>
-      <p
-        v-else-if="!messages.length"
-        class="hint"
-      >
-        发送消息开始咨询，客服会尽快接入
-      </p>
-
-      <template
-        v-for="msg in messages"
-        :key="msg.id"
-      >
-        <div
-          v-if="isSystem(msg)"
-          class="sys"
-        >
-          <!-- eslint-disable vue/no-v-html -->
-          <span
-            class="sys-body"
-            v-html="safeHtml(msg.content)"
-          />
-          <!-- eslint-enable vue/no-v-html -->
-        </div>
-        <div
-          v-else
-          class="row"
-          :class="{ 'row--self': isSelf(msg) }"
-        >
-          <div class="col">
-            <span class="sender">{{ isSelf(msg) ? '我' : '客服' }}</span>
-            <div
-              class="bubble"
-              :class="{ 'bubble--mention': mentionedMe(msg) }"
-            >
-              <ChatReplyQuote
-                v-if="msg.replyTo"
-                :sender-name="msg.replyTo.senderName"
-                :type="msg.replyTo.type"
-                :content="msg.replyTo.content"
-              />
-              <p
-                v-if="msg.type === MessageType.Text"
-                class="text"
-              >
-                {{ msg.content }}
-              </p>
-              <ChatMedia
-                v-else-if="msg.type === MessageType.Image"
-                type="image"
-                :url="msg.content"
-              />
-              <ChatMedia
-                v-else-if="msg.type === MessageType.Video"
-                type="video"
-                :url="msg.content"
-              />
-              <span class="time">{{ formatTime(msg.createdAt) }}</span>
-            </div>
-          </div>
-          <button
-            v-if="canSend"
-            class="quote-btn"
-            aria-label="引用回复"
-            @click="compose.setReply(msg)"
-          >
-            <AppIcon
-              name="reply"
-              :size="14"
-            />
-          </button>
-        </div>
-      </template>
+      <ChatMessageFeed
+        :messages="messages"
+        :loading="loading"
+        :has-conversation="Boolean(activeConversation)"
+        :empty-text="emptyText"
+        :can-send="canSend"
+        :self-id="auth.profile?.id"
+        @reply="compose.setReply"
+      />
     </div>
 
     <div
