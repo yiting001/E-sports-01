@@ -117,6 +117,32 @@
   background: var(--el-color-primary-light-9);
 }
 
+.app-menu__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
+  padding-right: 4px;
+}
+
+.app-menu__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-menu__label .el-badge__content {
+  position: static;
+  flex: 0 0 auto;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 8px;
+  padding: 0 5px;
+  line-height: 18px;
+  transform: none;
+}
+
 .app-menu .el-sub-menu .el-menu {
   background: transparent;
 }
@@ -215,9 +241,7 @@
 
 .page-route-enter-active,
 .page-route-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .page-route-enter-from {

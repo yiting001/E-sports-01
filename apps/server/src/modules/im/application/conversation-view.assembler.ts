@@ -51,6 +51,7 @@ export class ConversationViewAssembler {
     return {
       id: conversation.id,
       type: conversation.type,
+      viewerRole: viewer?.role ?? null,
       title: await this.displayTitle(conversation, viewerId),
       ownerId: conversation.ownerId,
       status: conversation.status,

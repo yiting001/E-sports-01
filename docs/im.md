@@ -13,7 +13,7 @@
 - **通用连接在线快照**：鉴权成功的每个 `/im` socket 按 `socketId → userId + tenantId` 登记到 `UserPresenceService`；同一用户任一标签页/设备存活即在线，断开最后一个 socket 才离线。该快照继续用于客服在线坐席等即时连接场景；打手是否接单已改由 booster 模块持久化状态维护，不再复用 socket presence。
 - **会话列表**（REST `GET /im/conversations`）：返回当前用户全部会话，含未读数、最后一条消息、显示标题（私聊解析为对端昵称）。
 - **会话搜索**（REST `GET /im/conversations/search?keyword=`）：在我参与的会话中按显示标题（私聊即对方用户名）忽略大小写模糊匹配，复用列表用例保证口径一致。
-- **聊天记录搜索**（REST `GET /im/messages/search`）：会话内按内容关键词 + 日期范围（`dateFrom`/`dateTo`，YYYY-MM-DD 闭区间，两者均可缺省）分页搜索（新→旧），仅会话成员可搜；不传关键词时即按日期翻阅当天聊天记录。
+- **聊天记录搜索**（REST `GET /im/messages/search`）：会话内按内容关键词 + 日期范围（`dateFrom`/`dateTo`，YYYY-MM-DD 闭区间，两者均可缺省）分页搜索（新 → 旧），仅会话成员可搜；不传关键词时即按日期翻阅当天聊天记录。
   - 管理端 UI：IM 页左侧会话列表顶部搜索框（防抖调会话搜索接口，清空回退全量列表）；聊天面板头部「搜索记录」按钮打开 `ImMessageSearchDialog`（关键词 + 日期范围选择器 + 分页结果）。
 - **群聊**：建群、改名、加/移成员、退群；成员变更广播系统消息（xx 加入/退出）。
 - **系统建群门面**：`GroupFacade` 供业务模块（如订单支付成功自动建群、打手接单进群）
@@ -154,36 +154,39 @@ modules/im/
 
 ## REST 端点
 
-| 方法 | 路径 | 权限 | 说明 |
-| --- | --- | --- | --- |
-| GET | `/im/messages` | `im:message:history` | 拉取会话历史 |
-| GET | `/im/messages/search` | `im:message:history` + 成员 | 搜索聊天记录（关键词/日期范围，分页） |
-| GET | `/im/conversations/search` | 登录 | 搜索我的会话（标题关键词） |
-| GET | `/im/conversations` | 登录 | 我的会话列表 |
-| POST | `/im/conversations` | `im:conversation:create` | 建群 |
-| POST | `/im/conversations/private` | 登录 | 开启/复用私聊 |
-| GET | `/im/conversations/:id` | 成员 | 会话详情(含成员) |
-| PUT | `/im/conversations/:id` | `im:conversation:manage` | 群改名 |
-| POST | `/im/conversations/:id/members` | `im:conversation:manage` | 加成员 |
-| DELETE | `/im/conversations/:id/members/:userId` | `im:conversation:manage` | 移成员 |
-| POST | `/im/conversations/:id/leave` | 成员 | 退群 |
-| POST | `/im/service` | 登录 | 访客发起客服 |
-| GET | `/im/service/queue` | `im:service:agent` | 待接入队列 |
-| POST | `/im/service/:id/claim` | `im:service:agent` | 坐席认领 |
-| POST | `/im/service/:id/assign` | `im:service:agent` | 指派坐席 |
-| POST | `/im/service/:id/close` | `im:service:agent` | 结束会话 |
+| 方法   | 路径                                    | 权限                        | 说明                                  |
+| ------ | --------------------------------------- | --------------------------- | ------------------------------------- |
+| GET    | `/im/messages`                          | `im:message:history`        | 拉取会话历史                          |
+| GET    | `/im/messages/search`                   | `im:message:history` + 成员 | 搜索聊天记录（关键词/日期范围，分页） |
+| GET    | `/im/conversations/search`              | 登录                        | 搜索我的会话（标题关键词）            |
+| GET    | `/im/conversations`                     | 登录                        | 我的会话列表                          |
+| POST   | `/im/conversations`                     | `im:conversation:create`    | 建群                                  |
+| POST   | `/im/conversations/private`             | 登录                        | 开启/复用私聊                         |
+| GET    | `/im/conversations/:id`                 | 成员                        | 会话详情(含成员)                      |
+| PUT    | `/im/conversations/:id`                 | `im:conversation:manage`    | 群改名                                |
+| POST   | `/im/conversations/:id/members`         | `im:conversation:manage`    | 加成员                                |
+| DELETE | `/im/conversations/:id/members/:userId` | `im:conversation:manage`    | 移成员                                |
+| POST   | `/im/conversations/:id/leave`           | 成员                        | 退群                                  |
+| POST   | `/im/service`                           | 登录                        | 访客发起客服                          |
+| GET    | `/im/service/queue`                     | `im:service:agent`          | 待接入队列                            |
+| POST   | `/im/service/:id/claim`                 | `im:service:agent`          | 坐席认领                              |
+| POST   | `/im/service/:id/assign`                | `im:service:agent`          | 指派坐席                              |
+| POST   | `/im/service/:id/close`                 | `im:service:agent`          | 结束会话                              |
 
 ## WS 事件（contracts 共享）
 
-| 事件 | 方向 | 载荷 | 说明 |
-| --- | --- | --- | --- |
-| `im:join` | C→S | `conversationId` | 进房(成员校验)+返回历史 |
-| `im:send` | C→S | `SendMessagePayload` | 发送消息 |
-| `im:receive` | S→C | `ChatMessage` | 房间广播 |
-| `im:conversation` | S→C | `ConversationView` | 会话新增/变更(个人房间) |
-| `im:service:watch` | C→S | — | 坐席订阅队列(权限校验) |
-| `im:service:queued` | S→C | `ServiceQueueItemView` | 新访客入队(坐席房间) |
-| `im:error` | S→C | `{ message }` | 鉴权/业务失败 |
+| 事件                 | 方向 | 载荷                            | 说明                               |
+| -------------------- | ---- | ------------------------------- | ---------------------------------- |
+| `im:join`            | C→S  | `conversationId`                | 进房(成员校验)+返回历史            |
+| `im:mark-read`       | C→S  | `{ conversationId, messageId }` | 按最后可见消息单调推进已读位点     |
+| `im:send`            | C→S  | `SendMessagePayload`            | 发送消息                           |
+| `im:receive`         | S→C  | `ChatMessage`                   | 房间广播                           |
+| `im:unread:changed`  | S→C  | `null`                          | 个人房间未读刷新信号，不含消息正文 |
+| `im:conversation`    | S→C  | `ConversationView`              | 会话新增/变更(个人房间)            |
+| `im:service:observe` | C→S  | —                               | 只观察队列，不登记自动分配在线状态 |
+| `im:service:watch`   | C→S  | —                               | 客服工作台订阅并登记在线坐席       |
+| `im:service:queued`  | S→C  | `ServiceQueueItemView`          | 新访客入队(坐席房间)               |
+| `im:error`           | S→C  | `{ message }`                   | 鉴权/业务失败                      |
 
 ## 数据模型
 
@@ -218,12 +221,12 @@ Socket 连接状态没有 ER 实体或 migration；`UserPresenceService` 是应�
 
 ## 配置项（配置中心，无硬编码）
 
-| Key | 说明 |
-| --- | --- |
-| `im.historyLimit` | 历史消息拉取条数 |
-| `im.group.maxMembers` | 群成员上限 |
-| `im.service.autoAssign` | 是否自动分配在线坐席 |
-| `im.service.welcome` | 客服接入欢迎语（richtext 富文本，支持图片/视频；客户端渲染前经 DOMPurify 净化） |
+| Key                     | 说明                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| `im.historyLimit`       | 历史消息拉取条数                                                                |
+| `im.group.maxMembers`   | 群成员上限                                                                      |
+| `im.service.autoAssign` | 是否自动分配在线坐席                                                            |
+| `im.service.welcome`    | 客服接入欢迎语（richtext 富文本，支持图片/视频；客户端渲染前经 DOMPurify 净化） |
 
 ## 设计要点
 
@@ -245,7 +248,7 @@ Socket 连接状态没有 ER 实体或 migration；`UserPresenceService` 是应�
 - 系统群补建只接受服务端业务模块提供的 UUID，不开放新 HTTP 入口；同一租户下重复调用会复用会话并按唯一成员关系补齐，不把实时通知失败伪装成建群失败。
 - Socket presence 当前没有 Redis/数据库持久化和跨实例广播；实例重启或负载均衡切换会暂时影响在线坐席判断，但不会改变打手本人持久化的上线/下线状态。
 - `apps/server/test/im/user-presence.spec.ts` 覆盖多设备任一在线、最后连接离线和租户隔离；尚缺 Socket.IO 握手 + HTTP 端到端、跨实例 presence 和断线重连实测。
-- 根目录 `pnpm test` 当前串行执行服务端与客户端测试，服务端 58 项、客户端 Vitest 6 项全部通过；上述端到端和多实例风险仍未覆盖。
+- 根目录 `pnpm test` 当前串行执行服务端、管理端和客户端测试，实际结果与数量以交付汇报为准；上述端到端和多实例风险仍未覆盖。
 
 ## 前端即时消息页
 
@@ -277,3 +280,12 @@ flowchart TD
   GroupDialog --> ImApi
   MemberDialog --> ImApi
 ```
+
+## 管理端菜单角标语义
+
+- “即时通讯”角标汇总 `GET /api/im/conversations` 返回的本人非坐席会话 `unread`，包括私聊、群聊及本人作为 `owner/member` 的访客侧客服会话。
+- “客服工作台”角标为 `GET /api/im/service/queue` 的待接入请求数，加上本人以 `viewerRole=agent` 参与的客服会话 `unread`；共享 `ConversationView.viewerRole` 来源于既有成员角色，不新增数据库字段。
+- 新消息持久化后向除发送者外的成员个人房间发送不含正文的 `im:unread:changed`，布局据此实时刷新两项角标；突发信号由单飞与一轮尾随机制合并，30 秒轮询、路由切换和页面恢复可见继续兜底。无权访问的菜单不会发起对应请求。活动且可见的会话发送最后可见 `messageId`，服务端校验成员与消息归属，并通过条件更新保证 `lastReadAt` 单调前进。
+- `service:agents` 已拆为租户队列房间与超级管理员观察房间；管理端布局通过 `im:service:observe` 只观察变化，不会成为自动分配候选，只有客服工作台通过 `im:service:watch` 登记在线。在线自动分配候选只取同租户普通坐席；前端收到队列事件后重新拉取受授权 REST 队列，不直接信任事件载荷。
+
+详细模块图、状态机、并发防旧响应和测试见 [menu-badges.md](./menu-badges.md)。

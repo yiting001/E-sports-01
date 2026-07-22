@@ -3,8 +3,8 @@
  * 订单管理页：分页检索全量订单（状态/订单号过滤）+ 查看单笔详情。
  * 「待客服处理」订单可下发接单大厅，由打手接单。
  */
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import {
   ORDER_PAYMENT_METHOD_TEXT,
   ORDER_STATUS_TEXT,
@@ -13,18 +13,20 @@ import {
   PERMS,
   type AdminOrderView,
   type OrderPaymentMethod,
-} from '@app/contracts';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import { Refresh, Search } from '@element-plus/icons-vue';
-import AppDataTable from '@/components/common/AppDataTable.vue';
-import AppPanel from '@/components/common/AppPanel.vue';
-import OrderDetailDrawer from '@/components/order/OrderDetailDrawer.vue';
-import AssignBoosterDialog from '@/components/order/AssignBoosterDialog.vue';
-import ProductPreviewDialog from '@/components/order/ProductPreviewDialog.vue';
-import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
-import { orderApi } from '@/api/order.api';
+} from "@app/contracts";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { Refresh, Search } from "@element-plus/icons-vue";
+import AppDataTable from "@/components/common/AppDataTable.vue";
+import AppPanel from "@/components/common/AppPanel.vue";
+import OrderDetailDrawer from "@/components/order/OrderDetailDrawer.vue";
+import AssignBoosterDialog from "@/components/order/AssignBoosterDialog.vue";
+import ProductPreviewDialog from "@/components/order/ProductPreviewDialog.vue";
+import { PAGE_SIZE_OPTIONS } from "@/config/pagination";
+import { orderApi } from "@/api/order.api";
+import { MENU_BADGE_CODES, useMenuBadgeStore } from "@/stores/menu-badge.store";
 
 const router = useRouter();
+const menuBadges = useMenuBadgeStore();
 
 const list = ref<AdminOrderView[]>([]);
 const total = ref(0);
@@ -33,13 +35,13 @@ const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const loading = ref(false);
 
 const statusFilter = ref<OrderStatus | undefined>(undefined);
-const orderNoFilter = ref('');
+const orderNoFilter = ref("");
 
 const detailVisible = ref(false);
 const current = ref<AdminOrderView | null>(null);
 
 const productVisible = ref(false);
-const productId = ref('');
+const productId = ref("");
 
 const assignVisible = ref(false);
 const assignTarget = ref<AdminOrderView | null>(null);
@@ -53,7 +55,7 @@ function openAssign(row: AdminOrderView): void {
 /** 进入订单群：幂等加群后跳转 IM 并选中该群会话 */
 async function enterGroup(order: AdminOrderView): Promise<void> {
   const { conversationId } = await orderApi.joinGroup(order.id);
-  await router.push({ path: '/im', query: { conversation: conversationId } });
+  await router.push({ path: "/im", query: { conversation: conversationId } });
 }
 
 /** 点击订单中的商品 → 弹窗预览商品详情 */
@@ -65,14 +67,14 @@ function openProduct(id: string): void {
 /** 状态 → 标签颜色（与订单状态机阶段对应） */
 const STATUS_TAG: Record<
   OrderStatus,
-  'info' | 'warning' | 'primary' | 'success' | 'danger'
+  "info" | "warning" | "primary" | "success" | "danger"
 > = {
-  [OrderStatus.PendingPayment]: 'warning',
-  [OrderStatus.PendingService]: 'primary',
-  [OrderStatus.Dispatching]: 'primary',
-  [OrderStatus.Serving]: 'primary',
-  [OrderStatus.Completed]: 'success',
-  [OrderStatus.Cancelled]: 'info',
+  [OrderStatus.PendingPayment]: "warning",
+  [OrderStatus.PendingService]: "primary",
+  [OrderStatus.Dispatching]: "primary",
+  [OrderStatus.Serving]: "primary",
+  [OrderStatus.Completed]: "success",
+  [OrderStatus.Cancelled]: "info",
 };
 
 const statusOptions = Object.values(OrderStatus).map((status) => ({
@@ -82,14 +84,14 @@ const statusOptions = Object.values(OrderStatus).map((status) => ({
 
 function formatDate(value: string): string {
   if (!value) {
-    return '-';
+    return "-";
   }
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(new Date(value));
 }
 
@@ -100,7 +102,7 @@ async function load(): Promise<void> {
       page.value,
       pageSize.value,
       statusFilter.value,
-      orderNoFilter.value.trim(),
+      orderNoFilter.value.trim()
     );
     list.value = res.list;
     total.value = res.total;
@@ -134,12 +136,16 @@ function openDetail(row: AdminOrderView): void {
 async function dispatch(row: AdminOrderView): Promise<void> {
   await ElMessageBox.confirm(
     `确认把订单 ${row.orderNo} 下发到接单大厅？下发后打手可在大厅接单。`,
-    '下发大厅',
-    { type: 'warning' },
+    "下发大厅",
+    { type: "warning" }
   );
   await orderApi.dispatch(row.id);
-  ElMessage.success('已下发接单大厅');
-  await load();
+  ElMessage.success("已下发接单大厅");
+  await refreshAfterOrderChange();
+}
+
+async function refreshAfterOrderChange(): Promise<void> {
+  await Promise.all([load(), menuBadges.refresh([MENU_BADGE_CODES.order])]);
 }
 
 onMounted(load);
@@ -326,7 +332,7 @@ onMounted(load);
     <assign-booster-dialog
       v-model="assignVisible"
       :order="assignTarget"
-      @assigned="load"
+      @assigned="refreshAfterOrderChange"
     />
   </section>
 </template>

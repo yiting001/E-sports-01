@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import type { MenuItem } from '@/composables/use-menus';
+import type { MenuItem } from "@/composables/use-menus";
 
-defineProps<{
+const props = defineProps<{
   menus: MenuItem[];
   activePath: string;
+  badgeCounts: Readonly<Partial<Record<string, number>>>;
 }>();
 
 const emit = defineEmits<{
   select: [];
 }>();
+
+function badgeCount(key: string): number {
+  return props.badgeCounts[key] ?? 0;
+}
 </script>
 
 <template>
@@ -40,7 +45,14 @@ const emit = defineEmits<{
           <el-icon v-if="child.icon">
             <component :is="child.icon" />
           </el-icon>
-          <span>{{ child.title }}</span>
+          <el-badge
+            :value="badgeCount(child.key)"
+            :max="99"
+            :hidden="badgeCount(child.key) === 0"
+            class="app-menu__label"
+          >
+            <span class="app-menu__title">{{ child.title }}</span>
+          </el-badge>
         </el-menu-item>
       </el-sub-menu>
 
@@ -51,7 +63,14 @@ const emit = defineEmits<{
         <el-icon v-if="item.icon">
           <component :is="item.icon" />
         </el-icon>
-        <span>{{ item.title }}</span>
+        <el-badge
+          :value="badgeCount(item.key)"
+          :max="99"
+          :hidden="badgeCount(item.key) === 0"
+          class="app-menu__label"
+        >
+          <span class="app-menu__title">{{ item.title }}</span>
+        </el-badge>
       </el-menu-item>
     </template>
   </el-menu>

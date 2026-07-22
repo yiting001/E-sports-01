@@ -31,6 +31,8 @@ export interface ConversationMemberView {
 export interface ConversationView {
   id: string;
   type: ConversationType;
+  /** 当前查看者在该会话中的角色；用于区分客服访客侧与坐席侧语义 */
+  viewerRole: ConversationMemberRole | null;
   title: string;
   ownerId: string | null;
   status: ConversationStatus;

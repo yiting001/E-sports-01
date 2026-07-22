@@ -9,65 +9,71 @@ import { ConversationMemberRepository } from '../domain/conversation-member-repo
 
 /** 会话成员仓储的 TypeORM 实现。读操作按租户上下文自动过滤 */
 @Injectable()
-export class TypeormConversationMemberRepository
-  implements ConversationMemberRepository
-{
+export class TypeormConversationMemberRepository implements ConversationMemberRepository {
   constructor(
     @InjectRepository(ConversationMemberEntity)
     private readonly repo: Repository<ConversationMemberEntity>,
     private readonly tenant: TenantContextService,
   ) {}
 
-  saveMany(
-    members: ConversationMemberEntity[],
-  ): Promise<ConversationMemberEntity[]> {
+  saveMany(members: ConversationMemberEntity[]): Promise<ConversationMemberEntity[]> {
     return this.repo.save(members);
   }
 
-  findByConversation(
-    conversationId: string,
-  ): Promise<ConversationMemberEntity[]> {
+  findByConversation(conversationId: string): Promise<ConversationMemberEntity[]> {
     return this.repo.find({
-      where: withTenant<ConversationMemberEntity>(this.tenant, { conversationId }) as FindOptionsWhere<ConversationMemberEntity>,
+      where: withTenant<ConversationMemberEntity>(this.tenant, {
+        conversationId,
+      }) as FindOptionsWhere<ConversationMemberEntity>,
       order: { createdAt: 'ASC' },
     });
   }
 
   findByUser(userId: string): Promise<ConversationMemberEntity[]> {
     return this.repo.find({
-      where: withTenant<ConversationMemberEntity>(this.tenant, { userId }) as FindOptionsWhere<ConversationMemberEntity>,
+      where: withTenant<ConversationMemberEntity>(this.tenant, {
+        userId,
+      }) as FindOptionsWhere<ConversationMemberEntity>,
     });
   }
 
-  findOne(
-    conversationId: string,
-    userId: string,
-  ): Promise<ConversationMemberEntity | null> {
+  findOne(conversationId: string, userId: string): Promise<ConversationMemberEntity | null> {
     return this.repo.findOne({
-      where: withTenant<ConversationMemberEntity>(this.tenant, { conversationId, userId }) as FindOptionsWhere<ConversationMemberEntity>,
+      where: withTenant<ConversationMemberEntity>(this.tenant, {
+        conversationId,
+        userId,
+      }) as FindOptionsWhere<ConversationMemberEntity>,
     });
   }
 
   countByConversation(conversationId: string): Promise<number> {
     return this.repo.countBy(
-      withTenant<ConversationMemberEntity>(this.tenant, { conversationId }) as FindOptionsWhere<ConversationMemberEntity>,
+      withTenant<ConversationMemberEntity>(this.tenant, {
+        conversationId,
+      }) as FindOptionsWhere<ConversationMemberEntity>,
     );
   }
 
   async remove(conversationId: string, userId: string): Promise<void> {
     await this.repo.delete(
-      withTenant<ConversationMemberEntity>(this.tenant, { conversationId, userId }) as FindOptionsWhere<ConversationMemberEntity>,
+      withTenant<ConversationMemberEntity>(this.tenant, {
+        conversationId,
+        userId,
+      }) as FindOptionsWhere<ConversationMemberEntity>,
     );
   }
 
-  async updateLastRead(
-    conversationId: string,
-    userId: string,
-    at: Date,
-  ): Promise<void> {
-    await this.repo.update(
-      withTenant<ConversationMemberEntity>(this.tenant, { conversationId, userId }) as FindOptionsWhere<ConversationMemberEntity>,
-      { lastReadAt: at },
-    );
+  async updateLastRead(conversationId: string, userId: string, at: Date): Promise<void> {
+    const scope = withTenant<ConversationMemberEntity>(this.tenant, {
+      conversationId,
+      userId,
+    }) as FindOptionsWhere<ConversationMemberEntity>;
+    await this.repo
+      .createQueryBuilder()
+      .update(ConversationMemberEntity)
+      .set({ lastReadAt: at })
+      .where(scope)
+      .andWhere('(last_read_at IS NULL OR last_read_at < :at)', { at })
+      .execute();
   }
 }

@@ -1,6 +1,7 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import {
   ChatMessage,
+  IM_EVENTS,
   MessageReplyPreview,
   MessageType,
   SendMessagePayload,
@@ -15,6 +16,7 @@ import {
   MessageRepository,
 } from '../../domain/message-repository.interface';
 import { ChatMessageEntity } from '../../domain/message.entity';
+import { ChatRealtimeService } from '../chat-realtime.service';
 import { toChatMessage } from '../message.mapper';
 import { ConversationAccessService } from '../conversation-access.service';
 
@@ -30,6 +32,7 @@ export class SendMessageUseCase {
     private readonly members: ConversationMemberRepository,
     private readonly access: ConversationAccessService,
     private readonly users: UserDirectory,
+    private readonly realtime: ChatRealtimeService,
   ) {}
 
   async execute(
@@ -44,34 +47,41 @@ export class SendMessageUseCase {
       throw new BadRequestException('系统消息不可由客户端发送');
     }
     await this.access.assertMember(payload.conversationId, senderId);
+    const conversationMembers = await this.members.findByConversation(
+      payload.conversationId,
+    );
     const entity = new ChatMessageEntity();
     entity.conversationId = payload.conversationId;
     entity.senderId = senderId;
     entity.type = payload.type;
     entity.content = content;
-    entity.mentions = await this.resolveMentions(
-      payload.conversationId,
+    entity.mentions = this.resolveMentions(
       payload.mentions,
+      conversationMembers.map((member) => member.userId),
     );
     entity.replyTo = await this.resolveReply(
       payload.conversationId,
       payload.replyToId,
     );
     const saved = await this.repo.save(entity);
+    for (const member of conversationMembers) {
+      if (member.userId !== senderId) {
+        this.realtime.emitToUser(member.userId, IM_EVENTS.unreadChanged, null);
+      }
+    }
     return toChatMessage(saved);
   }
 
   /** 提及列表去重后仅保留会话成员，为空则存 null */
-  private async resolveMentions(
-    conversationId: string,
+  private resolveMentions(
     mentions?: string[],
-  ): Promise<string[] | null> {
+    memberIds: string[] = [],
+  ): string[] | null {
     if (!Array.isArray(mentions) || mentions.length === 0) {
       return null;
     }
-    const memberRows = await this.members.findByConversation(conversationId);
-    const memberIds = new Set(memberRows.map((m) => m.userId));
-    const valid = [...new Set(mentions)].filter((id) => memberIds.has(id));
+    const memberIdSet = new Set(memberIds);
+    const valid = [...new Set(mentions)].filter((id) => memberIdSet.has(id));
     return valid.length > 0 ? valid : null;
   }
 

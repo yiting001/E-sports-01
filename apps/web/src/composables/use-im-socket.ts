@@ -1,13 +1,14 @@
 import type {
   ChatMessage,
   ConversationView,
+  MarkReadPayload,
   SendMessagePayload,
   ServiceQueueItemView,
-} from '@app/contracts';
-import { IM_EVENTS } from '@app/contracts';
-import { io, type Socket } from 'socket.io-client';
-import { ENV } from '@/config/env';
-import { tokenStorage } from '@/api/token-storage';
+} from "@app/contracts";
+import { IM_EVENTS } from "@app/contracts";
+import { io, type Socket } from "socket.io-client";
+import { ENV } from "@/config/env";
+import { tokenStorage } from "@/api/token-storage";
 
 /**
  * IM 客户端封装。
@@ -19,8 +20,8 @@ export function createImSocket() {
 
   function connect(): Socket {
     socket = io(`${ENV.wsBaseUrl}/im`, {
-      transports: ['websocket'],
-      auth: { token: tokenStorage.getAccess() ?? '' },
+      transports: ["websocket"],
+      auth: { token: tokenStorage.getAccess() ?? "" },
     });
     return socket;
   }
@@ -38,7 +39,28 @@ export function createImSocket() {
     socket?.emit(IM_EVENTS.send, payload);
   }
 
-  /** 订阅客服队列推送（仅坐席有权限） */
+  /** 当前页面确认消息可见后推进服务端已读位点，返回是否成功。 */
+  function markRead(
+    conversationId: string,
+    messageId: string
+  ): Promise<boolean> {
+    if (!socket) {
+      return Promise.resolve(false);
+    }
+    const payload: MarkReadPayload = { conversationId, messageId };
+    return new Promise((resolve) => {
+      socket?.emit(IM_EVENTS.markRead, payload, (marked: boolean) => {
+        resolve(marked === true);
+      });
+    });
+  }
+
+  /** 仅订阅客服队列变化，不把当前连接登记为可接单坐席。 */
+  function observeService(): void {
+    socket?.emit(IM_EVENTS.observeService);
+  }
+
+  /** 客服工作台订阅队列，并把当前连接登记为可接单坐席。 */
   function watchService(): void {
     socket?.emit(IM_EVENTS.watchService);
   }
@@ -47,13 +69,20 @@ export function createImSocket() {
     socket?.on(IM_EVENTS.receive, handler);
   }
 
+  /** 个人房间未读变化只作刷新信号，不传输消息正文或其他用户数据。 */
+  function onUnreadChanged(handler: () => void): void {
+    socket?.on(IM_EVENTS.unreadChanged, handler);
+  }
+
   /** 会话新增/变更推送（被拉群、被分配客服等） */
   function onConversation(handler: (view: ConversationView) => void): void {
     socket?.on(IM_EVENTS.conversation, handler);
   }
 
   /** 新访客进入客服队列推送（仅发往坐席） */
-  function onServiceQueued(handler: (item: ServiceQueueItemView) => void): void {
+  function onServiceQueued(
+    handler: (item: ServiceQueueItemView) => void
+  ): void {
     socket?.on(IM_EVENTS.serviceQueued, handler);
   }
 
@@ -69,9 +98,12 @@ export function createImSocket() {
   return {
     connect,
     join,
+    markRead,
     send,
+    observeService,
     watchService,
     onReceive,
+    onUnreadChanged,
     onConversation,
     onServiceQueued,
     onError,
