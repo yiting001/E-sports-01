@@ -1,10 +1,8 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { SendSmsCodeResult } from '@app/contracts';
 import { SmsCodeService } from '../../../sms/application/sms-code.service';
-import {
-  USER_REPOSITORY,
-  UserRepository,
-} from '../../domain/user-repository.interface';
+import { SmsCodePurpose } from '../../../sms/domain/sms-code-scope';
+import { USER_REPOSITORY, UserRepository } from '../../domain/user-repository.interface';
 import { UserStatus } from '../../domain/user.entity';
 import { TenantResolver } from '../tenant-resolver.service';
 
@@ -27,7 +25,10 @@ export class SendLoginSmsCodeUseCase {
     if (!user || user.status !== UserStatus.Enabled) {
       throw new BadRequestException('该手机号未绑定可用账号');
     }
-    const cooldown = await this.smsCode.send(phone);
+    const cooldown = await this.smsCode.send(phone, {
+      purpose: SmsCodePurpose.Login,
+      tenantId: user.tenantId,
+    });
     return { cooldown };
   }
 }

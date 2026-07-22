@@ -10,7 +10,7 @@
 | 配置中心 | [config-center.md](./config-center.md) | 除连接信息外的全部可调参数集中入库 + Redis 缓存，消除硬编码 |
 | RBAC 权限 | [rbac.md](./rbac.md) | 用户/角色/权限三层模型，JWT 双令牌，API/菜单/按钮级颗粒度 |
 | 文件上传 | [upload.md](./upload.md) | 策略模式，local 默认 / oss 可切，驱动由配置中心选择 |
-| 短信登录 | [sms.md](./sms.md) | 策略模式多云短信（阿里/腾讯/火山/日志），配置中心切换，验证码登录 |
+| 短信登录 | [sms.md](./sms.md) | 多云短信、开发固定码、生产安全门、Redis 原子限流与一次性验证码 |
 | WebSocket IM | [im.md](./im.md) | JWT 握手鉴权、会话收发、订单群标题、成员安全展示名、历史手机号脱敏及 C 端未读角标 |
 | 链路追踪与日志 | [observability.md](./observability.md) | AsyncLocalStorage 链路追踪，结构化日志异步落库 + RBAC 查询/链路详情/清理 |
 | 钱包 | [wallet.md](./wallet.md) | 钱包充值/提现/明细，以及服务订单余额支付的锁、流水和一致性边界 |

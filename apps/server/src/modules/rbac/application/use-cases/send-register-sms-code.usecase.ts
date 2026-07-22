@@ -1,10 +1,8 @@
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { SendSmsCodeResult } from '@app/contracts';
 import { SmsCodeService } from '../../../sms/application/sms-code.service';
-import {
-  USER_REPOSITORY,
-  UserRepository,
-} from '../../domain/user-repository.interface';
+import { SmsCodePurpose } from '../../../sms/domain/sms-code-scope';
+import { USER_REPOSITORY, UserRepository } from '../../domain/user-repository.interface';
 import { TenantResolver } from '../tenant-resolver.service';
 
 /**
@@ -25,7 +23,10 @@ export class SendRegisterSmsCodeUseCase {
     if (await this.userRepo.existsByPhone(phone, undefined, tenantId)) {
       throw new ConflictException('该手机号已注册，请直接登录');
     }
-    const cooldown = await this.smsCode.send(phone);
+    const cooldown = await this.smsCode.send(phone, {
+      purpose: SmsCodePurpose.Register,
+      tenantId,
+    });
     return { cooldown };
   }
 }

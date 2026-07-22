@@ -7,8 +7,10 @@
  */
 import { config as loadDotenv } from 'dotenv';
 
+export type NodeEnvironment = 'development' | 'test' | 'production';
+
 export interface EnvConfig {
-  nodeEnv: string;
+  nodeEnv: NodeEnvironment;
   port: number;
   database: {
     host: string;
@@ -49,11 +51,18 @@ function toNumber(value: string, key: string): number {
   return parsed;
 }
 
+function toNodeEnvironment(value: string): NodeEnvironment {
+  if (value === 'development' || value === 'test' || value === 'production') {
+    return value;
+  }
+  throw new Error(`环境变量 NODE_ENV 必须是 development、test 或 production，当前值: ${value}`);
+}
+
 /** 解析并校验环境变量，缺失即快速失败；先加载工作目录下的 .env（已有同名变量不覆盖） */
 export function loadEnvConfig(): EnvConfig {
   loadDotenv();
   return {
-    nodeEnv: process.env.NODE_ENV ?? 'development',
+    nodeEnv: toNodeEnvironment(required('NODE_ENV')),
     port: toNumber(process.env.PORT ?? '3000', 'PORT'),
     database: {
       host: required('DB_HOST'),

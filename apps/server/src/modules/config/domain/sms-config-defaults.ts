@@ -8,7 +8,14 @@ export const SMS_DEFAULT_CONFIGS: ConfigDefault[] = [
     value: SmsProvider.Log,
     type: ConfigValueType.String,
     group: ConfigGroup.Sms,
-    remark: '短信服务商：aliyun / tencent / volcano / log（默认 log，仅打日志不真正发送）',
+    remark: '短信服务商：aliyun / tencent / volcano / log（log 仅配合开发固定码，不发送验证码）',
+  },
+  {
+    key: CONFIG_KEYS.sms.developmentFixedCode,
+    value: '000000',
+    type: ConfigValueType.String,
+    group: ConfigGroup.Sms,
+    remark: '仅 NODE_ENV=development 生效的固定验证码；清空即关闭，生产环境始终忽略',
   },
   {
     key: CONFIG_KEYS.sms.codeLength,

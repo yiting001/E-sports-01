@@ -3,7 +3,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '../config/config.module';
 
 import { SMS_PORTS } from './domain/sms-port.interface';
+import { SMS_RUNTIME_POLICY } from './domain/sms-runtime-policy.interface';
 import { LogSmsDriver } from './infrastructure/drivers/log-sms.driver';
+import { EnvSmsRuntimePolicy } from './infrastructure/env-sms-runtime.policy';
 import { AliyunSmsDriver } from './infrastructure/drivers/aliyun-sms.driver';
 import { TencentSmsDriver } from './infrastructure/drivers/tencent-sms.driver';
 import { VolcanoSmsDriver } from './infrastructure/drivers/volcano-sms.driver';
@@ -19,6 +21,11 @@ import { SmsCodeService } from './application/sms-code.service';
 @Module({
   imports: [ConfigModule],
   providers: [
+    EnvSmsRuntimePolicy,
+    {
+      provide: SMS_RUNTIME_POLICY,
+      useExisting: EnvSmsRuntimePolicy,
+    },
     LogSmsDriver,
     AliyunSmsDriver,
     TencentSmsDriver,

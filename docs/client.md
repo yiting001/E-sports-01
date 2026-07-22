@@ -256,7 +256,7 @@ flowchart TD
 ```
 用户 → LoginView：输入手机号，点击「发送验证码」
      → authApi.sendLoginCode / sendRegisterCode（按当前页签选择）
-     → 后端按配置中心 sms.provider 发码（log 驱动打到日志），返回 cooldown 用于倒计时
+     → 后端按运行环境和配置中心策略发码，返回 cooldown 用于倒计时
 用户 → 输入验证码，点击「登录 / 注册并登录」
      → authStore.smsLogin / smsRegister → 保存令牌 → loadProfile()
      → 守卫放行，跳转 redirect 或首页
@@ -279,4 +279,4 @@ cp apps/client/.env.example apps/client/.env
 pnpm --filter @app/client dev   # http://127.0.0.1:5174
 ```
 
-无短信密钥时，把配置中心 `sms.provider` 保持默认 `log`，验证码会打印到后端日志，便于联调。
+无短信密钥时，仅可在 `NODE_ENV=development` 使用 `sms.development.fixedCode` 联调。默认固定码为 `000000`，仍需先点击发送验证码；`log` 驱动不会发送或输出验证码。
