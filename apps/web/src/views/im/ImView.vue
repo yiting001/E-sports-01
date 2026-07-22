@@ -37,6 +37,7 @@ const searchKeyword = ref("");
 const searchResults = ref<ConversationView[] | null>(null);
 const SEARCH_DEBOUNCE_MS = 300;
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
+let searchRevision = 0;
 
 /** 聊天记录搜索弹窗 */
 const messageSearchDialog = ref(false);
@@ -76,9 +77,19 @@ const memberCandidates = computed(() =>
 function upsertConversation(view: ConversationView): void {
   const idx = conversations.value.findIndex((c) => c.id === view.id);
   if (idx >= 0) {
+    if (view.version < conversations.value[idx].version) {
+      return;
+    }
     conversations.value[idx] = view;
   } else {
     conversations.value.unshift(view);
+  }
+  const searchIndex = searchResults.value?.findIndex((item) => item.id === view.id) ?? -1;
+  if (searchResults.value && searchIndex >= 0) {
+    const current = searchResults.value[searchIndex];
+    if (view.version >= current.version) {
+      searchResults.value[searchIndex] = view;
+    }
   }
   syncUnreadBadges();
 }
@@ -88,11 +99,20 @@ function syncUnreadBadges(): void {
 }
 
 async function loadConversations(): Promise<void> {
-  conversations.value = await imApi.listConversations();
+  const loaded = await imApi.listConversations();
+  const realtime = new Map(conversations.value.map((view) => [view.id, view]));
+  conversations.value = loaded.map((view) => {
+    const current = realtime.get(view.id);
+    realtime.delete(view.id);
+    return current && current.version > view.version ? current : view;
+  });
+  conversations.value.unshift(...realtime.values());
   syncUnreadBadges();
 }
 
 watch(searchKeyword, (value) => {
+  const currentRevision = searchRevision + 1;
+  searchRevision = currentRevision;
   if (searchTimer) {
     clearTimeout(searchTimer);
   }
@@ -102,7 +122,15 @@ watch(searchKeyword, (value) => {
     return;
   }
   searchTimer = setTimeout(async () => {
-    searchResults.value = await imApi.searchConversations(keyword);
+    const results = await imApi.searchConversations(keyword);
+    if (currentRevision !== searchRevision) {
+      return;
+    }
+    const currentById = new Map(conversations.value.map((view) => [view.id, view]));
+    searchResults.value = results.map((view) => {
+      const current = currentById.get(view.id);
+      return current && current.version > view.version ? current : view;
+    });
   }, SEARCH_DEBOUNCE_MS);
 });
 

@@ -10,6 +10,7 @@ import AppToast from '@/components/common/AppToast.vue';
 import { createPresenceSocket } from '@/composables/use-presence-socket';
 import { useAuthStore } from '@/stores/auth.store';
 import { useBrandingStore } from '@/stores/branding.store';
+import { useConversationEventsStore } from '@/stores/conversation-events.store';
 import { useHallBadgeStore } from '@/stores/hall-badge.store';
 import { usePortalStore } from '@/stores/portal.store';
 import { useUnreadStore } from '@/stores/unread.store';
@@ -17,9 +18,13 @@ import { useUnreadStore } from '@/stores/unread.store';
 const router = useRouter();
 const auth = useAuthStore();
 const unread = useUnreadStore();
+const conversationEvents = useConversationEventsStore();
 const badges = [unread, useHallBadgeStore()];
 const presence = createPresenceSocket({
-  onConversationChanged: () => void unread.refresh(),
+  onConversationChanged: (conversation) => {
+    conversationEvents.publish(conversation);
+    void unread.refresh();
+  },
   onUnreadChanged: () => void unread.refresh(),
 });
 
@@ -32,6 +37,7 @@ const stopPresenceWatch = watch(
       badges.forEach((badge) => void badge.refresh());
     } else {
       presence.disconnect();
+      conversationEvents.clear();
       badges.forEach((badge) => badge.setTotal(0));
     }
   },

@@ -1,12 +1,18 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { GroupFacade } from '../../im/application/group-facade.service';
+import {
+  GroupFacade,
+  SystemGroupTitleSyncResult,
+} from '../../im/application/group-facade.service';
 import { UserDirectory } from '../../rbac/application/user-directory.service';
 import { SUPER_ADMIN_ROLE, TENANT_ADMIN_ROLE } from '../../rbac/domain/rbac.constants';
 import { OrderEntity } from '../domain/order.entity';
 import { ORDER_REPOSITORY, OrderRepository } from '../domain/order-repository.interface';
+import { buildOrderGroupTitle } from './order-group-title';
 
 /** 拉入订单群的平台管理员人数上限（避免管理员过多时全员进群刷屏） */
 const MAX_ADMIN_MEMBERS = 5;
+/** CAS 冲突时重读订单状态，覆盖完整三阶段并发推进。 */
+const TITLE_SYNC_MAX_ATTEMPTS = 3;
 
 /**
  * 订单群服务。
@@ -36,32 +42,43 @@ export class OrderGroupService {
     return [];
   }
 
-  /** 幂等地为已支付订单创建订单群（已建过则跳过），返回会话 id */
+  /** 幂等地为已支付订单创建订单群；已建群时校正为当前真实状态标题。 */
   async ensureGroup(order: OrderEntity): Promise<void> {
-    if (order.conversationId) {
-      return;
+    const latest = await this.ensureLinkedGroup(order);
+    await this.syncTitle(latest);
+  }
+
+  /** 建群并恢复订单关联；稳定订单 UUID 让已建但失联的群可幂等找回。 */
+  private async ensureLinkedGroup(order: OrderEntity): Promise<OrderEntity> {
+    const latest = (await this.orders.findById(order.id)) ?? order;
+    if (latest.conversationId) {
+      order.conversationId = latest.conversationId;
+      return latest;
     }
     const adminIds = await this.resolveAdminIds();
-    const memberIds = [order.userId, order.serviceAgentId, order.boosterId, ...adminIds];
-    const ownerId = order.serviceAgentId || adminIds[0] || order.userId;
-    const title = `订单群·${order.productTitle}`;
+    const memberIds = [latest.userId, latest.serviceAgentId, latest.boosterId, ...adminIds];
+    const ownerId = latest.serviceAgentId || adminIds[0] || latest.userId;
+    const title = buildOrderGroupTitle(latest.productTitle, latest.status);
     const conversationId = await this.groups.ensureSystemGroup(
-      order.id,
+      latest.id,
       ownerId,
       title,
       memberIds,
-      `订单 ${order.orderNo} 已支付成功，客服将尽快为您安排服务`,
+      `订单 ${latest.orderNo} 已支付成功，客服将尽快为您安排服务`,
     );
+    await this.orders.updateConversationId(latest.id, conversationId);
+    latest.conversationId = conversationId;
     order.conversationId = conversationId;
-    await this.orders.save(order);
+    return latest;
   }
 
   /** 打手接单/被指派后加入订单群并广播系统消息 */
   async joinBooster(order: OrderEntity, boosterId: string): Promise<void> {
-    if (!order.conversationId) {
-      return;
-    }
     try {
+      await this.ensureGroup(order);
+      if (!order.conversationId) {
+        return;
+      }
       const names = await this.users.resolveNames([boosterId]);
       const name = names.get(boosterId) ?? boosterId;
       await this.groups.joinGroup(
@@ -73,6 +90,37 @@ export class OrderGroupService {
       this.logger.error(
         `订单 ${order.orderNo} 打手进群失败`,
         err instanceof Error ? err.stack : String(err),
+      );
+    }
+  }
+
+  /** 读取数据库最新订单状态后同步标题，失败不回滚已经提交的订单状态。 */
+  async syncTitle(order: OrderEntity): Promise<void> {
+    try {
+      for (let attempt = 0; attempt < TITLE_SYNC_MAX_ATTEMPTS; attempt += 1) {
+        const latest = await this.ensureLinkedGroup(order);
+        const expectedTitle = buildOrderGroupTitle(latest.productTitle, latest.status);
+        const result = await this.groups.syncSystemGroupTitle(
+          latest.conversationId,
+          expectedTitle,
+        );
+        const confirmed = await this.orders.findById(order.id);
+        if (!confirmed) {
+          return;
+        }
+        const stateChangedDuringSync =
+          !confirmed.conversationId ||
+          confirmed.conversationId !== latest.conversationId ||
+          buildOrderGroupTitle(confirmed.productTitle, confirmed.status) !== expectedTitle;
+        if (result !== SystemGroupTitleSyncResult.Conflict && !stateChangedDuringSync) {
+          return;
+        }
+      }
+      throw new Error('订单群标题连续发生并发状态或写入冲突');
+    } catch (error) {
+      this.logger.error(
+        `订单 ${order.orderNo} 群标题同步失败`,
+        error instanceof Error ? error.stack : String(error),
       );
     }
   }

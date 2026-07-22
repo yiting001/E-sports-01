@@ -81,6 +81,7 @@ function conversation(
 ): ConversationView {
   return {
     id,
+    version: 1,
     type,
     viewerRole,
     title: id,

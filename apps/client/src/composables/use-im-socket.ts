@@ -1,4 +1,9 @@
-import type { ChatMessage, MarkReadPayload, SendMessagePayload } from '@app/contracts';
+import type {
+  ChatMessage,
+  ConversationView,
+  MarkReadPayload,
+  SendMessagePayload,
+} from '@app/contracts';
 import { IM_EVENTS } from '@app/contracts';
 import { io, type Socket } from 'socket.io-client';
 import { ENV } from '@/config/env';
@@ -55,6 +60,11 @@ export function createImSocket() {
     socket?.on(IM_EVENTS.receive, handler);
   }
 
+  /** 个人房间会话更新用于实时同步订单群标题等服务端权威视图。 */
+  function onConversation(handler: (conversation: ConversationView) => void): void {
+    socket?.on(IM_EVENTS.conversation, handler);
+  }
+
   function onError(handler: (error: { message: string }) => void): void {
     socket?.on(IM_EVENTS.error, handler);
   }
@@ -64,5 +74,5 @@ export function createImSocket() {
     socket = null;
   }
 
-  return { connect, join, send, markRead, onReceive, onError, disconnect };
+  return { connect, join, send, markRead, onReceive, onConversation, onError, disconnect };
 }

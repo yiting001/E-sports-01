@@ -110,6 +110,14 @@ export class TypeormOrderRepository implements OrderRepository {
     return this.repo.save(entity);
   }
 
+  async updateConversationId(id: string, conversationId: string): Promise<void> {
+    const scope = withTenant<OrderEntity>(this.tenant, { id }) as FindOptionsWhere<OrderEntity>;
+    const result = await this.repo.update(scope, { conversationId });
+    if (result.affected !== 1) {
+      throw new Error(`订单 ${id} 的群聊关联回填失败`);
+    }
+  }
+
   claimForServing(input: ClaimOrderForServingInput): Promise<OrderEntity | null> {
     return this.repo.manager.transaction(async (manager) => {
       const repo = manager.getRepository(OrderEntity);

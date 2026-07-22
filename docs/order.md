@@ -26,7 +26,8 @@
 - 管理端订单管理：分页检索全量订单（状态/订单号过滤）+ 详情抽屉（商品快照/归属用户/关联客服/渠道交易号），
   权限码 `order:admin:list` / `order:admin:detail`，菜单「电竞运营 / 订单管理」由播种器幂等补齐
 - 支付渠道配置沿用配置中心既有 `wallet.*` 键（网关地址、商户密钥、回调基址 `wallet.notify.base-url`），无新增配置
-- 支付成功自动建群：落账后经 im 模块 `GroupFacade` 自动创建订单群（下单用户 + 商品关联客服 + 平台管理员，延迟补建时同时拉入已接单打手，客服缺省时管理员兜底为群主）。系统群固定使用订单 UUID，重复补建复用同一群并补齐成员；首次建群失败仅记日志、不回滚支付，支付查单、本人详情、管理详情和后台进群会幂等补建
+- 支付成功自动建群：落账后经 im 模块 `GroupFacade` 自动创建订单群（下单用户 + 商品关联客服 + 平台管理员，延迟补建时同时拉入已接单打手，客服缺省时管理员兜底为群主）。系统群固定使用订单 UUID，重复补建复用同一群并补齐成员；首次建群失败仅记日志、不回滚支付，支付查单、本人详情、管理详情和后台进群会幂等补建或校正标题
+- 订单群阶段标题：订单状态是唯一事实来源，`pending_service` / `dispatching` 显示 `[待接单] 订单群·商品标题`，`serving` 显示 `[服务中] 订单群·商品标题`，`completed` 显示 `[已结束] 订单群·商品标题`；管理端与 C 端复用 `ConversationView.title`，收到 `im:conversation` 后无需刷新即可更新当前会话和会话列表
 - 后台订单群入口：详情抽屉「进入订单群」→ POST `/order/admin/:id/group/join` 幂等加群（客服仅限自己负责的订单）→ 跳转 IM 页并自动选中该群会话（`/im?conversation=xxx`）
 - 客服订单可见性：客服角色（非管理员）在管理端订单列表/详情/下发/指派均被强制限定为自己负责商品的订单（`ServiceAgentScope`）；客服角色默认权限已含订单菜单与处理接口
 - 下发大厅：管理端「待客服处理」订单可下发接单大厅（权限码 `order:admin:dispatch`），订单进入「待接单」
@@ -41,6 +42,7 @@
 
 - 指定打手不等于支付后自动开工，客服仍需确认并推进到服务中；当前不做自动接单、超时改派或候补队列。
 - 本次不实现订单打赏、分阶段付款、多人共同履约或基于在线状态的自动派单。
+- “已结束”只用于订单群标题，订单状态仍为“已完成”，群会话仍保持 `active`；本次不自动关闭群聊，也不禁止具备管理权限的成员临时改名。
 - C 端跨页结算草稿只保存在当前内存会话，退出登录、令牌失效或支付完成会清除；不提供跨设备草稿恢复。
 
 ## 订单状态机
@@ -59,6 +61,41 @@ pending_service（待客服处理）
 ```
 
 指定订单没有 `pending_service → dispatching` 转换；客服尝试下发公共大厅会被拒绝，指派其他打手也会被拒绝。
+
+### 订单群标题状态流
+
+| 订单状态                         | 订单群标题                           | 触发或补偿入口                 |
+| -------------------------------- | ------------------------------------ | ------------------------------ |
+| `pending_service` / `dispatching` | `[待接单] 订单群·商品标题`           | 支付建群、下发大厅、详情补偿   |
+| `serving`                        | `[服务中] 订单群·商品标题`           | 打手接单、客服指派、进群补偿   |
+| `completed`                      | `[已结束] 订单群·商品标题`           | 完成订单、后续详情补偿         |
+
+```mermaid
+sequenceDiagram
+  participant Order as 订单用例
+  participant DB as PostgreSQL
+  participant Group as OrderGroupService
+  participant IM as GroupFacade
+  participant Client as 管理端/C端
+
+  Order->>DB: 先提交订单状态
+  Order->>Group: syncTitle(savedOrder)
+  Group->>DB: 读取租户内最新订单状态
+  Group->>IM: syncSystemGroupTitle(conversationId, title)
+  IM->>DB: 按期望实体版本原子窄写 sys_conversation
+  alt 发生并发写冲突
+    IM-->>Group: conflict
+    Group->>DB: 重读最新订单状态后重试
+  end
+  Group->>DB: 写后复核订单状态未变化
+  opt 状态在会话读取前已经推进
+    Group->>IM: 按最新状态再次同步
+  end
+  IM-->>Client: im:conversation(ConversationView)
+  Note over Order,Client: 同标题跳过写库和广播；通知失败不回滚订单状态
+```
+
+标题总长按 `sys_conversation.title` 的 128 个 Unicode 字符约束截断，并优先保留阶段前缀。待付款和已取消订单不会创建订单群，因此不支持生成群标题；人工改名会暂时覆盖系统标题，下一次状态流转或详情补偿会恢复系统格式。
 
 ## 业务流程与敏感字段可见性
 
@@ -120,7 +157,8 @@ apps/server/src/modules/order/
 │   ├── order.mapper.ts                      # 实体 → 视图
 │   ├── order-booster-selection.ts            # 指定订单大厅/改派约束
 │   ├── booster-access.service.ts            # 打手角色访问断言（复用 RBAC RoleGranter）
-│   ├── order-group.service.ts               # 订单群编排（支付成功建群 / 打手进群，失败不阻断主流程）
+│   ├── order-group-title.ts                 # 订单状态 → 三阶段群标题（128 字符约束）
+│   ├── order-group.service.ts               # 建群/进群/标题同步编排（失败不阻断主流程）
 │   ├── service-agent-scope.service.ts       # 客服可见范围解析（客服仅限自己负责的订单）
 │   └── use-cases/
 │       ├── create-order.usecase.ts          # 校验在架 → 固化快照 → 渠道下单取二维码
@@ -174,6 +212,7 @@ apps/server/src/modules/order/
 
 apps/client/src/
 ├── api/order.api.ts                         # 下单/详情/我的订单/取消/大厅/接单/打手订单/完成
+├── stores/conversation-events.store.ts      # 全局个人房间会话更新事件（Pinia）
 ├── stores/role.store.ts                     # 身份切换状态（老板/打手，本地持久化）
 ├── config/nav.ts                            # 老板/打手两套一级导航配置
 ├── views/product/ProductDetailView.vue      # 商品详情（纯展示，立即下单进下单页）
@@ -186,6 +225,9 @@ apps/client/src/
 ├── views/order/OrderDetailView.vue          # 订单详情页（价格明细/订单信息/订单群入口）
 ├── views/order/OrderDetailView.css          # 订单详情页样式（移动全屏 + PC 收敛）
 ├── views/message/ChatView.vue               # 全屏会话聊天页（订单群/群聊/客服复用 ServiceChatPanel）
+├── components/message/ServiceChatPanel.vue  # 聊天连接、历史与实时会话更新编排
+├── components/message/ChatMessageFeed.vue   # 消息流、系统富文本净化与引用入口展示
+├── components/message/ChatConversationHeader.vue # 会话标题与状态头部展示
 ├── views/order/HallView.vue                 # 接单大厅（打手一级 Tab，接单/点卡片看详情）
 ├── views/order/HallOrderDetailView.vue      # 大厅订单详情（/hall/:id，含备注附件，可接单）
 ├── views/order/BoosterOrderDetailView.vue   # 打手订单详情（/booster/orders/:id，含账号信息，可完成）
@@ -234,6 +276,7 @@ erDiagram
     varchar requested_booster_name
     varchar booster_id
     varchar booster_name
+    uuid conversation_id
     varchar status
     bigint amount_fen
   }
@@ -243,12 +286,19 @@ erDiagram
     jsonb service_regions
     varchar status
   }
+  SYS_CONVERSATION {
+    uuid id PK
+    varchar tenant_id
+    varchar title
+    varchar status
+  }
   SERVICE_ORDER }o--o| BOOSTER_APPLICATION : "锁定/实际打手按 userId 逻辑关联"
+  SERVICE_ORDER ||--o| SYS_CONVERSATION : "conversationId 逻辑关联"
 ```
 
 `apps/server/src/database/migrations/1784332800000-add-booster-directory-order-selection.ts` 为 `service_order` 增加上述六个结构化/锁定字段、三项 Check Constraint 和指定打手索引，同时为 `booster_application` 增加 `voice_url`。migration 提供可回滚 `up` / `down`；回滚会丢失新增快照字段但不删除上传文件。执行前需备份，不能以 `synchronize` 代替迁移。
 
-ER 图中的打手关系是通过租户内 `userId` 的逻辑关联，订单表没有新增外键；打手被删除或失去资格后，历史订单仍保留锁定/实际名称快照，后续主页跳转可能返回 404。
+ER 图中的打手关系是通过租户内 `userId` 的逻辑关联，订单群也沿用既有 `conversationId` 逻辑关联，两者均未新增外键。打手被删除或失去资格后，历史订单仍保留锁定/实际名称快照，后续主页跳转可能返回 404。本次标题同步只更新既有 `sys_conversation.title`，无数据库字段或 migration 变化。
 
 ## 设计要点
 
@@ -257,7 +307,7 @@ ER 图中的打手关系是通过租户内 `userId` 的逻辑关联，订单表�
 - **幂等回调**：以 `orderNo`（商户订单号，前缀 `O`）为幂等键，事务内行锁校验
   「待付款 + 金额一致」才落账，重复回调直接应答成功
 - **余额事务**：固定按“订单行 → 当前租户和用户的钱包行”加悲观写锁，在一个事务内校验订单本人、待付款、方式、金额、钱包状态和余额，随后扣款、写 `order_payment` 出账流水、推进 `pending_service`、写支付时间并增加商品销量。同一订单并发只首笔生效，同一钱包的不同订单串行扣款且不能透支
-- **失败补偿**：余额未开通、被冻结、余额不足或渠道下单失败时，新建的待付款订单改为已取消，并回退该订单已核销的优惠券。事务已经提交后，会员累计或建群失败只记录错误，不反向取消已支付订单；已支付且 `conversationId` 为空的订单由查单/详情入口调用 `ensurePaidOrderGroup` 补建，且不会重复累计会员消费
+- **失败补偿**：余额未开通、被冻结、余额不足或渠道下单失败时，新建的待付款订单改为已取消，并回退该订单已核销的优惠券。事务已经提交后，会员累计、建群或标题通知失败只记录错误，不反向取消已支付订单；所有已支付订单均可由查单/详情入口调用 `ensurePaidOrderGroup` 幂等补群或校正标题，且不会重复累计会员消费
 - **回调租户恢复**：支付渠道回调是公开入口，事务返回订单后以 `paidOrder.tenantId` 重建非超管租户上下文，再累计会员消费和解析订单群管理员，防止无上下文查询跨租户成员
 - **快照固化**：订单固化商品标题/封面/关联客服，商品后续改动不影响历史订单；
   `serviceAgentId` 快照用于建群拉客服、客服可见性过滤与指派打手归属判定
@@ -269,6 +319,8 @@ ER 图中的打手关系是通过租户内 `userId` 的逻辑关联，订单表�
 - **指派门禁**：管理端在 `tenant.run` 中复用 `BoosterSelectionService`；有区服订单校验目录、区服、启用账号、booster 角色、实名和押金，历史空区服订单只跳过区服匹配。门禁未知异常继续上抛，不被伪装成“不可选”
 - **订单群编排**：`OrderGroupService` 复用 im 模块 `GroupFacade` 建群/进群，
   订单 UUID 同时作为系统群 UUID，首次写入、补成员、订单回填任一步失败后均可定位原群重试，不会创建重复群；欢迎消息与实时通知失败不阻断群主体和订单关联；
+  群关联通过租户作用域内的 `updateConversationId` 窄写回填，避免支付后的旧订单实体整行保存覆盖并发状态；若状态用例的旧实体随后把群关联清空，标题同步会用稳定订单 UUID 幂等找回原群并重新回填；标题同步重新读取数据库最新订单，并以期望实体版本执行原子 compare-and-set，冲突时重读最新订单后重试；写入后再次复核订单状态，覆盖“旧同步读完订单、新状态先写完会话”的窗口；版本条件还可识别标题被人工改回旧值的 ABA，避免迟到副作用把“已结束”倒退为“服务中”；
+  标题变化后复用 `ConversationNotifier` 向成员个人房间发送权威 `ConversationView`，共享契约携带单调会话版本，管理端与 C 端拒绝逆序到达的旧版本；同标题不写库、不广播，也不发送人工改名系统消息；
   建群/进群失败仅记日志，不阻断支付落账与接单主流程；补建只修复群关系，不重复累计消费；
   平台管理员解析优先租户管理员、无则回退超管（`resolveAdminIds`），避免后台无人在群看不到订单群；
   后台未在群的工作人员可经 `JoinOrderGroupUseCase` 幂等加群后进入会话
@@ -332,12 +384,13 @@ sequenceDiagram
 ## 数据与验证边界
 
 - `service_order.provider`、`wallet_transaction.type` 仍是 `varchar`，但本次结构化游戏资料、锁定打手和语音字段由 `1784332800000-add-booster-directory-order-selection.ts` 正式迁移管理。
-- 后端测试覆盖 DTO 支付方式/游戏资料校验、指定订单大厅与改派约束、余额不足/冻结/金额或归属不符、同订单幂等、原子并发接单/指派（`order-assignment.spec.ts`，两请求仅一方成功）以及提交后副作用失败不回滚；`order-group-recovery.spec.ts` 覆盖成功建群、重复确保、成员写入中断后补齐、首次失败后查询补建和支付状态不回滚；真实数据库 migration 往返和 PostgreSQL 行锁竞争已验证。
+- 后端测试覆盖 DTO 支付方式/游戏资料校验、指定订单大厅与改派约束、余额不足/冻结/金额或归属不符、同订单幂等、原子并发接单/指派（`order-assignment.spec.ts`，两请求仅一方成功）以及提交后副作用失败不回滚；`order-group-recovery.spec.ts` 覆盖成功建群、窄写回填、成员补齐和失败补建；`order-group-title.spec.ts` 覆盖三阶段映射、128 字符边界、关联丢失恢复、下发与完成保存顺序、订单读取与会话写入交错、ABA 与 CAS 冲突重试、同标题幂等和通知/进群失败；`im-conversation-title.postgres.e2e.ts` 在真实 PostgreSQL 验证同一实体版本只有一个竞争者成功、错误期望版本不写入及跨租户更新被拒绝。
+- C 端测试覆盖 `im:conversation` 订阅、逆序版本拒绝、同一 tick 多会话批量消费和 REST 请求期间事件保留。真实三阶段浏览器验收仍需具备可操作订单群的 C 端测试账号及订单数据，当前交付不得把该项写作已通过。
 - 根目录 `pnpm test` 串行执行服务端、管理端和客户端测试；本次实际结果与数量见交付汇报及反馈模块文档，避免在多个文档复制易漂移计数。
 - C 端支付弹层只把明确的已支付状态或非空 `paidAt` 视为成功；`cancelled` 会停止轮询并提示未支付，请求失败采用单请求保护后自动重试。
 - `POST /order` 仍沿用既有“每次请求创建一个新订单”的语义，尚未提供客户端幂等键；网络响应丢失后自动重放请求可能生成第二张订单。客户端通过提交中禁用降低重复点击，但生产接入自动重试前应补充租户 + 用户 + 幂等键唯一约束。
 
-尚未覆盖的风险包括：目录选择到支付之间打手资料/押金/上下线状态变化（会在创建或确认时失败并需用户重试）、完整 HTTP + RBAC E2E、真实支付渠道回调和浏览器端语音播放。订单群没有独立后台任务队列，补建依赖后续查单、详情或后台进群请求；并发接单/指派已由行锁和 409 处理，指定订单仍依赖客服最终确认。
+尚未覆盖的风险包括：目录选择到支付之间打手资料/押金/上下线状态变化（会在创建或确认时失败并需用户重试）、完整 HTTP + RBAC E2E、真实支付渠道回调和浏览器端语音播放。订单群没有独立后台任务队列，补建或标题纠偏依赖后续查单、详情或后台进群请求；并发接单/指派已由行锁和 409 处理，指定订单仍依赖客服最终确认。完成订单的进度累计、提成入账与订单保存仍是既有的多步非单事务流程，并发重复完成存在资金与计数风险，本次标题同步不扩大范围处理该问题。
 
 ## 管理端菜单角标
 

@@ -3,7 +3,10 @@ import test from 'node:test';
 import { Logger } from '@nestjs/common';
 import { OrderPaymentMethod, OrderStatus } from '@app/contracts';
 import type { ConversationNotifier } from '../../src/modules/im/application/conversation-notifier.service';
-import { GroupFacade } from '../../src/modules/im/application/group-facade.service';
+import {
+  GroupFacade,
+  SystemGroupTitleSyncResult,
+} from '../../src/modules/im/application/group-facade.service';
 import type { SystemMessageService } from '../../src/modules/im/application/system-message.service';
 import type { ConversationMemberRepository } from '../../src/modules/im/domain/conversation-member-repository.interface';
 import { ConversationMemberEntity } from '../../src/modules/im/domain/conversation-member.entity';
@@ -29,26 +32,35 @@ test('订单群使用订单 ID 创建一次，并在延迟补建时包含已接�
     serviceAgentId: 'agent-1',
     boosterId: 'booster-1',
     conversationId: '',
+    status: OrderStatus.PendingService,
   });
   let groupWrites = 0;
-  let orderWrites = 0;
+  let conversationLinkWrites = 0;
   let receivedMembers: string[] = [];
+  let receivedTitle = '';
+  const synchronizedTitles: string[] = [];
   const groups = {
     ensureSystemGroup: async (
       conversationId: string,
       _ownerId: string,
-      _title: string,
+      title: string,
       memberIds: string[],
     ) => {
       groupWrites += 1;
+      receivedTitle = title;
       receivedMembers = memberIds;
       return conversationId;
     },
+    syncSystemGroupTitle: async (_conversationId: string, title: string) => {
+      synchronizedTitles.push(title);
+      return SystemGroupTitleSyncResult.Updated;
+    },
   } as unknown as GroupFacade;
   const orders = {
-    save: async (saved: OrderEntity) => {
-      orderWrites += 1;
-      return saved;
+    findById: async () => order,
+    updateConversationId: async (_id: string, conversationId: string) => {
+      conversationLinkWrites += 1;
+      order.conversationId = conversationId;
     },
   } as unknown as OrderRepository;
   const users = {
@@ -64,7 +76,12 @@ test('订单群使用订单 ID 创建一次，并在延迟补建时包含已接�
 
   assert.equal(order.conversationId, order.id);
   assert.equal(groupWrites, 1);
-  assert.equal(orderWrites, 1);
+  assert.equal(conversationLinkWrites, 1);
+  assert.equal(receivedTitle, '[待接单] 订单群·陪玩服务');
+  assert.deepEqual(synchronizedTitles, [
+    '[待接单] 订单群·陪玩服务',
+    '[待接单] 订单群·陪玩服务',
+  ]);
   assert.deepEqual(receivedMembers, ['user-1', 'agent-1', 'booster-1', 'admin-1']);
 });
 

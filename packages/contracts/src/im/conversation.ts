@@ -30,6 +30,8 @@ export interface ConversationMemberView {
 /** 会话列表项（含未读数与最后一条消息，供会话列表渲染） */
 export interface ConversationView {
   id: string;
+  /** 会话聚合单调版本，用于客户端拒绝逆序到达的旧实时视图 */
+  version: number;
   type: ConversationType;
   /** 当前查看者在该会话中的角色；用于区分客服访客侧与坐席侧语义 */
   viewerRole: ConversationMemberRole | null;

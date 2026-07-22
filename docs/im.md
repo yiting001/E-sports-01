@@ -18,6 +18,7 @@
 - **群聊**：建群、改名、加/移成员、退群；成员变更广播系统消息（xx 加入/退出）。
 - **系统建群门面**：`GroupFacade` 供业务模块（如订单支付成功自动建群、打手接单进群）
   以系统身份建群/幂等加人并广播系统消息，不做操作者管理权校验。`ensureSystemGroup` 接收业务方稳定 UUID，重复调用复用群主体并补齐缺失成员；仅新建群或实际补员时推送会话变更，避免详情查询产生重复实时事件。
+- **系统群标题同步**：`GroupFacade.syncSystemGroupTitle` 供订单等服务端业务模块幂等更新群标题；仓储按期望实体版本原子窄写，能识别标题值 A→B→A 的 ABA，冲突由业务模块重读权威状态后重试。同标题跳过写库和广播，变化后复用 `ConversationNotifier` 向成员个人房间推送 `im:conversation`，不发送“人工改名”系统消息。`ConversationView.version` 携带会话聚合的单调版本，客户端拒绝逆序到达的旧版本。订单群按 `[待接单]`、`[服务中]`、`[已结束]` 展示阶段，群状态始终保持 `active`。
 - **客服**：访客发起会话进入待接入队列 → 坐席认领/管理员指派 → 接入对话 → 结束；支持配置自动分配与欢迎语。
   - **客服角色打通工作台**：内置「客服」角色（`service`）由 RbacSeeder 幂等补齐坐席所需菜单与接口权限（`im:menu` / `im:service:menu` / `im:message:history` / `im:service:agent`），管理员在用户管理中为客服人员分配该角色后即可登录管理端接待访客。
   - **C 端联系客服**：用户端 `apps/client` 消息页移动端点击会话进入 `/service` 全屏聊天；PC 端 `/messages` 采用左侧会话列表 + 右侧聊天面板，聊天面板复用 `ServiceChatPanel`，不重复实现 WebSocket 收发。客服聊天复用进行中的客服会话（否则在 `/service` 新发起 `POST /im/service`），经 `/im` WebSocket 拉历史与实时收发；系统富文本消息经 DOMPurify 净化后渲染。
@@ -42,6 +43,7 @@ stateDiagram-v2
 
 - **群聊 / 私聊**：创建即 `active`，无状态流转。
 - **客服**：`pending`（待接入队列）→ `active`（坐席接入）→ `closed`（结束）。
+- **订单群**：“已结束”只是持久化标题中的订单阶段，不会把群会话推进为 `closed`。
 
 ## 客服队列与接入流程
 
@@ -118,8 +120,9 @@ sequenceDiagram
 - `client/stores/badge-store.factory.ts`：导航角标 store 工厂，封装数量拉取、单飞/尾随刷新、旧响应抑制、轮询与本地同步（消息未读与大厅待接单角标共用）。
 - `client/stores/unread.store.ts`：未读消息状态，汇总全部会话未读数供导航角标（`AppTabBar` / `AppTopNav`）展示。
 - `client/views/message/ServiceChatView.vue`：在线客服全屏页，只承载全屏版 `ServiceChatPanel`。
-- `client/components/message/ServiceChatPanel.vue`：客服聊天核心面板，统一处理会话解析、进房、实时收发、媒体发送、自动滚动与最后可见消息已读确认。
-- `web/views/im/ImView.vue` / `ServiceConsoleView.vue`：管理端会话和客服工作台在历史消息渲染且页面可见后显式确认已读，不依赖进房副作用。
+- `client/components/message/ServiceChatPanel.vue`：客服聊天核心面板，统一处理会话解析、进房、实时收发、媒体发送、自动滚动与最后可见消息已读确认；同一会话进房期间的标题更新复用当前请求，切换会话时以请求代次丢弃迟到的旧进房响应。
+- `client/components/message/ChatMessageFeed.vue`：消息流展示层，集中渲染加载/空状态、系统富文本净化、消息气泡、媒体与引用入口，不持有 Socket 或会话状态。
+- `web/views/im/ImView.vue` / `ServiceConsoleView.vue`：管理端会话和客服工作台在历史消息渲染且页面可见后显式确认已读，不依赖进房副作用；IM 列表按 `ConversationView.version` 合并 REST 与实时结果，避免旧响应或迟到事件回滚标题。
 
 ## 目录结构（DDD 四层）
 
@@ -237,10 +240,11 @@ Socket 连接状态没有 ER 实体或 migration；`UserPresenceService` 是应�
 - **会话为统一抽象**：私聊/群聊/客服复用同一消息、成员、房间与广播链路，仅状态机/语义不同，避免三套实现。
 - **成员校验前移到 WS 边界**：进房 `assertMember`，发送在用例内复核，安全与业务解耦。
 - **claim/assign 复用 ServiceAssignmentService**：坐席接入逻辑(置 active、加成员、欢迎语、推送)单一来源。
-- **显示标题装配**：私聊无存储标题，`ConversationViewAssembler` 批量解析对端昵称，避免 N+1。
+- **显示标题装配**：私聊无存储标题，`ConversationViewAssembler` 批量解析对端昵称，避免 N+1；同时下发会话实体 `version` 作为实时视图的单调顺序标记。
 - **事件名/类型共享**：`IM_EVENTS`、各 View/Payload 定义在 `packages/contracts`，前后端复用避免魔法字符串。
 - **个人事件只作刷新信号**：未读事件不包含消息正文、会话 ID 或其他用户数据；客户端收到后重新读取本人会话列表，不直接信任事件载荷。
 - **系统群可恢复**：系统群的核心会话与成员写入失败会向业务应用服务抛出，由业务方使用同一稳定 UUID 重试；欢迎消息和实时通知属于非核心副作用，失败只记录错误，不让已创建的群丢失关联。
+- **系统标题以业务状态为准**：IM 只提供群标题 CAS 保存和通知端口，不依赖订单实体或状态；订单 Application 负责映射、128 字符截断、冲突重读及失败补偿，保持模块边界。人工改名接口仍按既有群管理员权限工作，后续订单状态同步会恢复系统标题。
 
 ## 相关端点
 
@@ -252,6 +256,7 @@ Socket 连接状态没有 ER 实体或 migration；`UserPresenceService` 是应�
 - `UserPresenceService` 只保存 socket ID、用户 ID 和租户 ID，不保存令牌、昵称或消息正文；断开清理由网关统一执行。
 - 系统消息个人信号查询失败不会回滚已持久化消息，服务端记录固定警告，C 端在下一次轮询、路由切换或页面恢复时发现未读。
 - 系统群补建只接受服务端业务模块提供的 UUID，不开放新 HTTP 入口；同一租户下重复调用会复用会话并按唯一成员关系补齐，不把实时通知失败伪装成建群失败。
+- 系统标题同步不新增 REST/WS 事件、权限码、配置项、数据库字段或 migration；会话仓储继续受租户上下文约束，通知只发送给当前群成员。实时通知失败时标题已经持久化，客户端下次读取会话列表即可收敛。
 - Socket presence 当前没有 Redis/数据库持久化和跨实例广播；实例重启或负载均衡切换会暂时影响在线坐席判断，但不会改变打手本人持久化的上线/下线状态。
 - `apps/server/test/im/user-presence.spec.ts` 覆盖多设备任一在线、最后连接离线和租户隔离；尚缺 Socket.IO 握手 + HTTP 端到端、跨实例 presence 和断线重连实测。
 - 根目录 `pnpm test` 当前串行执行服务端、管理端和客户端测试，实际结果与数量以交付汇报为准；上述端到端和多实例风险仍未覆盖。
@@ -264,6 +269,7 @@ Socket 连接状态没有 ER 实体或 migration；`UserPresenceService` 是应�
 已实现能力：
 
 - 私聊 / 群聊 / 客服会话统一列表展示，保留未读数、状态、最后消息预览和更新时间。
+- 全局个人房间连接把完整 `im:conversation` 载荷发布到 `conversation-events.store`，消息列表与移动端全屏 `ChatView` 据此更新会话；Store 按会话版本拒绝迟到旧事件，并用单调本地修订号保留请求期间的最新事件。页面监听修订号后批量读取各会话更新，避免 Vue 同一 tick 合并 watcher 时漏掉中间会话，也避免 REST 旧响应覆盖实时标题。当前聊天面板同样拒绝较旧会话版本；同会话进房中的更新不重复建连，切换会话则以请求代次丢弃迟到的旧 ACK，避免旧消息和旧标题回滚新状态。该链路复用现有 Socket 与 Pinia，不额外建立连接。
 - 第一屏直接进入通讯工作台，去掉装饰型头图与统计卡，降低运营展示感。
 - 聊天面板使用桌面聊天常见的会话头与底部 compose box：头部展示会话头像、类型、状态、成员数和更新时间；输入面板内提供图标化图片/视频工具、多行文本输入和右侧发送按钮，媒体仍复用上传模块。
 - `/im` 工作台高度跟随视口固定，聊天记录区独立滚动；打开会话、收到新消息以及媒体加载完成后都会自动滚动到最新消息。
@@ -298,13 +304,17 @@ flowchart LR
   Server["IM Application<br/>普通/系统消息"] --> Room["user:&lt;id&gt;<br/>刷新信号"]
   Room --> GlobalSocket["createPresenceSocket<br/>全局登录连接"]
   GlobalSocket --> UnreadStore["unread.store<br/>汇总 ConversationView.unread"]
+  GlobalSocket --> ConversationStore["conversation-events.store<br/>权威会话更新"]
   UnreadStore --> TabBar["AppTabBar<br/>移动端红色角标"]
   UnreadStore --> TopNav["AppTopNav<br/>PC 红色角标"]
+  ConversationStore --> MessageList["MessageView<br/>全部会话标题"]
+  ConversationStore --> FullscreenChat["ChatView<br/>移动端当前群标题"]
+  ConversationStore --> ChatHeader["ChatConversationHeader<br/>当前会话标题"]
   ChatPanel["ServiceChatPanel<br/>最后可见 messageId"] --> MarkRead["im:mark-read"]
   MarkRead --> UnreadStore
 ```
 
-前端层次边界：Socket composable 只转换协议事件，`unread.store` 持有跨组件数量，TabBar/顶部导航只负责展示；服务端 Application 在消息持久化完成后通知成员，Domain 的会话、消息和 `lastReadAt` 规则不变。
+前端层次边界：Socket composable 只转换协议事件，`unread.store` 持有跨组件数量，`conversation-events.store` 分发权威会话视图，TabBar/顶部导航/会话标题组件只负责展示；服务端 Application 在消息或会话持久化完成后通知成员，Domain 的会话、消息和 `lastReadAt` 规则不变。
 
 ### 实时与已读流程
 
@@ -344,8 +354,9 @@ sequenceDiagram
 
 ### 测试与残余风险
 
-- 客户端测试覆盖全局连接订阅、令牌重连/删除、`markRead` ack、失败保留、突发刷新合并、旧响应抑制、本地更新和轮询清理。
+- 客户端测试覆盖全局连接订阅、令牌重连/删除、`markRead` ack、`im:conversation` 标题更新订阅、列表请求期间多会话事件保留、逆序版本拒绝、同一 tick 批量消费、失败保留、突发刷新合并、旧响应抑制、本地更新和轮询清理。
 - 服务端测试覆盖普通消息排除发送者、系统消息通知全部成员、个人信号失败不回滚消息，以及真实 PostgreSQL 微秒时间精确推进并归零未读。
+- `im-conversation-title.postgres.e2e.ts` 覆盖标题 CAS 并发竞争、错误期望值和租户隔离；订单用例测试覆盖 CAS 冲突后重读最新订单状态。
 - 真实浏览器验证需覆盖移动 TabBar 的 0 隐藏、正数展示、新消息实时增加与进入会话后清除，并检查应用控制台错误。
 - 多实例仍没有 Redis Socket adapter；连接落在不同实例时实时信号可能缺失，但持久化未读与轮询结果保持正确。完整会话列表聚合在会话规模增大后仍可能产生额外查询，应在出现真实性能数据后再优化。
 

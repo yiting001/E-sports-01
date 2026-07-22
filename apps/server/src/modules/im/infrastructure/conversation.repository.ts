@@ -36,6 +36,22 @@ export class TypeormConversationRepository implements ConversationRepository {
     });
   }
 
+  async compareAndSetTitle(
+    id: string,
+    expectedVersion: number,
+    nextTitle: string,
+  ): Promise<ConversationEntity | null> {
+    const scope = withTenant<ConversationEntity>(this.tenant, {
+      id,
+      version: expectedVersion,
+    }) as FindOptionsWhere<ConversationEntity>;
+    const result = await this.repo.update(scope, { title: nextTitle });
+    if (result.affected !== 1) {
+      return null;
+    }
+    return this.findById(id);
+  }
+
   findWaitingService(): Promise<ConversationEntity[]> {
     return this.repo.find({
       where: withTenant<ConversationEntity>(this.tenant, {

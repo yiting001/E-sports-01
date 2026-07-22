@@ -3,22 +3,25 @@
  * 消息页：移动端展示 IM 会话列表；PC 端左侧会话列表、右侧嵌入聊天面板。
  * 会话实时收发复用 ServiceChatPanel，列表只负责会话摘要、选中态与移动端跳转。
  */
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { MessageType, type ChatMessage, type ConversationView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import ServiceChatPanel from '@/components/message/ServiceChatPanel.vue';
 import { imApi } from '@/api/im.api';
+import { useConversationEventsStore } from '@/stores/conversation-events.store';
 import { useUnreadStore } from '@/stores/unread.store';
 
 const MESSAGE_TITLE = '会话消息';
 const router = useRouter();
 
 const unreadStore = useUnreadStore();
+const conversationEvents = useConversationEventsStore();
 const conversations = ref<ConversationView[]>([]);
 const selectedConversation = ref<ConversationView | null>(null);
 const loading = ref(true);
 let desktopQuery: MediaQueryList | null = null;
+let appliedRevision = conversationEvents.revision;
 
 const selectedConversationId = computed(() => selectedConversation.value?.id ?? '');
 
@@ -85,6 +88,9 @@ function openConversation(conv: ConversationView): void {
 
 function upsertConversation(conv: ConversationView): void {
   const index = conversations.value.findIndex((item) => item.id === conv.id);
+  if (index >= 0 && conv.version < conversations.value[index].version) {
+    return;
+  }
   const next = { ...conv, unread: 0 };
   if (index >= 0) {
     conversations.value.splice(index, 1, next);
@@ -93,6 +99,24 @@ function upsertConversation(conv: ConversationView): void {
   }
   selectedConversation.value = next;
   refreshUnreadBadge();
+}
+
+/** 全局个人房间更新列表项；未选中的会话不能被意外选中或清零未读。 */
+function applyConversationUpdate(conv: ConversationView): void {
+  const index = conversations.value.findIndex((item) => item.id === conv.id);
+  if (index >= 0 && conv.version < conversations.value[index].version) {
+    return;
+  }
+  const isSelected = conv.id === selectedConversationId.value;
+  const next = { ...conv, unread: isSelected ? 0 : conv.unread };
+  if (index >= 0) {
+    conversations.value.splice(index, 1, next);
+  } else {
+    conversations.value.unshift(next);
+  }
+  if (isSelected) {
+    selectedConversation.value = next;
+  }
 }
 
 function onChatMessage(message: ChatMessage): void {
@@ -118,8 +142,12 @@ function onChatMessage(message: ChatMessage): void {
 onMounted(async () => {
   desktopQuery = window.matchMedia('(min-width: 768px)');
   desktopQuery.addEventListener('change', onViewportChange);
+  const revisionBeforeLoad = conversationEvents.revision;
   try {
     conversations.value = await imApi.listConversations();
+    for (const conversation of conversationEvents.updatesSince(revisionBeforeLoad)) {
+      applyConversationUpdate(conversation);
+    }
     selectDefaultConversation();
     refreshUnreadBadge();
   } finally {
@@ -127,7 +155,18 @@ onMounted(async () => {
   }
 });
 
+const stopConversationWatch = watch(
+  () => conversationEvents.revision,
+  () => {
+    for (const conversation of conversationEvents.updatesSince(appliedRevision)) {
+      applyConversationUpdate(conversation);
+    }
+    appliedRevision = conversationEvents.revision;
+  },
+);
+
 onBeforeUnmount(() => {
+  stopConversationWatch();
   desktopQuery?.removeEventListener('change', onViewportChange);
 });
 </script>

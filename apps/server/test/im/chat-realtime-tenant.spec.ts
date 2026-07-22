@@ -148,6 +148,7 @@ function createStartServiceHarness(
     async toView(conversation: ConversationEntity): Promise<ConversationView> {
       return {
         id: conversation.id,
+        version: conversation.version,
         type: ConversationType.Service,
         viewerRole: ConversationMemberRole.Owner,
         title: conversation.title,

@@ -53,6 +53,7 @@ test('会话列表视图返回当前查看者成员角色供访客与坐席角�
   );
   const conversation = new ConversationEntity();
   conversation.id = 'conversation-1';
+  conversation.version = 7;
   conversation.type = ConversationType.Service;
   conversation.title = '客服会话';
   conversation.ownerId = 'visitor-1';
@@ -63,5 +64,6 @@ test('会话列表视图返回当前查看者成员角色供访客与坐席角�
   const view = await assembler.toView(conversation, 'agent-1');
 
   assert.equal(view.viewerRole, ConversationMemberRole.Agent);
+  assert.equal(view.version, 7);
   assert.equal(view.unread, 3);
 });

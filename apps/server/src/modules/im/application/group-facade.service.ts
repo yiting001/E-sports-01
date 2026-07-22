@@ -13,6 +13,12 @@ import { buildMember } from './member.factory';
 import { ConversationNotifier } from './conversation-notifier.service';
 import { SystemMessageService } from './system-message.service';
 
+export enum SystemGroupTitleSyncResult {
+  Unchanged = 'unchanged',
+  Updated = 'updated',
+  Conflict = 'conflict',
+}
+
 /**
  * 群聊系统操作门面（供业务模块调用的最小写口）。
  * 与用户主动建群/加人用例不同：由系统流程（如订单支付成功自动拉群、
@@ -110,6 +116,31 @@ export class GroupFacade {
     await this.notifier.pushToMembers(conversation);
   }
 
+  /** 系统业务同步群标题；不发送人工改名提示，同标题不重复写库或广播。 */
+  async syncSystemGroupTitle(
+    conversationId: string,
+    title: string,
+  ): Promise<SystemGroupTitleSyncResult> {
+    const conversation = await this.conversations.findById(conversationId);
+    if (!conversation) {
+      throw new Error(`系统群会话 ${conversationId} 不存在`);
+    }
+    this.assertSystemGroup(conversation);
+    if (conversation.title === title) {
+      return SystemGroupTitleSyncResult.Unchanged;
+    }
+    const saved = await this.conversations.compareAndSetTitle(
+      conversationId,
+      conversation.version,
+      title,
+    );
+    if (!saved) {
+      return SystemGroupTitleSyncResult.Conflict;
+    }
+    await this.notifySafely(saved);
+    return SystemGroupTitleSyncResult.Updated;
+  }
+
   private async findOrCreateSystemGroup(
     conversationId: string,
     ownerId: string,
@@ -191,7 +222,10 @@ export class GroupFacade {
     }
   }
 
-  private async notifySafely(conversation: ConversationEntity, userIds: string[]): Promise<void> {
+  private async notifySafely(
+    conversation: ConversationEntity,
+    userIds?: string[],
+  ): Promise<void> {
     try {
       await this.notifier.pushToMembers(conversation, userIds);
     } catch (error) {

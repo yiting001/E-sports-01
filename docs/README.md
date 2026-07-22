@@ -11,14 +11,14 @@
 | RBAC 权限 | [rbac.md](./rbac.md) | 用户/角色/权限三层模型，JWT 双令牌，API/菜单/按钮级颗粒度 |
 | 文件上传 | [upload.md](./upload.md) | 策略模式，local 默认 / oss 可切，驱动由配置中心选择 |
 | 短信登录 | [sms.md](./sms.md) | 策略模式多云短信（阿里/腾讯/火山/日志），配置中心切换，验证码登录 |
-| WebSocket IM | [im.md](./im.md) | JWT 握手鉴权、会话房间收发、登录用户在线快照，以及 C 端实时消息未读角标 |
+| WebSocket IM | [im.md](./im.md) | JWT 握手鉴权、会话房间收发、登录用户在线快照、订单群标题更新，以及 C 端实时消息未读角标 |
 | 链路追踪与日志 | [observability.md](./observability.md) | AsyncLocalStorage 链路追踪，结构化日志异步落库 + RBAC 查询/链路详情/清理 |
 | 钱包 | [wallet.md](./wallet.md) | 钱包充值/提现/明细，以及服务订单余额支付的锁、流水和一致性边界 |
 | 用户资料自助 | [user-profile.md](./user-profile.md) | 登录用户自助改头像/昵称/手机号，免授权自助上传，个人中心页 |
 | 实名认证 | [realname.md](./realname.md) | 证件提交 + 人工审核状态机，身份证 AES-256-GCM 加密脱敏，超管按角色配置需实名 |
 | 反馈管理 | [feedback.md](./feedback.md) | 投诉关联真实订单/打手，管理端原子幂等扣款 + 回复，C 端联系客服复用既有 IM |
 | 运营通知 | [notice.md](./notice.md) | 首页多图轮播、活动关联和后台配置（兼容历史单图）+ 通知公告 CRUD |
-| 服务订单 | [order.md](./order.md) | 结构化游戏资料、自动安排/锁定指定打手、三种支付方式及并发安全派单履约 |
+| 服务订单 | [order.md](./order.md) | 结构化游戏资料、自动安排/锁定指定打手、三种支付方式、并发安全派单及三阶段订单群标题 |
 | 商品评论 | [review.md](./review.md) | 订单完成后一单一评（打星 + 文字），商品详情页脱敏展示评论与平均分，管理端隐藏/恢复/删除治理 |
 | 打手入驻 | [booster.md](./booster.md) | 入驻审核、打手自主上下线、脱敏挑人目录/主页和安全语音试听，含 migration 与隐私边界 |
 | 商品管理 | [commerce.md](./commerce.md) | 分类 + 商品 CRUD 与上下架，C 端响应式商品详情、动态分类明细与销量榜，金额以分整数 |
