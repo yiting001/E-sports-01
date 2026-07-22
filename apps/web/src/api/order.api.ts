@@ -1,6 +1,7 @@
 import type {
   AdminOrderView,
   OrderGroupJoinResult,
+  RejectOrderRefundPayload,
   OrderStatus,
   PaginatedResult,
   ServiceAgentOption,
@@ -37,6 +38,17 @@ export const orderApi = {
   /** 指派指定打手完成订单 */
   assign(id: string, boosterId: string): Promise<AdminOrderView> {
     return http.post(`/order/admin/${id}/assign`, { boosterId });
+  },
+  /** 同意退款；处理中时查询渠道，失败时以同一退款号重试 */
+  approveRefund(id: string): Promise<AdminOrderView> {
+    return http.post(`/order/admin/${id}/refund/approve`);
+  },
+  /** 驳回待审核退款并记录原因 */
+  rejectRefund(
+    id: string,
+    payload: RejectOrderRefundPayload
+  ): Promise<AdminOrderView> {
+    return http.post(`/order/admin/${id}/refund/reject`, payload);
   },
   /** 分页查询可被指派的平台打手候选 */
   boosterCandidates(

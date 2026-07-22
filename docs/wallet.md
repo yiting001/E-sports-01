@@ -23,6 +23,7 @@
 - **收支明细**：分页查询本人流水，按时间倒序，含金额、方向、变更后余额快照、备注。
 - **统计**：余额、累计充值/提现金额与成功笔数。
 - **服务订单余额支付**：结算页读取本人钱包；选择余额后由订单模块在数据库事务内扣款并写 `order_payment` 出账流水，支付成功直接进入订单详情。
+- **服务订单原路退款**：订单退款审核通过后，余额订单通过事务参与端口写 `order_refund` 入账流水；支付宝/微信分别调用退款创建与查询接口，稳定退款号保证重试幂等。完整业务规则见 [order-refund.md](./order-refund.md)。
 - **金额一律以「分」整数存储与传输**，杜绝浮点误差；展示「元」由 `fenToYuan` 统一换算（前后端共享）。
 - **零硬编码**：所有商户凭证、网关、最小金额、回调地址均入配置中心（`ConfigGroup.Wallet`，敏感项脱敏）。
 
@@ -51,7 +52,7 @@
 
 ## 不变量与一致性
 
-- **余额写入边界**：充值、提现、调整和提成经 `WalletLedger`；服务订单余额支付经 `OrderPaymentSettlement`；缴押、退款、通用罚款和投诉处罚经调用方事务复用 `WalletTransactionParticipant`。三种基础设施入口都对钱包行加悲观写锁并同步写流水，业务用例不直接修改余额。
+- **余额写入边界**：充值、提现、调整和提成经 `WalletLedger`；服务订单余额支付经 `OrderPaymentSettlement`；订单余额退款、缴押、押金退款、通用罚款和投诉处罚经调用方事务复用 `WalletTransactionParticipant`。三种基础设施入口都对钱包行加悲观写锁并同步写流水，业务用例不直接修改余额。
 - **充值入账幂等**：以 `outTradeNo` 为幂等键；订单已支付则重复回调直接返回成功；金额不符则拒绝。
 - **订单支付并发安全**：按订单行再钱包行的固定顺序加锁；锁内校验租户、用户、待付款状态、支付方式、金额、钱包启用状态和余额。同一订单只扣一次，同一钱包并发支付不能透支。
 - **投诉直接扣款**：反馈模块通过 `FeedbackPenaltySettlement` 和各模块公开的事务参与端口执行。余额分支按“反馈 → 订单 → wallet”加锁，扣余额并写 `penalty` 出账流水；押金分支按“反馈 → 订单 → booster_application”加锁且不写钱包流水。两条路径都在同一事务内保存罚款并完成反馈，`bizOrderId` 保存反馈 ID，同反馈重试不会重复扣款。该路径不调用管理端人工调账接口。
@@ -61,8 +62,8 @@
 
 ## 渠道策略（策略模式 + 配置驱动）
 
-- 充值端口 `PaymentPort`、提现端口 `PayoutPort` 为抽象；具体渠道为可插拔策略，由解析器按请求渠道挑选。
-- 新增渠道 = 实现端口 + 注册进 `PAYMENT_PORTS` / `PAYOUT_PORTS`，上层用例零改动。
+- 充值端口 `PaymentPort`、原路退款端口 `RefundPort`、提现端口 `PayoutPort` 为抽象；具体渠道为可插拔策略，由解析器按请求渠道挑选。
+- 新增渠道 = 实现端口 + 注册进 `PAYMENT_PORTS` / `REFUND_PORTS` / `PAYOUT_PORTS`，上层用例零改动。
 - 提现端口含 `available` 标记，预留渠道（微信）在**扣款前**即被拦截，避免无谓的冻结/回滚。
 
 ## 目录结构（DDD 四层）
@@ -79,11 +80,13 @@ modules/wallet/
 │   ├── recharge-repository.interface.ts
 │   ├── withdrawal-repository.interface.ts
 │   ├── payment-port.interface.ts         充值渠道端口（下单/回调验签/应答）
+│   ├── refund-port.interface.ts          原路退款渠道端口（创建/查询）
 │   ├── payout-port.interface.ts          提现渠道端口（转账）
 │   └── ledger.interface.ts               账务单元端口（唯一余额写入口）
 ├── application/
 │   ├── wallet.service.ts                 取钱包/懒创建（并发安全）
 │   ├── payment.resolver.ts               充值渠道选择器
+│   ├── refund.resolver.ts                原路退款渠道选择器
 │   ├── payout.resolver.ts                提现渠道选择器
 │   ├── wallet.mapper.ts                  实体 → 钱包/统计视图
 │   ├── transaction.mapper.ts             实体 → 流水视图
@@ -114,9 +117,11 @@ modules/wallet/
 │   └── drivers/
 │       ├── alipay-client.factory.ts      支付宝 SDK 工厂（证书/公钥双模式，凭证取自配置中心）
 │       ├── alipay-payment.driver.ts      支付宝扫码下单 + 回调验签
+│       ├── alipay-refund.driver.ts       支付宝原路退款 + 查询
 │       ├── alipay-payout.driver.ts       支付宝转账提现
 │       ├── wechat-pay.config.ts          微信支付 v3 凭证工厂
 │       ├── wechat-payment.driver.ts      微信 Native 下单 + 回调验签/解密
+│       ├── wechat-refund.driver.ts       微信支付 v3 国内退款 + 查询
 │       └── wechat-payout.driver.ts       微信提现（预留位）
 └── interfaces/
     ├── dto/
@@ -301,6 +306,7 @@ flowchart LR
 ## 数据、异常与测试边界
 
 - `WalletTxnType.OrderPayment` 的存储值为 `order_payment`，沿用 `wallet_transaction.type` 的现有 `varchar(16)`；没有表结构变化和 migration。
+- `WalletTxnType.OrderRefund` 的存储值为 `order_refund`，余额退款作为入账流水并关联原服务订单 id。
 - 钱包不存在、冻结或余额不足会使余额事务完整回滚，订单创建用例随后取消仍为待付款的新订单并回退已核销优惠券；前端展示服务端返回的最终校验结果。
 - 会员累计消费和订单建群属于事务提交后的副作用，失败不会退回余额或把已支付订单改回未付款；错误会记录供后续补偿排查。
 - 测试范围包括订单支付方式与充值渠道隔离、钱包状态/余额/金额校验、重复支付幂等、并发锁顺序、流水余额快照，以及 C 端冻结/不足/刷新/充值交互。`pnpm test:e2e:postgres` 另在随机隔离 schema 验证投诉与通用罚款的钱包原子性和故障回滚；最终结果以本次交付汇报为准。

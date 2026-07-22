@@ -6,9 +6,10 @@ import {
   OrderStatus,
   type RemarkMediaItem,
 } from '@app/contracts';
-import { Check, Column, Entity, Index } from 'typeorm';
+import { Check, Column, Entity, Index, OneToOne } from 'typeorm';
 import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity';
 import { bigintTransformer } from '../../../shared/database/numeric.transformer';
+import { OrderRefundEntity } from './order-refund.entity';
 
 /**
  * 服务订单聚合根。
@@ -28,6 +29,9 @@ import { bigintTransformer } from '../../../shared/database/numeric.transformer'
     OR ("booster_selection_mode" = 'specified' AND "requested_booster_id" <> '')`,
 )
 export class OrderEntity extends TenantScopedEntity {
+  @OneToOne(() => OrderRefundEntity, (refund) => refund.order)
+  refund!: OrderRefundEntity | null;
+
   /** 下单用户 id */
   @Index()
   @Column({ name: 'user_id', length: 36 })
@@ -134,6 +138,10 @@ export class OrderEntity extends TenantScopedEntity {
   @Index()
   @Column({ type: 'varchar', length: 24, default: OrderStatus.PendingPayment })
   status!: OrderStatus;
+
+  /** 本单实付金额是否已计入会员累计消费；退款事务据此做逐单冲正。 */
+  @Column({ name: 'member_spend_recorded', type: 'boolean', default: false })
+  memberSpendRecorded!: boolean;
 
   /** 用户备注（大区/段位/开黑时间等） */
   @Column({ length: 256, default: '' })

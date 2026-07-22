@@ -23,6 +23,7 @@ import { TypeormBoosterRepository } from '../src/modules/booster/infrastructure/
 import { FeedbackEntity } from '../src/modules/feedback/domain/feedback.entity';
 import { TypeormFeedbackPenaltySettlement } from '../src/modules/feedback/infrastructure/feedback-penalty.settlement';
 import { OrderEntity } from '../src/modules/order/domain/order.entity';
+import { OrderRefundEntity } from '../src/modules/order/domain/order-refund.entity';
 import { TypeormOrderFeedbackPenaltyTransaction } from '../src/modules/order/infrastructure/order-feedback-penalty.transaction';
 import { WalletEntity } from '../src/modules/wallet/domain/wallet.entity';
 import { WalletTransactionEntity } from '../src/modules/wallet/domain/wallet-transaction.entity';
@@ -45,6 +46,7 @@ const entities = [
   BoosterPenaltyEntity,
   FeedbackEntity,
   OrderEntity,
+  OrderRefundEntity,
   WalletEntity,
   WalletTransactionEntity,
 ];

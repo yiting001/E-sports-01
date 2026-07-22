@@ -149,14 +149,19 @@ export const useMenuBadgeStore = defineStore("menu-badge", () => {
         ).total;
       case MENU_BADGE_CODES.order:
         return (
-          await orderApi.list(
-            PROBE_PAGE,
-            PROBE_PAGE_SIZE,
-            OrderStatus.PendingService,
-            undefined,
-            { silent: true }
+          await Promise.all(
+            [
+              OrderStatus.PendingService,
+              ...(auth.hasPermission(PERMS.order.refundReview)
+                ? [OrderStatus.RefundReviewing]
+                : []),
+            ].map((status) =>
+              orderApi.list(PROBE_PAGE, PROBE_PAGE_SIZE, status, undefined, {
+                silent: true,
+              })
+            )
           )
-        ).total;
+        ).reduce((sum, result) => sum + result.total, 0);
       case MENU_BADGE_CODES.booster:
         return (
           await boosterApi.list(

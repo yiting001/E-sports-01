@@ -4,8 +4,14 @@
  * 点击卡片主体进入订单详情。
  * 父页面只负责数据加载和弹窗编排，卡片内部负责单条订单的展示规则。
  */
-import { ORDER_STATUS_TEXT, OrderStatus, type OrderView } from '@app/contracts';
-import AppIcon from '@/components/common/AppIcon.vue';
+import {
+  ORDER_REFUND_STATUS_TEXT,
+  ORDER_STATUS_TEXT,
+  OrderStatus,
+  type OrderView,
+} from "@app/contracts";
+import AppIcon from "@/components/common/AppIcon.vue";
+import { orderRefundStatusTone, orderStatusTone } from "@/utils/order-status";
 
 defineProps<{
   order: OrderView;
@@ -18,19 +24,8 @@ const emit = defineEmits<{
   review: [order: OrderView];
 }>();
 
-/** 状态 → 徽标风格（进行中金色/完成绿色/取消灰色） */
-function statusClass(status: OrderStatus): string {
-  if (status === OrderStatus.Cancelled) {
-    return 'tag--muted';
-  }
-  if (status === OrderStatus.Completed) {
-    return 'tag--ok';
-  }
-  return 'tag--accent';
-}
-
 function formatTime(iso: string): string {
-  return iso ? iso.slice(0, 16).replace('T', ' ') : '';
+  return iso ? iso.slice(0, 16).replace("T", " ") : "";
 }
 </script>
 
@@ -41,11 +36,20 @@ function formatTime(iso: string): string {
   >
     <div class="head">
       <span class="no">订单号 {{ order.orderNo }}</span>
-      <span
-        class="tag"
-        :class="statusClass(order.status)"
-      >
-        {{ ORDER_STATUS_TEXT[order.status] }}
+      <span class="tags">
+        <span
+          class="tag"
+          :class="`tag--${orderStatusTone(order.status)}`"
+        >
+          {{ ORDER_STATUS_TEXT[order.status] }}
+        </span>
+        <span
+          v-if="order.refund"
+          class="tag tag--refund"
+          :class="`tag--${orderRefundStatusTone(order.refund.status)}`"
+        >
+          退款：{{ ORDER_REFUND_STATUS_TEXT[order.refund.status] }}
+        </span>
       </span>
     </div>
 
@@ -53,7 +57,11 @@ function formatTime(iso: string): string {
       <div
         class="thumb"
         :class="{ 'thumb--image': order.productCover }"
-        :style="order.productCover ? { backgroundImage: `url(${order.productCover})` } : undefined"
+        :style="
+          order.productCover
+            ? { backgroundImage: `url(${order.productCover})` }
+            : undefined
+        "
       >
         <AppIcon
           v-if="!order.productCover"
@@ -137,16 +145,32 @@ function formatTime(iso: string): string {
   border: 1px solid currentcolor;
 }
 
+.tags {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
 .tag--accent {
   color: var(--c-accent);
 }
 
-.tag--ok {
+.tag--success {
   color: var(--c-neon);
 }
 
 .tag--muted {
   color: var(--c-text-muted);
+}
+
+.tag--danger {
+  color: var(--c-danger, #ff5a5a);
+}
+
+.tag--refund {
+  font-size: 10px;
 }
 
 .body {

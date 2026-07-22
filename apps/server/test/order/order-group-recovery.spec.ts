@@ -12,7 +12,6 @@ import type { ConversationMemberRepository } from '../../src/modules/im/domain/c
 import { ConversationMemberEntity } from '../../src/modules/im/domain/conversation-member.entity';
 import type { ConversationRepository } from '../../src/modules/im/domain/conversation-repository.interface';
 import { ConversationEntity } from '../../src/modules/im/domain/conversation.entity';
-import type { MemberProgressService } from '../../src/modules/member/application/member-progress.service';
 import type { UserDirectory } from '../../src/modules/rbac/application/user-directory.service';
 import { OrderGroupService } from '../../src/modules/order/application/order-group.service';
 import { OrderPaymentSettleService } from '../../src/modules/order/application/order-payment.service';
@@ -236,9 +235,6 @@ test('支付已落账但首次建群失败时，主动查单会补建且不回�
   const settlement = {
     settleBalance: async () => order,
   } as unknown as OrderPaymentSettlement;
-  const memberProgress = {
-    recordSpend: async () => undefined,
-  } as unknown as MemberProgressService;
   let groupAttempts = 0;
   const orderGroup = {
     ensureGroup: async (paidOrder: OrderEntity) => {
@@ -253,7 +249,7 @@ test('支付已落账但首次建群失败时，主动查单会补建且不回�
     run: <T>(_context: { tenantId: string | null; isSuper: boolean }, callback: () => T): T =>
       callback(),
   } as unknown as TenantContextService;
-  const payment = new OrderPaymentSettleService(settlement, memberProgress, orderGroup, tenant);
+  const payment = new OrderPaymentSettleService(settlement, orderGroup, tenant);
   const orders = {
     findById: async (id: string) => (id === order.id ? order : null),
   } as unknown as OrderRepository;

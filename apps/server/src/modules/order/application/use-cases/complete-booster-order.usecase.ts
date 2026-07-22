@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   FundDirection,
   OrderStatus,
@@ -14,17 +9,11 @@ import {
 } from '@app/contracts';
 import { BoosterProgressService } from '../../../booster/application/booster-progress.service';
 import { WalletService } from '../../../wallet/application/wallet.service';
-import {
-  WALLET_LEDGER,
-  WalletLedger,
-} from '../../../wallet/domain/ledger.interface';
-import {
-  ORDER_REPOSITORY,
-  OrderRepository,
-} from '../../domain/order-repository.interface';
+import { WALLET_LEDGER, WalletLedger } from '../../../wallet/domain/ledger.interface';
+import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository.interface';
 import { BoosterAccess } from '../booster-access.service';
 import { OrderGroupService } from '../order-group.service';
-import { toOrderView } from '../order.mapper';
+import { toBoosterOrderView } from '../order.mapper';
 
 /**
  * 用例：打手完成服务（服务中 → 已完成，仅限本人接下的订单）。
@@ -54,10 +43,7 @@ export class CompleteBoosterOrderUseCase {
       throw new BadRequestException('仅「服务中」订单可完成');
     }
     const tier = await this.boosterProgress.recordCompletedOrder(userId);
-    const commissionFen = calcCommissionFen(
-      order.amountFen,
-      tier.commissionRateBp,
-    );
+    const commissionFen = calcCommissionFen(order.amountFen, tier.commissionRateBp);
     if (commissionFen > 0) {
       const wallet = await this.walletService.ensureWallet(userId);
       await this.ledger.adjustBalance({
@@ -74,6 +60,6 @@ export class CompleteBoosterOrderUseCase {
     order.commissionRateBp = tier.commissionRateBp;
     const saved = await this.orders.save(order);
     await this.orderGroup.syncTitle(saved);
-    return toOrderView(saved);
+    return toBoosterOrderView(saved);
   }
 }

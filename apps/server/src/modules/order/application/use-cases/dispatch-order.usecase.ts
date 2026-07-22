@@ -1,14 +1,12 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { AdminOrderView, OrderStatus } from '@app/contracts';
-import {
-  ORDER_REPOSITORY,
-  OrderRepository,
-} from '../../domain/order-repository.interface';
+import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository.interface';
 import { toAdminOrderView } from '../order.mapper';
 import { assertOrderCanDispatch } from '../order-booster-selection';
 import { OrderGroupService } from '../order-group.service';
@@ -34,9 +32,14 @@ export class DispatchOrderUseCase {
       throw new BadRequestException('仅「待客服处理」订单可下发大厅');
     }
     assertOrderCanDispatch(order);
-    order.status = OrderStatus.Dispatching;
-    order.dispatchedAt = new Date();
-    const saved = await this.orders.save(order);
+    const saved = await this.orders.claimForDispatch({
+      orderId: order.id,
+      tenantId: order.tenantId,
+      dispatchedAt: new Date(),
+    });
+    if (!saved) {
+      throw new ConflictException('订单状态已变化，请刷新后重试');
+    }
     await this.orderGroup.syncTitle(saved);
     return toAdminOrderView(saved);
   }

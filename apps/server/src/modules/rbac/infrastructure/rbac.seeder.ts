@@ -4,9 +4,11 @@ import {
   DEFAULT_TENANT_CODE,
   DEFAULT_TENANT_ID,
   PermissionType,
+  PERMS,
   TenantStatus,
 } from '@app/contracts';
 import { loadEnvConfig } from '../../../bootstrap/env.config';
+import { PermissionResolver } from '../application/permission-resolver.service';
 import {
   PERMISSION_REPOSITORY,
   PermissionRepository,
@@ -18,21 +20,13 @@ import {
   SERVICE_ROLE,
   SERVICE_ROLE_PERMISSION_CODES,
   SUPER_ADMIN_ROLE,
+  TENANT_ADMIN_ROLE,
 } from '../domain/rbac.constants';
 import { Permission } from '../domain/permission.entity';
 import { Role } from '../domain/role.entity';
-import {
-  ROLE_REPOSITORY,
-  RoleRepository,
-} from '../domain/role-repository.interface';
-import {
-  TENANT_REPOSITORY,
-  TenantRepository,
-} from '../domain/tenant-repository.interface';
-import {
-  USER_REPOSITORY,
-  UserRepository,
-} from '../domain/user-repository.interface';
+import { ROLE_REPOSITORY, RoleRepository } from '../domain/role-repository.interface';
+import { TENANT_REPOSITORY, TenantRepository } from '../domain/tenant-repository.interface';
+import { USER_REPOSITORY, UserRepository } from '../domain/user-repository.interface';
 import { PasswordService } from './password.service';
 
 /**
@@ -51,6 +45,8 @@ export class RbacSeeder implements OnApplicationBootstrap {
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(TENANT_REPOSITORY) private readonly tenantRepo: TenantRepository,
     private readonly password: PasswordService,
+    @Inject(PermissionResolver)
+    private readonly permissions: Pick<PermissionResolver, 'invalidateAll'>,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -65,10 +61,23 @@ export class RbacSeeder implements OnApplicationBootstrap {
     }
     await this.pruneObsoleteMenus();
     const superRole = await this.ensureSuperRole();
+    await this.ensureTenantAdminRefundPermission();
     await this.ensureMemberRole();
     await this.ensureServiceRole();
     await this.ensureBoosterRole();
     await this.ensureAdminUser(superRole.id);
+  }
+
+  /** 存量租户管理员按其“全部业务权限”语义补齐新增的退款审核权限。 */
+  private async ensureTenantAdminRefundPermission(): Promise<void> {
+    const roles = await this.roleRepo.findAllByCode(TENANT_ADMIN_ROLE);
+    let changed = false;
+    for (const role of roles) {
+      changed = (await this.ensureRolePermissions(role, [PERMS.order.refundReview])) || changed;
+    }
+    if (changed) {
+      await this.permissions.invalidateAll();
+    }
   }
 
   /**
@@ -96,9 +105,7 @@ export class RbacSeeder implements OnApplicationBootstrap {
   private async pruneObsoleteMenus(): Promise<void> {
     const valid = new Set(DEFAULT_MENU_PERMISSIONS.map((m) => m.code));
     const all = await this.permRepo.findAll();
-    const obsolete = all.filter(
-      (p) => p.type === PermissionType.Menu && !valid.has(p.code),
-    );
+    const obsolete = all.filter((p) => p.type === PermissionType.Menu && !valid.has(p.code));
     for (const permission of obsolete) {
       await this.permRepo.remove(permission.id);
     }
@@ -181,11 +188,11 @@ export class RbacSeeder implements OnApplicationBootstrap {
   }
 
   /** 幂等地为角色补齐给定权限码（仅新增缺失项，保留管理员后续手动授予的权限） */
-  private async ensureRolePermissions(role: Role, codes: string[]): Promise<void> {
+  private async ensureRolePermissions(role: Role, codes: string[]): Promise<boolean> {
     const owned = new Set((role.permissions ?? []).map((p) => p.code));
     const missing = codes.filter((code) => !owned.has(code));
     if (missing.length === 0) {
-      return;
+      return false;
     }
     const granted: Permission[] = [];
     for (const code of missing) {
@@ -195,11 +202,12 @@ export class RbacSeeder implements OnApplicationBootstrap {
       }
     }
     if (granted.length === 0) {
-      return;
+      return false;
     }
     role.permissions = [...(role.permissions ?? []), ...granted];
     await this.roleRepo.save(role);
-    this.logger.log(`客服角色补齐 ${granted.length} 项权限`);
+    this.logger.log(`角色 ${role.code} 补齐 ${granted.length} 项权限`);
+    return true;
   }
 
   private async ensureAdminUser(superRoleId: string): Promise<void> {

@@ -3,7 +3,7 @@ import { OrderStatus, OrderView } from '@app/contracts';
 import { PaymentResolver } from '../../../wallet/application/payment.resolver';
 import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository.interface';
 import { toPaymentProvider } from '../order-payment-method';
-import { toOrderView } from '../order.mapper';
+import { toOwnerOrderView } from '../order.mapper';
 import { OrderPaymentSettleService } from '../order-payment.service';
 
 /**
@@ -27,11 +27,11 @@ export class QueryOrderPaymentUseCase {
     }
     if (order.status !== OrderStatus.PendingPayment) {
       await this.settle.ensurePaidOrderGroup(order);
-      return toOrderView(order);
+      return toOwnerOrderView(order);
     }
     const provider = toPaymentProvider(order.provider);
     if (!provider) {
-      return toOrderView(order);
+      return toOwnerOrderView(order);
     }
     const port = this.paymentResolver.resolve(provider);
     const result = await port.queryTrade(order.orderNo);
@@ -46,8 +46,8 @@ export class QueryOrderPaymentUseCase {
       if (settled) {
         await this.settle.ensurePaidOrderGroup(settled);
       }
-      return toOrderView(settled ?? order);
+      return toOwnerOrderView(settled ?? order);
     }
-    return toOrderView(order);
+    return toOwnerOrderView(order);
   }
 }

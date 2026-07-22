@@ -29,6 +29,10 @@ const SENSITIVE_KEYS = [
   'materialimage',
   'intro',
 ];
+const REFUND_REASON_ROUTES = [
+  /^\/api\/order\/[^/]+\/refund\/?$/,
+  /^\/api\/order\/admin\/[^/]+\/refund\/reject\/?$/,
+];
 
 /** 递归脱敏凭证与个人申请资料，供错误日志写入前统一处理。 */
 export function sanitizeLogValue(value: unknown): unknown {
@@ -43,6 +47,24 @@ export function sanitizeLogValue(value: unknown): unknown {
     return result;
   }
   return value;
+}
+
+/** 退款申请与驳回原因可能包含隐私，仅在对应 POST 路由隐藏顶层 reason。 */
+export function sanitizeHttpLogBody(method: string, path: string, body: unknown): unknown {
+  const sanitized = sanitizeLogValue(body);
+  if (
+    method.toUpperCase() !== 'POST' ||
+    !REFUND_REASON_ROUTES.some((route) => route.test(path)) ||
+    !isLogRecord(sanitized) ||
+    !Object.prototype.hasOwnProperty.call(sanitized, 'reason')
+  ) {
+    return sanitized;
+  }
+  return { ...sanitized, reason: '***' };
+}
+
+function isLogRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function isSensitiveLogKey(key: string): boolean {
@@ -122,7 +144,7 @@ export class LoggingInterceptor implements NestInterceptor {
       username: req.user?.username ?? null,
       ip: this.clientIp(req),
       userAgent: this.header(req, 'user-agent'),
-      stack: error instanceof Error ? (error.stack ?? null) : null,
+      stack: error instanceof Error ? error.stack ?? null : null,
       detail: isError ? this.buildDetail(req, error) : null,
     };
     this.writer.enqueue(draft);
@@ -138,7 +160,7 @@ export class LoggingInterceptor implements NestInterceptor {
       detail.response = error.getResponse();
     }
     if (this.hasBody(req.body)) {
-      detail.body = sanitizeLogValue(req.body);
+      detail.body = sanitizeHttpLogBody(req.method, req.originalUrl.split('?')[0], req.body);
     }
     if (detail.response === undefined && detail.body === undefined) {
       return null;

@@ -32,7 +32,7 @@ import { OrderEntity } from '../../src/modules/order/domain/order.entity';
 import type { WalletService } from '../../src/modules/wallet/application/wallet.service';
 import type { WalletLedger } from '../../src/modules/wallet/domain/ledger.interface';
 
-test('订单群标题映射待接单、服务中和已结束，并限制为 128 个字符', () => {
+test('订单群标题映射履约与退款阶段，并限制为 128 个字符', () => {
   assert.equal(
     buildOrderGroupTitle('陪玩服务', OrderStatus.PendingService),
     '[待接单] 订单群·陪玩服务',
@@ -42,10 +42,12 @@ test('订单群标题映射待接单、服务中和已结束，并限制为 128 
     '[待接单] 订单群·陪玩服务',
   );
   assert.equal(buildOrderGroupTitle('陪玩服务', OrderStatus.Serving), '[服务中] 订单群·陪玩服务');
+  assert.equal(buildOrderGroupTitle('陪玩服务', OrderStatus.Completed), '[已结束] 订单群·陪玩服务');
   assert.equal(
-    buildOrderGroupTitle('陪玩服务', OrderStatus.Completed),
-    '[已结束] 订单群·陪玩服务',
+    buildOrderGroupTitle('陪玩服务', OrderStatus.RefundReviewing),
+    '[退款审核] 订单群·陪玩服务',
   );
+  assert.equal(buildOrderGroupTitle('陪玩服务', OrderStatus.Refunded), '[已退款] 订单群·陪玩服务');
 
   const longest = buildOrderGroupTitle('竞'.repeat(128), OrderStatus.Serving);
   assert.equal(Array.from(longest).length, ORDER_GROUP_TITLE_MAX_LENGTH);
@@ -93,7 +95,11 @@ test('下发订单保存待接单状态后同步群标题', async () => {
   let synchronizedStatus: OrderStatus | null = null;
   const orders = {
     findById: async () => order,
-    save: async (saved: OrderEntity) => saved,
+    claimForDispatch: async () => {
+      order.status = OrderStatus.Dispatching;
+      order.dispatchedAt = new Date();
+      return order;
+    },
   } as unknown as OrderRepository;
   const scope = {
     assertCanHandle: async () => undefined,
@@ -362,11 +368,7 @@ test('系统群标题变化只写一次，通知失败不回滚持久化标题',
   let notificationAttempts = 0;
   const conversations = {
     findById: async () => conversation,
-    compareAndSetTitle: async (
-      _id: string,
-      expectedVersion: number,
-      nextTitle: string,
-    ) => {
+    compareAndSetTitle: async (_id: string, expectedVersion: number, nextTitle: string) => {
       if (conversation.version !== expectedVersion) {
         return null;
       }

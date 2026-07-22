@@ -1,7 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OrderPaymentMethod } from '@app/contracts';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
-import { MemberProgressService } from '../../member/application/member-progress.service';
 import { OrderEntity } from '../domain/order.entity';
 import {
   ORDER_PAYMENT_SETTLEMENT,
@@ -23,7 +22,6 @@ export class OrderPaymentSettleService {
   constructor(
     @Inject(ORDER_PAYMENT_SETTLEMENT)
     private readonly settlement: OrderPaymentSettlement,
-    private readonly memberProgress: MemberProgressService,
     private readonly orderGroup: OrderGroupService,
     private readonly tenant: TenantContextService,
   ) {}
@@ -40,7 +38,7 @@ export class OrderPaymentSettleService {
       providerTradeNo,
       paidAmountFen,
     });
-    await this.runPostCommitEffects(paidOrder, paidAmountFen);
+    await this.runPostCommitEffects(paidOrder);
   }
 
   /** 钱包余额支付：核心落账异常向上抛；提交后副作用失败不回滚已支付订单。 */
@@ -50,7 +48,7 @@ export class OrderPaymentSettleService {
       userId,
       paidAmountFen,
     });
-    await this.runPostCommitEffects(paidOrder, paidAmountFen);
+    await this.runPostCommitEffects(paidOrder);
   }
 
   /** 查询入口补偿：已支付订单幂等补建群或校正状态标题，不重复累计消费。 */
@@ -63,32 +61,13 @@ export class OrderPaymentSettleService {
     );
   }
 
-  private async runPostCommitEffects(
-    paidOrder: OrderEntity | null,
-    paidAmountFen: number,
-  ): Promise<void> {
+  private async runPostCommitEffects(paidOrder: OrderEntity | null): Promise<void> {
     if (!paidOrder) {
       return;
     }
     await this.tenant.run({ tenantId: paidOrder.tenantId, isSuper: false }, () =>
-      this.runScopedPostCommitEffects(paidOrder, paidAmountFen),
+      this.ensureGroupSafely(paidOrder),
     );
-  }
-
-  /** 渠道回调是公开路由，提交后副作用必须恢复订单租户作用域。 */
-  private async runScopedPostCommitEffects(
-    paidOrder: OrderEntity,
-    paidAmountFen: number,
-  ): Promise<void> {
-    try {
-      await this.memberProgress.recordSpend(paidOrder.userId, paidAmountFen);
-    } catch (error) {
-      this.logger.error(
-        `订单 ${paidOrder.orderNo} 累计会员消费失败`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-    await this.ensureGroupSafely(paidOrder);
   }
 
   private async ensureGroupSafely(paidOrder: OrderEntity): Promise<void> {

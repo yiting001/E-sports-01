@@ -23,6 +23,19 @@ export interface ClaimOrderForServingInput {
   acceptedAt: Date;
 }
 
+export interface ClaimOrderForDispatchInput {
+  orderId: string;
+  tenantId: string;
+  dispatchedAt: Date;
+}
+
+export interface ClaimOrderForCancellationInput {
+  orderId: string;
+  tenantId: string;
+  userId: string;
+  cancelledAt: Date;
+}
+
 /** 订单仓储接口（领域层只依赖抽象，实现在基础设施层，读操作按租户上下文过滤） */
 export interface OrderRepository {
   /** 按主键取订单 */
@@ -55,6 +68,10 @@ export interface OrderRepository {
   save(entity: OrderEntity): Promise<OrderEntity>;
   /** 仅回填订单群关联，禁止用支付后的旧实体整行保存覆盖并发状态。 */
   updateConversationId(id: string, conversationId: string): Promise<void>;
+  /** 行锁内把自动安排的待客服订单推进至大厅；与退款申请竞争时仅一方成功。 */
+  claimForDispatch(input: ClaimOrderForDispatchInput): Promise<OrderEntity | null>;
+  /** 行锁内仅把本人的待付款订单置为已取消；与支付落账竞争时仅一方成功。 */
+  claimForCancellation(input: ClaimOrderForCancellationInput): Promise<OrderEntity | null>;
   /** 行锁内复核订单状态与指定人后原子推进到服务中；竞争失败返回 null。 */
   claimForServing(input: ClaimOrderForServingInput): Promise<OrderEntity | null>;
 }

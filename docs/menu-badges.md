@@ -7,7 +7,7 @@
 已实现能力：
 
 - 实名管理显示当前可见范围内的待审核实名数量。
-- 订单管理显示当前可见范围内的待客服处理订单数量；客服角色仍只统计本人负责商品的订单。
+- 订单管理显示当前可见范围内的待客服处理订单数量；具备退款审核权限时额外统计退款处理中订单，客服角色仍只统计本人负责商品的订单。
 - 打手管理显示当前可见范围内待审核入驻申请数量。
 - 即时通讯显示当前用户私聊、群聊和访客侧客服会话的未读消息总数，不与坐席客服消息重复计数。
 - 客服工作台显示当前可见范围内待接入请求数与当前坐席已认领客服会话未读数之和。
@@ -23,13 +23,13 @@
 
 ## 计数口径与复用接口
 
-| 菜单 code          | 计数口径                                  | 复用接口                                                        | 数据权限                                       |
-| ------------------ | ----------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------- |
-| `realname:menu`    | `status=pending` 的分页 `total`           | `GET /api/realname?page=1&pageSize=1&status=pending`            | `realname:list` + 页面可见范围                 |
-| `order:admin:menu` | `status=pending_service` 的分页 `total`   | `GET /api/order/admin?page=1&pageSize=1&status=pending_service` | `order:admin:list` + 租户/客服归属过滤         |
-| `booster:menu`     | `status=pending` 的分页 `total`           | `GET /api/booster?page=1&pageSize=1&status=pending`             | `booster:list` + 页面可见范围                  |
-| `im:menu`          | 非坐席会话 `unread` 之和                  | `GET /api/im/conversations`                                     | 登录用户只能取得本人参与的会话                 |
-| `im:service:menu`  | 待接入队列长度 + 坐席角色客服会话未读之和 | `GET /api/im/service/queue` + `GET /api/im/conversations`       | `im:service:agent` + 队列范围/本人会话成员关系 |
+| 菜单 code          | 计数口径                                                 | 复用接口                                                     | 数据权限                                                                       |
+| ------------------ | -------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `realname:menu`    | `status=pending` 的分页 `total`                          | `GET /api/realname?page=1&pageSize=1&status=pending`         | `realname:list` + 页面可见范围                                                 |
+| `order:admin:menu` | `pending_service`；有退款审核权限时加 `refund_reviewing` | 分别复用 `GET /api/order/admin?page=1&pageSize=1&status=...` | `order:admin:list`；退款数还需 `order:admin:refund:review` + 租户/客服归属过滤 |
+| `booster:menu`     | `status=pending` 的分页 `total`                          | `GET /api/booster?page=1&pageSize=1&status=pending`          | `booster:list` + 页面可见范围                                                  |
+| `im:menu`          | 非坐席会话 `unread` 之和                                 | `GET /api/im/conversations`                                  | 登录用户只能取得本人参与的会话                                                 |
+| `im:service:menu`  | 待接入队列长度 + 坐席角色客服会话未读之和                | `GET /api/im/service/queue` + `GET /api/im/conversations`    | `im:service:agent` + 队列范围/本人会话成员关系                                 |
 
 “页面可见范围”沿用现有服务端授权：普通账号受租户过滤，超级管理员为跨租户全局。共享 `ConversationView.viewerRole` 暴露当前查看者在会话中的既有成员角色；只有 `ConversationType.Service + viewerRole=agent` 进入客服角标，访客侧客服会话仍进入即时通讯，避免同一账号兼具访客/坐席身份时误分流。
 
@@ -137,6 +137,7 @@ stateDiagram-v2
 
 - 五类菜单到既有接口的计数映射、访客/坐席客服未读分流及静默请求参数。
 - 菜单或 API 权限不足时跳过请求并清零。
+- 未获退款审核权限时不请求 `refund_reviewing`，有权时与待客服订单合计。
 - 单项失败保留旧值，其他角标仍可更新。
 - 客服未读/队列来源部分失败和交错响应互不覆盖。
 - 并发旧响应抑制。

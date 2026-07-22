@@ -1,10 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { OrderStatus, OrderView, PaginatedResult } from '@app/contracts';
-import {
-  ORDER_REPOSITORY,
-  OrderRepository,
-} from '../../domain/order-repository.interface';
-import { toOrderView } from '../order.mapper';
+import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository.interface';
+import { toOwnerOrderView } from '../order.mapper';
 
 /** 用例：分页查询我的订单（可按状态过滤），按创建时间倒序 */
 @Injectable()
@@ -21,12 +18,7 @@ export class ListMyOrdersUseCase {
     skip: number,
     status?: OrderStatus,
   ): Promise<PaginatedResult<OrderView>> {
-    const [rows, total] = await this.orders.paginateByUser(
-      userId,
-      skip,
-      pageSize,
-      status,
-    );
-    return { list: rows.map(toOrderView), total, page, pageSize };
+    const [rows, total] = await this.orders.paginateByUser(userId, skip, pageSize, status);
+    return { list: rows.map(toOwnerOrderView), total, page, pageSize };
   }
 }

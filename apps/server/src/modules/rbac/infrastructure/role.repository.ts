@@ -40,11 +40,14 @@ export class TypeormRoleRepository implements RoleRepository {
     });
   }
 
+  findAllByCode(code: string): Promise<Role[]> {
+    return this.repo.find({ where: { code }, relations: { permissions: true } });
+  }
+
   async existsByCode(code: string): Promise<boolean> {
     return (
-      (await this.repo.countBy(
-        withTenant<Role>(this.tenant, { code }) as FindOptionsWhere<Role>,
-      )) > 0
+      (await this.repo.countBy(withTenant<Role>(this.tenant, { code }) as FindOptionsWhere<Role>)) >
+      0
     );
   }
 
@@ -70,8 +73,6 @@ export class TypeormRoleRepository implements RoleRepository {
   }
 
   async remove(id: string): Promise<void> {
-    await this.repo.delete(
-      withTenant<Role>(this.tenant, { id }) as FindOptionsWhere<Role>,
-    );
+    await this.repo.delete(withTenant<Role>(this.tenant, { id }) as FindOptionsWhere<Role>);
   }
 }

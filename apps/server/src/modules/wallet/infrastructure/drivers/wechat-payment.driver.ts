@@ -1,10 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { PaymentProvider } from '@app/contracts';
-import { Aes, Formatter, Rsa } from 'wechatpay-axios-plugin';
+import { Aes, Rsa } from 'wechatpay-axios-plugin';
 import {
   PaymentCallbackRequest,
   PaymentCallbackResult,
@@ -14,9 +10,8 @@ import {
   RechargeCreateResult,
 } from '../../domain/payment-port.interface';
 import { WechatPayConfig, WechatPayConfigFactory } from './wechat-pay.config';
+import { signWechatPayRequest, WECHAT_PAY_API_BASE } from './wechat-pay.request';
 
-/** 微信支付 v3 API 根地址 */
-const WECHAT_API_BASE = 'https://api.mch.weixin.qq.com';
 /** Native 下单路径 */
 const NATIVE_PATH = '/v3/pay/transactions/native';
 /** 商户订单号查单路径前缀 */
@@ -63,9 +58,7 @@ export class WechatPaymentDriver implements PaymentPort {
 
   constructor(private readonly configFactory: WechatPayConfigFactory) {}
 
-  async createRecharge(
-    input: RechargeCreateInput,
-  ): Promise<RechargeCreateResult> {
+  async createRecharge(input: RechargeCreateInput): Promise<RechargeCreateResult> {
     const cfg = await this.configFactory.load();
     const body = JSON.stringify({
       appid: cfg.appId,
@@ -75,8 +68,8 @@ export class WechatPaymentDriver implements PaymentPort {
       notify_url: input.notifyUrl,
       amount: { total: input.amountFen, currency: 'CNY' },
     });
-    const authorization = this.sign(cfg, 'POST', NATIVE_PATH, body);
-    const resp = await fetch(`${WECHAT_API_BASE}${NATIVE_PATH}`, {
+    const authorization = signWechatPayRequest(cfg, 'POST', NATIVE_PATH, body);
+    const resp = await fetch(`${WECHAT_PAY_API_BASE}${NATIVE_PATH}`, {
       method: 'POST',
       headers: {
         Authorization: authorization,
@@ -93,19 +86,12 @@ export class WechatPaymentDriver implements PaymentPort {
     return { qrCode: data.code_url };
   }
 
-  async parseCallback(
-    req: PaymentCallbackRequest,
-  ): Promise<PaymentCallbackResult> {
+  async parseCallback(req: PaymentCallbackRequest): Promise<PaymentCallbackResult> {
     const cfg = await this.configFactory.load();
     this.verify(cfg, req);
     const envelope = JSON.parse(req.rawBody) as CallbackEnvelope;
     const { ciphertext, nonce, associated_data } = envelope.resource;
-    const plain = Aes.AesGcm.decrypt(
-      ciphertext,
-      cfg.apiV3Key,
-      nonce,
-      associated_data,
-    );
+    const plain = Aes.AesGcm.decrypt(ciphertext, cfg.apiV3Key, nonce, associated_data);
     const resource = JSON.parse(plain) as DecryptedResource;
     return {
       outTradeNo: resource.out_trade_no,
@@ -118,8 +104,8 @@ export class WechatPaymentDriver implements PaymentPort {
   async queryTrade(outTradeNo: string): Promise<PaymentQueryResult> {
     const cfg = await this.configFactory.load();
     const path = `${QUERY_PATH_PREFIX}${encodeURIComponent(outTradeNo)}?mchid=${cfg.mchId}`;
-    const authorization = this.sign(cfg, 'GET', path, '');
-    const resp = await fetch(`${WECHAT_API_BASE}${path}`, {
+    const authorization = signWechatPayRequest(cfg, 'GET', path, '');
+    const resp = await fetch(`${WECHAT_PAY_API_BASE}${path}`, {
       headers: { Authorization: authorization, Accept: 'application/json' },
     });
     // 单据不存在（用户未扫码）等非 200 均视为未支付，交由上层继续轮询
@@ -141,32 +127,10 @@ export class WechatPaymentDriver implements PaymentPort {
     return JSON.stringify({ code: 'SUCCESS', message: '成功' });
   }
 
-  /** 构造请求 Authorization 头（METHOD\nURL\ntimestamp\nnonce\nbody\n 经 RSA 签名） */
-  private sign(
-    cfg: WechatPayConfig,
-    method: string,
-    path: string,
-    body: string,
-  ): string {
-    const nonce = Formatter.nonce();
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-    const message = `${method}\n${path}\n${timestamp}\n${nonce}\n${body}\n`;
-    const signature = Rsa.sign(message, cfg.privateKey);
-    return Formatter.authorization(
-      cfg.mchId,
-      nonce,
-      signature,
-      timestamp,
-      cfg.serial,
-    );
-  }
-
   /** 验证回调签名（timestamp\nnonce\nbody\n 经平台公钥验签） */
   private verify(cfg: WechatPayConfig, req: PaymentCallbackRequest): void {
     if (!cfg.platformPublicKey) {
-      throw new ServiceUnavailableException(
-        '微信支付平台证书未配置，无法校验回调',
-      );
+      throw new ServiceUnavailableException('微信支付平台证书未配置，无法校验回调');
     }
     const timestamp = req.headers['wechatpay-timestamp'] ?? '';
     const nonce = req.headers['wechatpay-nonce'] ?? '';

@@ -68,6 +68,7 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.order.detail]: '订单-详情',
   [PERMS.order.dispatch]: '订单-下发大厅',
   [PERMS.order.assign]: '订单-指派打手',
+  [PERMS.order.refundReview]: '订单-退款审核',
   [PERMS.review.list]: '评论-查询',
   [PERMS.review.moderate]: '评论-显隐',
   [PERMS.review.remove]: '评论-删除',

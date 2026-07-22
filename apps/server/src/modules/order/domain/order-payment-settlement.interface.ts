@@ -20,8 +20,8 @@ export const ORDER_PAYMENT_SETTLEMENT = Symbol('ORDER_PAYMENT_SETTLEMENT');
 
 /**
  * 订单支付事务端口。
- * 返回实体表示本次事务首次完成落账；返回 null 表示订单已由并发请求完成，
- * 调用方仅对首次落账执行会员累计与建群等提交后副作用。
+ * 返回实体表示本次事务首次完成订单、资金、销量与会员累计落账；
+ * 返回 null 表示订单已由并发请求完成，调用方仅补偿建群等提交后副作用。
  */
 export interface OrderPaymentSettlement {
   settle(input: SettleOrderPaymentInput): Promise<OrderEntity | null>;
