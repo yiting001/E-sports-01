@@ -145,6 +145,10 @@ JWT_SECRET=<强随机密钥>
 JWT_REFRESH_SECRET=<强随机密钥>
 ```
 
+`NODE_ENV` 是短信安全门的一部分，必须显式设置为 `development`、`test` 或 `production`；缺失或非法值会让服务启动失败。正式环境必须使用 `production`，不能依赖配置中心关闭开发固定码来弥补错误的运行环境。
+
+生产环境还必须在配置中心把 `sms.provider` 设置为 `aliyun`、`tencent` 或 `volcano` 并配置对应凭证、签名和模板。`sms.development.fixedCode` 在生产环境无条件忽略，`sms.provider=log` 会让发码明确失败，不会把验证码写入日志。
+
 前端关键项：
 
 ```env
@@ -196,13 +200,13 @@ pm2 start apps/server/dist/main.js \
   --update-env
 ```
 
-如果使用项目里的 `ecosystem.config.cjs`：
+项目里的 `ecosystem.config.cjs` 写入了 `NODE_ENV=development`、本机绝对路径和开发数据库配置，**只用于本机联调，禁止用于生产部署**：
 
 ```bash
 pm2 start ecosystem.config.cjs --only e-sports-01-server
 ```
 
-说明：`ecosystem.config.cjs` 内有绝对路径和环境变量，换机器部署前需要改成目标机器路径与真实数据库密码。
+生产环境应使用上方直接启动方式，并由部署平台显式注入 `NODE_ENV=production`、数据库连接和密钥；不要复制本地 ecosystem 文件后只替换数据库密码。
 
 ### 7. 启动前端
 
@@ -313,6 +317,18 @@ pm2 restart e-sports-01-web --update-env
 ```bash
 pm2 list
 ```
+
+## 开发环境固定验证码验收
+
+本地后端使用 `NODE_ENV=development` 时，配置中心会幂等补齐 `sms.development.fixedCode=000000`。开发者仍需使用已绑定且启用的手机号，先点击“发送验证码”，再输入 `000000` 登录；固定码不会绕过账号、租户、Redis TTL、冷却或一次性消费。
+
+需要临时恢复真实短信联调时，在配置中心清空 `sms.development.fixedCode`，并配置真实 `sms.provider`。只选择 `log` 不会真实发送，也不会在日志输出验证码。改回固定码后无需 migration，重启也不会覆盖管理员已保存的值。
+
+部署前应分别确认：
+
+- 开发环境：发码成功后 `000000` 只能登录一次，未发码不能直接登录。
+- 生产环境：即使数据库仍保存 `000000`，固定码也不能登录；`log` 驱动不能发码。
+- 日志：不出现完整手机号、验证码、访问令牌或刷新令牌。
 
 ## 健康检查
 

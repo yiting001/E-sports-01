@@ -1,6 +1,6 @@
 /**
  * 短信服务商标识，与配置中心 sms.provider 取值一一对应。
- * log 为内置「日志/模拟」provider：不真正发短信、把验证码打到日志，便于无密钥联调。
+ * log 为内置「日志/模拟」provider：不发送或输出验证码，仅配合开发固定码联调。
  */
 export enum SmsProvider {
   Aliyun = 'aliyun',

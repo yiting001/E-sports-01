@@ -103,6 +103,8 @@ export const CONFIG_KEYS = {
   sms: {
     /** 当前生效的短信服务商：aliyun / tencent / volcano / log */
     provider: 'sms.provider',
+    /** 仅 development 生效的固定验证码；清空即关闭，生产环境始终忽略 */
+    developmentFixedCode: 'sms.development.fixedCode',
     /** 验证码位数 */
     codeLength: 'sms.code.length',
     /** 验证码有效期（秒） */

@@ -8,15 +8,10 @@ import {
 } from '@nestjs/common';
 import { SmsRegisterPayload, TokenPair } from '@app/contracts';
 import { SmsCodeService } from '../../../sms/application/sms-code.service';
+import { SmsCodePurpose } from '../../../sms/domain/sms-code-scope';
 import { MEMBER_ROLE } from '../../domain/rbac.constants';
-import {
-  ROLE_REPOSITORY,
-  RoleRepository,
-} from '../../domain/role-repository.interface';
-import {
-  USER_REPOSITORY,
-  UserRepository,
-} from '../../domain/user-repository.interface';
+import { ROLE_REPOSITORY, RoleRepository } from '../../domain/role-repository.interface';
+import { USER_REPOSITORY, UserRepository } from '../../domain/user-repository.interface';
 import { PasswordService } from '../../infrastructure/password.service';
 import { TenantResolver } from '../tenant-resolver.service';
 import { TokenService } from '../token.service';
@@ -38,11 +33,14 @@ export class SmsRegisterUseCase {
   ) {}
 
   async execute(payload: SmsRegisterPayload): Promise<TokenPair> {
-    const valid = await this.smsCode.verify(payload.phone, payload.code);
+    const tenantId = await this.tenants.resolveForWrite(payload.tenantCode);
+    const valid = await this.smsCode.verify(payload.phone, payload.code, {
+      purpose: SmsCodePurpose.Register,
+      tenantId,
+    });
     if (!valid) {
       throw new UnauthorizedException('验证码错误或已过期');
     }
-    const tenantId = await this.tenants.resolveForWrite(payload.tenantCode);
     if (await this.userRepo.existsByPhone(payload.phone, undefined, tenantId)) {
       throw new ConflictException('该手机号已注册，请直接登录');
     }

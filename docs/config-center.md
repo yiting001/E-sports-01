@@ -18,6 +18,7 @@
 - **打手入驻公告图**：`booster.onboardingNoticeImage` 在「打手」分组维护，默认空串；C 端不直接读取配置列表，而是由打手模块通过 `GET /booster/mine` 下发给登录用户。
 - **品牌信息**：`system.appName`（软件名称）与 `system.appLogo`（软件图标）可在配置中心修改，并经公开接口 `GET /config/branding` 在登录前下发给前端，用于浏览器标题、favicon、登录页与侧边栏 logo。
 - **用户协议**：`auth.userAgreement`（富文本）在配置中心「认证」组编辑，经公开接口 `GET /config/agreement` 登录前下发；C 端登录/注册页需勾选同意后才可提交，弹层查看全文。
+- **开发短信固定码**：`sms.development.fixedCode` 默认 `000000`，仅服务端 `NODE_ENV=development` 生效；清空即关闭，生产环境始终忽略。
 - **历史迁移（幂等）**：`im.service.welcome` 由 string 改为 richtext 仅纠正类型、保留已编辑内容；`upload.maxFileSize` 旧字节默认值迁移为 MB。
 
 ## 目录结构（DDD 四层）
@@ -129,6 +130,7 @@ sequenceDiagram
 | `upload.ossAccessKeySecret` | Upload | （空） | OSS AccessKeySecret | ✓ |
 | `im.historyLimit` | Im | `50` | 拉取历史消息默认条数 | |
 | `sms.provider` | Sms | `log` | 短信服务商 aliyun/tencent/volcano/log | |
+| `sms.development.fixedCode` | Sms | `000000` | 仅 development 生效的 4～8 位固定验证码；清空关闭 | |
 | `sms.code.length` | Sms | `6` | 验证码位数 | |
 | `sms.code.ttl` | Sms | `300` | 验证码有效期（秒） | |
 | `sms.code.sendInterval` | Sms | `60` | 同号两次发送最小间隔（秒） | |
@@ -141,6 +143,8 @@ sequenceDiagram
 | `sms.volcano.smsAccount` / `signName` / `templateId` / `region` | Sms | — | 火山引擎账号/签名/模板/地域 | |
 
 > 标记为密钥（`secret: true`）的配置项，列表查询时值会被脱敏为 `******`，不会明文返回前端。短信详见 [sms.md](./sms.md)。
+
+`sms.development.fixedCode` 由现有播种器幂等新增，不覆盖数据库中的已有配置，也不需要 migration。该配置不能单独开启固定码：只有引导级 `NODE_ENV=development` 与非空合法配置同时满足时才生效；`test`、`production` 始终走标准短信流程，且生产环境禁止日志短信驱动。需要持久关闭时应把值保存为空串；若直接删除配置项，下一次启动会被播种器重新补为默认值。
 
 ## 首页横幅配置迁移
 
