@@ -4,6 +4,7 @@ import { computed, ref } from 'vue';
 import { authApi } from '@/api/auth.api';
 import { tokenStorage } from '@/api/token-storage';
 import { useCheckoutDraftStore } from '@/stores/checkout-draft.store';
+import { useMemberStore } from '@/stores/member.store';
 
 /**
  * C 端鉴权状态。
@@ -23,6 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
     authed.value = false;
     profile.value = null;
     useCheckoutDraftStore().clearOrderContext();
+    useMemberStore().reset();
   }
 
   tokenStorage.onChange(() => {

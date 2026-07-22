@@ -3,16 +3,18 @@
  * 我的页头部：切角头像框（已设头像展示图片）+ 登录入口/昵称 + 等级徽章 + 身份切换。
  * 已登录时点头像/设置进入个人信息编辑页（含退出登录）；未登录时点击「立即登录」跳登录页。
  * 拥有打手角色时可在「老板/打手」身份间切换（导航随之变化），
- * 未入驻时点切换引导去打手入驻。登录态与资料统一取自 auth.store。
+ * 未入驻时点切换引导去打手入驻。登录资料取自 auth.store，会员等级取自 member.store。
  */
 import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { useToast } from '@/composables/use-toast';
 import { useAuthStore } from '@/stores/auth.store';
+import { useMemberStore } from '@/stores/member.store';
 import { useRoleStore } from '@/stores/role.store';
 
 const auth = useAuthStore();
+const member = useMemberStore();
 const role = useRoleStore();
 const toast = useToast();
 const router = useRouter();
@@ -110,12 +112,16 @@ function onSwitch(): void {
           >
             {{ displayName }}
           </span>
-          <span class="level">
+          <span
+            v-if="auth.isAuthenticated && member.mine && !member.loading && !member.loadError"
+            class="level"
+            data-testid="profile-member-level"
+          >
             <AppIcon
               name="gem"
               :size="12"
             />
-            Lv.1
+            Lv.{{ member.mine.level }}
           </span>
         </div>
         <p class="uid">

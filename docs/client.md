@@ -14,7 +14,7 @@
 - **品牌配置共用**：C 端软件名称/图标与管理端共用配置中心品牌配置（`system.appName` / `system.appLogo`，公开接口 `GET /config/branding`）；启动即拉取（`stores/branding.store.ts`），登录页与 PC 顶部导航展示配置名称/图标（未配图标回退默认徽标），浏览器标题按「页标题 · 软件名称」拼合并同步 favicon。
 - **用户协议**：登录/注册均需勾选「我已阅读并同意《用户协议》」才可提交；协议正文为后台配置中心富文本（`auth.userAgreement` 键），公开接口 `GET /config/agreement` 登录前可读，弹层（`AgreementDialog`）内 DOMPurify 消毒后展示。
 - **登录守卫**：访问带 `meta.requiresAuth` 的页面（我的 / 消息）未登录时自动重定向到 `/login` 并带 `redirect` 回跳地址；已登录再访问登录页直接回首页。
-- **登录态展示**：「我的」页头部登录后展示昵称与用户 ID 并提供退出登录；未登录展示「立即登录」入口；PC 端个人页采用左右两列，右侧订单与更多功能紧凑衔接。
+- **登录态展示**：「我的」页头部登录后展示昵称与用户 ID 并提供退出登录；头像旁会员等级徽标与会员卡共用 `member.store` 的服务端权威等级，失败时不伪造 `Lv.1`。未登录展示「立即登录」入口；PC 端个人页采用左右两列，右侧订单与更多功能紧凑衔接。
 - **更多功能网格（全部落地）**：领券中心 `/coupons/center`、我的优惠券 `/coupons/mine`、会员等级 `/member/levels`、排行榜 `/rank`、福利活动 `/activities`（详情 `/activities/:id`）、打手入驻 `/profile/booster`、实名认证 `/profile/realname`（复用 realname 模块接口，打手等级卡/入驻页未实名时同步引导）、公告通知 `/notices`、搭建同款电竞系统 `/build`（介绍页 + 在线客服咨询入口）；入口 → 路由映射见 `components/profile/FeatureGrid.vue` 的 `ENTRY_ROUTES`。
 - **打手完整入驻表单**：登录用户填写姓名、性别、1～2 个接单区服、自我介绍、联系方式，可选上传一张材料图和填写邀请码；未申请 / 已驳回可提交，审核中 / 已通过只读展示。顶部公告图由配置中心 `booster.onboardingNoticeImage` 下发，驳回时保留资料并显示理由。
 - **挑选打手与主页**：首页第三个快捷入口进入 `/boosters`；支持按完整/部分打手 ID 或昵称搜索、性别与结算区服筛选、分页加载、空态/失败重试。卡片展示安全显示名、头像、等级、完成单数、区服、打手自主接单状态和不可选原因；点击头像/名称进入 `/boosters/:userId` 主页。
@@ -46,6 +46,8 @@ apps/client/src
 ├─ utils/http-error.ts     # 统一错误信息提取
 ├─ utils/media-url.ts      # 相对路径 / 历史本机媒体地址归一化（含富文本媒体）
 ├─ stores/auth.store.ts    # 鉴权状态：令牌生命周期 + 当前用户档案
+├─ stores/member.store.ts  # 个人中心会员等级单一来源 + 登出会话隔离
+├─ stores/member.store.spec.ts # 真实等级、失败重试与晚到响应测试
 ├─ router
 │  ├─ index.ts             # 路由表：登录、商品/结算、挑人目录/主页与 requiresAuth 页面
 │  └─ guard.ts             # 全局前置守卫（未登录拦截并带 redirect）
