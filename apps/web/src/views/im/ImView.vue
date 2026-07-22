@@ -109,11 +109,7 @@ watch(searchKeyword, (value) => {
 async function selectConversation(id: string): Promise<void> {
   activeId.value = id;
   messages.value = await im.join(id);
-  const item = conversations.value.find((c) => c.id === id);
-  if (item) {
-    item.unread = 0;
-    syncUnreadBadges();
-  }
+  markActiveConversationRead();
   // 成员清单供聊天面板 @选择与引用预览解析用户名
   detail.value = await imApi.conversationDetail(id);
 }
@@ -255,9 +251,11 @@ async function markConversationRead(
   item: ConversationView,
   messageId: string
 ): Promise<void> {
-  item.unread = 0;
-  syncUnreadBadges();
-  await im.markRead(item.id, messageId);
+  const marked = await im.markRead(item.id, messageId);
+  if (marked) {
+    item.unread = 0;
+    syncUnreadBadges();
+  }
 }
 
 function markActiveConversationRead(): void {
@@ -266,7 +264,7 @@ function markActiveConversationRead(): void {
   }
   const item = conversations.value.find((entry) => entry.id === activeId.value);
   const lastVisibleMessage = messages.value.at(-1);
-  if (item?.unread && lastVisibleMessage) {
+  if (item && lastVisibleMessage?.conversationId === activeId.value) {
     void markConversationRead(item, lastVisibleMessage.id);
   }
 }

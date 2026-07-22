@@ -12,6 +12,6 @@ export const useUnreadStore = defineBadgeStore('unread', async () => {
   if (!auth.isAuthenticated) {
     return 0;
   }
-  const list = await imApi.listConversations();
+  const list = await imApi.listConversations({ silent: true });
   return list.reduce((sum, conv) => sum + conv.unread, 0);
 });

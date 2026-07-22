@@ -16,8 +16,12 @@ import { useUnreadStore } from '@/stores/unread.store';
 
 const router = useRouter();
 const auth = useAuthStore();
-const badges = [useUnreadStore(), useHallBadgeStore()];
-const presence = createPresenceSocket();
+const unread = useUnreadStore();
+const badges = [unread, useHallBadgeStore()];
+const presence = createPresenceSocket({
+  onConversationChanged: () => void unread.refresh(),
+  onUnreadChanged: () => void unread.refresh(),
+});
 
 /** 登录/登出时同步在线连接；首次打开时也按本地令牌立即建立。 */
 const stopPresenceWatch = watch(
@@ -25,8 +29,10 @@ const stopPresenceWatch = watch(
   (authenticated) => {
     if (authenticated) {
       presence.connect();
+      badges.forEach((badge) => void badge.refresh());
     } else {
       presence.disconnect();
+      badges.forEach((badge) => badge.setTotal(0));
     }
   },
   { immediate: true },
@@ -37,10 +43,18 @@ const removeAfterEach = router.afterEach(() => {
   badges.forEach((badge) => void badge.refresh());
 });
 
+/** 从后台恢复页面时刷新，作为断线或浏览器节流期间的兜底。 */
+function refreshVisibleBadges(): void {
+  if (document.visibilityState === 'visible') {
+    badges.forEach((badge) => void badge.refresh());
+  }
+}
+
 onMounted(() => {
   void useBrandingStore().load();
   void usePortalStore().load();
   badges.forEach((badge) => badge.startPolling());
+  document.addEventListener('visibilitychange', refreshVisibleBadges);
 });
 
 onBeforeUnmount(() => {
@@ -48,6 +62,7 @@ onBeforeUnmount(() => {
   stopPresenceWatch();
   presence.dispose();
   badges.forEach((badge) => badge.stopPolling());
+  document.removeEventListener('visibilitychange', refreshVisibleBadges);
 });
 </script>
 

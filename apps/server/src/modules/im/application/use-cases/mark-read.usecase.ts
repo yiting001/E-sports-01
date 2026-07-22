@@ -26,6 +26,6 @@ export class MarkReadUseCase {
     if (!message || message.conversationId !== conversationId) {
       throw new BadRequestException('已读消息不属于当前会话');
     }
-    await this.members.updateLastRead(conversationId, userId, message.createdAt);
+    await this.members.updateLastReadToMessage(conversationId, userId, messageId);
   }
 }

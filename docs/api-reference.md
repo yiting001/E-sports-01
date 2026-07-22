@@ -121,6 +121,9 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | `im:joined` | S→C | `{ conversationId }` |
 | `im:send` | C→S | `{ conversationId, type, content }` |
 | `im:receive` | S→C | `ChatMessage` |
+| `im:mark-read` | C→S | `{ conversationId, messageId }` → ACK `boolean` |
+| `im:conversation` | S→C | `ConversationView`，个人会话新增/变更信号 |
+| `im:unread:changed` | S→C | `null`，个人未读变化刷新信号，不含消息正文 |
 | `im:error` | S→C | `{ message }` |
 
 ## Observability 日志

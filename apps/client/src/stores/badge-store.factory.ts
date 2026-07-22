@@ -14,18 +14,45 @@ export function defineBadgeStore(id: string, fetchTotal: () => Promise<number>) 
     /** 角标数量 */
     const total = ref(0);
     let timer: number | null = null;
+    let refreshVersion = 0;
+    let refreshQueued = false;
+    let refreshInFlight: Promise<void> | null = null;
 
-    /** 拉取最新数量；失败时保留上一次的值等待下次轮询 */
-    async function refresh(): Promise<void> {
-      try {
-        total.value = await fetchTotal();
-      } catch {
-        // 静默失败：保留上一次的数量
+    /** 合并突发刷新信号；并发期间最多尾随一轮，且只有最新代次可以落状态。 */
+    async function runRefresh(initialVersion: number): Promise<void> {
+      let version = initialVersion;
+      while (true) {
+        refreshQueued = false;
+        try {
+          const nextTotal = await fetchTotal();
+          if (version === refreshVersion) {
+            total.value = nextTotal;
+          }
+        } catch {
+          // 背景刷新失败时保留上一次有效数量，由实时信号或轮询重试。
+        }
+        if (!refreshQueued) {
+          return;
+        }
+        version = refreshVersion;
       }
     }
 
-    /** 直接设置数量（页面已持有列表数据时本地同步，免发请求） */
+    function refresh(): Promise<void> {
+      const version = ++refreshVersion;
+      if (refreshInFlight) {
+        refreshQueued = true;
+        return refreshInFlight;
+      }
+      refreshInFlight = runRefresh(version).finally(() => {
+        refreshInFlight = null;
+      });
+      return refreshInFlight;
+    }
+
+    /** 直接设置数量并废弃在途旧响应，避免已读后的本地结果被覆盖。 */
     function setTotal(value: number): void {
+      refreshVersion += 1;
       total.value = value;
     }
 

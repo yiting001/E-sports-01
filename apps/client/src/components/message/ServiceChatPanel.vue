@@ -21,7 +21,9 @@ import { useChatCompose } from '@/composables/use-chat-compose';
 import { imApi } from '@/api/im.api';
 import { uploadApi } from '@/api/upload.api';
 import { createImSocket } from '@/composables/use-im-socket';
+import { createVisibleMessageRead } from '@/composables/use-visible-message-read';
 import { useAuthStore } from '@/stores/auth.store';
+import { useUnreadStore } from '@/stores/unread.store';
 import { useToast } from '@/composables/use-toast';
 import './ServiceChatPanel.css';
 
@@ -54,6 +56,7 @@ const emit = defineEmits<{
 }>();
 
 const auth = useAuthStore();
+const unread = useUnreadStore();
 const toast = useToast();
 let socket = createImSocket();
 
@@ -67,6 +70,12 @@ const scrollArea = ref<HTMLElement | null>(null);
 const compose = useChatCompose(draft);
 const imageInput = ref<HTMLInputElement | null>(null);
 const videoInput = ref<HTMLInputElement | null>(null);
+const visibleRead = createVisibleMessageRead({
+  activeConversationId: () => activeConversation.value?.id ?? '',
+  latestMessage: () => messages.value.at(-1),
+  markRead: (conversationId, messageId) => socket.markRead(conversationId, messageId),
+  onMarked: () => void unread.refresh(),
+});
 
 /** 会话状态文案：待接入 / 服务中 / 已结束 */
 const statusText = computed(() => {
@@ -177,14 +186,17 @@ async function joinConversation(target: ConversationView | null): Promise<void> 
         messages.value.push(message);
         emit('message', message);
         await scrollToBottom();
+        await visibleRead.confirm(message);
       }
     });
     socket.onError((err) => toast.show(err.message));
     messages.value = await socket.join(target.id);
     activeConversationId.value = target.id;
+    void unread.refresh();
     void loadMembers(target.id);
     emit('ready', target);
     await scrollToBottom();
+    await visibleRead.confirm();
   } catch {
     toast.show('客服接入失败，请稍后重试');
   } finally {
@@ -256,6 +268,7 @@ async function sendMedia(
 }
 
 onMounted(() => {
+  visibleRead.start();
   void setupConversation();
 });
 
@@ -266,7 +279,10 @@ watch(
   },
 );
 
-onBeforeUnmount(() => socket.disconnect());
+onBeforeUnmount(() => {
+  visibleRead.dispose();
+  socket.disconnect();
+});
 </script>
 
 <template>
