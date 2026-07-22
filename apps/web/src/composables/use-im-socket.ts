@@ -10,6 +10,8 @@ import { io, type Socket } from "socket.io-client";
 import { ENV } from "@/config/env";
 import { tokenStorage } from "@/api/token-storage";
 
+const MARK_READ_ACK_TIMEOUT_MS = 5_000;
+
 /**
  * IM 客户端封装。
  * 复用 RBAC 访问令牌完成握手鉴权，连接 /im 命名空间；
@@ -44,14 +46,21 @@ export function createImSocket() {
     conversationId: string,
     messageId: string
   ): Promise<boolean> {
-    if (!socket) {
+    const activeSocket = socket;
+    if (!activeSocket) {
       return Promise.resolve(false);
     }
     const payload: MarkReadPayload = { conversationId, messageId };
     return new Promise((resolve) => {
-      socket?.emit(IM_EVENTS.markRead, payload, (marked: boolean) => {
-        resolve(marked === true);
-      });
+      activeSocket
+        .timeout(MARK_READ_ACK_TIMEOUT_MS)
+        .emit(
+          IM_EVENTS.markRead,
+          payload,
+          (error: Error | null, marked: boolean) => {
+            resolve(!error && marked === true);
+          }
+        );
     });
   }
 

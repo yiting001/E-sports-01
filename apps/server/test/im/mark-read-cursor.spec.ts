@@ -11,10 +11,18 @@ import { TenantContextService } from '../../src/shared/tenant/tenant-context.ser
 
 interface FakeUpdateBuilder {
   update(): FakeUpdateBuilder;
-  set(values: { lastReadAt: Date }): FakeUpdateBuilder;
+  set(values: { lastReadAt: () => string }): FakeUpdateBuilder;
   where(scope: Record<string, string>): FakeUpdateBuilder;
-  andWhere(condition: string, params: { at: Date }): FakeUpdateBuilder;
+  andWhere(condition: string): FakeUpdateBuilder;
+  setParameters(params: Record<string, string>): FakeUpdateBuilder;
   execute(): Promise<UpdateResult>;
+}
+
+interface FakeCursorBuilder {
+  getParameters(): Record<string, string>;
+  getQuery(): string;
+  select(selection: string): FakeCursorBuilder;
+  where(condition: string, params: Record<string, string>): FakeCursorBuilder;
 }
 
 test('已读用例只使用已确认消息时间并拒绝跨会话消息游标', async () => {
@@ -27,13 +35,16 @@ test('已读用例只使用已确认消息时间并拒绝跨会话消息游标',
   message.conversationId = 'conversation-1';
   message.createdAt = new Date('2026-07-22T01:02:03.000Z');
 
-  const updates: Array<{ at: Date; conversationId: string; userId: string }> = [];
-  const members: Pick<ConversationMemberRepository, 'findOne' | 'updateLastRead'> = {
+  const updates: Array<{ conversationId: string; messageId: string; userId: string }> = [];
+  const members: Pick<
+    ConversationMemberRepository,
+    'findOne' | 'updateLastReadToMessage'
+  > = {
     async findOne() {
       return member;
     },
-    async updateLastRead(conversationId, userId, at) {
-      updates.push({ at, conversationId, userId });
+    async updateLastReadToMessage(conversationId, userId, messageId) {
+      updates.push({ conversationId, messageId, userId });
     },
   };
   const messages: Pick<MessageRepository, 'findById'> = {
@@ -50,8 +61,8 @@ test('已读用例只使用已确认消息时间并拒绝跨会话消息游标',
 
   assert.deepEqual(updates, [
     {
-      at: message.createdAt,
       conversationId: 'conversation-1',
+      messageId: 'message-1',
       userId: 'user-1',
     },
   ]);
@@ -66,11 +77,31 @@ test('已读用例只使用已确认消息时间并拒绝跨会话消息游标',
 
 test('TypeORM 已读更新带租户条件且只允许 lastReadAt 单调前进', async () => {
   const calls: {
-    condition?: string;
-    conditionParams?: { at: Date };
+    conditions: string[];
+    cursorCondition?: string;
+    cursorParams?: Record<string, string>;
+    cursorSelection?: string;
+    parameters?: Record<string, string>;
     scope?: Record<string, string>;
-    values?: { lastReadAt: Date };
-  } = {};
+    values?: { lastReadAt: () => string };
+  } = { conditions: [] };
+  const cursorBuilder: FakeCursorBuilder = {
+    getParameters() {
+      return calls.cursorParams ?? {};
+    },
+    getQuery() {
+      return 'SELECT message.created_at FROM sys_chat_message message';
+    },
+    select(selection) {
+      calls.cursorSelection = selection;
+      return cursorBuilder;
+    },
+    where(condition, params) {
+      calls.cursorCondition = condition;
+      calls.cursorParams = params;
+      return cursorBuilder;
+    },
+  };
   const builder: FakeUpdateBuilder = {
     update() {
       return builder;
@@ -83,9 +114,12 @@ test('TypeORM 已读更新带租户条件且只允许 lastReadAt 单调前进', 
       calls.scope = scope;
       return builder;
     },
-    andWhere(condition, params) {
-      calls.condition = condition;
-      calls.conditionParams = params;
+    andWhere(condition) {
+      calls.conditions.push(condition);
+      return builder;
+    },
+    setParameters(params) {
+      calls.parameters = params;
       return builder;
     },
     async execute(): Promise<UpdateResult> {
@@ -93,6 +127,11 @@ test('TypeORM 已读更新带租户条件且只允许 lastReadAt 单调前进', 
     },
   };
   const ormRepository = {
+    manager: {
+      createQueryBuilder() {
+        return cursorBuilder;
+      },
+    },
     createQueryBuilder() {
       return builder;
     },
@@ -102,10 +141,8 @@ test('TypeORM 已读更新带租户条件且只允许 lastReadAt 单调前进', 
     ormRepository as unknown as Repository<ConversationMemberEntity>,
     tenant,
   );
-  const at = new Date('2026-07-22T02:03:04.000Z');
-
   await tenant.run({ isSuper: false, tenantId: 'tenant-1' }, () =>
-    repository.updateLastRead('conversation-1', 'user-1', at),
+    repository.updateLastReadToMessage('conversation-1', 'user-1', 'message-1'),
   );
 
   assert.deepEqual(calls.scope, {
@@ -113,7 +150,19 @@ test('TypeORM 已读更新带租户条件且只允许 lastReadAt 单调前进', 
     tenantId: 'tenant-1',
     userId: 'user-1',
   });
-  assert.deepEqual(calls.values, { lastReadAt: at });
-  assert.equal(calls.condition, '(last_read_at IS NULL OR last_read_at < :at)');
-  assert.deepEqual(calls.conditionParams, { at });
+  assert.equal(calls.cursorSelection, 'message.createdAt');
+  assert.match(calls.cursorCondition ?? '', /message.tenantId = :cursorTenantId/);
+  assert.deepEqual(calls.cursorParams, {
+    cursorConversationId: 'conversation-1',
+    cursorMessageId: 'message-1',
+    cursorTenantId: 'tenant-1',
+  });
+  assert.equal(
+    calls.values?.lastReadAt(),
+    '(SELECT message.created_at FROM sys_chat_message message)',
+  );
+  assert.equal(calls.conditions.length, 2);
+  assert.match(calls.conditions[0] ?? '', /IS NOT NULL/);
+  assert.match(calls.conditions[1] ?? '', /last_read_at < \(SELECT/);
+  assert.deepEqual(calls.parameters, calls.cursorParams);
 });

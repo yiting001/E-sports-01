@@ -23,8 +23,8 @@ export interface MessageRepository {
   findRecent(conversationId: string, limit: number): Promise<ChatMessageEntity[]>;
   /** 会话最后一条消息，供会话列表预览 */
   findLatest(conversationId: string): Promise<ChatMessageEntity | null>;
-  /** 某时间点之后的消息条数，供未读数计算（since 为空表示统计全部） */
-  countSince(conversationId: string, since: Date | null): Promise<number>;
+  /** 在数据库内按成员精确已读位点计算未读，保留时间戳微秒精度。 */
+  countUnread(conversationId: string, userId: string): Promise<number>;
   /** 按关键词/日期范围搜索会话内消息（新→旧分页返回） */
   search(
     filter: MessageSearchFilter,

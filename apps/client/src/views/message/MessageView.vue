@@ -46,9 +46,9 @@ function formatTime(ts: number): string {
   });
 }
 
-/** 本地会话列表变化后同步导航未读角标（免额外请求） */
-function syncUnreadBadge(): void {
-  unreadStore.setTotal(conversations.value.reduce((sum, conv) => sum + conv.unread, 0));
+/** 本地列表可能滞后于全局事件，始终刷新服务端权威未读数。 */
+function refreshUnreadBadge(): void {
+  void unreadStore.refresh();
 }
 
 function isDesktopLayout(): boolean {
@@ -77,7 +77,7 @@ function openConversation(conv: ConversationView): void {
       conversations.value.splice(index, 1, next);
     }
     selectedConversation.value = next;
-    syncUnreadBadge();
+    refreshUnreadBadge();
     return;
   }
   router.push({ name: 'chat', params: { id: conv.id } });
@@ -92,7 +92,7 @@ function upsertConversation(conv: ConversationView): void {
     conversations.value.unshift(next);
   }
   selectedConversation.value = next;
-  syncUnreadBadge();
+  refreshUnreadBadge();
 }
 
 function onChatMessage(message: ChatMessage): void {
@@ -112,7 +112,7 @@ function onChatMessage(message: ChatMessage): void {
   if (isSelected) {
     selectedConversation.value = next;
   }
-  syncUnreadBadge();
+  refreshUnreadBadge();
 }
 
 onMounted(async () => {
@@ -121,7 +121,7 @@ onMounted(async () => {
   try {
     conversations.value = await imApi.listConversations();
     selectDefaultConversation();
-    syncUnreadBadge();
+    refreshUnreadBadge();
   } finally {
     loading.value = false;
   }

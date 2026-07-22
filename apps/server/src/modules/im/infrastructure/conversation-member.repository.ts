@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import type { FindOptionsWhere } from 'typeorm';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
 import { withTenant } from '../../../shared/tenant/tenant-scope.util';
+import { ChatMessageEntity } from '../domain/message.entity';
 import { ConversationMemberEntity } from '../domain/conversation-member.entity';
 import { ConversationMemberRepository } from '../domain/conversation-member-repository.interface';
 
@@ -63,17 +64,41 @@ export class TypeormConversationMemberRepository implements ConversationMemberRe
     );
   }
 
-  async updateLastRead(conversationId: string, userId: string, at: Date): Promise<void> {
+  async updateLastReadToMessage(
+    conversationId: string,
+    userId: string,
+    messageId: string,
+  ): Promise<void> {
     const scope = withTenant<ConversationMemberEntity>(this.tenant, {
       conversationId,
       userId,
     }) as FindOptionsWhere<ConversationMemberEntity>;
+    const cursorParams: Record<string, string> = {
+      cursorConversationId: conversationId,
+      cursorMessageId: messageId,
+    };
+    const cursorConditions = [
+      'message.id = :cursorMessageId',
+      'message.conversationId = :cursorConversationId',
+    ];
+    const tenantId = this.tenant.scopeId();
+    if (tenantId) {
+      cursorConditions.push('message.tenantId = :cursorTenantId');
+      cursorParams.cursorTenantId = tenantId;
+    }
+    const cursorQuery = this.repo.manager
+      .createQueryBuilder(ChatMessageEntity, 'message')
+      .select('message.createdAt')
+      .where(cursorConditions.join(' AND '), cursorParams);
+    const cursorSql = `(${cursorQuery.getQuery()})`;
     await this.repo
       .createQueryBuilder()
       .update(ConversationMemberEntity)
-      .set({ lastReadAt: at })
+      .set({ lastReadAt: () => cursorSql })
       .where(scope)
-      .andWhere('(last_read_at IS NULL OR last_read_at < :at)', { at })
+      .andWhere(`${cursorSql} IS NOT NULL`)
+      .andWhere(`(last_read_at IS NULL OR last_read_at < ${cursorSql})`)
+      .setParameters(cursorQuery.getParameters())
       .execute();
   }
 }

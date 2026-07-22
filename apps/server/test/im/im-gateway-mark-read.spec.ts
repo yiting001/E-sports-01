@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { IM_EVENTS, PERMS } from '@app/contracts';
+import type { ChatMessage } from '@app/contracts';
+import { IM_EVENTS, MessageType, PERMS } from '@app/contracts';
 import { ChatRealtimeService } from '../../src/modules/im/application/chat-realtime.service';
 import type { ConversationAccessService } from '../../src/modules/im/application/conversation-access.service';
 import type { GetHistoryUseCase } from '../../src/modules/im/application/use-cases/get-history.usecase';
@@ -45,6 +46,25 @@ test('成员标记已读成功调用用例，越权失败不推进已读位点',
   ]);
 });
 
+test('加入会话只返回历史，不在页面可见确认前提前标记已读', async () => {
+  const historyMessage: ChatMessage = {
+    id: 'message-history-1',
+    conversationId: 'conversation-1',
+    senderId: 'user-2',
+    type: MessageType.Text,
+    content: '历史消息',
+    mentions: null,
+    replyTo: null,
+    createdAt: 1,
+  };
+  const harness = await createGatewayHarness(false, false, [historyMessage]);
+
+  const history = await harness.gateway.onJoin(harness.socket, 'conversation-1');
+
+  assert.deepEqual(history, [historyMessage]);
+  assert.deepEqual(harness.markReadCalls, []);
+});
+
 test('布局观察客服队列不参与自动分配，工作台订阅才登记在线坐席', async () => {
   const harness = await createGatewayHarness(false, true);
 
@@ -61,6 +81,7 @@ test('布局观察客服队列不参与自动分配，工作台订阅才登记�
 async function createGatewayHarness(
   denyAccess: boolean,
   serviceAgent = false,
+  historyMessages: ChatMessage[] = [],
 ): Promise<{
   accessChecks: string[];
   emitted: EmittedEvent[];
@@ -115,7 +136,7 @@ async function createGatewayHarness(
   };
   const history: Pick<GetHistoryUseCase, 'execute'> = {
     async execute() {
-      return [];
+      return historyMessages;
     },
   };
   const emitted: EmittedEvent[] = [];

@@ -4,13 +4,13 @@ import {
   Between,
   ILike,
   LessThanOrEqual,
-  MoreThan,
   MoreThanOrEqual,
   Repository,
 } from 'typeorm';
 import type { FindOperator, FindOptionsWhere } from 'typeorm';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
 import { withTenant } from '../../../shared/tenant/tenant-scope.util';
+import { ConversationMemberEntity } from '../domain/conversation-member.entity';
 import { ChatMessageEntity } from '../domain/message.entity';
 import {
   MessageRepository,
@@ -55,13 +55,24 @@ export class TypeormMessageRepository implements MessageRepository {
     });
   }
 
-  countSince(conversationId: string, since: Date | null): Promise<number> {
-    return this.repo.countBy(
-      withTenant<ChatMessageEntity>(this.tenant, {
-        conversationId,
-        ...(since ? { createdAt: MoreThan(since) } : {}),
-      }) as FindOptionsWhere<ChatMessageEntity>,
-    );
+  countUnread(conversationId: string, userId: string): Promise<number> {
+    const query = this.repo
+      .createQueryBuilder('message')
+      .innerJoin(
+        ConversationMemberEntity,
+        'member',
+        'member.conversationId = message.conversationId AND member.userId = :viewerId',
+        { viewerId: userId },
+      )
+      .where('message.conversationId = :conversationId', { conversationId })
+      .andWhere('(member.lastReadAt IS NULL OR message.createdAt > member.lastReadAt)');
+    const tenantId = this.tenant.scopeId();
+    if (tenantId) {
+      query
+        .andWhere('message.tenantId = :unreadTenantId', { unreadTenantId: tenantId })
+        .andWhere('member.tenantId = :unreadTenantId', { unreadTenantId: tenantId });
+    }
+    return query.getCount();
   }
 
   async search(

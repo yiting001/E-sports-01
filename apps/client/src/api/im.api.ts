@@ -3,7 +3,7 @@ import type {
   ConversationView,
   StartServicePayload,
 } from '@app/contracts';
-import { http } from './http';
+import { http, type RequestOptions } from './http';
 
 /**
  * C 端 IM REST 接口。
@@ -12,8 +12,8 @@ import { http } from './http';
  */
 export const imApi = {
   /** 我的会话列表（含客服会话，用于复用进行中的客服会话，避免重复发起） */
-  listConversations(): Promise<ConversationView[]> {
-    return http.get('/im/conversations');
+  listConversations(options: RequestOptions = {}): Promise<ConversationView[]> {
+    return http.get('/im/conversations', options);
   },
 
   /** 会话详情（含成员清单），供聊天 @成员选择 */

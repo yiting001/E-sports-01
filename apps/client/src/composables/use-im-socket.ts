@@ -1,8 +1,10 @@
-import type { ChatMessage, SendMessagePayload } from '@app/contracts';
+import type { ChatMessage, MarkReadPayload, SendMessagePayload } from '@app/contracts';
 import { IM_EVENTS } from '@app/contracts';
 import { io, type Socket } from 'socket.io-client';
 import { ENV } from '@/config/env';
 import { tokenStorage } from '@/api/token-storage';
+
+const MARK_READ_ACK_TIMEOUT_MS = 5_000;
 
 /**
  * C 端 IM 客户端封装（仅联系客服场景）。
@@ -33,6 +35,22 @@ export function createImSocket() {
     socket?.emit(IM_EVENTS.send, payload);
   }
 
+  /** 当前页面确认消息可见后推进服务端已读位点，返回服务端确认结果。 */
+  function markRead(conversationId: string, messageId: string): Promise<boolean> {
+    const activeSocket = socket;
+    if (!activeSocket) {
+      return Promise.resolve(false);
+    }
+    const payload: MarkReadPayload = { conversationId, messageId };
+    return new Promise((resolve) => {
+      activeSocket
+        .timeout(MARK_READ_ACK_TIMEOUT_MS)
+        .emit(IM_EVENTS.markRead, payload, (error: Error | null, marked: boolean) => {
+          resolve(!error && marked === true);
+        });
+    });
+  }
+
   function onReceive(handler: (message: ChatMessage) => void): void {
     socket?.on(IM_EVENTS.receive, handler);
   }
@@ -46,5 +64,5 @@ export function createImSocket() {
     socket = null;
   }
 
-  return { connect, join, send, onReceive, onError, disconnect };
+  return { connect, join, send, markRead, onReceive, onError, disconnect };
 }

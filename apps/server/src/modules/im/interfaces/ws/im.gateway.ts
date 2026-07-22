@@ -135,10 +135,6 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
       }
       await socket.join(this.realtime.conversationRoom(conversationId));
       const history = await this.getHistory.execute(conversationId);
-      const lastVisibleMessage = history.at(-1);
-      if (lastVisibleMessage) {
-        await this.markRead.execute(conversationId, socket.data.userId, lastVisibleMessage.id);
-      }
       socket.emit(IM_EVENTS.joined, { conversationId });
       return history;
     });

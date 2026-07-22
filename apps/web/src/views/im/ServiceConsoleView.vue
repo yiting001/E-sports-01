@@ -76,6 +76,7 @@ async function claim(item: ServiceQueueItemView): Promise<void> {
   messages.value = await im.join(view.id);
   await menuBadges.refresh([MENU_BADGE_CODES.service]);
   await scrollToBottom();
+  await markActiveConversationRead();
 }
 
 function send(): void {
@@ -135,6 +136,7 @@ async function markActiveConversationRead(): Promise<void> {
   if (
     !activeId.value ||
     !lastVisibleMessage ||
+    lastVisibleMessage.conversationId !== activeId.value ||
     document.visibilityState !== "visible"
   ) {
     return;

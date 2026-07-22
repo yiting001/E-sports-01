@@ -33,8 +33,8 @@ test('会话列表视图返回当前查看者成员角色供访客与坐席角�
       return viewer;
     },
   };
-  const messages: Pick<MessageRepository, 'countSince' | 'findLatest'> = {
-    async countSince() {
+  const messages: Pick<MessageRepository, 'countUnread' | 'findLatest'> = {
+    async countUnread() {
       return 3;
     },
     async findLatest() {

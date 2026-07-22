@@ -39,15 +39,12 @@ export class ConversationViewAssembler {
     conversation: ConversationEntity,
     viewerId: string,
   ): Promise<ConversationView> {
-    const [memberCount, latest, viewer] = await Promise.all([
+    const [memberCount, latest, viewer, unread] = await Promise.all([
       this.members.countByConversation(conversation.id),
       this.messages.findLatest(conversation.id),
       this.members.findOne(conversation.id, viewerId),
+      this.messages.countUnread(conversation.id, viewerId),
     ]);
-    const unread = await this.messages.countSince(
-      conversation.id,
-      viewer?.lastReadAt ?? null,
-    );
     return {
       id: conversation.id,
       type: conversation.type,

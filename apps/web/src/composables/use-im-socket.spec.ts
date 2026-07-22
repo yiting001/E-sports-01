@@ -6,6 +6,7 @@ const socketMocks = vi.hoisted(() => ({
   disconnect: vi.fn(),
   emit: vi.fn(),
   on: vi.fn(),
+  timeout: vi.fn(),
 }));
 
 const ioMock = vi.hoisted(() => vi.fn(() => socketMocks));
@@ -20,6 +21,7 @@ beforeEach(() => {
   for (const mock of Object.values(socketMocks)) {
     mock.mockReset();
   }
+  socketMocks.timeout.mockReturnValue(socketMocks);
 });
 
 describe("createImSocket markRead", () => {
@@ -39,7 +41,7 @@ describe("createImSocket markRead", () => {
         payload.conversationId === "conversation-1" &&
         payload.messageId === "message-1"
       ) {
-        callback(true);
+        callback(null, true);
       }
     });
     const im = createImSocket();
@@ -52,6 +54,19 @@ describe("createImSocket markRead", () => {
       IM_EVENTS.markRead,
       { conversationId: "conversation-1", messageId: "message-1" },
       expect.any(Function)
+    );
+    expect(socketMocks.timeout).toHaveBeenCalledWith(5_000);
+  });
+
+  it("服务端未在超时内确认时返回失败", async () => {
+    socketMocks.emit.mockImplementation((_event, _payload, callback) => {
+      callback(new Error("operation has timed out"), false);
+    });
+    const im = createImSocket();
+    im.connect();
+
+    await expect(im.markRead("conversation-1", "message-1")).resolves.toBe(
+      false
     );
   });
 
