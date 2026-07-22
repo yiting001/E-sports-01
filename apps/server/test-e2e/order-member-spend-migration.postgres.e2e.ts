@@ -54,7 +54,7 @@ test('会员累计 migration 按已支付订单修复历史数据并建立逐单
         "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         "created_at" timestamptz NOT NULL DEFAULT now(),
         "updated_at" timestamptz NOT NULL DEFAULT now(),
-        "version" integer NOT NULL DEFAULT 1,
+        "version" integer NOT NULL,
         "tenant_id" varchar(36) NOT NULL,
         "user_id" varchar(36) NOT NULL,
         "spend_fen" bigint NOT NULL DEFAULT 0,
@@ -67,8 +67,8 @@ test('会员累计 migration 按已支付订单修复历史数据并建立逐单
       )
     `);
     await runner.query(`
-      INSERT INTO "member_profile" ("tenant_id", "user_id", "spend_fen")
-      VALUES ('tenant-a', 'user-a', 999), ('tenant-a', 'user-no-orders', 50)
+      INSERT INTO "member_profile" ("version", "tenant_id", "user_id", "spend_fen")
+      VALUES (1, 'tenant-a', 'user-a', 999), (1, 'tenant-a', 'user-no-orders', 50)
     `);
     await runner.query(`
       INSERT INTO "service_order" ("tenant_id", "user_id", "amount_fen", "status")
@@ -90,12 +90,12 @@ test('会员累计 migration 按已支付订单修复历史数据并建立逐单
     }
 
     const profiles = (await runner.query(
-      `SELECT "user_id", "spend_fen" FROM "member_profile" ORDER BY "user_id"`,
-    )) as Array<{ user_id: string; spend_fen: string }>;
+      `SELECT "user_id", "spend_fen", "version" FROM "member_profile" ORDER BY "user_id"`,
+    )) as Array<{ user_id: string; spend_fen: string; version: number }>;
     assert.deepEqual(profiles, [
-      { user_id: 'user-a', spend_fen: '300' },
-      { user_id: 'user-b', spend_fen: '250' },
-      { user_id: 'user-no-orders', spend_fen: '0' },
+      { user_id: 'user-a', spend_fen: '300', version: 2 },
+      { user_id: 'user-b', spend_fen: '250', version: 1 },
+      { user_id: 'user-no-orders', spend_fen: '0', version: 2 },
     ]);
     const recorded = (await runner.query(
       `SELECT "amount_fen", "member_spend_recorded" FROM "service_order" ORDER BY "amount_fen"`,

@@ -126,7 +126,7 @@ sequenceDiagram
 
 - `apps/server/src/database/migrations/1784736000000-add-order-refund-review.ts` 创建退款主表。
 - `apps/server/src/database/migrations/1784736100000-add-order-refund-channel-attempt.ts` 增加当前渠道尝试字段和尝试审计表；存量 `processing` / `failed` / `succeeded` 记录按原渠道号回填为第 1 次尝试。
-- `apps/server/src/database/migrations/1784736200000-add-order-member-spend-ledger.ts` 增加订单逐单消费标记，按未退款的已支付订单重算会员累计消费，使退款只冲正目标订单的贡献。
+- `apps/server/src/database/migrations/1784736200000-add-order-member-spend-ledger.ts` 增加订单逐单消费标记，按未退款的已支付订单重算会员累计消费，使退款只冲正目标订单的贡献；历史 `member_profile.version` 无数据库默认值，补建档案时显式初始化为 `1`。
 
 ```mermaid
 erDiagram

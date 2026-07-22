@@ -36,11 +36,12 @@ export class AddOrderMemberSpendLedger1784736200000 implements MigrationInterfac
       "updated_at" = now(),
       "version" = profile."version" + 1
     `);
+    // 历史表的 VersionColumn 为非空且无数据库默认值，原生 INSERT 必须显式初始化。
     await queryRunner.query(`
       INSERT INTO "member_profile" (
-        "tenant_id", "user_id", "spend_fen"
+        "version", "tenant_id", "user_id", "spend_fen"
       )
-      SELECT "tenant_id", "user_id", SUM("amount_fen")
+      SELECT 1, "tenant_id", "user_id", SUM("amount_fen")
       FROM "service_order"
       WHERE "status" IN (${statuses})
       GROUP BY "tenant_id", "user_id"
