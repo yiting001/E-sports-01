@@ -359,6 +359,7 @@ onBeforeUnmount(() => {
 .refresh {
   min-width: 108px;
   min-height: 36px;
+  touch-action: manipulation;
   display: inline-flex;
   align-items: center;
   justify-content: center;
