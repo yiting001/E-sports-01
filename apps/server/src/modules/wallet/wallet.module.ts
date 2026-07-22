@@ -15,6 +15,7 @@ import { WITHDRAWAL_ORDER_REPOSITORY } from './domain/withdrawal-repository.inte
 import { WALLET_LEDGER } from './domain/ledger.interface';
 import { PAYMENT_PORTS } from './domain/payment-port.interface';
 import { PAYOUT_PORTS } from './domain/payout-port.interface';
+import { REFUND_PORTS } from './domain/refund-port.interface';
 
 import { TypeormWalletRepository } from './infrastructure/wallet.repository';
 import { TypeormTransactionRepository } from './infrastructure/transaction.repository';
@@ -31,9 +32,12 @@ import { WechatPayConfigFactory } from './infrastructure/drivers/wechat-pay.conf
 import { WechatPaymentDriver } from './infrastructure/drivers/wechat-payment.driver';
 import { AlipayPayoutDriver } from './infrastructure/drivers/alipay-payout.driver';
 import { WechatPayoutDriver } from './infrastructure/drivers/wechat-payout.driver';
+import { AlipayRefundDriver } from './infrastructure/drivers/alipay-refund.driver';
+import { WechatRefundDriver } from './infrastructure/drivers/wechat-refund.driver';
 
 import { PaymentResolver } from './application/payment.resolver';
 import { PayoutResolver } from './application/payout.resolver';
+import { RefundResolver } from './application/refund.resolver';
 import { WalletService } from './application/wallet.service';
 import { GetMyWalletUseCase } from './application/use-cases/get-my-wallet.usecase';
 import { GetWalletStatsUseCase } from './application/use-cases/get-wallet-stats.usecase';
@@ -122,6 +126,8 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
     WechatPaymentDriver,
     AlipayPayoutDriver,
     WechatPayoutDriver,
+    AlipayRefundDriver,
+    WechatRefundDriver,
     {
       provide: PAYMENT_PORTS,
       useFactory: (alipay: AlipayPaymentDriver, wechat: WechatPaymentDriver) => [alipay, wechat],
@@ -132,9 +138,15 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
       useFactory: (alipay: AlipayPayoutDriver, wechat: WechatPayoutDriver) => [alipay, wechat],
       inject: [AlipayPayoutDriver, WechatPayoutDriver],
     },
+    {
+      provide: REFUND_PORTS,
+      useFactory: (alipay: AlipayRefundDriver, wechat: WechatRefundDriver) => [alipay, wechat],
+      inject: [AlipayRefundDriver, WechatRefundDriver],
+    },
 
     PaymentResolver,
     PayoutResolver,
+    RefundResolver,
     WalletService,
     GetMyWalletUseCase,
     GetWalletStatsUseCase,
@@ -151,7 +163,13 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
     ApproveWithdrawalUseCase,
     RejectWithdrawalUseCase,
   ],
-  // 导出支付渠道解析器，供订单等其他收款场景复用同一套支付宝/微信驱动
-  exports: [PaymentResolver, WalletService, WALLET_LEDGER, WALLET_TRANSACTION_PARTICIPANT],
+  // 导出支付/退款渠道解析器，供订单复用同一套支付宝/微信配置与驱动
+  exports: [
+    PaymentResolver,
+    RefundResolver,
+    WalletService,
+    WALLET_LEDGER,
+    WALLET_TRANSACTION_PARTICIPANT,
+  ],
 })
 export class WalletModule {}

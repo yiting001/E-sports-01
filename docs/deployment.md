@@ -281,17 +281,25 @@ comm -12 <(git diff --name-only | sort) <(git diff --name-only HEAD..origin/espo
 git pull --ff-only
 ```
 
-重新构建：
+先构建新版本产物：
 
 ```bash
 pnpm --filter @app/contracts build
 pnpm --filter @app/server build
 pnpm --filter @app/client build
 pnpm --filter @app/web build
+```
+
+停止并排空全部服务端与后台任务进程，再执行 migration。`1784736200000` 会按订单重算会员累计消费，旧版本仍写入时执行会造成重复或遗漏，因此迁移完成前不得恢复 API、支付回调或 worker 流量：
+
+```bash
+pm2 stop e-sports-01-server
+# 如部署了独立 worker/多实例，也必须全部停止并确认没有旧版本任务在途
+pnpm --filter @app/server migration:show
 pnpm --filter @app/server migration:run
 ```
 
-重启：
+迁移失败时保持服务端停止并向前修复，不得删除退款审计或强制执行受保护的 `down`。迁移成功后启动新版本：
 
 ```bash
 pm2 restart e-sports-01-server --update-env

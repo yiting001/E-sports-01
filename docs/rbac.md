@@ -13,7 +13,7 @@ JWT **双令牌**（access + refresh）鉴权，超级管理员走 bypass 拥有
 - **权限管理**：列表/创建/更新/删除（权限带类型：api/menu/button）。
 - **鉴权基础设施**：JWT 守卫 + 权限守卫，`@Public` / `@Permissions` 装饰器，`@CurrentUser` 注入。
 - **权限解析缓存**：`PermissionResolver` 将用户的扁平权限码集合缓存到 Redis（TTL 600s），超管直接放行。
-- **启动播种**：创建超级管理员角色 `admin` 与初始管理员账号，按权限码登记处播种 api 权限，并按 contracts `MENU_DEFINITIONS` 播种 menu 权限（菜单码按「业务命名空间 + `:menu`」组织，如 `rbac:user:menu`、`im:service:menu`，使其与同域接口/按钮权限归并到同一棵权限树；启动时清理不在清单内的历史 menu 权限）。
+- **启动播种**：创建超级管理员角色 `admin` 与初始管理员账号，按权限码登记处播种 api 权限，并按 contracts `MENU_DEFINITIONS` 播种 menu 权限（菜单码按「业务命名空间 + `:menu`」组织，如 `rbac:user:menu`、`im:service:menu`，使其与同域接口/按钮权限归并到同一棵权限树；启动时清理不在清单内的历史 menu 权限）。新增内置角色权限需幂等补齐；退款审核权限实际补给存量 `tenant_admin` 后，播种器通过 `PermissionResolver` 统一失效 Redis 权限缓存。
 - **可见菜单下发**：`GET /rbac/menus/mine` 返回当前用户可见菜单（按其授权码过滤，超管全量），前端据此渲染菜单并动态注册路由。
 
 ## 目录结构（DDD 四层）
@@ -132,7 +132,7 @@ flowchart LR
 
 ## 设计要点
 
-- **解析器 + 缓存**：`PermissionResolver` 把"用户→角色→权限码"的多表聚合结果缓存到 Redis，避免每次请求重复 JOIN。
+- **解析器 + 缓存**：`PermissionResolver` 把"用户→角色→权限码"的多表聚合结果缓存到 Redis，避免每次请求重复 JOIN。角色权限关系变化后必须复用解析器的单用户或全量失效能力，禁止业务/播种代码跨层操作 Redis key；缓存服务异常时不阻断权限持久化，最迟由 600 秒 TTL 收敛。
 - **端口-适配器**：用例只依赖仓储接口，TypeORM 实现可替换。
 - **用例粒度**：20 个动作各自独立文件，符合"一个函数只做一件事"。
 - **密码安全**：`password.service` 用 bcrypt，明文密码不落库、不出现在响应。

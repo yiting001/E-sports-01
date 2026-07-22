@@ -7,7 +7,9 @@ import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import {
   ORDER_PAYMENT_METHOD_TEXT,
+  ORDER_REFUND_STATUS_TEXT,
   ORDER_STATUS_TEXT,
+  OrderRefundStatus,
   OrderStatus,
   PAGINATION_DEFAULTS,
   PERMS,
@@ -19,11 +21,14 @@ import { Refresh, Search } from "@element-plus/icons-vue";
 import AppDataTable from "@/components/common/AppDataTable.vue";
 import AppPanel from "@/components/common/AppPanel.vue";
 import OrderDetailDrawer from "@/components/order/OrderDetailDrawer.vue";
+import OrderRefundActions from "@/components/order/OrderRefundActions.vue";
 import AssignBoosterDialog from "@/components/order/AssignBoosterDialog.vue";
 import ProductPreviewDialog from "@/components/order/ProductPreviewDialog.vue";
 import { PAGE_SIZE_OPTIONS } from "@/config/pagination";
 import { orderApi } from "@/api/order.api";
+import { useOrderRefundReview } from "@/composables/use-order-refund-review";
 import { MENU_BADGE_CODES, useMenuBadgeStore } from "@/stores/menu-badge.store";
+import { refundTagType } from "@/utils/order-refund-ui";
 
 const router = useRouter();
 const menuBadges = useMenuBadgeStore();
@@ -33,6 +38,7 @@ const total = ref(0);
 const page = ref<number>(PAGINATION_DEFAULTS.page);
 const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const loading = ref(false);
+let loadVersion = 0;
 
 const statusFilter = ref<OrderStatus | undefined>(undefined);
 const orderNoFilter = ref("");
@@ -74,6 +80,8 @@ const STATUS_TAG: Record<
   [OrderStatus.Dispatching]: "primary",
   [OrderStatus.Serving]: "primary",
   [OrderStatus.Completed]: "success",
+  [OrderStatus.RefundReviewing]: "warning",
+  [OrderStatus.Refunded]: "success",
   [OrderStatus.Cancelled]: "info",
 };
 
@@ -96,6 +104,8 @@ function formatDate(value: string): string {
 }
 
 async function load(): Promise<void> {
+  const version = loadVersion + 1;
+  loadVersion = version;
   loading.value = true;
   try {
     const res = await orderApi.list(
@@ -104,10 +114,14 @@ async function load(): Promise<void> {
       statusFilter.value,
       orderNoFilter.value.trim()
     );
-    list.value = res.list;
-    total.value = res.total;
+    if (version === loadVersion) {
+      list.value = res.list;
+      total.value = res.total;
+    }
   } finally {
-    loading.value = false;
+    if (version === loadVersion) {
+      loading.value = false;
+    }
   }
 }
 
@@ -132,6 +146,16 @@ function openDetail(row: AdminOrderView): void {
   detailVisible.value = true;
 }
 
+function applyUpdatedOrder(updated: AdminOrderView): void {
+  const index = list.value.findIndex((item) => item.id === updated.id);
+  if (index >= 0) {
+    list.value[index] = updated;
+  }
+  if (current.value?.id === updated.id) {
+    current.value = updated;
+  }
+}
+
 /** 把「待客服处理」订单下发到接单大厅 */
 async function dispatch(row: AdminOrderView): Promise<void> {
   await ElMessageBox.confirm(
@@ -147,6 +171,15 @@ async function dispatch(row: AdminOrderView): Promise<void> {
 async function refreshAfterOrderChange(): Promise<void> {
   await Promise.all([load(), menuBadges.refresh([MENU_BADGE_CODES.order])]);
 }
+
+const {
+  submittingAction: refundSubmittingAction,
+  advanceRefund,
+  rejectRefund,
+} = useOrderRefundReview({
+  onUpdated: applyUpdatedOrder,
+  refresh: refreshAfterOrderChange,
+});
 
 onMounted(load);
 </script>
@@ -203,7 +236,7 @@ onMounted(load);
       <app-data-table
         :data="list"
         :loading="loading"
-        :min-width="960"
+        :min-width="1200"
         empty-text="暂无订单"
       >
         <el-table-column
@@ -258,6 +291,25 @@ onMounted(load);
           </template>
         </el-table-column>
         <el-table-column
+          label="退款状态"
+          width="110"
+        >
+          <template #default="{ row }">
+            <el-tag
+              v-if="row.refund"
+              :type="refundTagType(row.refund.status)"
+            >
+              {{
+                ORDER_REFUND_STATUS_TEXT[row.refund.status as OrderRefundStatus]
+              }}
+            </el-tag>
+            <span
+              v-else
+              class="order-muted"
+            >-</span>
+          </template>
+        </el-table-column>
+        <el-table-column
           label="下单时间"
           width="150"
         >
@@ -267,7 +319,7 @@ onMounted(load);
         </el-table-column>
         <el-table-column
           label="操作"
-          width="210"
+          min-width="360"
         >
           <template #default="{ row }">
             <el-button
@@ -298,6 +350,12 @@ onMounted(load);
             >
               指派打手
             </el-button>
+            <OrderRefundActions
+              :order="row"
+              :submitting-action="refundSubmittingAction(row.id)"
+              @advance="advanceRefund"
+              @reject="rejectRefund"
+            />
           </template>
         </el-table-column>
       </app-data-table>
@@ -320,8 +378,13 @@ onMounted(load);
       v-model="detailVisible"
       :order="current"
       :format-date="formatDate"
+      :refund-submitting-action="
+        current ? refundSubmittingAction(current.id) : undefined
+      "
       @view-product="openProduct"
       @enter-group="enterGroup"
+      @advance-refund="advanceRefund"
+      @reject-refund="rejectRefund"
     />
 
     <product-preview-dialog

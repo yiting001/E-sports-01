@@ -23,23 +23,6 @@ export class TypeormMemberRepository implements MemberRepository {
     });
   }
 
-  /** 已建档走原子 increment；未建档先插入（唯一约束撞车则回退为 increment） */
-  async increaseSpend(userId: string, amountFen: number): Promise<void> {
-    const existing = await this.findByUserId(userId);
-    if (existing) {
-      await this.repo.increment({ id: existing.id }, 'spendFen', amountFen);
-      return;
-    }
-    try {
-      await this.repo.save(this.repo.create({ userId, spendFen: amountFen }));
-    } catch {
-      const concurrent = await this.findByUserId(userId);
-      if (concurrent) {
-        await this.repo.increment({ id: concurrent.id }, 'spendFen', amountFen);
-      }
-    }
-  }
-
   create(data: Partial<MemberProfileEntity>): MemberProfileEntity {
     return this.repo.create(data);
   }

@@ -41,6 +41,7 @@ vi.mock("@/api/realname.api", () => ({
 const ALL_PERMISSIONS = [
   PERMS.realname.list,
   PERMS.order.list,
+  PERMS.order.refundReview,
   PERMS.booster.list,
   PERMS.im.serviceAgent,
 ];
@@ -133,7 +134,9 @@ afterEach(() => {
 describe("useMenuBadgeStore", () => {
   it("复用五类业务接口并写入对应菜单角标", async () => {
     apiMocks.realnameList.mockResolvedValue(pageResult(2));
-    apiMocks.orderList.mockResolvedValue(pageResult(3));
+    apiMocks.orderList
+      .mockResolvedValueOnce(pageResult(3))
+      .mockResolvedValueOnce(pageResult(2));
     apiMocks.boosterList.mockResolvedValue(pageResult(4));
     apiMocks.conversationList.mockResolvedValue([
       conversation("conversation-1", 5),
@@ -160,7 +163,7 @@ describe("useMenuBadgeStore", () => {
 
     expect(badges.counts).toEqual({
       [MENU_BADGE_CODES.realname]: 2,
-      [MENU_BADGE_CODES.order]: 3,
+      [MENU_BADGE_CODES.order]: 5,
       [MENU_BADGE_CODES.booster]: 4,
       [MENU_BADGE_CODES.im]: 12,
       [MENU_BADGE_CODES.service]: 8,
@@ -171,10 +174,19 @@ describe("useMenuBadgeStore", () => {
       RealnameStatus.Pending,
       { silent: true }
     );
-    expect(apiMocks.orderList).toHaveBeenCalledWith(
+    expect(apiMocks.orderList).toHaveBeenNthCalledWith(
+      1,
       1,
       1,
       OrderStatus.PendingService,
+      undefined,
+      { silent: true }
+    );
+    expect(apiMocks.orderList).toHaveBeenNthCalledWith(
+      2,
+      1,
+      1,
+      OrderStatus.RefundReviewing,
       undefined,
       { silent: true }
     );
@@ -187,6 +199,26 @@ describe("useMenuBadgeStore", () => {
     );
     expect(apiMocks.conversationList).toHaveBeenCalledWith({ silent: true });
     expect(apiMocks.serviceQueue).toHaveBeenCalledWith({ silent: true });
+  });
+
+  it("未获退款审核权限时不探测退款待办", async () => {
+    apiMocks.orderList.mockResolvedValue(pageResult(3));
+    const permissions = ALL_PERMISSIONS.filter(
+      (permission) => permission !== PERMS.order.refundReview
+    );
+    const { badges } = prepareStore(permissions);
+
+    await badges.refresh([MENU_BADGE_CODES.order]);
+
+    expect(badges.counts[MENU_BADGE_CODES.order]).toBe(3);
+    expect(apiMocks.orderList).toHaveBeenCalledTimes(1);
+    expect(apiMocks.orderList).toHaveBeenCalledWith(
+      1,
+      1,
+      OrderStatus.PendingService,
+      undefined,
+      { silent: true }
+    );
   });
 
   it("菜单或 API 权限不足时清零且不请求受限数据", async () => {
@@ -205,7 +237,7 @@ describe("useMenuBadgeStore", () => {
     apiMocks.serviceQueue.mockResolvedValue([{ conversationId: "service-1" }]);
     const { auth, badges, menus } = prepareStore();
     await badges.refresh();
-    expect(Object.values(badges.counts)).toEqual([3, 4, 2, 5, 7]);
+    expect(Object.values(badges.counts)).toEqual([6, 4, 2, 5, 7]);
 
     for (const mock of Object.values(apiMocks)) {
       mock.mockClear();
@@ -236,7 +268,7 @@ describe("useMenuBadgeStore", () => {
     await badges.refresh([MENU_BADGE_CODES.realname, MENU_BADGE_CODES.order]);
 
     expect(badges.counts[MENU_BADGE_CODES.realname]).toBe(7);
-    expect(badges.counts[MENU_BADGE_CODES.order]).toBe(9);
+    expect(badges.counts[MENU_BADGE_CODES.order]).toBe(18);
     expect(badges.failed[MENU_BADGE_CODES.realname]).toBe(true);
     expect(badges.failed[MENU_BADGE_CODES.order]).toBe(false);
   });
@@ -331,7 +363,7 @@ describe("useMenuBadgeStore", () => {
     badges.startPolling();
 
     expect(apiMocks.realnameList).toHaveBeenCalledTimes(1);
-    expect(apiMocks.orderList).toHaveBeenCalledTimes(1);
+    expect(apiMocks.orderList).toHaveBeenCalledTimes(2);
     expect(apiMocks.boosterList).toHaveBeenCalledTimes(1);
     expect(apiMocks.conversationList).toHaveBeenCalledTimes(1);
     expect(apiMocks.serviceQueue).toHaveBeenCalledTimes(1);
@@ -341,7 +373,7 @@ describe("useMenuBadgeStore", () => {
 
     await vi.advanceTimersByTimeAsync(1);
     expect(apiMocks.realnameList).toHaveBeenCalledTimes(2);
-    expect(apiMocks.orderList).toHaveBeenCalledTimes(2);
+    expect(apiMocks.orderList).toHaveBeenCalledTimes(4);
     expect(apiMocks.boosterList).toHaveBeenCalledTimes(2);
     expect(apiMocks.conversationList).toHaveBeenCalledTimes(2);
     expect(apiMocks.serviceQueue).toHaveBeenCalledTimes(2);
@@ -349,7 +381,7 @@ describe("useMenuBadgeStore", () => {
     badges.stopPolling();
     await vi.advanceTimersByTimeAsync(60_000);
     expect(apiMocks.realnameList).toHaveBeenCalledTimes(2);
-    expect(apiMocks.orderList).toHaveBeenCalledTimes(2);
+    expect(apiMocks.orderList).toHaveBeenCalledTimes(4);
     expect(apiMocks.boosterList).toHaveBeenCalledTimes(2);
     expect(apiMocks.conversationList).toHaveBeenCalledTimes(2);
     expect(apiMocks.serviceQueue).toHaveBeenCalledTimes(2);

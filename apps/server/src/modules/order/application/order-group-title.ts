@@ -8,6 +8,8 @@ const ORDER_GROUP_STAGE_TEXT: Partial<Record<OrderStatus, string>> = {
   [OrderStatus.Dispatching]: '待接单',
   [OrderStatus.Serving]: '服务中',
   [OrderStatus.Completed]: '已结束',
+  [OrderStatus.RefundReviewing]: '退款审核',
+  [OrderStatus.Refunded]: '已退款',
 };
 
 /** 订单状态是标题唯一事实来源；订单群不存在于待付款和已取消阶段。 */
@@ -18,8 +20,6 @@ export function buildOrderGroupTitle(productTitle: string, status: OrderStatus):
   }
   const prefix = `[${stage}] 订单群·`;
   const productLength = ORDER_GROUP_TITLE_MAX_LENGTH - Array.from(prefix).length;
-  const normalizedProductTitle = Array.from(productTitle.trim())
-    .slice(0, productLength)
-    .join('');
+  const normalizedProductTitle = Array.from(productTitle.trim()).slice(0, productLength).join('');
   return prefix + normalizedProductTitle;
 }

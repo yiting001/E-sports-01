@@ -38,6 +38,10 @@ export enum OrderStatus {
   Serving = "serving",
   /** 已完成 */
   Completed = "completed",
+  /** 用户已申请退款，履约冻结并等待后台审核/渠道处理 */
+  RefundReviewing = "refund_reviewing",
+  /** 原支付方式已完成全额退款 */
+  Refunded = "refunded",
   /** 已取消（仅待付款可取消） */
   Cancelled = "cancelled",
 }
@@ -49,8 +53,42 @@ export const ORDER_STATUS_TEXT: Record<OrderStatus, string> = {
   [OrderStatus.Dispatching]: "待接单",
   [OrderStatus.Serving]: "服务中",
   [OrderStatus.Completed]: "已完成",
+  [OrderStatus.RefundReviewing]: "退款处理中",
+  [OrderStatus.Refunded]: "已退款",
   [OrderStatus.Cancelled]: "已取消",
 };
+
+/** 退款申请状态；与订单履约状态分离，避免把渠道结果误当作审核结果。 */
+export enum OrderRefundStatus {
+  PendingReview = "pending_review",
+  Processing = "processing",
+  Succeeded = "succeeded",
+  Rejected = "rejected",
+  Failed = "failed",
+}
+
+/** 退款申请状态展示文案 */
+export const ORDER_REFUND_STATUS_TEXT: Record<OrderRefundStatus, string> = {
+  [OrderRefundStatus.PendingReview]: "待审核",
+  [OrderRefundStatus.Processing]: "退款处理中",
+  [OrderRefundStatus.Succeeded]: "退款成功",
+  [OrderRefundStatus.Rejected]: "审核驳回",
+  [OrderRefundStatus.Failed]: "退款失败",
+};
+
+/** 退款原因和审核说明的共享输入约束。 */
+export const ORDER_REFUND_LIMITS = {
+  reasonMax: 500,
+  reviewReasonMax: 500,
+} as const;
+
+export interface RequestOrderRefundPayload {
+  reason: string;
+}
+
+export interface RejectOrderRefundPayload {
+  reason: string;
+}
 
 /** 订单字段约束（DTO 校验与前端输入限制共享） */
 export const ORDER_LIMITS = {
@@ -124,8 +162,30 @@ export interface OrderGroupJoinResult {
   conversationId: string;
 }
 
+/** C 端的一笔全额退款申请投影，不包含后台审核与渠道幂等标识。 */
+export interface OrderRefundView {
+  status: OrderRefundStatus;
+  amountFen: number;
+  amountYuan: string;
+  paymentMethod: OrderPaymentMethod;
+  reason: string;
+  rejectReason: string;
+  failReason: string;
+  requestedAt: string;
+  reviewedAt: string;
+  refundedAt: string;
+}
+
+/** 管理端退款投影：补充审核追踪和渠道幂等所需的内部标识。 */
+export interface AdminOrderRefundView extends OrderRefundView {
+  id: string;
+  refundNo: string;
+  reviewerId: string;
+}
+
 /** 管理端订单视图：在 C 端视图之上补充归属用户/客服快照/渠道交易号 */
 export interface AdminOrderView extends OrderView {
+  refund: AdminOrderRefundView | null;
   /** 下单用户 id */
   userId: string;
   /** 商品关联客服快照（未关联为空串） */
@@ -158,6 +218,10 @@ export interface OrderView {
   commissionRateBp: number;
   provider: OrderPaymentMethod;
   status: OrderStatus;
+  /** 当前订单是否满足服务端退款申请规则；前端不得自行推断。 */
+  canRequestRefund: boolean;
+  /** 退款申请；尚未申请时为 null。 */
+  refund: OrderRefundView | null;
   remark: string;
   /** 备注附件（图片/视频） */
   remarkMedia: RemarkMediaItem[];

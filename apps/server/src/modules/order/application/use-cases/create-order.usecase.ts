@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   CONFIG_KEYS,
   CreateOrderPayload,
@@ -27,10 +22,7 @@ import {
 import { MemberLevelService } from '../../../member/application/member-level.service';
 import { PaymentResolver } from '../../../wallet/application/payment.resolver';
 import { buildOrderNo } from '../../../wallet/application/order-no.util';
-import {
-  ORDER_REPOSITORY,
-  OrderRepository,
-} from '../../domain/order-repository.interface';
+import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository.interface';
 import { toPaymentProvider } from '../order-payment-method';
 import { OrderPaymentSettleService } from '../order-payment.service';
 
@@ -59,10 +51,7 @@ export class CreateOrderUseCase {
     private readonly boosterSelection: BoosterSelectionService,
   ) {}
 
-  async execute(
-    userId: string,
-    payload: CreateOrderPayload,
-  ): Promise<CreateOrderResult> {
+  async execute(userId: string, payload: CreateOrderPayload): Promise<CreateOrderResult> {
     const product = await this.products.findById(payload.productId);
     if (!product || product.status !== ProductStatus.OnShelf) {
       throw new NotFoundException('商品不存在或已下架');
@@ -73,10 +62,7 @@ export class CreateOrderUseCase {
       throw new BadRequestException('订单金额异常');
     }
     const memberTier = await this.memberLevels.resolveForUser(userId);
-    const memberAmountFen = calcDiscountedFen(
-      originalAmountFen,
-      memberTier.discountBp,
-    );
+    const memberAmountFen = calcDiscountedFen(originalAmountFen, memberTier.discountBp);
 
     // 优惠券抵扣：在会员折后价上再抵扣，最多抵到 0 元（0 元单免真实支付）
     let couponDeductionFen = 0;
@@ -185,17 +171,12 @@ export class CreateOrderUseCase {
 
     let qrCode: string;
     try {
-      const notifyBaseUrl = await this.config.getString(
-        CONFIG_KEYS.wallet.notifyBaseUrl,
-        '',
-      );
+      const notifyBaseUrl = await this.config.getString(CONFIG_KEYS.wallet.notifyBaseUrl, '');
       const result = await port.createRecharge({
         outTradeNo: orderNo,
         amountFen,
         subject: product.title,
-        notifyUrl: notifyBaseUrl
-          ? `${notifyBaseUrl}/order/pay/callback/${payload.provider}`
-          : '',
+        notifyUrl: notifyBaseUrl ? `${notifyBaseUrl}/order/pay/callback/${payload.provider}` : '',
       });
       qrCode = result.qrCode;
     } catch (error) {
@@ -231,11 +212,7 @@ export class CreateOrderUseCase {
     if (!requestedId) {
       throw new BadRequestException('请选择要指定的打手');
     }
-    return this.boosterSelection.assertSelectable(
-      userId,
-      requestedId,
-      payload.serviceRegion,
-    );
+    return this.boosterSelection.assertSelectable(userId, requestedId, payload.serviceRegion);
   }
 
   /** 支付未落账时作废新订单，并回退该订单已经核销的优惠券。 */
@@ -244,11 +221,17 @@ export class CreateOrderUseCase {
     if (!order || order.status !== OrderStatus.PendingPayment) {
       return;
     }
-    order.status = OrderStatus.Cancelled;
-    order.cancelledAt = new Date();
-    await this.orders.save(order);
-    if (order.userCouponId) {
-      await this.couponRedeem.restoreByOrder(order.id);
+    const cancelled = await this.orders.claimForCancellation({
+      orderId: order.id,
+      tenantId: order.tenantId,
+      userId: order.userId,
+      cancelledAt: new Date(),
+    });
+    if (!cancelled) {
+      return;
+    }
+    if (cancelled.userCouponId) {
+      await this.couponRedeem.restoreByOrder(cancelled.id);
     }
   }
 }

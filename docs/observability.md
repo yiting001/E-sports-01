@@ -9,7 +9,7 @@
 - **链路追踪**：基于 `AsyncLocalStorage`，每个请求生成 `traceId`/`spanId`，兼容透传上游 `x-trace-id` / W3C `traceparent`，响应头回写 `x-trace-id`；WS 消息处理同样在独立链路上下文中执行。
 - **结构化日志**：`AppLogger` 输出 JSON（time/level/traceId/context/message/stack），统一替换裸 `console`。
 - **访问/错误日志自动采集**：全局 `LoggingInterceptor` 记录 method/path/status/耗时/userId/ip/ua/traceId，异常时附错误栈，**带缓冲异步落库**，不阻塞响应。
-- **错误详情 `detail`**：错误日志额外落库异常响应体（含 `ValidationPipe` 的 `message` 字段数组，直指哪个入参不合法）与脱敏请求体（`password`/`token`/`secret`/`authorization` 等字段替换为 `***`），便于在链路详情里直接定位校验失败原因；超 4000 字符截断。
+- **错误详情 `detail`**：错误日志额外落库异常响应体（含 `ValidationPipe` 的 `message` 字段数组，直指哪个入参不合法）与脱敏请求体（`password`/`token`/`secret`/`authorization` 等字段替换为 `***`），便于在链路详情里直接定位校验失败原因；超 4000 字符截断。退款申请和后台驳回两个精确 POST 路由还会将顶层 `reason` 替换为 `***`，其他业务的同名字段不受影响。
 - **日志查询**（REST `GET /api/observability/logs`）：分页 + 多条件（level/type/traceId/path/userId/时间段）。
 - **链路详情**（REST `GET /api/observability/logs/trace/:traceId`）：同一 traceId 下按时间排序的全部 span。
 - **日志清理**（REST `DELETE /api/observability/logs`）：按保留天数删除过期日志，缺省取配置中心 `log.retentionDays`。
@@ -163,6 +163,7 @@ erDiagram
 - **AsyncLocalStorage 透明传递**：链路标识随异步调用链自动流动，任意层 `trace.get()` 即可读取，避免层层传 `traceId` 参数污染签名。
 - **采集与写入解耦**：拦截器只管"采集 + 入队"，`LogWriter` 只管"批量落库"，单一职责且互不阻塞。
 - **同步/异步两条取配置路径**：`AppLogger` 走同步快照 `current()`，用例/拦截器走异步 `resolve()`，兼顾性能与实时性。
+- **按路由收窄业务字段脱敏**：通用凭证/隐私键递归脱敏；退款原因仅匹配 `POST /api/order/:id/refund` 和 `POST /api/order/admin/:id/refund/reject` 并处理顶层 `reason`，防止扩大规则后掩盖投诉、处罚等普通原因字段的诊断信息。
 - **不泄露堆栈给前端**：错误栈只入库（供运维排查），对外响应仍由 `AllExceptionsFilter` 归一化，绝不外泄。
 - **类型与码共享**：`LogLevel`/`LogType`/`LogView` 等定义在 `packages/contracts`，前后端复用；权限码、配置键同源单一来源。
 

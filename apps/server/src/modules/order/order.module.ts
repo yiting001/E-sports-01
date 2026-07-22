@@ -10,10 +10,14 @@ import { CouponModule } from '../coupon/coupon.module';
 import { ImModule } from '../im/im.module';
 
 import { OrderEntity } from './domain/order.entity';
+import { OrderRefundAttemptEntity } from './domain/order-refund-attempt.entity';
+import { OrderRefundEntity } from './domain/order-refund.entity';
 import { ORDER_REPOSITORY } from './domain/order-repository.interface';
 import { TypeormOrderRepository } from './infrastructure/order.repository';
 import { ORDER_PAYMENT_SETTLEMENT } from './domain/order-payment-settlement.interface';
 import { TypeormOrderPaymentSettlement } from './infrastructure/order-payment.settlement';
+import { TypeormOrderRefundTransaction } from './infrastructure/order-refund.transaction';
+import { ORDER_REFUND_TRANSACTION } from './domain/order-refund-transaction.interface';
 import {
   ORDER_FEEDBACK_PENALTY_TRANSACTION,
   TypeormOrderFeedbackPenaltyTransaction,
@@ -41,6 +45,9 @@ import { ServiceAgentScope } from './application/service-agent-scope.service';
 import { AssignOrderBoosterUseCase } from './application/use-cases/assign-order-booster.usecase';
 import { ListBoosterCandidatesUseCase } from './application/use-cases/list-booster-candidates.usecase';
 import { JoinOrderGroupUseCase } from './application/use-cases/join-order-group.usecase';
+import { RequestOrderRefundUseCase } from './application/use-cases/request-order-refund.usecase';
+import { RejectOrderRefundUseCase } from './application/use-cases/reject-order-refund.usecase';
+import { ApproveOrderRefundUseCase } from './application/use-cases/approve-order-refund.usecase';
 
 import { OrderCreateController } from './interfaces/controllers/order.create.controller';
 import { OrderCallbackController } from './interfaces/controllers/order.callback.controller';
@@ -60,6 +67,9 @@ import { OrderHallAcceptController } from './interfaces/controllers/order.hall.a
 import { OrderBoosterListController } from './interfaces/controllers/order.booster.list.controller';
 import { OrderBoosterDetailController } from './interfaces/controllers/order.booster.detail.controller';
 import { OrderBoosterCompleteController } from './interfaces/controllers/order.booster.complete.controller';
+import { OrderRefundRequestController } from './interfaces/controllers/order.refund.request.controller';
+import { OrderAdminRefundRejectController } from './interfaces/controllers/order.admin.refund.reject.controller';
+import { OrderAdminRefundApproveController } from './interfaces/controllers/order.admin.refund.approve.controller';
 
 /**
  * 服务订单模块。
@@ -78,7 +88,7 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     MemberModule,
     CouponModule,
     ImModule,
-    TypeOrmModule.forFeature([OrderEntity]),
+    TypeOrmModule.forFeature([OrderEntity, OrderRefundEntity, OrderRefundAttemptEntity]),
   ],
   controllers: [
     OrderCallbackController,
@@ -90,12 +100,15 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     OrderBoosterDetailController,
     OrderBoosterCompleteController,
     OrderCreateController,
+    OrderRefundRequestController,
     OrderCancelController,
     OrderAdminListController,
     OrderAdminBoosterCandidatesController,
     OrderAdminDispatchController,
     OrderAdminAssignController,
     OrderAdminGroupJoinController,
+    OrderAdminRefundApproveController,
+    OrderAdminRefundRejectController,
     OrderAdminDetailController,
     OrderPayQueryController,
     OrderMineDetailController,
@@ -105,6 +118,10 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     {
       provide: ORDER_PAYMENT_SETTLEMENT,
       useClass: TypeormOrderPaymentSettlement,
+    },
+    {
+      provide: ORDER_REFUND_TRANSACTION,
+      useClass: TypeormOrderRefundTransaction,
     },
     {
       provide: ORDER_FEEDBACK_PENALTY_TRANSACTION,
@@ -129,6 +146,9 @@ import { OrderBoosterCompleteController } from './interfaces/controllers/order.b
     AssignOrderBoosterUseCase,
     ListBoosterCandidatesUseCase,
     JoinOrderGroupUseCase,
+    RequestOrderRefundUseCase,
+    ApproveOrderRefundUseCase,
+    RejectOrderRefundUseCase,
     BoosterAccess,
     OrderGroupService,
     ServiceAgentScope,

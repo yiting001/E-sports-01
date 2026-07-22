@@ -4,6 +4,7 @@ import type {
   OrderStatus,
   OrderView,
   PaginatedResult,
+  RequestOrderRefundPayload,
 } from '@app/contracts';
 import { http, type RequestOptions } from './http';
 
@@ -32,6 +33,10 @@ export const orderApi = {
   /** 取消待付款订单 */
   cancel(id: string): Promise<OrderView> {
     return http.post(`/order/${id}/cancel`);
+  },
+  /** 申请全额原路退款，进入后台审核流程 */
+  requestRefund(id: string, payload: RequestOrderRefundPayload): Promise<OrderView> {
+    return http.post(`/order/${id}/refund`, payload);
   },
   /** 接单大厅：分页浏览待接单订单（仅打手） */
   hall(

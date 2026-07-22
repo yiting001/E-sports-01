@@ -14,10 +14,11 @@
 - 打手选择：结算页可选「自动安排」或「指定打手」；指定时从 C 端脱敏目录选择，服务端复核打手支持区服、本人排除、实名和押金门禁，并固化 `requestedBoosterId` / `requestedBoosterName` 快照
 - 指定打手履约约束：指定订单支付成功后仍处于「待客服处理」，不能下发公共接单大厅；客服只能确认老板锁定的打手，不能改派他人，实际 `boosterId` / `boosterName` 仅在确认接单时写入
 - 下单支付：订单使用独立 `OrderPaymentMethod`（`alipay` / `wechat` / `balance`）。支付宝、微信复用钱包收款驱动并返回二维码；余额支付在创建订单请求内完成扣款并直接进入详情，不生成二维码
+- 全额退款审核：已付款且未开工的 `pending_service` / `dispatching` 订单可由本人申请，申请后冻结履约；后台按独立权限审核，余额退钱包、支付宝/微信原路退回，成功后冲正销量与会员累计消费。完整状态机、数据模型和失败恢复见 [order-refund.md](./order-refund.md)
 - 结算页钱包状态：独立调用 `GET /wallet/mine` 展示可用余额；加载失败可重试，冻结或余额不足时禁用余额方式，金额/优惠券变化造成不足时自动退出；可复用充值弹层原地充值并刷新余额
 - 会员折扣：下单时按用户当前会员等级折扣（member 模块 `MemberLevelService`）计应付，订单固化 `originalAmountFen`/`discountBp` 快照
 - 优惠券抵扣：下单可选用未使用的我的优惠券（coupon 模块 `CouponRedeemService`），在会员折后价上再抵扣（最低 0 分，0 元单直接落账），订单固化 `userCouponId`/`couponDeductionFen` 快照；条件核销防并发重复用券，取消订单时自动回滚券为未使用（详见 docs/coupon.md）
-- 支付回调：渠道异步回调验签解析，事务 + 行锁内幂等落账（待付款 → 待客服处理），并累加商品销量与用户会员累计消费（`MemberProgressService.recordSpend`）
+- 支付回调：渠道异步回调验签解析，事务 + 行锁内幂等落账（待付款 → 待客服处理），并在同一事务累加商品销量与用户会员累计消费；订单以 `memberSpendRecorded` 记录本单是否已计入，供退款逐单冲正
 - 主动查单兜底：支付二维码弹窗轮询 `GET /order/:id/pay/query`，后端调渠道官方查单接口（支付宝 `alipay.trade.query` / 微信 `GET /v3/pay/transactions/out-trade-no`），查到已支付则与回调共用 `OrderPaymentSettleService` 幂等落账——回调丢失/延迟也能正常完成支付流程
 - 我的订单：分页列表（商品快照/数量/金额/状态），待付款订单可取消；PC 端标题、紧凑状态筛选、列表统一收敛到内容区宽度，移动端保持全屏滚动
 - C 端订单详情页（`/orders/:id`）：支付成功（含 0 元单免扫码）自动跳转进入，也可点击订单卡片进入；展示商品快照、状态、服务信息（接单打手显示名快照 `boosterName`/接单时间/完成时间，打手接单或被指派后展示）、价格明细（原价/会员折扣减免/优惠券抵扣/实付）、订单信息（订单号/支付方式/备注）与全量时间线（下单/支付/下发大厅 `dispatchedAt`/接单 `acceptedAt`/完成 `completedAt`/取消 `cancelledAt`，未发生的不展示）；已建群订单提供「进入订单群」入口（跳全屏聊天页 `/chat/:id`），待付款可取消
@@ -42,6 +43,7 @@
 
 - 指定打手不等于支付后自动开工，客服仍需确认并推进到服务中；当前不做自动接单、超时改派或候补队列。
 - 本次不实现订单打赏、分阶段付款、多人共同履约或基于在线状态的自动派单。
+- 退款本期不支持部分退款、自动审批、服务中/已完成退款或返还优惠券；相关资金与提成边界见 [order-refund.md](./order-refund.md)。
 - “已结束”只用于订单群标题，订单状态仍为“已完成”，群会话仍保持 `active`；本次不自动关闭群聊，也不禁止具备管理权限的成员临时改名。
 - C 端跨页结算草稿只保存在当前内存会话，退出登录、令牌失效或支付完成会清除；不提供跨设备草稿恢复。
 
@@ -58,17 +60,22 @@ pending_service（待客服处理）
    └─ 指定打手 + 客服确认指派 ─▶ serving（服务中）
  dispatching ──┬─ 打手接单 ──▶ serving（服务中）── 打手完成 ──▶ completed（已完成）
                └─ 客服指派打手 ─▶ serving（服务中）
+pending_service / dispatching ── 用户申请 ─▶ refund_reviewing（退款处理中）
+refund_reviewing ──┬─ 审核驳回 ─▶ 申请前的 pending_service / dispatching
+                   └─ 原路退款成功 ─▶ refunded（已退款）
 ```
 
 指定订单没有 `pending_service → dispatching` 转换；客服尝试下发公共大厅会被拒绝，指派其他打手也会被拒绝。
 
 ### 订单群标题状态流
 
-| 订单状态                         | 订单群标题                           | 触发或补偿入口                 |
-| -------------------------------- | ------------------------------------ | ------------------------------ |
-| `pending_service` / `dispatching` | `[待接单] 订单群·商品标题`           | 支付建群、下发大厅、详情补偿   |
-| `serving`                        | `[服务中] 订单群·商品标题`           | 打手接单、客服指派、进群补偿   |
-| `completed`                      | `[已结束] 订单群·商品标题`           | 完成订单、后续详情补偿         |
+| 订单状态                          | 订单群标题                   | 触发或补偿入口               |
+| --------------------------------- | ---------------------------- | ---------------------------- |
+| `pending_service` / `dispatching` | `[待接单] 订单群·商品标题`   | 支付建群、下发大厅、详情补偿 |
+| `serving`                         | `[服务中] 订单群·商品标题`   | 打手接单、客服指派、进群补偿 |
+| `completed`                       | `[已结束] 订单群·商品标题`   | 完成订单、后续详情补偿       |
+| `refund_reviewing`                | `[退款审核] 订单群·商品标题` | 用户申请退款、后续详情补偿   |
+| `refunded`                        | `[已退款] 订单群·商品标题`   | 原路退款成功、后续详情补偿   |
 
 ```mermaid
 sequenceDiagram
@@ -208,7 +215,7 @@ apps/server/src/modules/order/
 - commerce：GET /commerce/public/products/:id（本次新增公开商品详情）+ 商品仓储导出
 - wallet：PaymentResolver / PaymentPort 策略（支付宝/微信驱动、验签、应答报文）+ WalletLedger 提成入账
 - booster：BoosterDepositGuard（接单押金门控）/ BoosterProgressService（完成单数累计 + 等级费率解析）
-- member：MemberLevelService（下单折扣解析）/ MemberProgressService（支付成功累计消费）
+- member：`MemberLevelService`（下单折扣解析）/ `MemberSpendTransactionParticipant`（支付累计与退款冲正事务窄写口）
 
 apps/client/src/
 ├── api/order.api.ts                         # 下单/详情/我的订单/取消/大厅/接单/打手订单/完成
@@ -306,6 +313,7 @@ ER 图中的打手关系是通过租户内 `userId` 的逻辑关联，订单群�
 - **策略模式复用**：订单的支付宝/微信收款复用钱包模块 `PaymentResolver` → `PaymentPort`，仅回调地址不同（`/order/pay/callback/:provider`）
 - **幂等回调**：以 `orderNo`（商户订单号，前缀 `O`）为幂等键，事务内行锁校验
   「待付款 + 金额一致」才落账，重复回调直接应答成功
+- **支付与取消竞争**：用户取消和余额支付/渠道回调都在订单行锁内复核 `pending_payment`；并发时只有先持锁的一方能推进，另一方返回当前状态错误，避免陈旧实体整行保存覆盖已支付结果
 - **余额事务**：固定按“订单行 → 当前租户和用户的钱包行”加悲观写锁，在一个事务内校验订单本人、待付款、方式、金额、钱包状态和余额，随后扣款、写 `order_payment` 出账流水、推进 `pending_service`、写支付时间并增加商品销量。同一订单并发只首笔生效，同一钱包的不同订单串行扣款且不能透支
 - **失败补偿**：余额未开通、被冻结、余额不足或渠道下单失败时，新建的待付款订单改为已取消，并回退该订单已核销的优惠券。事务已经提交后，会员累计、建群或标题通知失败只记录错误，不反向取消已支付订单；所有已支付订单均可由查单/详情入口调用 `ensurePaidOrderGroup` 幂等补群或校正标题，且不会重复累计会员消费
 - **回调租户恢复**：支付渠道回调是公开入口，事务返回订单后以 `paidOrder.tenantId` 重建非超管租户上下文，再累计会员消费和解析订单群管理员，防止无上下文查询跨租户成员
@@ -369,6 +377,7 @@ sequenceDiagram
 | GET  | `/api/order/:id/pay/query`                                | 登录，本人                                | 渠道支付主动查单兜底                                                                                                                                                                                                 |
 | GET  | `/api/order/mine`                                         | 登录，本人                                | 我的订单分页                                                                                                                                                                                                         |
 | POST | `/api/order/:id/cancel`                                   | 登录，本人                                | 仅待付款可取消                                                                                                                                                                                                       |
+| POST | `/api/order/:id/refund`                                   | 登录，本人                                | 未开工订单提交全额退款申请 `{ reason }`，申请后冻结履约                                                                                                                                                              |
 | GET  | `/api/order/hall` / `/api/order/hall/:id`                 | 打手角色                                  | 待接单大厅列表/详情，账号字段隐藏                                                                                                                                                                                    |
 | POST | `/api/order/hall/:id/accept`                              | 打手角色且当前上线                        | 原子接单；指定订单只能由指定人接单，下线返回业务错误                                                                                                                                                                 |
 | GET  | `/api/order/booster/mine` / `/api/order/booster/mine/:id` | 打手角色                                  | 本人接单订单及详情，接单后可见账号字段                                                                                                                                                                               |
@@ -378,6 +387,8 @@ sequenceDiagram
 | POST | `/api/order/admin/:id/dispatch`                           | `order:admin:dispatch`                    | 自动安排订单下发大厅；指定订单拒绝                                                                                                                                                                                   |
 | GET  | `/api/order/admin/booster-candidates`                     | `order:admin:assign`                      | 仅搜索当前上线且资格有效的指派候选                                                                                                                                                                                   |
 | POST | `/api/order/admin/:id/assign`                             | `order:admin:assign`                      | 指派打手；指定订单只能指派老板选定者                                                                                                                                                                                 |
+| POST | `/api/order/admin/:id/refund/approve`                     | `order:admin:refund:review`               | 同意退款；处理中时查单，明确失败时使用新渠道尝试号重试；客服仍受商品归属范围限制                                                                                                                                     |
+| POST | `/api/order/admin/:id/refund/reject`                      | `order:admin:refund:review`               | 驳回待审核退款 `{ reason }` 并恢复申请前履约状态                                                                                                                                                                     |
 
 数字游戏 ID、区服和指定模式由 DTO 与数据库约束双重校验；账号信息和游戏 ID 不会返回给未接单的大厅打手。实际打手显示名使用昵称或安全 ID 后缀快照，避免向老板暴露登录用户名。
 
@@ -385,14 +396,14 @@ sequenceDiagram
 
 - `service_order.provider`、`wallet_transaction.type` 仍是 `varchar`，但本次结构化游戏资料、锁定打手和语音字段由 `1784332800000-add-booster-directory-order-selection.ts` 正式迁移管理。
 - C 端在 `393×852` 视口确认刷新按钮计算样式为 `touch-action: manipulation`，按钮宽 369px，页面 `clientWidth` 与 `scrollWidth` 均为 393px，连续桌面指针双击后 `visualViewport.scale` 保持 1。当前自动化不能生成微信 WebView 的真实触屏手势，仍需真机确认连续触控不放大且双指缩放可用。
-- 后端测试覆盖 DTO 支付方式/游戏资料校验、指定订单大厅与改派约束、余额不足/冻结/金额或归属不符、同订单幂等、原子并发接单/指派（`order-assignment.spec.ts`，两请求仅一方成功）以及提交后副作用失败不回滚；`order-group-recovery.spec.ts` 覆盖成功建群、窄写回填、成员补齐和失败补建；`order-group-title.spec.ts` 覆盖三阶段映射、128 字符边界、关联丢失恢复、下发与完成保存顺序、订单读取与会话写入交错、ABA 与 CAS 冲突重试、同标题幂等和通知/进群失败；`im-conversation-title.postgres.e2e.ts` 在真实 PostgreSQL 验证同一实体版本只有一个竞争者成功、错误期望版本不写入及跨租户更新被拒绝。
+- 后端测试覆盖 DTO 支付方式/游戏资料校验、指定订单大厅与改派约束、余额不足/冻结/金额或归属不符、同订单幂等、原子并发接单/指派（`order-assignment.spec.ts`，两请求仅一方成功）以及提交后副作用失败不回滚；`order-payment-member-spend.postgres.e2e.ts` 验证支付、会员累计、退款冲正的同事务原子性及支付与取消竞争；`order-group-recovery.spec.ts` 覆盖成功建群、窄写回填、成员补齐和失败补建；`order-group-title.spec.ts` 覆盖三阶段映射、128 字符边界、关联丢失恢复、下发与完成保存顺序、订单读取与会话写入交错、ABA 与 CAS 冲突重试、同标题幂等和通知/进群失败；`im-conversation-title.postgres.e2e.ts` 在真实 PostgreSQL 验证同一实体版本只有一个竞争者成功、错误期望版本不写入及跨租户更新被拒绝。
 - C 端测试覆盖 `im:conversation` 订阅、逆序版本拒绝、同一 tick 多会话批量消费和 REST 请求期间事件保留。真实三阶段浏览器验收仍需具备可操作订单群的 C 端测试账号及订单数据，当前交付不得把该项写作已通过。
 - 根目录 `pnpm test` 串行执行服务端、管理端和客户端测试；本次实际结果与数量见交付汇报及反馈模块文档，避免在多个文档复制易漂移计数。
 - C 端支付弹层只把明确的已支付状态或非空 `paidAt` 视为成功；`cancelled` 会停止轮询并提示未支付，请求失败采用单请求保护后自动重试。
 - `POST /order` 仍沿用既有“每次请求创建一个新订单”的语义，尚未提供客户端幂等键；网络响应丢失后自动重放请求可能生成第二张订单。客户端通过提交中禁用降低重复点击，但生产接入自动重试前应补充租户 + 用户 + 幂等键唯一约束。
 
-尚未覆盖的风险包括：目录选择到支付之间打手资料/押金/上下线状态变化（会在创建或确认时失败并需用户重试）、完整 HTTP + RBAC E2E、真实支付渠道回调和浏览器端语音播放。订单群没有独立后台任务队列，补建或标题纠偏依赖后续查单、详情或后台进群请求；并发接单/指派已由行锁和 409 处理，指定订单仍依赖客服最终确认。完成订单的进度累计、提成入账与订单保存仍是既有的多步非单事务流程，并发重复完成存在资金与计数风险，本次标题同步不扩大范围处理该问题。
+尚未覆盖的风险包括：目录选择到支付之间打手资料/押金/上下线状态变化（会在创建或确认时失败并需用户重试）、完整 HTTP + RBAC E2E、真实支付渠道回调和浏览器端语音播放。扫码渠道已扣款但数据库取消先提交时，晚到支付回调仍可能被终态规则忽略，后续需要渠道关单或主动对账补偿。订单群没有独立后台任务队列，补建或标题纠偏依赖后续查单、详情或后台进群请求；并发接单/指派已由行锁和 409 处理，指定订单仍依赖客服最终确认。完成订单的进度累计、提成入账与订单保存仍是既有的多步非单事务流程，并发重复完成存在资金与计数风险，本次标题同步不扩大范围处理该问题。
 
 ## 管理端菜单角标
 
-“订单管理”角标复用 `GET /api/order/admin`，只探测 `status=pending_service` 的分页 `total`。普通租户管理员看到租户内全部待客服订单，客服角色继续经 `ServiceAgentScope` 只看到本人负责商品的订单，超级管理员沿用列表的全局范围；下发大厅或指派成功后页面立即刷新角标。完整实现见 [menu-badges.md](./menu-badges.md)。
+“订单管理”角标复用 `GET /api/order/admin`：所有有订单列表权限者探测 `pending_service`，具备 `order:admin:refund:review` 时额外探测 `refund_reviewing` 并合计。客服角色继续经 `ServiceAgentScope` 只看到本人负责商品的订单；下发、指派或退款审核后页面立即刷新角标。完整实现见 [menu-badges.md](./menu-badges.md)。

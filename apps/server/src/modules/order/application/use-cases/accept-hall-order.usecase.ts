@@ -10,7 +10,7 @@ import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository
 import { BoosterSelectionService } from '../../../booster/application/booster-selection.service';
 import { BoosterAccess } from '../booster-access.service';
 import { OrderGroupService } from '../order-group.service';
-import { toOrderView } from '../order.mapper';
+import { toBoosterOrderView } from '../order.mapper';
 import { assertRequestedBooster } from '../order-booster-selection';
 
 /**
@@ -61,6 +61,6 @@ export class AcceptHallOrderUseCase {
       throw new ConflictException('该订单已被接走或状态已变化');
     }
     await this.orderGroup.joinBooster(saved, userId);
-    return toOrderView(saved);
+    return toBoosterOrderView(saved);
   }
 }

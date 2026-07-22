@@ -9,6 +9,7 @@ import {
 } from '@app/contracts';
 import type { DataSource, EntityManager } from 'typeorm';
 import { ProductEntity } from '../../src/modules/commerce/domain/product.entity';
+import type { MemberSpendTransactionParticipant } from '../../src/modules/member/infrastructure/member-spend-transaction.participant';
 import { OrderEntity } from '../../src/modules/order/domain/order.entity';
 import { TypeormOrderPaymentSettlement } from '../../src/modules/order/infrastructure/order-payment.settlement';
 import { WalletEntity } from '../../src/modules/wallet/domain/wallet.entity';
@@ -24,7 +25,9 @@ class SettlementHarness {
   readonly lockTargets: string[] = [];
   readonly walletLookupCriteria: Partial<WalletEntity>[] = [];
   readonly soldByProduct = new Map<string, number>();
+  readonly memberSpendByUser = new Map<string, number>();
   readonly dataSource: DataSource;
+  readonly memberSpend: MemberSpendTransactionParticipant;
   private queue: Promise<void> = Promise.resolve();
 
   constructor(
@@ -38,6 +41,20 @@ class SettlementHarness {
       transaction: <T>(work: (entityManager: EntityManager) => Promise<T>) =>
         this.serialized(() => work(manager)),
     } as unknown as DataSource;
+    this.memberSpend = {
+      record: async (_manager, input) => {
+        this.memberSpendByUser.set(
+          input.userId,
+          (this.memberSpendByUser.get(input.userId) ?? 0) + input.amountFen,
+        );
+      },
+      rollback: async (_manager, input) => {
+        this.memberSpendByUser.set(
+          input.userId,
+          Math.max((this.memberSpendByUser.get(input.userId) ?? 0) - input.amountFen, 0),
+        );
+      },
+    };
   }
 
   private async serialized<T>(work: () => Promise<T>): Promise<T> {
@@ -137,6 +154,7 @@ function makeOrder(
     conversationId: '',
     quantity: 2,
     amountFen,
+    memberSpendRecorded: false,
     provider: OrderPaymentMethod.Balance,
     status: OrderStatus.PendingPayment,
     providerTradeNo: null,
@@ -158,11 +176,11 @@ function makeWallet(balanceFen: number, overrides: Partial<WalletEntity> = {}): 
   });
 }
 
-test('余额支付同事务扣款、记流水、推进订单并累加销量', async () => {
+test('余额支付同事务扣款、记流水、推进订单并累加销量与会员消费', async () => {
   const order = makeOrder('order-1', 300);
   const wallet = makeWallet(1_000);
   const harness = new SettlementHarness([order], wallet);
-  const settlement = new TypeormOrderPaymentSettlement(harness.dataSource);
+  const settlement = new TypeormOrderPaymentSettlement(harness.dataSource, harness.memberSpend);
 
   const result = await settlement.settleBalance({
     orderId: order.id,
@@ -176,6 +194,8 @@ test('余额支付同事务扣款、记流水、推进订单并累加销量', as
   assert.match(order.providerTradeNo ?? '', /^BALANCE-/);
   assert.ok(order.paidAt instanceof Date);
   assert.equal(harness.soldByProduct.get(order.productId), order.quantity);
+  assert.equal(harness.memberSpendByUser.get(order.userId), order.amountFen);
+  assert.equal(order.memberSpendRecorded, true);
   assert.deepEqual(harness.lockTargets, ['order', 'wallet']);
   assert.deepEqual(harness.walletLookupCriteria, [
     { tenantId: order.tenantId, userId: order.userId },
@@ -192,7 +212,7 @@ test('余额冻结或不足时不修改订单、余额和流水', async (t) => {
     const order = makeOrder('order-frozen', 300);
     const wallet = makeWallet(1_000, { status: WalletStatus.Frozen });
     const harness = new SettlementHarness([order], wallet);
-    const settlement = new TypeormOrderPaymentSettlement(harness.dataSource);
+    const settlement = new TypeormOrderPaymentSettlement(harness.dataSource, harness.memberSpend);
 
     await assert.rejects(
       settlement.settleBalance({
@@ -211,7 +231,7 @@ test('余额冻结或不足时不修改订单、余额和流水', async (t) => {
     const order = makeOrder('order-insufficient', 300);
     const wallet = makeWallet(299);
     const harness = new SettlementHarness([order], wallet);
-    const settlement = new TypeormOrderPaymentSettlement(harness.dataSource);
+    const settlement = new TypeormOrderPaymentSettlement(harness.dataSource, harness.memberSpend);
 
     await assert.rejects(
       settlement.settleBalance({
@@ -232,7 +252,7 @@ test('余额支付拒绝越权用户和不一致金额', async (t) => {
     const order = makeOrder('order-owner', 300);
     const wallet = makeWallet(1_000);
     const harness = new SettlementHarness([order], wallet);
-    const settlement = new TypeormOrderPaymentSettlement(harness.dataSource);
+    const settlement = new TypeormOrderPaymentSettlement(harness.dataSource, harness.memberSpend);
 
     await assert.rejects(
       settlement.settleBalance({
@@ -250,7 +270,7 @@ test('余额支付拒绝越权用户和不一致金额', async (t) => {
     const order = makeOrder('order-amount', 300);
     const wallet = makeWallet(1_000);
     const harness = new SettlementHarness([order], wallet);
-    const settlement = new TypeormOrderPaymentSettlement(harness.dataSource);
+    const settlement = new TypeormOrderPaymentSettlement(harness.dataSource, harness.memberSpend);
 
     await assert.rejects(
       settlement.settleBalance({
@@ -269,7 +289,7 @@ test('同一订单并发余额支付仅扣款一次', async () => {
   const order = makeOrder('order-concurrent', 200);
   const wallet = makeWallet(500);
   const harness = new SettlementHarness([order], wallet);
-  const settlement = new TypeormOrderPaymentSettlement(harness.dataSource);
+  const settlement = new TypeormOrderPaymentSettlement(harness.dataSource, harness.memberSpend);
   const input = {
     orderId: order.id,
     userId: order.userId,
@@ -285,6 +305,7 @@ test('同一订单并发余额支付仅扣款一次', async () => {
   assert.equal(wallet.balanceFen, 300);
   assert.equal(harness.transactions.length, 1);
   assert.equal(harness.soldByProduct.get(order.productId), order.quantity);
+  assert.equal(harness.memberSpendByUser.get(order.userId), order.amountFen);
 });
 
 test('同钱包不同订单并发时余额不会透支', async () => {
@@ -292,7 +313,7 @@ test('同钱包不同订单并发时余额不会透支', async () => {
   const second = makeOrder('order-b', 100);
   const wallet = makeWallet(150);
   const harness = new SettlementHarness([first, second], wallet);
-  const settlement = new TypeormOrderPaymentSettlement(harness.dataSource);
+  const settlement = new TypeormOrderPaymentSettlement(harness.dataSource, harness.memberSpend);
 
   const results = await Promise.allSettled(
     [first, second].map((order) =>
@@ -317,7 +338,7 @@ test('同钱包不同订单并发时余额不会透支', async () => {
 test('0 元余额订单直接落账且不产生钱包流水', async () => {
   const order = makeOrder('order-zero', 0);
   const harness = new SettlementHarness([order], null);
-  const settlement = new TypeormOrderPaymentSettlement(harness.dataSource);
+  const settlement = new TypeormOrderPaymentSettlement(harness.dataSource, harness.memberSpend);
 
   const result = await settlement.settle({
     orderNo: order.orderNo,
@@ -329,6 +350,8 @@ test('0 元余额订单直接落账且不产生钱包流水', async () => {
   assert.equal(result, order);
   assert.equal(order.status, OrderStatus.PendingService);
   assert.equal(order.providerTradeNo, 'ZERO_AMOUNT');
+  assert.equal(order.memberSpendRecorded, false);
+  assert.equal(harness.memberSpendByUser.has(order.userId), false);
   assert.equal(harness.transactions.length, 0);
   assert.deepEqual(harness.lockTargets, ['order']);
 });

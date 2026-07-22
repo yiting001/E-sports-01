@@ -7,6 +7,8 @@ import { withTenant } from '../../../shared/tenant/tenant-scope.util';
 import { OrderEntity } from '../domain/order.entity';
 import {
   AdminOrderFilter,
+  ClaimOrderForCancellationInput,
+  ClaimOrderForDispatchInput,
   ClaimOrderForServingInput,
   OrderRepository,
 } from '../domain/order-repository.interface';
@@ -23,6 +25,7 @@ export class TypeormOrderRepository implements OrderRepository {
   findById(id: string): Promise<OrderEntity | null> {
     return this.repo.findOne({
       where: withTenant<OrderEntity>(this.tenant, { id }) as FindOptionsWhere<OrderEntity>,
+      relations: { refund: true },
     });
   }
 
@@ -46,6 +49,7 @@ export class TypeormOrderRepository implements OrderRepository {
         ...(status ? { status } : {}),
       }),
       order: { createdAt: 'DESC' },
+      relations: { refund: true },
       skip,
       take,
     });
@@ -57,6 +61,7 @@ export class TypeormOrderRepository implements OrderRepository {
         status: OrderStatus.Dispatching,
       }),
       order: { createdAt: 'DESC' },
+      relations: { refund: true },
       skip,
       take,
     });
@@ -97,6 +102,7 @@ export class TypeormOrderRepository implements OrderRepository {
     return this.repo.findAndCount({
       where: withTenant<OrderEntity>(this.tenant, where),
       order: { createdAt: 'DESC' },
+      relations: { refund: true },
       skip,
       take,
     });
@@ -116,6 +122,43 @@ export class TypeormOrderRepository implements OrderRepository {
     if (result.affected !== 1) {
       throw new Error(`订单 ${id} 的群聊关联回填失败`);
     }
+  }
+
+  claimForDispatch(input: ClaimOrderForDispatchInput): Promise<OrderEntity | null> {
+    return this.repo.manager.transaction(async (manager) => {
+      const repo = manager.getRepository(OrderEntity);
+      const order = await repo.findOne({
+        where: { id: input.orderId, tenantId: input.tenantId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (
+        !order ||
+        order.status !== OrderStatus.PendingService ||
+        order.boosterId ||
+        order.requestedBoosterId
+      ) {
+        return null;
+      }
+      order.status = OrderStatus.Dispatching;
+      order.dispatchedAt = input.dispatchedAt;
+      return repo.save(order);
+    });
+  }
+
+  claimForCancellation(input: ClaimOrderForCancellationInput): Promise<OrderEntity | null> {
+    return this.repo.manager.transaction(async (manager) => {
+      const repo = manager.getRepository(OrderEntity);
+      const order = await repo.findOne({
+        where: { id: input.orderId, tenantId: input.tenantId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!order || order.userId !== input.userId || order.status !== OrderStatus.PendingPayment) {
+        return null;
+      }
+      order.status = OrderStatus.Cancelled;
+      order.cancelledAt = input.cancelledAt;
+      return repo.save(order);
+    });
   }
 
   claimForServing(input: ClaimOrderForServingInput): Promise<OrderEntity | null> {

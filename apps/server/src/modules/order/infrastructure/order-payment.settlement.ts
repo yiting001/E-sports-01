@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   FundDirection,
   OrderPaymentMethod,
@@ -9,6 +9,10 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { ProductEntity } from '../../commerce/domain/product.entity';
+import {
+  MEMBER_SPEND_TRANSACTION_PARTICIPANT,
+  MemberSpendTransactionParticipant,
+} from '../../member/infrastructure/member-spend-transaction.participant';
 import { WalletEntity } from '../../wallet/domain/wallet.entity';
 import { WalletTransactionEntity } from '../../wallet/domain/wallet-transaction.entity';
 import {
@@ -23,7 +27,11 @@ const BALANCE_TRADE_PREFIX = 'BALANCE-';
 /** TypeORM 订单支付事务实现，统一收敛订单、钱包、流水与销量的一致性边界。 */
 @Injectable()
 export class TypeormOrderPaymentSettlement implements OrderPaymentSettlement {
-  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    @Inject(MEMBER_SPEND_TRANSACTION_PARTICIPANT)
+    private readonly memberSpend: MemberSpendTransactionParticipant,
+  ) {}
 
   settle(input: SettleOrderPaymentInput): Promise<OrderEntity | null> {
     return this.dataSource.transaction(async (manager) => {
@@ -39,9 +47,10 @@ export class TypeormOrderPaymentSettlement implements OrderPaymentSettlement {
         return null;
       }
 
+      await this.increaseProductSales(manager, order);
+      await this.recordMemberSpend(manager, order);
       this.markOrderPaid(order, input.providerTradeNo);
       await orderRepo.save(order);
-      await this.increaseProductSales(manager, order);
       return order;
     });
   }
@@ -98,9 +107,10 @@ export class TypeormOrderPaymentSettlement implements OrderPaymentSettlement {
       });
       await manager.getRepository(WalletTransactionEntity).save(transaction);
 
+      await this.increaseProductSales(manager, order);
+      await this.recordMemberSpend(manager, order);
       this.markOrderPaid(order, `${BALANCE_TRADE_PREFIX}${order.id}`);
       await orderRepo.save(order);
-      await this.increaseProductSales(manager, order);
       return order;
     });
   }
@@ -109,6 +119,19 @@ export class TypeormOrderPaymentSettlement implements OrderPaymentSettlement {
     order.status = OrderStatus.PendingService;
     order.providerTradeNo = providerTradeNo;
     order.paidAt = new Date();
+  }
+
+  private async recordMemberSpend(manager: EntityManager, order: OrderEntity): Promise<void> {
+    if (order.amountFen <= 0) {
+      order.memberSpendRecorded = false;
+      return;
+    }
+    await this.memberSpend.record(manager, {
+      tenantId: order.tenantId,
+      userId: order.userId,
+      amountFen: order.amountFen,
+    });
+    order.memberSpendRecorded = true;
   }
 
   private async increaseProductSales(manager: EntityManager, order: OrderEntity): Promise<void> {

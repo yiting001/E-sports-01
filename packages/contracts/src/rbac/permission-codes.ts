@@ -85,6 +85,8 @@ export const PERMS = {
     detail: 'order:admin:detail',
     dispatch: 'order:admin:dispatch',
     assign: 'order:admin:assign',
+    /** 订单退款审核；客服不默认拥有，需管理员显式授权。 */
+    refundReview: 'order:admin:refund:review',
   },
   review: {
     list: 'review:admin:list',

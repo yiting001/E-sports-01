@@ -14,7 +14,6 @@ import { ProductEntity } from '../../src/modules/commerce/domain/product.entity'
 import type { ConfigService } from '../../src/modules/config/application/config.service';
 import type { CouponRedeemService } from '../../src/modules/coupon/application/coupon-redeem.service';
 import type { MemberLevelService } from '../../src/modules/member/application/member-level.service';
-import type { MemberProgressService } from '../../src/modules/member/application/member-progress.service';
 import type { OrderGroupService } from '../../src/modules/order/application/order-group.service';
 import type { BoosterSelectionService } from '../../src/modules/booster/application/booster-selection.service';
 import { OrderPaymentSettleService } from '../../src/modules/order/application/order-payment.service';
@@ -61,6 +60,23 @@ function createFailureFixture(balanceFailure: Error, channelFailure: Error): Fai
       return order;
     },
     findById: async (id: string) => (storedOrder?.id === id ? storedOrder : null),
+    claimForCancellation: async (input: {
+      orderId: string;
+      userId: string;
+      cancelledAt: Date;
+    }) => {
+      if (
+        !storedOrder ||
+        storedOrder.id !== input.orderId ||
+        storedOrder.userId !== input.userId ||
+        storedOrder.status !== OrderStatus.PendingPayment
+      ) {
+        return null;
+      }
+      storedOrder.status = OrderStatus.Cancelled;
+      storedOrder.cancelledAt = input.cancelledAt;
+      return storedOrder;
+    },
   } as unknown as OrderRepository;
   const products = {
     findById: async (id: string) => (id === product.id ? product : null),
@@ -215,7 +231,7 @@ test('余额支付 DTO 接受 balance 且拒绝未知支付方式', async () => 
   assert.ok((await validate(invalid)).some((error) => error.property === 'provider'));
 });
 
-test('支付事务提交后的会员累计失败不会冒泡为支付失败', async (t) => {
+test('支付事务提交后的建群失败不会冒泡为支付失败', async (t) => {
   t.mock.method(Logger.prototype, 'error', () => undefined);
   const order = Object.assign(new OrderEntity(), {
     id: 'order-1',
@@ -226,17 +242,13 @@ test('支付事务提交后的会员累计失败不会冒泡为支付失败', as
   const settlement = {
     settleBalance: async () => order,
   } as unknown as OrderPaymentSettlement;
-  const memberProgress = {
-    recordSpend: async () => {
-      throw new Error('会员服务暂不可用');
-    },
-  };
   let groupCalled = false;
   let tenantId = '';
   let isSuper = true;
   const orderGroup = {
     ensureGroup: async () => {
       groupCalled = true;
+      throw new Error('IM 暂时不可用');
     },
   };
   const tenant = {
@@ -248,7 +260,6 @@ test('支付事务提交后的会员累计失败不会冒泡为支付失败', as
   };
   const service = new OrderPaymentSettleService(
     settlement,
-    memberProgress as unknown as MemberProgressService,
     orderGroup as unknown as OrderGroupService,
     tenant as unknown as TenantContextService,
   );

@@ -10,6 +10,10 @@ import { PRODUCT_REPOSITORY } from './domain/product-repository.interface';
 
 import { TypeormCategoryRepository } from './infrastructure/category.repository';
 import { TypeormProductRepository } from './infrastructure/product.repository';
+import {
+  PRODUCT_SALES_TRANSACTION_PARTICIPANT,
+  TypeormProductSalesTransactionParticipant,
+} from './infrastructure/product-sales-transaction.participant';
 
 import { ProductViewAssembler } from './application/product-view.assembler';
 import { ListCategoriesUseCase } from './application/use-cases/list-categories.usecase';
@@ -47,10 +51,7 @@ import { ServiceAgentListController } from './interfaces/controllers/service-age
  * 表结构经 TypeORM synchronize 自动建立，无需手写迁移。
  */
 @Module({
-  imports: [
-    RbacModule,
-    TypeOrmModule.forFeature([CategoryEntity, ProductEntity]),
-  ],
+  imports: [RbacModule, TypeOrmModule.forFeature([CategoryEntity, ProductEntity])],
   controllers: [
     CategoryListController,
     CategoryCreateController,
@@ -69,6 +70,10 @@ import { ServiceAgentListController } from './interfaces/controllers/service-age
   providers: [
     { provide: CATEGORY_REPOSITORY, useClass: TypeormCategoryRepository },
     { provide: PRODUCT_REPOSITORY, useClass: TypeormProductRepository },
+    {
+      provide: PRODUCT_SALES_TRANSACTION_PARTICIPANT,
+      useClass: TypeormProductSalesTransactionParticipant,
+    },
     ProductViewAssembler,
     ListCategoriesUseCase,
     CreateCategoryUseCase,
@@ -85,6 +90,6 @@ import { ServiceAgentListController } from './interfaces/controllers/service-age
     ListServiceAgentsUseCase,
   ],
   // 导出商品仓储供订单模块下单时校验商品/固化快照
-  exports: [PRODUCT_REPOSITORY],
+  exports: [PRODUCT_REPOSITORY, PRODUCT_SALES_TRANSACTION_PARTICIPANT],
 })
 export class CommerceModule {}

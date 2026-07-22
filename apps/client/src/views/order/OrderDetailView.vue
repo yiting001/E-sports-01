@@ -3,7 +3,7 @@
  * 订单详情页（全屏）：展示单笔订单的商品快照、状态、服务信息（接单打手）、
  * 价格明细（原价/会员折扣/优惠券抵扣/实付）、订单信息与全量时间线
  * （下单/支付/下发大厅/接单/完成/取消）；
- * 已建群订单提供「进入订单群」入口，待付款订单可取消。
+ * 已建群订单提供「进入订单群」入口，待付款订单可取消，可退款订单提交审核申请。
  */
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -18,9 +18,12 @@ import {
   type OrderView,
 } from "@app/contracts";
 import AppIcon from "@/components/common/AppIcon.vue";
+import OrderRefundPanel from "@/components/order/OrderRefundPanel.vue";
+import OrderRefundRequestDialog from "@/components/order/OrderRefundRequestDialog.vue";
 import RemarkMediaGallery from "@/components/order/RemarkMediaGallery.vue";
 import { orderApi } from "@/api/order.api";
 import { useToast } from "@/composables/use-toast";
+import { formatOrderDateTime as formatTime } from "@/utils/order-status";
 import "./OrderDetailView.css";
 
 const route = useRoute();
@@ -30,6 +33,7 @@ const toast = useToast();
 const order = ref<OrderView | null>(null);
 const loading = ref(true);
 const loadError = ref(false);
+const refundDialogVisible = ref(false);
 
 /** 会员折扣减免金额（分）= 原价 - 券抵扣 - 实付 */
 const memberDiscountFen = computed(() => {
@@ -50,10 +54,6 @@ const discountText = computed(() => {
   }
   return `${(order.value.discountBp / (FEE_RATE_BASE / 100)).toFixed(0)} 折`;
 });
-
-function formatTime(iso: string): string {
-  return iso ? iso.slice(0, 19).replace("T", " ") : "-";
-}
 
 function serviceRegionText(value: OrderView["serviceRegion"]): string {
   return (
@@ -80,6 +80,11 @@ async function cancel(): Promise<void> {
   }
   order.value = await orderApi.cancel(order.value.id);
   toast.show("订单已取消");
+}
+
+function onRefundSubmitted(updated: OrderView): void {
+  order.value = updated;
+  refundDialogVisible.value = false;
 }
 
 async function loadOrder(): Promise<void> {
@@ -295,6 +300,12 @@ onMounted(() => {
           </dl>
         </section>
 
+        <OrderRefundPanel
+          :order="order"
+          :format-time="formatTime"
+          @request="refundDialogVisible = true"
+        />
+
         <!-- 订单信息 -->
         <section class="card block">
           <h3 class="block-title">
@@ -425,5 +436,12 @@ onMounted(() => {
         订单不存在
       </p>
     </div>
+
+    <OrderRefundRequestDialog
+      v-if="refundDialogVisible && order"
+      :order="order"
+      @submitted="onRefundSubmitted"
+      @close="refundDialogVisible = false"
+    />
   </div>
 </template>

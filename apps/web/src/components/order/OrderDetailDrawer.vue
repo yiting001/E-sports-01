@@ -8,13 +8,23 @@ import {
   BOOSTER_SERVICE_REGIONS,
   FEE_RATE_BASE,
   ORDER_PAYMENT_METHOD_TEXT,
+  ORDER_REFUND_STATUS_TEXT,
   ORDER_STATUS_TEXT,
   OrderBoosterSelectionMode,
+  PERMS,
   fenToYuan,
   type AdminOrderView,
   type OrderStatus,
   type OrderPaymentMethod,
 } from "@app/contracts";
+import { computed } from "vue";
+import OrderRefundActions from "@/components/order/OrderRefundActions.vue";
+import { useAuthStore } from "@/stores/auth.store";
+import {
+  canShowRefundReviewAction,
+  refundTagType,
+  type RefundSubmissionAction,
+} from "@/utils/order-refund-ui";
 
 function serviceRegionText(value: AdminOrderView["serviceRegion"]): string {
   if (!value) {
@@ -48,18 +58,35 @@ function discountText(discountBp: number): string {
   return `${(discountBp / (FEE_RATE_BASE / 100)).toFixed(0)} 折`;
 }
 
-defineProps<{
+const props = defineProps<{
   /** 当前查看的订单，为空时不渲染内容 */
   order: AdminOrderView | null;
   /** 时间格式化函数（与列表页共用） */
   formatDate: (value: string) => string;
+  /** 当前退款审核请求，用于禁用重复操作 */
+  refundSubmittingAction?: RefundSubmissionAction;
 }>();
+
+const auth = useAuthStore();
+const canShowRefundActions = computed(() => {
+  const refund = props.order?.refund;
+  return refund
+    ? canShowRefundReviewAction(
+        refund.status,
+        auth.hasPermission(PERMS.order.refundReview)
+      )
+    : false;
+});
 
 const emit = defineEmits<{
   /** 点击商品 → 由父页弹窗预览商品详情 */
   "view-product": [productId: string];
   /** 点击进入订单群 → 由父页加群并跳转 IM */
   "enter-group": [order: AdminOrderView];
+  /** 同意、查询或重试退款 */
+  "advance-refund": [order: AdminOrderView];
+  /** 驳回待审核退款 */
+  "reject-refund": [order: AdminOrderView];
 }>();
 
 const visible = defineModel<boolean>({ required: true });
@@ -82,6 +109,72 @@ const visible = defineModel<boolean>({ required: true });
       <el-descriptions-item label="状态">
         {{ ORDER_STATUS_TEXT[order.status as OrderStatus] }}
       </el-descriptions-item>
+      <template v-if="order.refund">
+        <el-descriptions-item label="退款状态">
+          <el-tag :type="refundTagType(order.refund.status)">
+            {{ ORDER_REFUND_STATUS_TEXT[order.refund.status] }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="退款单号">
+          {{ order.refund.refundNo }}
+        </el-descriptions-item>
+        <el-descriptions-item label="退款金额">
+          ¥{{ order.refund.amountYuan }}（{{
+            ORDER_PAYMENT_METHOD_TEXT[order.refund.paymentMethod]
+          }}）
+        </el-descriptions-item>
+        <el-descriptions-item label="申请原因">
+          <span class="refund-content">{{ order.refund.reason }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="申请时间">
+          {{ formatDate(order.refund.requestedAt) }}
+        </el-descriptions-item>
+        <el-descriptions-item
+          v-if="order.refund.rejectReason"
+          label="驳回原因"
+        >
+          <span class="refund-content refund-content--danger">
+            {{ order.refund.rejectReason }}
+          </span>
+        </el-descriptions-item>
+        <el-descriptions-item
+          v-if="order.refund.failReason"
+          label="失败原因"
+        >
+          <span class="refund-content refund-content--danger">
+            {{ order.refund.failReason }}
+          </span>
+        </el-descriptions-item>
+        <el-descriptions-item
+          v-if="order.refund.reviewerId"
+          label="审核人"
+        >
+          {{ order.refund.reviewerId }}
+        </el-descriptions-item>
+        <el-descriptions-item
+          v-if="order.refund.reviewedAt"
+          label="审核时间"
+        >
+          {{ formatDate(order.refund.reviewedAt) }}
+        </el-descriptions-item>
+        <el-descriptions-item
+          v-if="order.refund.refundedAt"
+          label="退款完成时间"
+        >
+          {{ formatDate(order.refund.refundedAt) }}
+        </el-descriptions-item>
+        <el-descriptions-item
+          v-if="canShowRefundActions"
+          label="退款操作"
+        >
+          <OrderRefundActions
+            :order="order"
+            :submitting-action="refundSubmittingAction"
+            @advance="emit('advance-refund', $event)"
+            @reject="emit('reject-refund', $event)"
+          />
+        </el-descriptions-item>
+      </template>
       <el-descriptions-item label="商品">
         <el-button
           link
@@ -234,5 +327,14 @@ const visible = defineModel<boolean>({ required: true });
   height: 72px;
   border-radius: 4px;
   object-fit: cover;
+}
+
+.refund-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.refund-content--danger {
+  color: var(--el-color-danger);
 }
 </style>
