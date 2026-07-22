@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { MessageType, SYSTEM_SENDER_ID, type ChatMessage } from '@app/contracts';
+import {
+  MessageType,
+  SYSTEM_SENDER_ID,
+  type ChatMessage,
+  type ConversationMemberView,
+} from '@app/contracts';
 import DOMPurify from 'dompurify';
 import AppIcon from '@/components/common/AppIcon.vue';
 import ChatMedia from '@/components/message/ChatMedia.vue';
 import ChatReplyQuote from '@/components/message/ChatReplyQuote.vue';
+import { resolveChatMemberName } from '@/composables/use-chat-compose';
 
 const props = defineProps<{
   messages: ChatMessage[];
@@ -12,6 +18,7 @@ const props = defineProps<{
   emptyText: string;
   canSend: boolean;
   selfId?: string;
+  members: ConversationMemberView[];
 }>();
 
 const emit = defineEmits<{
@@ -24,6 +31,14 @@ function isSelf(message: ChatMessage): boolean {
 
 function isSystem(message: ChatMessage): boolean {
   return message.senderId === SYSTEM_SENDER_ID;
+}
+
+/** 消息与历史引用都只从成员安全展示名解析，避免回显旧快照中的登录账号。 */
+function senderNameForId(senderId: string): string {
+  if (senderId === props.selfId) {
+    return '我';
+  }
+  return resolveChatMemberName(props.members, senderId);
 }
 
 function mentionedMe(message: ChatMessage): boolean {
@@ -83,14 +98,14 @@ function formatTime(timestamp: number): string {
       :class="{ 'row--self': isSelf(message) }"
     >
       <div class="col">
-        <span class="sender">{{ isSelf(message) ? '我' : '客服' }}</span>
+        <span class="sender">{{ senderNameForId(message.senderId) }}</span>
         <div
           class="bubble"
           :class="{ 'bubble--mention': mentionedMe(message) }"
         >
           <ChatReplyQuote
             v-if="message.replyTo"
-            :sender-name="message.replyTo.senderName"
+            :sender-name="senderNameForId(message.replyTo.senderId)"
             :type="message.replyTo.type"
             :content="message.replyTo.content"
           />

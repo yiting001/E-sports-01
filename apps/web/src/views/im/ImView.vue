@@ -138,7 +138,7 @@ async function selectConversation(id: string): Promise<void> {
   activeId.value = id;
   messages.value = await im.join(id);
   markActiveConversationRead();
-  // 成员清单供聊天面板 @选择与引用预览解析用户名
+  // 成员清单供聊天面板、记录搜索、@选择与引用预览解析安全展示名
   detail.value = await imApi.conversationDetail(id);
 }
 
@@ -382,6 +382,7 @@ onBeforeUnmount(() => {
     <im-message-search-dialog
       v-model="messageSearchDialog"
       :conversation-id="activeId"
+      :members="detail?.id === activeId ? detail.members : []"
     />
     <im-member-dialog
       v-model="memberDialog"

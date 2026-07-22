@@ -3,16 +3,19 @@
  * 聊天记录搜索弹窗：在当前会话内按内容关键词 + 日期范围分页检索（新→旧）。
  * 关键词与日期均可缺省——只选日期即可按天翻阅当天记录。
  */
-import type { ChatMessage } from '@app/contracts';
-import { MessageType, PAGINATION_DEFAULTS } from '@app/contracts';
+import type { ChatMessage, ConversationMemberView } from '@app/contracts';
+import { MessageType, PAGINATION_DEFAULTS, SYSTEM_SENDER_ID } from '@app/contracts';
 import { ref, watch } from 'vue';
 import { Search } from '@element-plus/icons-vue';
 import { imApi } from '@/api/im.api';
+import { resolveChatMemberName } from '@/composables/use-chat-compose';
 import { formatImTime, messageTypeLabel } from './im-ui';
 
 const props = defineProps<{
   /** 目标会话 id，为空时弹窗不可用 */
   conversationId: string | null;
+  /** 当前会话成员，用于把搜索结果发送者解析为安全展示名 */
+  members: ConversationMemberView[];
 }>();
 
 const visible = defineModel<boolean>({ required: true });
@@ -24,6 +27,13 @@ const results = ref<ChatMessage[]>([]);
 const total = ref(0);
 const loading = ref(false);
 const searched = ref(false);
+
+function senderNameOf(message: ChatMessage): string {
+  if (message.senderId === SYSTEM_SENDER_ID) {
+    return '系统';
+  }
+  return resolveChatMemberName(props.members, message.senderId);
+}
 
 async function search(): Promise<void> {
   if (!props.conversationId || loading.value) {
@@ -112,7 +122,7 @@ watch(visible, (open) => {
         class="im-search__item"
       >
         <div class="im-search__meta">
-          <span>{{ message.senderId.slice(0, 8) }}</span>
+          <span>{{ senderNameOf(message) }}</span>
           <span>{{ messageTypeLabel(message.type) }}</span>
           <time>{{ formatImTime(message.createdAt) }}</time>
         </div>

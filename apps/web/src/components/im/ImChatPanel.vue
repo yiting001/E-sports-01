@@ -16,7 +16,11 @@ import {
   User,
   VideoCamera,
 } from '@element-plus/icons-vue';
-import { replyContentText, useChatCompose } from '@/composables/use-chat-compose';
+import {
+  replyContentText,
+  resolveChatMemberName,
+  useChatCompose,
+} from '@/composables/use-chat-compose';
 import { sanitizeHtml } from '@/utils/sanitize-html';
 import {
   conversationInitial,
@@ -34,7 +38,7 @@ const props = defineProps<{
   draft: string;
   uploading: boolean;
   canManage: boolean;
-  /** 当前会话成员（供 @选择与引用预览的用户名解析） */
+  /** 当前会话成员（供消息发送者、@选择与引用预览的安全展示名解析） */
   members: ConversationMemberView[];
   /** 当前登录用户 id，用于 @我 高亮与候选排除自己 */
   selfId: string | null;
@@ -73,10 +77,17 @@ function mentionedMe(message: ChatMessage): boolean {
   return Boolean(props.selfId && message.mentions?.includes(props.selfId));
 }
 
-/** 引用预览里的发送者名：从成员清单解析，兜底用 id 前缀 */
+/** 所有发送者文案只信任当前成员清单，不展示登录名、历史快照或用户 ID。 */
+function memberNameOf(senderId: string): string {
+  return resolveChatMemberName(props.members, senderId);
+}
+
 function senderNameOf(message: ChatMessage): string {
-  const member = props.members.find((m) => m.userId === message.senderId);
-  return member?.username ?? message.senderId.slice(0, 8);
+  return memberNameOf(message.senderId);
+}
+
+function senderInitialOf(message: ChatMessage): string {
+  return senderNameOf(message).slice(0, 1).toUpperCase();
 }
 
 /** 发送：带上有效提及与引用 id，发完清空引用状态 */
@@ -187,11 +198,11 @@ watch(
               :class="['im-message', { 'is-self': isSelf(message) }]"
             >
               <span class="im-message__avatar">
-                {{ message.senderId.slice(0, 2).toUpperCase() }}
+                {{ senderInitialOf(message) }}
               </span>
               <div class="im-message__content">
                 <div class="im-message__meta">
-                  <span>{{ message.senderId.slice(0, 8) }}</span>
+                  <span>{{ senderNameOf(message) }}</span>
                   <span>{{ messageTypeLabel(message.type) }}</span>
                   <time>{{ formatImTime(message.createdAt) }}</time>
                   <el-button
@@ -207,7 +218,9 @@ watch(
                   v-if="message.replyTo"
                   class="im-reply-quote"
                 >
-                  <span class="im-reply-quote__sender">{{ message.replyTo.senderName }}</span>
+                  <span class="im-reply-quote__sender">
+                    {{ memberNameOf(message.replyTo.senderId) }}
+                  </span>
                   <span class="im-reply-quote__content">
                     {{ replyContentText(message.replyTo.type, message.replyTo.content) }}
                   </span>
@@ -260,7 +273,7 @@ watch(
             class="im-mention-picker__item"
             @click="compose.pickMention(member)"
           >
-            @{{ member.username }}
+            @{{ member.displayName }}
           </button>
         </div>
         <div

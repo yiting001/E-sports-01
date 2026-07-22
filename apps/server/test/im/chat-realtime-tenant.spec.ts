@@ -129,7 +129,7 @@ function createStartServiceHarness(
     },
   };
   const users = {
-    async resolveNames(ids: string[]): Promise<Map<string, string>> {
+    async resolveDisplayNames(ids: string[]): Promise<Map<string, string>> {
       return new Map(ids.map((id) => [id, `用户-${id}`]));
     },
   };

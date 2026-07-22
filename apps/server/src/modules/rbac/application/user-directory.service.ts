@@ -1,13 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  USER_REPOSITORY,
-  UserRepository,
-} from '../domain/user-repository.interface';
+import { formatPublicUserDisplayName } from '@app/contracts';
+import { USER_REPOSITORY, UserRepository } from '../domain/user-repository.interface';
 
 /** 用户简要信息（仅展示所需字段，跨模块共享时避免泄露敏感字段） */
 export interface UserBrief {
   id: string;
   username: string;
+  displayName: string;
 }
 
 /** 用户展示资料（用户名 + 昵称），供需要显示提交人/成员的模块使用 */
@@ -28,9 +27,7 @@ export interface UserProfileItem extends UserProfileBrief {
  */
 @Injectable()
 export class UserDirectory {
-  constructor(
-    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
-  ) {}
+  constructor(@Inject(USER_REPOSITORY) private readonly users: UserRepository) {}
 
   /** 批量解析用户名，返回 id → username 映射（不存在的 id 不在表中） */
   async resolveNames(ids: string[]): Promise<Map<string, string>> {
@@ -43,16 +40,28 @@ export class UserDirectory {
   async findBriefs(ids: string[]): Promise<UserBrief[]> {
     const unique = [...new Set(ids.filter(Boolean))];
     const rows = await this.users.findByIds(unique);
-    return rows.map((u) => ({ id: u.id, username: u.username }));
+    return rows.map((u) => ({
+      id: u.id,
+      username: u.username,
+      displayName: formatPublicUserDisplayName(u.id, u.nickname),
+    }));
+  }
+
+  /** 批量解析对外安全展示名；不存在的用户也只回退稳定编号，不暴露登录账号。 */
+  async resolveDisplayNames(ids: string[]): Promise<Map<string, string>> {
+    const unique = [...new Set(ids.filter(Boolean))];
+    const rows = await this.users.findByIds(unique);
+    const nicknames = new Map(rows.map((user) => [user.id, user.nickname]));
+    return new Map(
+      unique.map((id) => [id, formatPublicUserDisplayName(id, nicknames.get(id) ?? '')]),
+    );
   }
 
   /** 批量解析用户展示资料，返回 id → { username, nickname } 映射 */
   async resolveProfiles(ids: string[]): Promise<Map<string, UserProfileBrief>> {
     const unique = [...new Set(ids.filter(Boolean))];
     const rows = await this.users.findByIds(unique);
-    return new Map(
-      rows.map((u) => [u.id, { username: u.username, nickname: u.nickname }]),
-    );
+    return new Map(rows.map((u) => [u.id, { username: u.username, nickname: u.nickname }]));
   }
 
   /**
@@ -83,12 +92,7 @@ export class UserDirectory {
     take: number,
     keyword?: string,
   ): Promise<[UserProfileItem[], number]> {
-    const [rows, total] = await this.users.paginateByRole(
-      roleCode,
-      skip,
-      take,
-      keyword,
-    );
+    const [rows, total] = await this.users.paginateByRole(roleCode, skip, take, keyword);
     const list = rows.map((u) => ({
       id: u.id,
       username: u.username,

@@ -24,7 +24,7 @@ import { extractToken } from './ws-auth';
 
 /** 握手鉴权后注入到连接上的登录身份 */
 interface AuthedSocket extends Socket {
-  data: { userId: string; username: string; tenantId: string | null; isSuper: boolean };
+  data: { userId: string; tenantId: string | null; isSuper: boolean };
 }
 
 /**
@@ -67,7 +67,7 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
         traceId: TraceContextService.newTraceId(),
         spanId: TraceContextService.newSpanId(),
         userId: socket.data?.userId ?? null,
-        username: socket.data?.username ?? null,
+        username: null,
       },
       () =>
         this.tenant.run(
@@ -98,7 +98,6 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
       const auth = await this.permissions.resolve(payload.sub);
       (socket as AuthedSocket).data = {
         userId: payload.sub,
-        username: payload.username,
         tenantId: payload.tenantId ?? null,
         isSuper: auth.isSuper,
       };
@@ -107,7 +106,7 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
         return;
       }
       this.presence.register(socket.id, payload.sub, payload.tenantId ?? null);
-      this.logger.debug(`IM 连接已鉴权：${payload.username}`);
+      this.logger.debug(`IM 连接已鉴权：${payload.sub}`);
     } catch {
       this.deny(socket, '访问令牌无效或已过期');
     }

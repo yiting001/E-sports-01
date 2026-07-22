@@ -1,8 +1,5 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import {
-  ConversationMemberRole,
-  ConversationType,
-} from '@app/contracts';
+import { ConversationMemberRole, ConversationType } from '@app/contracts';
 import { UserDirectory } from '../../../rbac/application/user-directory.service';
 import {
   CONVERSATION_MEMBER_REPOSITORY,
@@ -24,14 +21,9 @@ export class RemoveMemberUseCase {
     private readonly systemMessage: SystemMessageService,
   ) {}
 
-  async execute(
-    conversationId: string,
-    operatorId: string,
-    targetId: string,
-  ): Promise<void> {
+  async execute(conversationId: string, operatorId: string, targetId: string): Promise<void> {
     await this.access.assertManager(conversationId, operatorId);
-    const conversation =
-      await this.access.getConversationOrFail(conversationId);
+    const conversation = await this.access.getConversationOrFail(conversationId);
     if (conversation.type !== ConversationType.Group) {
       throw new BadRequestException('仅群聊支持移出成员');
     }
@@ -44,10 +36,10 @@ export class RemoveMemberUseCase {
     }
 
     await this.members.remove(conversationId, targetId);
-    const names = await this.users.resolveNames([targetId]);
-    await this.systemMessage.post(
+    const names = await this.users.resolveDisplayNames([targetId]);
+    await this.systemMessage.postText(
       conversationId,
-      `${names.get(targetId) ?? targetId} 被移出群聊`,
+      `${names.get(targetId) ?? '成员'} 被移出群聊`,
     );
     await this.notifier.pushToMembers(conversation);
   }

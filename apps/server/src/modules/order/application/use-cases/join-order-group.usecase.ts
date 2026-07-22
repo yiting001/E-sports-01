@@ -31,8 +31,8 @@ export class JoinOrderGroupUseCase {
     if (!order.conversationId) {
       throw new BadRequestException('该订单尚未创建订单群（支付成功后自动创建）');
     }
-    const names = await this.users.resolveNames([operatorId]);
-    const name = names.get(operatorId) ?? operatorId;
+    const names = await this.users.resolveDisplayNames([operatorId]);
+    const name = names.get(operatorId) ?? '工作人员';
     await this.groups.joinGroup(order.conversationId, operatorId, `工作人员 ${name} 加入群聊`);
     return { conversationId: order.conversationId };
   }

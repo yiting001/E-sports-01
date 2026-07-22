@@ -1,9 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import {
-  ConversationType,
-  ConversationView,
-  RenameGroupPayload,
-} from '@app/contracts';
+import { ConversationType, ConversationView, RenameGroupPayload } from '@app/contracts';
 import {
   CONVERSATION_REPOSITORY,
   ConversationRepository,
@@ -36,15 +32,14 @@ export class RenameGroupUseCase {
       throw new BadRequestException('群名称不能为空');
     }
     await this.access.assertManager(conversationId, operatorId);
-    const conversation =
-      await this.access.getConversationOrFail(conversationId);
+    const conversation = await this.access.getConversationOrFail(conversationId);
     if (conversation.type !== ConversationType.Group) {
       throw new BadRequestException('仅群聊支持改名');
     }
 
     conversation.title = title;
     const saved = await this.conversations.save(conversation);
-    await this.systemMessage.post(conversationId, `群名称已改为「${title}」`);
+    await this.systemMessage.postText(conversationId, `群名称已改为「${title}」`);
     await this.notifier.pushToMembers(saved);
     return this.assembler.toView(saved, operatorId);
   }

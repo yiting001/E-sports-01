@@ -23,8 +23,7 @@ export class LeaveConversationUseCase {
 
   async execute(conversationId: string, userId: string): Promise<void> {
     const member = await this.access.assertMember(conversationId, userId);
-    const conversation =
-      await this.access.getConversationOrFail(conversationId);
+    const conversation = await this.access.getConversationOrFail(conversationId);
     if (
       conversation.type === ConversationType.Group &&
       member.role === ConversationMemberRole.Owner
@@ -34,10 +33,10 @@ export class LeaveConversationUseCase {
 
     await this.members.remove(conversationId, userId);
     if (conversation.type === ConversationType.Group) {
-      const names = await this.users.resolveNames([userId]);
-      await this.systemMessage.post(
+      const names = await this.users.resolveDisplayNames([userId]);
+      await this.systemMessage.postText(
         conversationId,
-        `${names.get(userId) ?? userId} 退出了群聊`,
+        `${names.get(userId) ?? '成员'} 退出了群聊`,
       );
     }
     await this.notifier.pushToMembers(conversation);

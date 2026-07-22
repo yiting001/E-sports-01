@@ -1,9 +1,5 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import {
-  CONFIG_KEYS,
-  ConversationMemberRole,
-  ConversationStatus,
-} from '@app/contracts';
+import { CONFIG_KEYS, ConversationMemberRole, ConversationStatus } from '@app/contracts';
 import { ConfigService } from '../../config/application/config.service';
 import { UserDirectory } from '../../rbac/application/user-directory.service';
 import { ConversationEntity } from '../domain/conversation.entity';
@@ -37,10 +33,7 @@ export class ServiceAssignmentService {
     private readonly systemMessage: SystemMessageService,
   ) {}
 
-  async attachAgent(
-    conversation: ConversationEntity,
-    agentId: string,
-  ): Promise<void> {
+  async attachAgent(conversation: ConversationEntity, agentId: string): Promise<void> {
     if (conversation.status !== ConversationStatus.Pending) {
       throw new BadRequestException('该客服会话已被接入或已结束');
     }
@@ -53,14 +46,12 @@ export class ServiceAssignmentService {
     conversation.status = ConversationStatus.Active;
     const saved = await this.conversations.save(conversation);
 
-    const names = await this.users.resolveNames([agentId]);
-    await this.systemMessage.post(
+    const names = await this.users.resolveDisplayNames([agentId]);
+    await this.systemMessage.postText(
       conversation.id,
-      `客服 ${names.get(agentId) ?? agentId} 已接入`,
+      `客服 ${names.get(agentId) ?? '客服'} 已接入`,
     );
-    const welcome = (
-      await this.config.getString(CONFIG_KEYS.im.serviceWelcome, '')
-    ).trim();
+    const welcome = (await this.config.getString(CONFIG_KEYS.im.serviceWelcome, '')).trim();
     if (welcome) {
       await this.systemMessage.post(conversation.id, welcome);
     }

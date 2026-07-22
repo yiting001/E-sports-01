@@ -7,6 +7,16 @@ import {
 
 /** 输入框末尾的 @提及触发模式：@ 后跟不含空白的检索词 */
 const MENTION_TRIGGER = /@([^\s@]*)$/;
+const MEMBER_NAME_FALLBACK = '成员';
+
+/** 从当前会话成员清单解析安全展示名，禁止回退登录名、历史快照或用户 ID。 */
+export function resolveChatMemberName(
+  members: readonly ConversationMemberView[],
+  userId: string,
+): string {
+  const member = members.find((item) => item.userId === userId);
+  return member?.displayName.trim() || MEMBER_NAME_FALLBACK;
+}
 
 /** 引用摘要文案：媒体消息显占位，文本原样返回 */
 export function replyContentText(type: MessageType, content: string): string {
@@ -21,15 +31,15 @@ export function replyContentText(type: MessageType, content: string): string {
 
 /**
  * 聊天输入的 @提及与引用回复状态管理。
- * - 提及：输入 @ 触发成员候选面板，选中后插入 @用户名，发送时回收仍存在于文本中的提及 id；
+ * - 提及：输入 @ 触发成员候选面板，选中后插入 @展示名，发送时回收仍存在于文本中的提及 id；
  * - 引用：记录被引用消息并生成发送载荷字段，发送后清空。
  * C 端与管理端聊天面板共享同一交互模型，此组合式函数收敛全部纯状态逻辑。
  */
 export function useChatCompose(draft: Ref<string>) {
   /** 当前会话可 @ 的成员（由外部在进入会话后注入） */
   const members = ref<ConversationMemberView[]>([]);
-  /** 已选择的提及（发送前校验文本中仍保留 @用户名 才计入） */
-  const picked = ref<{ id: string; username: string }[]>([]);
+  /** 已选择的提及（发送前校验文本中仍保留 @展示名 才计入） */
+  const picked = ref<{ id: string; displayName: string }[]>([]);
   /** 引用回复的目标消息 */
   const replyTarget = ref<ChatMessage | null>(null);
 
@@ -46,7 +56,7 @@ export function useChatCompose(draft: Ref<string>) {
     }
     const query = mentionQuery.value.toLowerCase();
     return members.value.filter((m) =>
-      m.username.toLowerCase().includes(query),
+      m.displayName.toLowerCase().includes(query),
     );
   });
 
@@ -56,21 +66,21 @@ export function useChatCompose(draft: Ref<string>) {
     replyTarget.value = null;
   }
 
-  /** 选中候选成员：把末尾的 @检索词 替换为 @用户名 并记录 */
+  /** 选中候选成员：把末尾的 @检索词替换为安全展示名并记录 */
   function pickMention(member: ConversationMemberView): void {
     draft.value = draft.value.replace(
       MENTION_TRIGGER,
-      `@${member.username} `,
+      `@${member.displayName} `,
     );
     if (!picked.value.some((p) => p.id === member.userId)) {
-      picked.value.push({ id: member.userId, username: member.username });
+      picked.value.push({ id: member.userId, displayName: member.displayName });
     }
   }
 
-  /** 发送时计算有效提及：仅统计文本中仍保留 @用户名 的记录 */
+  /** 发送时计算有效提及：仅统计文本中仍保留 @展示名 的记录 */
   function collectMentions(content: string): string[] | undefined {
     const ids = picked.value
-      .filter((p) => content.includes(`@${p.username}`))
+      .filter((p) => content.includes(`@${p.displayName}`))
       .map((p) => p.id);
     return ids.length > 0 ? ids : undefined;
   }

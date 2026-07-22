@@ -21,7 +21,8 @@ export enum ConversationStatus {
 /** 会话成员对外结构 */
 export interface ConversationMemberView {
   userId: string;
-  username: string;
+  /** 隐私安全展示名，不包含登录用户名或手机号 */
+  displayName: string;
   role: ConversationMemberRole;
   joinedAt: number;
   lastReadAt: number | null;

@@ -13,15 +13,12 @@ import {
   CONVERSATION_MEMBER_REPOSITORY,
   ConversationMemberRepository,
 } from '../domain/conversation-member-repository.interface';
-import {
-  MESSAGE_REPOSITORY,
-  MessageRepository,
-} from '../domain/message-repository.interface';
+import { MESSAGE_REPOSITORY, MessageRepository } from '../domain/message-repository.interface';
 import { toChatMessage } from './message.mapper';
 
 /**
  * 会话视图组装器。
- * 把会话实体补齐为对外视图：成员数、最后一条消息、未读数、成员清单（含用户名）。
+ * 把会话实体补齐为对外视图：成员数、最后一条消息、未读数、成员安全展示名。
  * 集中此处避免各用例重复拼装。
  */
 @Injectable()
@@ -35,10 +32,7 @@ export class ConversationViewAssembler {
   ) {}
 
   /** 单个会话的列表视图（含当前查看者的未读数） */
-  async toView(
-    conversation: ConversationEntity,
-    viewerId: string,
-  ): Promise<ConversationView> {
+  async toView(conversation: ConversationEntity, viewerId: string): Promise<ConversationView> {
     const [memberCount, latest, viewer, unread] = await Promise.all([
       this.members.countByConversation(conversation.id),
       this.messages.findLatest(conversation.id),
@@ -68,9 +62,7 @@ export class ConversationViewAssembler {
   ): Promise<ConversationDetailView> {
     const base = await this.toView(conversation, viewerId);
     const memberRows = await this.members.findByConversation(conversation.id);
-    const names = await this.users.resolveNames(
-      memberRows.map((m) => m.userId),
-    );
+    const names = await this.users.resolveDisplayNames(memberRows.map((m) => m.userId));
     const members: ConversationMemberView[] = memberRows.map((m) =>
       this.toMemberView(m, names.get(m.userId) ?? m.userId),
     );
@@ -79,30 +71,25 @@ export class ConversationViewAssembler {
 
   /**
    * 列表展示标题。
-   * 群聊/客服用存储的 title；私聊无固定标题，按查看者视角取“对方用户名”。
+   * 群聊/客服用存储的 title；私聊无固定标题，按查看者视角取对方安全展示名。
    */
-  private async displayTitle(
-    conversation: ConversationEntity,
-    viewerId: string,
-  ): Promise<string> {
+  private async displayTitle(conversation: ConversationEntity, viewerId: string): Promise<string> {
     if (conversation.type !== ConversationType.Private) {
       return conversation.title;
     }
     const memberRows = await this.members.findByConversation(conversation.id);
-    const peerIds = memberRows
-      .map((m) => m.userId)
-      .filter((id) => id !== viewerId);
-    const names = await this.users.resolveNames(peerIds);
-    return peerIds.map((id) => names.get(id) ?? id).join('、') || '私聊';
+    const peerIds = memberRows.map((m) => m.userId).filter((id) => id !== viewerId);
+    const names = await this.users.resolveDisplayNames(peerIds);
+    return peerIds.map((id) => names.get(id) ?? '成员').join('、') || '私聊';
   }
 
   private toMemberView(
     member: ConversationMemberEntity,
-    username: string,
+    displayName: string,
   ): ConversationMemberView {
     return {
       userId: member.userId,
-      username,
+      displayName,
       role: member.role as ConversationMemberRole,
       joinedAt: member.createdAt.getTime(),
       lastReadAt: member.lastReadAt ? member.lastReadAt.getTime() : null,

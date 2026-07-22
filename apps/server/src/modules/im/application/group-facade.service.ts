@@ -111,7 +111,7 @@ export class GroupFacade {
       ]);
     }
     if (noticeText) {
-      await this.systemMessage.post(conversationId, noticeText);
+      await this.systemMessage.postText(conversationId, noticeText);
     }
     await this.notifier.pushToMembers(conversation);
   }
@@ -222,10 +222,7 @@ export class GroupFacade {
     }
   }
 
-  private async notifySafely(
-    conversation: ConversationEntity,
-    userIds?: string[],
-  ): Promise<void> {
+  private async notifySafely(conversation: ConversationEntity, userIds?: string[]): Promise<void> {
     try {
       await this.notifier.pushToMembers(conversation, userIds);
     } catch (error) {
