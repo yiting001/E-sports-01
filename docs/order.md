@@ -7,7 +7,7 @@
 
 ## 实现的功能
 
-- C 端商品详情页：固定比例主图只展示商品封面，封面主副标语位于图片下方的独立介绍区，并展示四项服务保障；富文本经净化后渲染且兼容历史本机媒体地址。PC 端导航与详情主体同轴收敛，移动端滚动区避让固定下单栏；进入结算页选择数量、备注、优惠券与支付方式后下单，结算页复用同类顶部返回栏，基础样式拆分到 `CheckoutView.css`
+- C 端商品详情页：方形主图完整展示商品封面并支持原图预览，封面主副标语位于图片下方的独立介绍区，同时展示手机端/电脑端价格与四项服务保障；富文本经净化后渲染且兼容历史本机媒体地址。进入结算页后复用既有区服控件选择手机端或电脑端，金额、会员折扣、优惠券和支付金额随所选端同步重算
 - 备注附件：下单备注支持上传图片/视频（`RemarkMediaUploader`，复用 `/upload/self` 自助上传，最多 `ORDER_LIMITS.remarkMediaMax` 个），订单固化 `remarkMedia` jsonb 快照，详情页/大厅详情/管理端抽屉以缩略图展示（`RemarkMediaGallery`）
 - 账号信息：下单可选填 `accountInfo`（游戏账号等敏感信息）；仅本人、接单后的打手与管理端可见，接单大厅列表/详情经 `toHallOrderView` 置空不下发
 - 结构化游戏资料：数字游戏 ID（1 ～ 32 位数字，必填）、文字游戏 ID（选填，最多 64）、本单区服（`delta-mobile` / `delta-pc`）和其他账号信息分字段收集；历史订单字段为空串兼容，不把大厅可见数据与接单后敏感数据混用
@@ -33,7 +33,7 @@
 - 客服订单可见性：客服角色（非管理员）在管理端订单列表/详情/下发/指派均被强制限定为自己负责商品的订单（`ServiceAgentScope`）；客服角色默认权限已含订单菜单与处理接口
 - 下发大厅：管理端「待客服处理」订单可下发接单大厅（权限码 `order:admin:dispatch`），订单进入「待接单」
 - 指派打手：客服/管理员可直接指派指定平台打手（权限码 `order:admin:assign`，POST `/order/admin/:id/assign`），「待客服处理/待接单」→「服务中」；候选列表只返回同租户审核通过、账号启用、具备打手角色且已自主上线的用户，提交指派时再次复核上线、实名、押金和区服
-- 接单大厅（C 端打手身份）：分页浏览待接单订单，顶部可自主上线/下线；提供手动“刷新订单”，页面可见时每 5 秒自动刷新并在失败时保留旧列表。移动端刷新按钮声明 `touch-action: manipulation`，防止连续触控被浏览器解释为双击缩放，同时保留页面滚动和双指缩放。点卡片进入大厅详情页（`/hall/:id`），账号信息继续隐藏；只有上线且满足目录、实名、押金和区服门禁的打手能接单，下线按钮禁用且直接调用 API 也会被拒绝。接单成功后原子回填 `boosterId`、进入「服务中」并加入订单群
+- 接单大厅（C 端打手身份）：分页浏览待接单订单，支持按订单号/商品名搜索以及“全部、手机端、电脑端”服务区服筛选，顶部可自主上线/下线；提供手动刷新，页面可见时每 5 秒按当前筛选自动刷新并在失败时保留旧列表。移动端刷新按钮声明 `touch-action: manipulation`，防止连续触控被浏览器解释为双击缩放，同时保留页面滚动和双指缩放。点卡片进入大厅详情页（`/hall/:id`），可见商品、区服、金额、备注和下发时间，账号信息继续隐藏；只有上线且满足目录、实名、押金和区服门禁的打手能接单
 - 完成结算：打手完成订单时按其当前等级费率（booster 模块 `BoosterProgressService`）计提成经 `WalletLedger` 入账（commission 流水），订单落 `commissionFen`/`commissionRateBp` 快照并累计完成单数
 - 打手订单中心（C 端打手身份）：分页查看本人接下的订单（全部/服务中/已完成），点卡片进入打手订单详情页（`/booster/orders/:id`，GET `/order/booster/mine/:id`，展示用户备注/附件/账号信息，服务中可直接完成）；列表服务中可标记完成
 - C 端身份切换：拥有 booster 角色的账号可在「我的」页切换老板/打手身份（本地持久化），
@@ -116,7 +116,7 @@ sequenceDiagram
   participant Agent as 客服
   participant DB as PostgreSQL
 
-  Owner->>Client: 填数字 ID/文字 ID/区服/备注
+  Owner->>Client: 选择手机端/电脑端并填写游戏资料
   alt 自动安排
     Client->>Order: boosterSelectionMode=auto
   else 指定打手
@@ -125,6 +125,7 @@ sequenceDiagram
     Booster-->>Client: 公开投影校验通过
     Client->>Order: boosterSelectionMode=specified
   end
+  Order->>Order: 按 serviceRegion 重新解析商品权威单价
   Order->>Booster: 服务端再次校验指定打手（如有）
   Order->>DB: 固化账号、区服与锁定打手快照
   Order->>Settle: 余额/渠道支付
@@ -172,6 +173,7 @@ apps/server/src/modules/order/
 │       ├── handle-order-callback.usecase.ts # 回调验签 → 幂等标记已支付 + 累加销量
 │       ├── get-my-order.usecase.ts          # 单笔查询（支付轮询）
 │       ├── list-admin-orders.usecase.ts     # 管理端分页检索（状态/订单号过滤）
+│       ├── list-hall-orders.usecase.ts      # 大厅分页（订单/商品关键词 + 区服过滤）
 │       ├── get-admin-order.usecase.ts       # 管理端单笔详情
 │       ├── list-my-orders.usecase.ts        # 我的订单分页
 │       ├── cancel-my-order.usecase.ts       # 取消待付款订单
@@ -305,6 +307,8 @@ erDiagram
 
 `apps/server/src/database/migrations/1784332800000-add-booster-directory-order-selection.ts` 为 `service_order` 增加上述六个结构化/锁定字段、三项 Check Constraint 和指定打手索引，同时为 `booster_application` 增加 `voice_url`。migration 提供可回滚 `up` / `down`；回滚会丢失新增快照字段但不删除上传文件。执行前需备份，不能以 `synchronize` 代替迁移。
 
+商品双端价格由 commerce migration `1784908800000-add-product-pc-prices.ts` 管理；订单不复制商品的四个价格字段，而是继续固化所选 `serviceRegion`、`originalAmountFen` 和最终 `amountFen`。因此商品后续改价不会改写历史订单，退款仍以订单实付快照为准。
+
 ER 图中的打手关系是通过租户内 `userId` 的逻辑关联，订单群也沿用既有 `conversationId` 逻辑关联，两者均未新增外键。打手被删除或失去资格后，历史订单仍保留锁定/实际名称快照，后续主页跳转可能返回 404。本次标题同步只更新既有 `sys_conversation.title`，无数据库字段或 migration 变化。
 
 ## 设计要点
@@ -322,6 +326,8 @@ ER 图中的打手关系是通过租户内 `userId` 的逻辑关联，订单群�
 - **投诉关联**：C 端投诉打手只提交本人订单 ID；反馈用例按当前租户复核订单属于提交人、状态为服务中/已完成且已有实际打手，再固化 `orderId/orderNo/boosterUserId/boosterName`（`boosterUserId` 来源于订单 `boosterId`）。处罚事务通过订单模块公开的事务参与端口重新锁定订单并校验快照，不能用昵称、前端打手 ID 或过期关系扣款；处罚不改变订单状态。
 - **指定打手两阶段语义**：创建订单用 `requestedBooster*` 锁定唯一履约人，不提前写实际 `booster*`；客服确认该打手后才进入服务中。`assertOrderCanDispatch` 阻止指定订单进入公共大厅，`assertRequestedBooster` 同时约束后台指派和大厅接单，禁止改派或被其他打手领取
 - **服务端再次校验**：C 端目录的 `selectable` 只用于交互提示；`CreateOrderUseCase`、大厅接单与后台指派必须重新校验打手仍上线、可见、支持本单区服、不是本人且实名/押金满足要求，防止使用过期或篡改的前端状态
+- **双端价格单一口径**：详情和结算页复用共享 `resolveProductPrice` 预览，`CreateOrderUseCase` 必须重新读取在架商品并按 `serviceRegion` 计算；请求不接收客户端金额，不能通过篡改前端价格少付。端类型切换会使可用优惠券和余额可用性重新计算
+- **大厅检索隔离**：`keyword` 与 `serviceRegion` 由 DTO 校验，关键词限制长度并使用参数化 `ILIKE`；Repository 始终附加 `dispatching` 状态和租户作用域，筛选只影响可见待接单列表，不扩大详情或接单权限
 - **原子领取**：`OrderRepository.claimForServing` 在 PostgreSQL 短事务中对订单行加 `pessimistic_write` 锁，锁内复核租户、允许状态、`boosterId` 为空、下单人不是打手、`expectedRequestedBoosterId` 未变化及锁定人一致；竞争失败返回 `null`，用例转换为 409，只有成功者进入订单群
 - **完成进度并发**：打手累计完成单数通过 `BoosterRepository.recordCompletedOrder` 在 `booster_application` 行锁事务内递增，不再用旧实体整行保存；与投诉押金处罚并发时完成单数和押金字段均不会丢失。
 - **指派门禁**：管理端在 `tenant.run` 中复用 `BoosterSelectionService`；有区服订单校验目录、区服、启用账号、booster 角色、实名和押金，历史空区服订单只跳过区服匹配。门禁未知异常继续上抛，不被伪装成“不可选”
@@ -378,7 +384,7 @@ sequenceDiagram
 | GET  | `/api/order/mine`                                         | 登录，本人                                | 我的订单分页                                                                                                                                                                                                         |
 | POST | `/api/order/:id/cancel`                                   | 登录，本人                                | 仅待付款可取消                                                                                                                                                                                                       |
 | POST | `/api/order/:id/refund`                                   | 登录，本人                                | 未开工订单提交全额退款申请 `{ reason }`，申请后冻结履约                                                                                                                                                              |
-| GET  | `/api/order/hall` / `/api/order/hall/:id`                 | 打手角色                                  | 待接单大厅列表/详情，账号字段隐藏                                                                                                                                                                                    |
+| GET  | `/api/order/hall` / `/api/order/hall/:id`                 | 打手角色                                  | 待接单大厅列表支持 `?keyword&serviceRegion=delta-mobile\|delta-pc&page&pageSize`；详情继续隐藏账号字段                                                                                                               |
 | POST | `/api/order/hall/:id/accept`                              | 打手角色且当前上线                        | 原子接单；指定订单只能由指定人接单，下线返回业务错误                                                                                                                                                                 |
 | GET  | `/api/order/booster/mine` / `/api/order/booster/mine/:id` | 打手角色                                  | 本人接单订单及详情，接单后可见账号字段                                                                                                                                                                               |
 | POST | `/api/order/booster/:id/complete`                         | 打手角色                                  | 完成服务并结算提成                                                                                                                                                                                                   |
@@ -396,13 +402,13 @@ sequenceDiagram
 
 - `service_order.provider`、`wallet_transaction.type` 仍是 `varchar`，但本次结构化游戏资料、锁定打手和语音字段由 `1784332800000-add-booster-directory-order-selection.ts` 正式迁移管理。
 - C 端在 `393×852` 视口确认刷新按钮计算样式为 `touch-action: manipulation`，按钮宽 369px，页面 `clientWidth` 与 `scrollWidth` 均为 393px，连续桌面指针双击后 `visualViewport.scale` 保持 1。当前自动化不能生成微信 WebView 的真实触屏手势，仍需真机确认连续触控不放大且双指缩放可用。
-- 后端测试覆盖 DTO 支付方式/游戏资料校验、指定订单大厅与改派约束、余额不足/冻结/金额或归属不符、同订单幂等、原子并发接单/指派（`order-assignment.spec.ts`，两请求仅一方成功）以及提交后副作用失败不回滚；`order-payment-member-spend.postgres.e2e.ts` 验证支付、会员累计、退款冲正的同事务原子性及支付与取消竞争；`order-group-recovery.spec.ts` 覆盖成功建群、窄写回填、成员补齐和失败补建；`order-group-title.spec.ts` 覆盖三阶段映射、128 字符边界、关联丢失恢复、下发与完成保存顺序、订单读取与会话写入交错、ABA 与 CAS 冲突重试、同标题幂等和通知/进群失败；`im-conversation-title.postgres.e2e.ts` 在真实 PostgreSQL 验证同一实体版本只有一个竞争者成功、错误期望版本不写入及跨租户更新被拒绝。
+- 后端测试覆盖 DTO 支付方式/游戏资料校验、手机端/电脑端权威计价、大厅关键词与区服筛选、指定订单大厅与改派约束、余额不足/冻结/金额或归属不符、同订单幂等、原子并发接单/指派（`order-assignment.spec.ts`，两请求仅一方成功）以及提交后副作用失败不回滚；`order-hall-http.postgres.e2e.ts` 通过真实 PostgreSQL 与临时 Nest HTTP 入口验证大厅双租户隔离、订单号/商品名查询、`%`/`_`/反斜杠按字面量转义、区服分页、已审核上线打手访问以及匿名/无资格用户的 401/403；`order-payment-member-spend.postgres.e2e.ts` 验证支付、会员累计、退款冲正的同事务原子性及支付与取消竞争；`order-group-recovery.spec.ts` 覆盖成功建群、窄写回填、成员补齐和失败补建；`order-group-title.spec.ts` 覆盖三阶段映射、128 字符边界、关联丢失恢复、下发与完成保存顺序、订单读取与会话写入交错、ABA 与 CAS 冲突重试、同标题幂等和通知/进群失败；`im-conversation-title.postgres.e2e.ts` 在真实 PostgreSQL 验证同一实体版本只有一个竞争者成功、错误期望版本不写入及跨租户更新被拒绝。
 - C 端测试覆盖 `im:conversation` 订阅、逆序版本拒绝、同一 tick 多会话批量消费和 REST 请求期间事件保留。真实三阶段浏览器验收仍需具备可操作订单群的 C 端测试账号及订单数据，当前交付不得把该项写作已通过。
 - 根目录 `pnpm test` 串行执行服务端、管理端和客户端测试；本次实际结果与数量见交付汇报及反馈模块文档，避免在多个文档复制易漂移计数。
 - C 端支付弹层只把明确的已支付状态或非空 `paidAt` 视为成功；`cancelled` 会停止轮询并提示未支付，请求失败采用单请求保护后自动重试。
 - `POST /order` 仍沿用既有“每次请求创建一个新订单”的语义，尚未提供客户端幂等键；网络响应丢失后自动重放请求可能生成第二张订单。客户端通过提交中禁用降低重复点击，但生产接入自动重试前应补充租户 + 用户 + 幂等键唯一约束。
 
-尚未覆盖的风险包括：目录选择到支付之间打手资料/押金/上下线状态变化（会在创建或确认时失败并需用户重试）、完整 HTTP + RBAC E2E、真实支付渠道回调和浏览器端语音播放。扫码渠道已扣款但数据库取消先提交时，晚到支付回调仍可能被终态规则忽略，后续需要渠道关单或主动对账补偿。订单群没有独立后台任务队列，补建或标题纠偏依赖后续查单、详情或后台进群请求；并发接单/指派已由行锁和 409 处理，指定订单仍依赖客服最终确认。完成订单的进度累计、提成入账与订单保存仍是既有的多步非单事务流程，并发重复完成存在资金与计数风险，本次标题同步不扩大范围处理该问题。
+尚未覆盖的风险包括：目录选择到支付之间打手资料/押金/上下线状态变化（会在创建或确认时失败并需用户重试）、真实支付渠道回调和浏览器端语音播放。扫码渠道已扣款但数据库取消先提交时，晚到支付回调仍可能被终态规则忽略，后续需要渠道关单或主动对账补偿。订单群没有独立后台任务队列，补建或标题纠偏依赖后续查单、详情或后台进群请求；并发接单/指派已由行锁和 409 处理，指定订单仍依赖客服最终确认。完成订单的进度累计、提成入账与订单保存仍是既有的多步非单事务流程，并发重复完成存在资金与计数风险，本次标题同步不扩大范围处理该问题。
 
 ## 管理端菜单角标
 

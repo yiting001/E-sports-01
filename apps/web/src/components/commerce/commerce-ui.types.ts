@@ -1,4 +1,4 @@
-import type { ProductStatus } from '@app/contracts';
+import type { ProductStatus } from "@app/contracts";
 
 /** 商品分类抽屉表单模型。 */
 export interface CategoryFormModel {
@@ -24,8 +24,12 @@ export interface ProductFormModel {
   coverTitle: string;
   coverSub: string;
   description: string;
+  /** 手机端现价/原价（元，仅用于管理表单展示） */
   priceYuan: number;
   originPriceYuan: number;
+  /** 电脑端现价/原价（元，仅用于管理表单展示） */
+  pcPriceYuan: number;
+  pcOriginPriceYuan: number;
   serviceAgentId: string;
   sort: number;
 }

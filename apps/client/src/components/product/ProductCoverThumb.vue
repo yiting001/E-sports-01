@@ -7,8 +7,9 @@ const props = withDefaults(
   defineProps<{
     src: string;
     fallback: string;
+    variant?: 'square' | 'circle';
   }>(),
-  { src: '', fallback: '商品' },
+  { src: '', fallback: '商品', variant: 'square' },
 );
 
 const failed = ref(false);
@@ -25,6 +26,7 @@ watch(
 <template>
   <span
     class="product-cover-thumb"
+    :class="`product-cover-thumb--${props.variant}`"
     aria-hidden="true"
   >
     <img
@@ -79,5 +81,10 @@ watch(
   line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.product-cover-thumb--circle {
+  border-radius: 50%;
+  clip-path: none;
 }
 </style>

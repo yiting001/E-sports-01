@@ -1,12 +1,4 @@
-import {
-  IsInt,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Length,
-  Min,
-  ValidateIf,
-} from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Length, Min, ValidateIf } from 'class-validator';
 import { CreateProductPayload } from '@app/contracts';
 
 /** 创建商品入参 */
@@ -44,6 +36,14 @@ export class CreateProductDto implements CreateProductPayload {
   @IsInt()
   @Min(0)
   originPriceFen!: number;
+
+  @IsInt()
+  @Min(0)
+  pcPriceFen!: number;
+
+  @IsInt()
+  @Min(0)
+  pcOriginPriceFen!: number;
 
   @IsOptional()
   @ValidateIf((_, value) => value !== '')

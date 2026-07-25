@@ -1,9 +1,10 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ProductStatus, ProductView } from '@app/contracts';
+import { PRODUCT_REPOSITORY, ProductRepository } from '../../domain/product-repository.interface';
 import {
-  PRODUCT_REPOSITORY,
-  ProductRepository,
-} from '../../domain/product-repository.interface';
+  hasValidProductSalePrices,
+  PRODUCT_SALE_PRICE_REQUIRED_MESSAGE,
+} from '../../domain/product-pricing.rules';
 import { ProductViewAssembler } from '../product-view.assembler';
 
 /** 用例：商品上下架（切换 status） */
@@ -19,6 +20,9 @@ export class PublishProductUseCase {
     const entity = await this.repo.findById(id);
     if (!entity) {
       throw new NotFoundException('商品不存在');
+    }
+    if (status === ProductStatus.OnShelf && !hasValidProductSalePrices(entity)) {
+      throw new BadRequestException(PRODUCT_SALE_PRICE_REQUIRED_MESSAGE);
     }
     entity.status = status;
     const saved = await this.repo.save(entity);

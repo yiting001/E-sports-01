@@ -3,11 +3,50 @@
  * 商品归属某个分类，可关联一名「负责客服」（用户下单后由该客服处理/拉群），
  * 支持上下架与排序。价格统一以「分」为单位存储，避免浮点误差。
  */
-import type { PaginationQuery } from '../common/pagination';
-import type { ProductStatus } from './product-status';
+import type { PaginationQuery } from "../common/pagination";
+import {
+  BOOSTER_SERVICE_REGION,
+  type BoosterServiceRegion,
+} from "../booster/booster";
+import type { ProductStatus } from "./product-status";
+
+/** 商品在手机端和电脑端的价格字段；旧字段继续代表手机端，保持接口兼容。 */
+export interface ProductPlatformPrices {
+  priceFen: number;
+  originPriceFen: number;
+  pcPriceFen: number;
+  pcOriginPriceFen: number;
+}
+
+export interface ResolvedProductPrice {
+  priceFen: number;
+  originPriceFen: number;
+}
+
+/** 按订单区服解析服务端与前端共用的权威商品价格。 */
+export function resolveProductPrice(
+  product: ProductPlatformPrices,
+  serviceRegion: BoosterServiceRegion
+): ResolvedProductPrice {
+  if (serviceRegion === BOOSTER_SERVICE_REGION.Pc) {
+    return {
+      priceFen: product.pcPriceFen,
+      originPriceFen: product.pcOriginPriceFen,
+    };
+  }
+  return {
+    priceFen: product.priceFen,
+    originPriceFen: product.originPriceFen,
+  };
+}
+
+/** 取两种服务端的最低现价，用于未选择区服前的“起”价展示。 */
+export function lowestProductPriceFen(product: ProductPlatformPrices): number {
+  return Math.min(product.priceFen, product.pcPriceFen);
+}
 
 /** 商品管理视图（管理端列表/详情） */
-export interface ProductView {
+export interface ProductView extends ProductPlatformPrices {
   id: string;
   /** 所属分类 id */
   categoryId: string;
@@ -23,10 +62,6 @@ export interface ProductView {
   coverSub: string;
   /** 商品详情（富文本 HTML） */
   description: string;
-  /** 现价（分） */
-  priceFen: number;
-  /** 划线原价（分） */
-  originPriceFen: number;
   /** 已售数量 */
   sold: number;
   /** 关联负责客服的用户 id；未关联为空串 */
@@ -42,7 +77,7 @@ export interface ProductView {
 }
 
 /** C 端只读商品视图（不含客服/状态等管理字段） */
-export interface ProductPublicView {
+export interface ProductPublicView extends ProductPlatformPrices {
   id: string;
   categoryId: string;
   categoryName: string;
@@ -53,13 +88,11 @@ export interface ProductPublicView {
   coverSub: string;
   /** 商品详情（富文本 HTML） */
   description: string;
-  priceFen: number;
-  originPriceFen: number;
   sold: number;
 }
 
 /** 创建商品入参 */
-export interface CreateProductPayload {
+export interface CreateProductPayload extends ProductPlatformPrices {
   categoryId: string;
   title: string;
   /** 封面图片 URL（选填） */
@@ -68,8 +101,6 @@ export interface CreateProductPayload {
   coverSub?: string;
   /** 商品详情（富文本 HTML，选填） */
   description?: string;
-  priceFen: number;
-  originPriceFen: number;
   /** 关联负责客服的用户 id（选填） */
   serviceAgentId?: string;
   sort?: number;
@@ -85,6 +116,8 @@ export interface UpdateProductPayload {
   description?: string;
   priceFen?: number;
   originPriceFen?: number;
+  pcPriceFen?: number;
+  pcOriginPriceFen?: number;
   serviceAgentId?: string;
   sort?: number;
   /** 已售数量（营销工具可编辑） */

@@ -1,7 +1,7 @@
 /** 打手入驻（前后端共享契约） */
 
 /** 打手角色码：审核通过后授予该角色，标识用户为打手 */
-export const BOOSTER_ROLE_CODE = 'booster';
+export const BOOSTER_ROLE_CODE = "booster";
 
 /** 打手申请字段长度限制（前后端共用同一校验规则） */
 export const BOOSTER_LIMITS = {
@@ -20,13 +20,13 @@ export const BOOSTER_LIMITS = {
 export const BOOSTER_VOICE_LIMITS = {
   maxSizeBytes: 5 * 1024 * 1024,
   mimeTypes: [
-    'audio/mpeg',
-    'audio/mp4',
-    'audio/x-m4a',
-    'audio/m4a',
-    'audio/wav',
-    'audio/x-wav',
-    'audio/webm',
+    "audio/mpeg",
+    "audio/mp4",
+    "audio/x-m4a",
+    "audio/m4a",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/webm",
   ],
 } as const;
 
@@ -39,48 +39,58 @@ export const BOOSTER_LEGACY_LIMITS = {
 
 /** 性别选项 */
 export enum BoosterGender {
-  Male = 'male',
-  Female = 'female',
+  Male = "male",
+  Female = "female",
 }
 
 /** 联系方式类型 */
 export enum BoosterContactType {
-  Phone = 'phone',
-  Wechat = 'wechat',
-  QQ = 'qq',
+  Phone = "phone",
+  Wechat = "wechat",
+  QQ = "qq",
 }
+
+/** 接单区服语义值，供校验、计价和展示配置复用。 */
+export const BOOSTER_SERVICE_REGION = {
+  Mobile: "delta-mobile",
+  Pc: "delta-pc",
+} as const;
+
+export type BoosterServiceRegion =
+  (typeof BOOSTER_SERVICE_REGION)[keyof typeof BOOSTER_SERVICE_REGION];
 
 /** 当前开放的接单区服，标签和值由前后端共享，避免展示与校验漂移 */
 export const BOOSTER_SERVICE_REGIONS = [
-  { value: 'delta-mobile', label: '三角洲 - 手机端' },
-  { value: 'delta-pc', label: '三角洲 - 电脑端' },
+  { value: BOOSTER_SERVICE_REGION.Mobile, label: "三角洲 - 手机端" },
+  { value: BOOSTER_SERVICE_REGION.Pc, label: "三角洲 - 电脑端" },
 ] as const;
-
-export type BoosterServiceRegion = (typeof BOOSTER_SERVICE_REGIONS)[number]['value'];
 
 export const BOOSTER_SERVICE_REGION_VALUES: readonly BoosterServiceRegion[] =
   BOOSTER_SERVICE_REGIONS.map((item) => item.value);
 
 /** 对外打手显示名：优先昵称，缺失时使用不含登录用户名的稳定 ID 后缀。 */
-export function formatBoosterDisplayName(userId: string, nickname: string): string {
+export function formatBoosterDisplayName(
+  userId: string,
+  nickname: string
+): string {
   const normalizedNickname = nickname.trim();
   if (normalizedNickname) {
     return normalizedNickname;
   }
-  const suffix = userId.replace(/-/g, '').slice(-6).toUpperCase();
+  const suffix = userId.replace(/-/g, "").slice(-6).toUpperCase();
   return `打手${suffix}`;
 }
 
 /** 打手入驻申请状态 */
 export enum BoosterStatus {
   /** 尚未提交 */
-  None = 'none',
+  None = "none",
   /** 已提交，待审核 */
-  Pending = 'pending',
+  Pending = "pending",
   /** 审核通过（已授予打手角色） */
-  Approved = 'approved',
+  Approved = "approved",
   /** 审核驳回，可重新提交 */
-  Rejected = 'rejected',
+  Rejected = "rejected",
 }
 
 /** 提交打手入驻申请入参 */
@@ -146,10 +156,10 @@ export interface BoosterView {
   /** 昵称（管理端展示） */
   nickname: string;
   applicantName: string;
-  gender: BoosterGender | '';
+  gender: BoosterGender | "";
   serviceRegions: BoosterServiceRegion[];
   intro: string;
-  contactType: BoosterContactType | '';
+  contactType: BoosterContactType | "";
   contactValue: string;
   materialImage: string;
   /** 对外试听语音 URL；未上传为空串 */
@@ -172,7 +182,7 @@ export interface BoosterPublicView {
   /** 昵称为空时由服务端生成稳定兜底名，不暴露登录用户名或真实姓名 */
   displayName: string;
   avatar: string;
-  gender: BoosterGender | '';
+  gender: BoosterGender | "";
   serviceRegions: BoosterServiceRegion[];
   intro: string;
   completedOrders: number;

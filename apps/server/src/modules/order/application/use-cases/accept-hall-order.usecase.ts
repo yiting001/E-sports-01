@@ -34,7 +34,7 @@ export class AcceptHallOrderUseCase {
       throw new NotFoundException('订单不存在');
     }
     if (order.status !== OrderStatus.Dispatching) {
-      throw new BadRequestException('该订单已被接走或不可接单');
+      throw new ConflictException('该订单已被接走或状态已变化');
     }
     if (order.userId === userId) {
       throw new BadRequestException('不能接自己的订单');

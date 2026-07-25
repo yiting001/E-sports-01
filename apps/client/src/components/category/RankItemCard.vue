@@ -2,11 +2,11 @@
 /**
  * 排行榜条目卡：名次编号 + 商品明细 + 销量热度 + 单一醒目下单操作。
  */
-import { fenToYuan } from '@app/contracts';
-import type { RankItem } from '@/config/category.mock';
-import AppIcon from '@/components/common/AppIcon.vue';
-import ProductCoverThumb from '@/components/product/ProductCoverThumb.vue';
-import { useRouter } from 'vue-router';
+import { fenToYuan, lowestProductPriceFen } from "@app/contracts";
+import type { RankItem } from "@/config/category.mock";
+import AppIcon from "@/components/common/AppIcon.vue";
+import ProductCoverThumb from "@/components/product/ProductCoverThumb.vue";
+import { useRouter } from "vue-router";
 
 defineProps<{
   item: RankItem;
@@ -21,7 +21,7 @@ const TOP_COUNT = 3;
 
 /** 名次补零：1 → 01，竞赛计分板惯例 */
 function rankNo(index: number): string {
-  return String(index + 1).padStart(2, '0');
+  return String(index + 1).padStart(2, "0");
 }
 </script>
 
@@ -55,16 +55,14 @@ function rankNo(index: number): string {
         </span>
       </div>
       <p class="summary">
-        <strong v-if="item.product.coverTitle">{{ item.product.coverTitle }}</strong>
+        <strong v-if="item.product.coverTitle">{{
+          item.product.coverTitle
+        }}</strong>
         <span v-if="item.product.coverSub">{{ item.product.coverSub }}</span>
         <span v-if="!item.product.coverTitle && !item.product.coverSub">查看商品详情</span>
       </p>
       <div class="stats">
-        <span class="price">¥{{ fenToYuan(item.product.priceFen) }}</span>
-        <span
-          v-if="item.product.originPriceFen > item.product.priceFen"
-          class="origin"
-        >¥{{ fenToYuan(item.product.originPriceFen) }}</span>
+        <span class="price">¥{{ fenToYuan(lowestProductPriceFen(item.product)) }} 起</span>
         <span class="sold">已售 {{ item.product.sold }}</span>
         <div
           class="bar"
@@ -127,7 +125,14 @@ function rankNo(index: number): string {
   color: var(--c-text-muted);
   background: rgba(150, 165, 195, 0.08);
   border: 1px solid var(--c-border);
-  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  clip-path: polygon(
+    9px 0,
+    100% 0,
+    100% calc(100% - 9px),
+    calc(100% - 9px) 100%,
+    0 100%,
+    0 9px
+  );
 }
 
 .no.top {
@@ -238,7 +243,14 @@ function rankNo(index: number): string {
   font-weight: 800;
   color: var(--c-bg);
   background: var(--c-accent);
-  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  clip-path: polygon(
+    6px 0,
+    100% 0,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    0 100%,
+    0 6px
+  );
 }
 
 @media (max-width: 767px) {

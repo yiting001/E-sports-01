@@ -1,72 +1,69 @@
 <script setup lang="ts">
-/**
- * 综合分类卡：后台分类名作为大标题，下面展示该分类的真实商品封面与关键明细。
- * 商品入口点击进入详情；图片失败回退封面标语，无商品时保持紧凑空态。
- */
-import { ref } from 'vue';
-import { fenToYuan } from '@app/contracts';
+/** 分类目录分组：标题居中，下面以圆形入口展示全部商品和上架商品。 */
+import { useRouter } from 'vue-router';
 import type { CategoryGroup } from '@/config/category.mock';
 import ProductCoverThumb from '@/components/product/ProductCoverThumb.vue';
-import { resolveMediaUrl } from '@/utils/media-url';
-import { useRouter } from 'vue-router';
 
 defineProps<{ group: CategoryGroup }>();
 
+const emit = defineEmits<{ 'show-all': [categoryId: string] }>();
 const router = useRouter();
-const iconFailed = ref(false);
+
+function openProduct(productId: string): void {
+  void router.push(`/products/${productId}`);
+}
 </script>
 
 <template>
-  <section class="group card">
+  <section class="group">
     <header class="group-head">
-      <h2 class="sec-title">
-        <img
-          v-if="group.icon && !iconFailed"
-          :src="resolveMediaUrl(group.icon)"
-          alt=""
-          class="cat-icon"
-          @error="iconFailed = true"
-        >
-        <span
-          v-else
-          class="cat-icon-text"
-        >{{ group.iconText || group.title.slice(0, 2) }}</span>
-        <span class="group-title">{{ group.title }}</span>
+      <span class="rule" />
+      <h2 class="group-title">
+        {{ group.title }}
       </h2>
-      <span class="item-count">{{ group.items.length }} 项</span>
+      <span class="group-count">{{ group.items.length }} 项</span>
+      <span class="rule" />
     </header>
+
     <div
       v-if="group.items.length"
-      class="grid"
+      class="directory-grid"
     >
+      <button
+        type="button"
+        class="directory-item directory-item--all"
+        :aria-label="`查看${group.title}全部商品`"
+        @click="emit('show-all', group.id)"
+      >
+        <ProductCoverThumb
+          :src="group.icon"
+          :fallback="group.iconText || group.title.slice(0, 2)"
+          variant="circle"
+        />
+        <span class="item-label">全部商品</span>
+      </button>
+
       <button
         v-for="item in group.items"
         :key="item.id"
         type="button"
-        class="item"
-        @click="router.push(`/products/${item.id}`)"
+        class="directory-item"
+        :aria-label="`查看商品${item.title}`"
+        @click="openProduct(item.id)"
       >
         <ProductCoverThumb
           :src="item.cover"
-          :fallback="item.coverTitle || group.iconText || '商品'"
+          :fallback="item.coverTitle || item.title"
+          variant="circle"
         />
-        <div class="item-info">
-          <strong class="name">{{ item.title }}</strong>
-          <span
-            v-if="item.coverTitle"
-            class="cover-label"
-          >{{ item.coverTitle }}</span>
-          <span
-            v-if="item.coverSub"
-            class="subtitle"
-          >{{ item.coverSub }}</span>
-          <span class="meta">
-            <b>¥{{ fenToYuan(item.priceFen) }}</b>
-            <small>已售 {{ item.sold }}</small>
-          </span>
-        </div>
+        <span class="item-label">{{ item.title }}</span>
+        <span
+          v-if="item.coverSub"
+          class="item-subtitle"
+        >{{ item.coverSub }}</span>
       </button>
     </div>
+
     <p
       v-else
       class="group-empty"
@@ -78,141 +75,127 @@ const iconFailed = ref(false);
 
 <style scoped>
 .group {
-  min-height: 156px;
-  padding: 16px;
+  padding: 4px 4px 24px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.group + .group {
+  padding-top: 22px;
 }
 
 .group-head {
-  min-height: 28px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.sec-title {
-  min-width: 0;
-  font-size: 16px;
-  letter-spacing: 0;
-}
-
-.group-title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.item-count {
-  flex-shrink: 0;
-  font-family: var(--font-num);
-  font-size: 11px;
-  color: var(--c-text-muted);
-}
-
-.grid {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  column-gap: 16px;
-}
-
-.group-empty {
-  min-height: 54px;
-  display: flex;
-  align-items: center;
-  margin-top: 10px;
-  font-size: 12px;
-  color: var(--c-text-muted);
-}
-
-.cat-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  object-fit: cover;
-}
-
-.cat-icon-text {
-  max-width: 84px;
-  padding: 2px 6px;
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0;
-  color: var(--c-neon);
-  border: 1px solid rgba(61, 255, 155, 0.45);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.item {
-  display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   min-width: 0;
-  min-height: 94px;
-  padding: 10px 4px;
-  border-top: 1px solid var(--c-border);
-  text-align: left;
-  transition: background 0.2s ease;
 }
 
-.item:hover {
-  background: rgba(61, 255, 155, 0.06);
+.rule {
+  flex: 1;
+  height: 1px;
+  min-width: 12px;
+  background: var(--c-border);
 }
 
-.item-info {
-  min-width: 0;
+.group-title {
+  max-width: 55%;
+  overflow: hidden;
+  color: var(--c-text);
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-count {
+  flex-shrink: 0;
+  color: var(--c-text-muted);
+  font-family: var(--font-num);
+  font-size: 10px;
+}
+
+.directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  justify-items: center;
+  gap: 20px 12px;
+  margin: 20px auto 0;
+}
+
+.directory-item {
+  width: 86px;
+  min-height: 106px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-}
-
-.name {
-  font-size: 14px;
-  color: var(--c-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cover-label,
-.subtitle {
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cover-label {
-  font-weight: 700;
-  color: var(--c-neon);
-}
-
-.subtitle {
+  align-items: center;
+  gap: 7px;
+  padding: 2px 1px;
   color: var(--c-text-secondary);
+  text-align: center;
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
-.meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+.directory-item:hover,
+.directory-item:focus-visible {
+  color: var(--c-accent);
+  transform: translateY(-2px);
 }
 
-.meta b {
-  font-family: var(--font-num);
-  font-size: 15px;
+.directory-item :deep(.product-cover-thumb) {
+  --product-thumb-size: 58px;
+}
+
+.item-label {
+  width: 100%;
+  min-height: 30px;
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 15px;
+  text-align: center;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.item-subtitle {
+  width: 100%;
+  overflow: hidden;
+  color: var(--c-text-muted);
+  font-size: 10px;
+  line-height: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.directory-item--all {
   color: var(--c-accent);
 }
 
-.meta small {
-  font-size: 10px;
+.group-empty {
+  padding: 30px 12px 8px;
   color: var(--c-text-muted);
-  white-space: nowrap;
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .group {
+    padding-inline: 12px;
+  }
+
+  .directory-grid {
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 24px 18px;
+  }
+
+  .directory-item {
+    width: 100px;
+  }
+
+  .directory-item :deep(.product-cover-thumb) {
+    --product-thumb-size: 68px;
+  }
 }
 </style>

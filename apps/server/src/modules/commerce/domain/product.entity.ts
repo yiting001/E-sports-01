@@ -43,6 +43,14 @@ export class ProductEntity extends TenantScopedEntity {
   @Column({ name: 'origin_price_fen', type: 'int', default: 0 })
   originPriceFen!: number;
 
+  /** 电脑端现价（分） */
+  @Column({ name: 'pc_price_fen', type: 'int', default: 0 })
+  pcPriceFen!: number;
+
+  /** 电脑端划线原价（分） */
+  @Column({ name: 'pc_origin_price_fen', type: 'int', default: 0 })
+  pcOriginPriceFen!: number;
+
   /** 已售数量 */
   @Column({ type: 'int', default: 0 })
   sold!: number;

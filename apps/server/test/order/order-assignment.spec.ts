@@ -111,6 +111,27 @@ test('并发接单只有原子领取成功者获得订单并进入群聊', async
   assert.ok(rejected[0]?.status === 'rejected' && rejected[0].reason instanceof ConflictException);
 });
 
+test('详情加载后订单状态已变化时返回并发冲突', async () => {
+  const order = Object.assign(createDispatchingOrder(), {
+    status: OrderStatus.Serving,
+    boosterId: 'booster-other',
+  });
+  const orders = {
+    findById: async () => order,
+  } as unknown as OrderRepository;
+  const access = {
+    assert: async () => undefined,
+  } as unknown as BoosterAccess;
+  const selection = {} as BoosterSelectionService;
+  const groups = {} as OrderGroupService;
+  const useCase = new AcceptHallOrderUseCase(orders, access, selection, groups);
+
+  await assert.rejects(
+    useCase.execute('booster-1', order.id),
+    (error: unknown) => error instanceof ConflictException && error.getStatus() === 409,
+  );
+});
+
 test('后台原子指派竞争失败时不拉打手进群', async () => {
   const order = createDispatchingOrder();
   let joined = 0;

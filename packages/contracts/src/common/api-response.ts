@@ -17,8 +17,10 @@ export interface ApiResponse<T = unknown> {
 export enum BizCode {
   Success = 0,
   Fail = 1,
+  BadRequest = 400,
   Unauthorized = 401,
   Forbidden = 403,
   NotFound = 404,
+  Conflict = 409,
   ServerError = 500,
 }

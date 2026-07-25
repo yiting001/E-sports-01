@@ -113,7 +113,7 @@ function onSwitch(): void {
             {{ displayName }}
           </span>
           <span
-            v-if="auth.isAuthenticated && member.mine && !member.loading && !member.loadError"
+            v-if="auth.isAuthenticated && member.mine"
             class="level"
             data-testid="profile-member-level"
           >

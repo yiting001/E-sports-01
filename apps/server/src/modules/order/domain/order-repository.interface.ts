@@ -1,5 +1,7 @@
-import type { OrderStatus } from '@app/contracts';
+import type { HallOrderFilter, OrderStatus } from '@app/contracts';
 import type { OrderEntity } from './order.entity';
+
+export type { HallOrderFilter };
 
 /** 管理端订单检索条件 */
 export interface AdminOrderFilter {
@@ -49,8 +51,12 @@ export interface OrderRepository {
     take: number,
     status?: OrderStatus,
   ): Promise<[OrderEntity[], number]>;
-  /** 分页查询接单大厅订单（状态为待接单），按创建时间倒序 */
-  paginateDispatching(skip: number, take: number): Promise<[OrderEntity[], number]>;
+  /** 分页查询接单大厅订单（状态为待接单），按下发时间倒序。 */
+  paginateDispatching(
+    skip: number,
+    take: number,
+    filter?: HallOrderFilter,
+  ): Promise<[OrderEntity[], number]>;
   /** 分页查询某打手接下的订单（可按状态过滤），按创建时间倒序 */
   paginateByBooster(
     boosterId: string,

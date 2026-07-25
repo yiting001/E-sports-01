@@ -1,24 +1,25 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from "vue";
 import {
   PAGINATION_DEFAULTS,
   ProductStatus,
   type CategoryView,
   type ProductView,
   type ServiceAgentOption,
-} from '@app/contracts';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import ProductDirectory from '@/components/commerce/product/ProductDirectory.vue';
-import ProductFormDrawer from '@/components/commerce/product/ProductFormDrawer.vue';
-import ProductMarketingDialog from '@/components/commerce/product/ProductMarketingDialog.vue';
-import ProductStats from '@/components/commerce/product/ProductStats.vue';
+} from "@app/contracts";
+import { ElMessage, ElMessageBox } from "element-plus";
+import ProductDirectory from "@/components/commerce/product/ProductDirectory.vue";
+import ProductFormDrawer from "@/components/commerce/product/ProductFormDrawer.vue";
+import ProductMarketingDialog from "@/components/commerce/product/ProductMarketingDialog.vue";
+import ProductStats from "@/components/commerce/product/ProductStats.vue";
 import type {
   ProductFilterModel,
   ProductFormModel,
-} from '@/components/commerce/commerce-ui.types';
-import { commerceApi } from '@/api/commerce.api';
-import './CommerceView.css';
-import './CommerceView.responsive.css';
+} from "@/components/commerce/commerce-ui.types";
+import { commerceApi } from "@/api/commerce.api";
+import { hasValidProductFormPrices } from "@/utils/product-price";
+import "./CommerceView.css";
+import "./CommerceView.responsive.css";
 
 const list = ref<ProductView[]>([]);
 const total = ref(0);
@@ -30,43 +31,49 @@ const categories = ref<CategoryView[]>([]);
 const filter = reactive<ProductFilterModel>({
   categoryId: undefined,
   status: undefined,
-  keyword: '',
+  keyword: "",
 });
 
 const statusOptions = [
-  { label: '全部', value: undefined },
-  { label: '已上架', value: ProductStatus.OnShelf },
-  { label: '已下架', value: ProductStatus.OffShelf },
+  { label: "全部", value: undefined },
+  { label: "已上架", value: ProductStatus.OnShelf },
+  { label: "已下架", value: ProductStatus.OffShelf },
 ];
 
 const drawerVisible = ref(false);
 const marketingVisible = ref(false);
 const marketingProduct = ref<ProductView | null>(null);
-const editingId = ref('');
+const editingId = ref("");
+const editingStatus = ref<ProductStatus>(ProductStatus.OffShelf);
 const form = reactive<ProductFormModel>(emptyForm());
 
 const agentOptions = ref<ServiceAgentOption[]>([]);
 const agentLoading = ref(false);
 
 const onShelfCount = computed(
-  () => list.value.filter((item) => item.status === ProductStatus.OnShelf).length,
+  () =>
+    list.value.filter((item) => item.status === ProductStatus.OnShelf).length
 );
-const linkedAgentCount = computed(() =>
-  list.value.filter((item) => Boolean(item.serviceAgentId)).length,
+const linkedAgentCount = computed(
+  () => list.value.filter((item) => Boolean(item.serviceAgentId)).length
 );
-const soldCount = computed(() => list.value.reduce((sum, item) => sum + item.sold, 0));
+const soldCount = computed(() =>
+  list.value.reduce((sum, item) => sum + item.sold, 0)
+);
 
 function emptyForm(): ProductFormModel {
   return {
-    categoryId: '',
-    title: '',
-    cover: '',
-    coverTitle: '',
-    coverSub: '',
-    description: '',
+    categoryId: "",
+    title: "",
+    cover: "",
+    coverTitle: "",
+    coverSub: "",
+    description: "",
     priceYuan: 0,
     originPriceYuan: 0,
-    serviceAgentId: '',
+    pcPriceYuan: 0,
+    pcOriginPriceYuan: 0,
+    serviceAgentId: "",
     sort: 0,
   };
 }
@@ -80,7 +87,10 @@ function toFen(value: number): number {
 }
 
 async function loadCategories(): Promise<void> {
-  const res = await commerceApi.listCategories(1, PAGINATION_DEFAULTS.maxPageSize);
+  const res = await commerceApi.listCategories(
+    1,
+    PAGINATION_DEFAULTS.maxPageSize
+  );
   categories.value = res.list;
 }
 
@@ -107,7 +117,11 @@ async function search(): Promise<void> {
 }
 
 async function resetSearch(): Promise<void> {
-  Object.assign(filter, { categoryId: undefined, status: undefined, keyword: '' });
+  Object.assign(filter, {
+    categoryId: undefined,
+    status: undefined,
+    keyword: "",
+  });
   await search();
 }
 
@@ -125,7 +139,11 @@ async function changePageSize(value: number): Promise<void> {
 async function searchAgents(keyword: string): Promise<void> {
   agentLoading.value = true;
   try {
-    const res = await commerceApi.listServiceAgents(1, 20, keyword || undefined);
+    const res = await commerceApi.listServiceAgents(
+      1,
+      20,
+      keyword || undefined
+    );
     agentOptions.value = res.list;
   } finally {
     agentLoading.value = false;
@@ -141,7 +159,8 @@ function updateForm(value: ProductFormModel): void {
 }
 
 function openCreate(): void {
-  editingId.value = '';
+  editingId.value = "";
+  editingStatus.value = ProductStatus.OffShelf;
   Object.assign(form, emptyForm());
   agentOptions.value = [];
   drawerVisible.value = true;
@@ -149,6 +168,7 @@ function openCreate(): void {
 
 function openEdit(row: ProductView): void {
   editingId.value = row.id;
+  editingStatus.value = row.status;
   Object.assign(form, {
     categoryId: row.categoryId,
     title: row.title,
@@ -158,23 +178,41 @@ function openEdit(row: ProductView): void {
     description: row.description,
     priceYuan: row.priceFen / 100,
     originPriceYuan: row.originPriceFen / 100,
+    pcPriceYuan: row.pcPriceFen / 100,
+    pcOriginPriceYuan: row.pcOriginPriceFen / 100,
     serviceAgentId: row.serviceAgentId,
     sort: row.sort,
   });
   agentOptions.value =
     row.serviceAgentId && row.serviceAgentName
-      ? [{ id: row.serviceAgentId, username: row.serviceAgentName, nickname: row.serviceAgentName }]
+      ? [
+          {
+            id: row.serviceAgentId,
+            username: row.serviceAgentName,
+            nickname: row.serviceAgentName,
+          },
+        ]
       : [];
   drawerVisible.value = true;
 }
 
 async function submit(): Promise<void> {
   if (!form.categoryId) {
-    ElMessage.warning('请选择分类');
+    ElMessage.warning("请选择分类");
     return;
   }
   if (!form.title.trim() || !form.coverTitle.trim()) {
-    ElMessage.warning('商品名与封面主标语必填');
+    ElMessage.warning("商品名与封面主标语必填");
+    return;
+  }
+  if (
+    !hasValidProductFormPrices(
+      editingStatus.value,
+      form.priceYuan,
+      form.pcPriceYuan
+    )
+  ) {
+    ElMessage.warning("手机端与电脑端现价必须大于 0");
     return;
   }
   const payload = {
@@ -186,15 +224,17 @@ async function submit(): Promise<void> {
     description: form.description,
     priceFen: toFen(form.priceYuan),
     originPriceFen: toFen(form.originPriceYuan),
-    serviceAgentId: form.serviceAgentId || '',
+    pcPriceFen: toFen(form.pcPriceYuan),
+    pcOriginPriceFen: toFen(form.pcOriginPriceYuan),
+    serviceAgentId: form.serviceAgentId || "",
     sort: form.sort,
   };
   if (editingId.value) {
     await commerceApi.updateProduct(editingId.value, payload);
-    ElMessage.success('已保存');
+    ElMessage.success("已保存");
   } else {
     await commerceApi.createProduct(payload);
-    ElMessage.success('创建成功，默认下架，请在列表中上架');
+    ElMessage.success("创建成功，默认下架，请在列表中上架");
   }
   drawerVisible.value = false;
   await load();
@@ -207,16 +247,20 @@ function openMarketing(row: ProductView): void {
 
 async function togglePublish(row: ProductView): Promise<void> {
   const next =
-    row.status === ProductStatus.OnShelf ? ProductStatus.OffShelf : ProductStatus.OnShelf;
+    row.status === ProductStatus.OnShelf
+      ? ProductStatus.OffShelf
+      : ProductStatus.OnShelf;
   await commerceApi.publishProduct(row.id, { status: next });
-  ElMessage.success(next === ProductStatus.OnShelf ? '已上架' : '已下架');
+  ElMessage.success(next === ProductStatus.OnShelf ? "已上架" : "已下架");
   await load();
 }
 
 async function remove(row: ProductView): Promise<void> {
-  await ElMessageBox.confirm(`确认删除商品「${row.title}」？`, '提示', { type: 'warning' });
+  await ElMessageBox.confirm(`确认删除商品「${row.title}」？`, "提示", {
+    type: "warning",
+  });
   await commerceApi.removeProduct(row.id);
-  ElMessage.success('已删除');
+  ElMessage.success("已删除");
   await load();
 }
 
@@ -260,6 +304,7 @@ onMounted(async () => {
       v-model="drawerVisible"
       :form="form"
       :is-edit="Boolean(editingId)"
+      :require-positive-prices="editingStatus === ProductStatus.OnShelf"
       :categories="categories"
       :agent-options="agentOptions"
       :agent-loading="agentLoading"

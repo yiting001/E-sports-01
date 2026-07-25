@@ -63,6 +63,17 @@
   text-decoration: line-through;
 }
 
+.commerce-price--platforms > span {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 6px;
+}
+
+.commerce-price--platforms small {
+  text-decoration: none;
+}
+
 .commerce-thumb,
 .commerce-letter-icon {
   flex: 0 0 auto;

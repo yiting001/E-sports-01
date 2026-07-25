@@ -1,19 +1,11 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProductPayload, ProductStatus, ProductView } from '@app/contracts';
 import { UserDirectory } from '../../../rbac/application/user-directory.service';
 import {
   CATEGORY_REPOSITORY,
   CategoryRepository,
 } from '../../domain/category-repository.interface';
-import {
-  PRODUCT_REPOSITORY,
-  ProductRepository,
-} from '../../domain/product-repository.interface';
+import { PRODUCT_REPOSITORY, ProductRepository } from '../../domain/product-repository.interface';
 import { ProductViewAssembler } from '../product-view.assembler';
 
 /** 用例：创建商品，校验分类存在、关联客服存在；新建默认下架，需显式上架 */
@@ -43,6 +35,8 @@ export class CreateProductUseCase {
       description: payload.description ?? '',
       priceFen: payload.priceFen,
       originPriceFen: payload.originPriceFen,
+      pcPriceFen: payload.pcPriceFen,
+      pcOriginPriceFen: payload.pcOriginPriceFen,
       serviceAgentId: payload.serviceAgentId ?? '',
       status: ProductStatus.OffShelf,
       sort: payload.sort ?? 0,

@@ -309,7 +309,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| GET | `/api/commerce/public/products/:id` | 公开 | 单个上架商品详情（下架/不存在均 404） |
+| GET | `/api/commerce/public/products/:id` | 公开 | 单个上架商品详情（下架/不存在均 404）；`priceFen/originPriceFen` 为手机端价格，`pcPriceFen/pcOriginPriceFen` 为电脑端价格 |
 | POST | `/api/order` | 登录 | 创建订单并支付 `{ productId, quantity, provider, gameAccountId, gameTextId?, serviceRegion, boosterSelectionMode, requestedBoosterId?, accountInfo?, remark?, remarkMedia?, userCouponId? }`；provider 为 `alipay/wechat/balance`。渠道支付返回二维码，余额/0 元支付返回 `paid: true` 并直接落账 |
 | POST | `/api/order/pay/callback/:provider` | 公开 | 支付渠道异步回调（验签后幂等落账：待付款 → 待客服处理，并累加销量） |
 | GET | `/api/order/mine` | 登录 | 分页查询我的订单 `?page&pageSize&status`（status 可选，tabs 按状态过滤），按创建时间倒序 |
@@ -317,7 +317,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | GET | `/api/order/:id/pay/query` | 登录 | 支付渠道主动查单兜底，仅本人可查；已支付空群同步补建 |
 | POST | `/api/order/:id/cancel` | 登录 | 取消待付款订单（已支付订单不可取消） |
 | POST | `/api/order/:id/refund` | 登录且订单本人 | 已付款未开工订单申请全额退款 `{ reason }`；订单冻结为退款处理中，返回含退款投影的最新订单 |
-| GET | `/api/order/hall` / `/api/order/hall/:id` | `booster` 角色 | 接单大厅列表/详情；接单前隐藏数字 ID、文字 ID 和账号信息 |
+| GET | `/api/order/hall` / `/api/order/hall/:id` | `booster` 角色 | 大厅列表支持 `?page&pageSize&keyword&serviceRegion`，关键词匹配订单号/商品名，区服为 `delta-mobile` / `delta-pc`；详情接单前隐藏数字 ID、文字 ID 和账号信息 |
 | POST | `/api/order/hall/:id/accept` | `booster` 角色且当前上线 | 原子接单；下线拒绝，锁定打手订单只能由锁定人领取，竞争失败返回 409 |
 | GET | `/api/order/booster/mine` / `/api/order/booster/mine/:id` | `booster` 角色 | 本人接单订单及详情，接单后可见敏感账号字段 |
 | POST | `/api/order/booster/:id/complete` | `booster` 角色 | 完成服务并结算提成 |
@@ -329,7 +329,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | POST | `/api/order/admin/:id/refund/approve` | `order:admin:refund:review` | 同意退款；处理中时查询渠道，明确失败时使用新渠道尝试号重试；客服仍按负责商品隔离 |
 | POST | `/api/order/admin/:id/refund/reject` | `order:admin:refund:review` | 驳回待审核退款 `{ reason }`，恢复申请前履约状态 |
 
-下单约束：`gameAccountId` 为 1～32 位数字；`serviceRegion` 只能为 `delta-mobile` / `delta-pc`；`boosterSelectionMode=specified` 必须提供可选打手 ID。锁定打手在创建、指派/接单时均由服务端复核上线状态、目录可见性、启用状态、booster 角色、区服（历史空区服仅跳过此项）、实名、押金和本人排除。订单群使用订单 UUID 作为确定性会话 ID；首次失败不回滚支付，查单、详情和后台进群会幂等补建。
+下单约束：`gameAccountId` 为 1～32 位数字；`serviceRegion` 只能为 `delta-mobile` / `delta-pc`，并决定服务端使用手机端还是电脑端商品价格；请求不接收客户端金额。`boosterSelectionMode=specified` 必须提供可选打手 ID。锁定打手在创建、指派/接单时均由服务端复核上线状态、目录可见性、启用状态、booster 角色、区服（历史空区服仅跳过此项）、实名、押金和本人排除。订单群使用订单 UUID 作为确定性会话 ID；首次失败不回滚支付，查单、详情和后台进群会幂等补建。
 
 ## 商品评论
 

@@ -3,13 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import type { FindOptionsWhere, Repository } from 'typeorm';
 import { OrderStatus } from '@app/contracts';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
-import { withTenant } from '../../../shared/tenant/tenant-scope.util';
+import { applyTenant, withTenant } from '../../../shared/tenant/tenant-scope.util';
 import { OrderEntity } from '../domain/order.entity';
 import {
   AdminOrderFilter,
   ClaimOrderForCancellationInput,
   ClaimOrderForDispatchInput,
   ClaimOrderForServingInput,
+  HallOrderFilter,
   OrderRepository,
 } from '../domain/order-repository.interface';
 
@@ -55,16 +56,35 @@ export class TypeormOrderRepository implements OrderRepository {
     });
   }
 
-  paginateDispatching(skip: number, take: number): Promise<[OrderEntity[], number]> {
-    return this.repo.findAndCount({
-      where: withTenant<OrderEntity>(this.tenant, {
-        status: OrderStatus.Dispatching,
-      }),
-      order: { createdAt: 'DESC' },
-      relations: { refund: true },
-      skip,
-      take,
-    });
+  paginateDispatching(
+    skip: number,
+    take: number,
+    filter: HallOrderFilter = {},
+  ): Promise<[OrderEntity[], number]> {
+    const query = this.repo
+      .createQueryBuilder('serviceOrder')
+      .leftJoinAndSelect('serviceOrder.refund', 'refund')
+      .where('serviceOrder.status = :status', { status: OrderStatus.Dispatching })
+      .orderBy('serviceOrder.dispatchedAt', 'DESC')
+      .addOrderBy('serviceOrder.createdAt', 'DESC')
+      .skip(skip)
+      .take(take);
+    applyTenant(this.tenant, query, 'serviceOrder');
+
+    if (filter.serviceRegion) {
+      query.andWhere('serviceOrder.serviceRegion = :serviceRegion', {
+        serviceRegion: filter.serviceRegion,
+      });
+    }
+    const keyword = filter.keyword?.trim();
+    if (keyword) {
+      query.andWhere(
+        '(serviceOrder.orderNo ILIKE :keyword OR serviceOrder.productTitle ILIKE :keyword)',
+        { keyword: `%${this.escapeLike(keyword)}%` },
+      );
+    }
+
+    return query.getManyAndCount();
   }
 
   paginateByBooster(
@@ -122,6 +142,10 @@ export class TypeormOrderRepository implements OrderRepository {
     if (result.affected !== 1) {
       throw new Error(`订单 ${id} 的群聊关联回填失败`);
     }
+  }
+
+  private escapeLike(value: string): string {
+    return value.replace(/[\\%_]/g, (character) => `\\${character}`);
   }
 
   claimForDispatch(input: ClaimOrderForDispatchInput): Promise<OrderEntity | null> {

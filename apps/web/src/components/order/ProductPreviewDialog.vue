@@ -3,10 +3,10 @@
  * 商品详情预览抽屉：按商品 id 拉取公开详情（封面/价格/分类/销量/富文本详情）。
  * 商品已下架或删除时接口返回 404，展示占位提示（订单中的商品名/封面为下单快照，不受影响）。
  */
-import { computed, ref, watch } from 'vue';
-import { fenToYuan, type ProductPublicView } from '@app/contracts';
-import { commerceApi } from '@/api/commerce.api';
-import { sanitizeHtml } from '@/utils/sanitize-html';
+import { computed, ref, watch } from "vue";
+import { fenToYuan, type ProductPublicView } from "@app/contracts";
+import { commerceApi } from "@/api/commerce.api";
+import { sanitizeHtml } from "@/utils/sanitize-html";
 
 const props = defineProps<{
   /** 要预览的商品 id，为空时不加载 */
@@ -20,7 +20,7 @@ const loading = ref(false);
 const missing = ref(false);
 
 const safeDescription = computed(() =>
-  product.value ? sanitizeHtml(product.value.description) : '',
+  product.value ? sanitizeHtml(product.value.description) : ""
 );
 
 async function load(): Promise<void> {
@@ -74,11 +74,16 @@ watch(visible, (open) => {
             {{ product.title }}
           </h3>
           <div class="preview-meta">
-            <span class="preview-price">¥{{ fenToYuan(product.priceFen) }}</span>
-            <span
-              v-if="product.originPriceFen > product.priceFen"
-              class="preview-origin"
-            >¥{{ fenToYuan(product.originPriceFen) }}</span>
+            <span class="preview-platform-price">
+              <small>手机端</small>
+              <strong>¥{{ fenToYuan(product.priceFen) }}</strong>
+              <del v-if="product.originPriceFen > product.priceFen">¥{{ fenToYuan(product.originPriceFen) }}</del>
+            </span>
+            <span class="preview-platform-price">
+              <small>电脑端</small>
+              <strong>¥{{ fenToYuan(product.pcPriceFen) }}</strong>
+              <del v-if="product.pcOriginPriceFen > product.pcPriceFen">¥{{ fenToYuan(product.pcOriginPriceFen) }}</del>
+            </span>
             <el-tag size="small">
               {{ product.categoryName }}
             </el-tag>
@@ -112,9 +117,9 @@ watch(visible, (open) => {
 
 .preview-cover {
   width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: 240px;
-  object-fit: cover;
+  aspect-ratio: 1;
+  max-height: min(460px, 65vh);
+  object-fit: contain;
   border: 1px solid var(--el-border-color);
   border-radius: 4px;
   display: block;
@@ -138,16 +143,30 @@ watch(visible, (open) => {
   gap: 10px;
 }
 
-.preview-price {
+.preview-platform-price {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 4px 7px;
+  padding: 7px 10px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+}
+
+.preview-platform-price small {
+  grid-column: 1 / -1;
+  color: var(--el-text-color-secondary);
+}
+
+.preview-platform-price strong {
   font-size: 18px;
   font-weight: 600;
   color: var(--el-color-danger);
 }
 
-.preview-origin {
+.preview-platform-price del {
   font-size: 13px;
   color: var(--el-text-color-secondary);
-  text-decoration: line-through;
 }
 
 .preview-sold {

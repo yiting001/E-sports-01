@@ -19,14 +19,14 @@
 | 实名认证 | [realname.md](./realname.md) | 证件提交 + 人工审核状态机，身份证 AES-256-GCM 加密脱敏，超管按角色配置需实名 |
 | 反馈管理 | [feedback.md](./feedback.md) | 投诉关联真实订单/打手，管理端原子幂等扣款 + 回复，C 端联系客服复用既有 IM |
 | 运营通知 | [notice.md](./notice.md) | 首页多图轮播、活动关联和后台配置（兼容历史单图）+ 通知公告 CRUD |
-| 服务订单 | [order.md](./order.md) | 结构化游戏资料、自动安排/锁定指定打手、三种支付方式、并发安全派单、三阶段群标题及移动端安全刷新 |
+| 服务订单 | [order.md](./order.md) | 双端权威计价、结构化游戏资料、大厅检索、并发安全派单、三种支付方式与三阶段群标题 |
 | 订单退款 | [order-refund.md](./order-refund.md) | 用户申请、后台审核、客服独立授权、余额与支付宝/微信原路退款、并发幂等及失败恢复 |
 | 商品评论 | [review.md](./review.md) | 订单完成后一单一评（打星 + 文字），商品详情页脱敏展示评论与平均分，管理端隐藏/恢复/删除治理 |
 | 打手入驻 | [booster.md](./booster.md) | 入驻审核、打手自主上下线、脱敏挑人目录/主页和安全语音试听，含 migration 与隐私边界 |
-| 商品管理 | [commerce.md](./commerce.md) | 分类 + 商品 CRUD 与上下架，C 端响应式商品详情、动态分类明细与销量榜，金额以分整数 |
+| 商品管理 | [commerce.md](./commerce.md) | 分类 + 商品 CRUD、手机/电脑双端价格、左右分类目录、方形完整主图与正式 migration |
 | 前端基座 | [frontend.md](./frontend.md) | Vue3 + Pinia，鉴权 store、动态路由守卫、v-permission 指令 |
 | 菜单待办角标 | [menu-badges.md](./menu-badges.md) | 管理端实名、订单、打手、即时通讯和客服待办数量，权限裁剪、实时刷新、轮询重试与并发防旧响应 |
-| C 端用户应用 | [client.md](./client.md) | 独立商城、分类与商品、挑选打手、结构化结算、短信登录和个人功能说明 |
+| C 端用户应用 | [client.md](./client.md) | 左右分类目录、双端结算、接单大厅检索、挑选打手和短信登录说明 |
 | 登录注册 UI | [auth-ui.md](./auth-ui.md) | 企业级电竞风格登录/注册/短信验证码入口，仅重做 UI 不改鉴权逻辑 |
 | 工作台 UI | [dashboard-ui.md](./dashboard-ui.md) | 响应式账号概览、业务入口、快捷访问和权限摘要 |
 | 数据统计仪表盘 | [dashboard.md](./dashboard.md) | 订单/财务/用户/打手四块只读聚合统计（ECharts），日/月/年时间范围，按权限分块展示 |

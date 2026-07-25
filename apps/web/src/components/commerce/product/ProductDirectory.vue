@@ -4,7 +4,7 @@ import {
   ProductStatus,
   type CategoryView,
   type ProductView,
-} from '@app/contracts';
+} from "@app/contracts";
 import {
   Delete,
   Download,
@@ -14,11 +14,11 @@ import {
   Refresh,
   Search,
   Upload,
-} from '@element-plus/icons-vue';
-import AppDataTable from '@/components/common/AppDataTable.vue';
-import AppPanel from '@/components/common/AppPanel.vue';
-import type { ProductFilterModel } from '@/components/commerce/commerce-ui.types';
-import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
+} from "@element-plus/icons-vue";
+import AppDataTable from "@/components/common/AppDataTable.vue";
+import AppPanel from "@/components/common/AppPanel.vue";
+import type { ProductFilterModel } from "@/components/commerce/commerce-ui.types";
+import { PAGE_SIZE_OPTIONS } from "@/config/pagination";
 
 const props = defineProps<{
   list: ProductView[];
@@ -33,7 +33,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  'update:filter': [value: ProductFilterModel];
+  "update:filter": [value: ProductFilterModel];
   search: [];
   reset: [];
   refresh: [];
@@ -42,12 +42,12 @@ const emit = defineEmits<{
   marketing: [row: ProductView];
   publish: [row: ProductView];
   remove: [row: ProductView];
-  'update:page': [value: number];
-  'update:pageSize': [value: number];
+  "update:page": [value: number];
+  "update:pageSize": [value: number];
 }>();
 
 function updateFilter(patch: Partial<ProductFilterModel>): void {
-  emit('update:filter', { ...props.filter, ...patch });
+  emit("update:filter", { ...props.filter, ...patch });
 }
 </script>
 
@@ -160,7 +160,7 @@ function updateFilter(patch: Partial<ProductFilterModel>): void {
             </span>
             <div>
               <strong>{{ row.title }}</strong>
-              <small>{{ row.coverTitle || '未设置封面主标语' }}</small>
+              <small>{{ row.coverTitle || "未设置封面主标语" }}</small>
             </div>
           </div>
         </template>
@@ -176,13 +176,19 @@ function updateFilter(patch: Partial<ProductFilterModel>): void {
         </template>
       </el-table-column>
       <el-table-column
-        label="价格"
-        width="140"
+        label="双端价格"
+        width="190"
       >
         <template #default="{ row }">
-          <div class="commerce-price">
-            <strong>{{ yuan(row.priceFen) }}</strong>
-            <small>{{ yuan(row.originPriceFen) }}</small>
+          <div class="commerce-price commerce-price--platforms">
+            <span>
+              <small>手机端</small>
+              <strong>{{ yuan(row.priceFen) }}</strong>
+            </span>
+            <span>
+              <small>电脑端</small>
+              <strong>{{ yuan(row.pcPriceFen) }}</strong>
+            </span>
           </div>
         </template>
       </el-table-column>
@@ -203,7 +209,9 @@ function updateFilter(patch: Partial<ProductFilterModel>): void {
         min-width="130"
       >
         <template #default="{ row }">
-          <span class="commerce-muted">{{ row.serviceAgentName || '未关联' }}</span>
+          <span class="commerce-muted">{{
+            row.serviceAgentName || "未关联"
+          }}</span>
         </template>
       </el-table-column>
       <el-table-column
@@ -215,7 +223,7 @@ function updateFilter(patch: Partial<ProductFilterModel>): void {
             round
             :type="row.status === ProductStatus.OnShelf ? 'success' : 'info'"
           >
-            {{ row.status === ProductStatus.OnShelf ? '已上架' : '已下架' }}
+            {{ row.status === ProductStatus.OnShelf ? "已上架" : "已下架" }}
           </el-tag>
         </template>
       </el-table-column>
@@ -246,11 +254,13 @@ function updateFilter(patch: Partial<ProductFilterModel>): void {
             <el-button
               v-permission="PERMS.product.publish"
               link
-              :type="row.status === ProductStatus.OnShelf ? 'warning' : 'success'"
+              :type="
+                row.status === ProductStatus.OnShelf ? 'warning' : 'success'
+              "
               :icon="row.status === ProductStatus.OnShelf ? Download : Upload"
               @click="emit('publish', row)"
             >
-              {{ row.status === ProductStatus.OnShelf ? '下架' : '上架' }}
+              {{ row.status === ProductStatus.OnShelf ? "下架" : "上架" }}
             </el-button>
             <el-button
               v-permission="PERMS.product.remove"
