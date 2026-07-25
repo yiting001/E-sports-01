@@ -49,7 +49,8 @@
 
   .detail .cover.cover {
     grid-column: 1;
-    min-height: 300px;
+    width: min(100%, 680px);
+    justify-self: center;
   }
 
   .detail .info.info {
@@ -65,18 +66,12 @@
     line-height: 1.35;
   }
 
-  .detail .meta.meta {
-    flex-wrap: wrap;
-    gap: 8px 10px;
+  .detail .product-platform-prices.product-platform-prices {
+    grid-template-columns: 1fr;
   }
 
   .detail .price.price {
     font-size: 26px;
-  }
-
-  .detail .sold.sold {
-    width: 100%;
-    margin-left: 0;
   }
 
   .detail .category.category {

@@ -1,22 +1,30 @@
 <script setup lang="ts">
 /**
- * 商品详情页（全屏，纯展示）：封面/标题/价格/富文本详情/用户评价，
+ * 商品详情页（全屏，纯展示）：铺满主图/标题/价格/富文本详情/用户评价，
+ * 主图预览由 ProductCoverPreview 负责，
  * 底部「立即下单」进入独立的下单页（/checkout/:productId）。
  * 富文本经 DOMPurify 净化后渲染，防 XSS。
  */
-import { computed, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { AxiosError } from 'axios';
-import DOMPurify from 'dompurify';
-import { BizCode, fenToYuan, type ProductPublicView } from '@app/contracts';
-import SelectedBoosterNotice from '@/components/booster/SelectedBoosterNotice.vue';
-import AppIcon from '@/components/common/AppIcon.vue';
-import ProductAssuranceBar from '@/components/product/ProductAssuranceBar.vue';
-import ProductIntroCard from '@/components/product/ProductIntroCard.vue';
-import ProductReviews from '@/components/product/ProductReviews.vue';
-import { commerceApi } from '@/api/commerce.api';
-import { resolveMediaUrl, resolveRichMediaUrls } from '@/utils/media-url';
-import './ProductDetailView.responsive.css';
+import { computed, onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { AxiosError } from "axios";
+import DOMPurify from "dompurify";
+import {
+  BizCode,
+  fenToYuan,
+  lowestProductPriceFen,
+  type ProductPublicView,
+} from "@app/contracts";
+import SelectedBoosterNotice from "@/components/booster/SelectedBoosterNotice.vue";
+import AppIcon from "@/components/common/AppIcon.vue";
+import ProductAssuranceBar from "@/components/product/ProductAssuranceBar.vue";
+import ProductCoverPreview from "@/components/product/ProductCoverPreview.vue";
+import ProductIntroCard from "@/components/product/ProductIntroCard.vue";
+import ProductPlatformPrices from "@/components/product/ProductPlatformPrices.vue";
+import ProductReviews from "@/components/product/ProductReviews.vue";
+import { commerceApi } from "@/api/commerce.api";
+import { resolveMediaUrl, resolveRichMediaUrls } from "@/utils/media-url";
+import "./ProductDetailView.responsive.css";
 
 const route = useRoute();
 const router = useRouter();
@@ -25,15 +33,14 @@ const product = ref<ProductPublicView | null>(null);
 const loading = ref(true);
 const missing = ref(false);
 const loadError = ref(false);
-const coverFailed = ref(false);
 const descExpanded = ref(false);
 
 const safeDescription = computed(() =>
   product.value
     ? resolveRichMediaUrls(DOMPurify.sanitize(product.value.description))
-    : '',
+    : ""
 );
-const coverUrl = computed(() => resolveMediaUrl(product.value?.cover ?? ''));
+const coverUrl = computed(() => resolveMediaUrl(product.value?.cover ?? ""));
 
 function goCheckout(): void {
   if (product.value) {
@@ -45,12 +52,14 @@ async function loadProduct(): Promise<void> {
   loading.value = true;
   missing.value = false;
   loadError.value = false;
-  coverFailed.value = false;
   try {
     product.value = await commerceApi.getProduct(String(route.params.id));
   } catch (error) {
     product.value = null;
-    if (error instanceof AxiosError && error.response?.status === BizCode.NotFound) {
+    if (
+      error instanceof AxiosError &&
+      error.response?.status === BizCode.NotFound
+    ) {
       missing.value = true;
     } else {
       loadError.value = true;
@@ -114,32 +123,18 @@ onMounted(() => {
         <p>商品不存在或已下架</p>
       </section>
       <template v-else>
-        <div class="cover card">
-          <img
-            v-if="coverUrl && !coverFailed"
-            :src="coverUrl"
-            :alt="product.title"
-            class="cover-image"
-            @error="coverFailed = true"
-          >
-          <AppIcon
-            v-else
-            name="gem"
-            :size="72"
-            class="emblem"
-          />
-        </div>
+        <ProductCoverPreview
+          class="cover card"
+          :src="coverUrl"
+          :alt="product.title"
+        />
 
         <section class="card info">
           <h1 class="title">
             {{ product.title }}
           </h1>
+          <ProductPlatformPrices :product="product" />
           <div class="meta">
-            <span class="price">¥{{ fenToYuan(product.priceFen) }}</span>
-            <span
-              v-if="product.originPriceFen > product.priceFen"
-              class="origin"
-            >¥{{ fenToYuan(product.originPriceFen) }}</span>
             <span class="sold">已售 {{ product.sold }}</span>
           </div>
           <span class="category">{{ product.categoryName }}</span>
@@ -184,7 +179,7 @@ onMounted(() => {
             :aria-expanded="descExpanded"
             @click="descExpanded = !descExpanded"
           >
-            {{ descExpanded ? '收起详情' : '展开详情' }}
+            {{ descExpanded ? "收起详情" : "展开详情" }}
           </button>
         </section>
 
@@ -198,7 +193,7 @@ onMounted(() => {
     >
       <div class="total">
         <span class="total-label">价格</span>
-        <span class="total-value">¥{{ fenToYuan(product.priceFen) }}</span>
+        <span class="total-value">¥{{ fenToYuan(lowestProductPriceFen(product)) }} 起</span>
       </div>
       <button
         type="button"
@@ -217,8 +212,11 @@ onMounted(() => {
   inset: 0;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(70% 36% at 50% 0%, rgba(255, 176, 32, 0.07), transparent 70%),
+  background: radial-gradient(
+      70% 36% at 50% 0%,
+      rgba(255, 176, 32, 0.07),
+      transparent 70%
+    ),
     var(--c-bg);
 }
 
@@ -288,16 +286,18 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 800;
   background: var(--c-accent);
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%,
+    0 8px
+  );
 }
 
 .cover {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  display: grid;
-  place-items: center;
-  background: var(--c-cover-bg);
-  overflow: hidden;
+  min-width: 0;
 }
 
 .cover,
@@ -307,20 +307,6 @@ onMounted(() => {
 .desc,
 .reviews {
   flex-shrink: 0;
-}
-
-.cover-image {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: contain;
-}
-
-.emblem {
-  color: rgba(61, 255, 155, 0.55);
-  filter: drop-shadow(0 0 12px rgba(61, 255, 155, 0.32));
 }
 
 .info {
@@ -341,22 +327,8 @@ onMounted(() => {
   gap: 8px;
 }
 
-.price {
-  font-family: var(--font-num);
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--c-accent);
-}
-
-.origin {
-  font-family: var(--font-num);
-  font-size: 12px;
-  color: var(--c-text-muted);
-  text-decoration: line-through;
-}
-
 .sold {
-  margin-left: auto;
+  margin-left: 0;
   font-size: 12px;
   color: var(--c-text-muted);
 }
@@ -401,7 +373,7 @@ onMounted(() => {
 }
 
 .desc-content::after {
-  content: '';
+  content: "";
   position: absolute;
   right: 0;
   bottom: 0;

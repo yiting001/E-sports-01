@@ -4,7 +4,7 @@
  */
 import type { ProductPublicView } from '@app/contracts';
 
-/** 分类分组（综合页签） */
+/** 分类目录分组（左侧索引 + 右侧商品入口） */
 export interface CategoryGroup {
   id: string;
   title: string;
@@ -16,7 +16,7 @@ export interface CategoryGroup {
   items: ProductPublicView[];
 }
 
-/** 排行榜条目（排行榜页签） */
+/** 排行榜条目（保留给独立排行榜展示） */
 export interface RankItem {
   product: ProductPublicView;
   /** 热度进度（0-100，驱动进度条宽度） */

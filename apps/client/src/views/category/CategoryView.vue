@@ -1,49 +1,37 @@
 <script setup lang="ts">
 /**
- * 分类页（全部游戏）：顶部标题/分段页签 + 综合分类目录 / 商品销量榜。
- * 分类名称由管理端维护，商品明细来自公开接口；桌面综合双列、榜单单列，移动统一单列。
+ * 商品分类目录：搜索栏 + 左侧分类索引 + 右侧分组商品入口。
+ * 数据继续来自公开分类/商品接口；目录不改变下单、权限和导航边界。
  */
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { CategoryPublicView, ProductPublicView } from '@app/contracts';
 import SelectedBoosterNotice from '@/components/booster/SelectedBoosterNotice.vue';
+import AppIcon from '@/components/common/AppIcon.vue';
 import CategoryGroupCard from '@/components/category/CategoryGroupCard.vue';
-import RankItemCard from '@/components/category/RankItemCard.vue';
-import SegmentTabs from '@/components/common/SegmentTabs.vue';
-import type { CategoryGroup, RankItem } from '@/config/category.mock';
 import { commerceApi } from '@/api/commerce.api';
+import type { CategoryGroup } from '@/config/category.mock';
+import { buildCategoryGroups, filterCategoryGroups } from '@/utils/category-catalog';
 
-/** 页签文案（下标与 activeTab 对应） */
-const TABS = ['综合', '排行榜'];
 const PRODUCT_PAGE_SIZE = 100;
-const activeTab = ref(0);
 
 const categories = ref<CategoryPublicView[]>([]);
 const products = ref<ProductPublicView[]>([]);
+const keyword = ref('');
+const activeCategoryId = ref('');
 const loading = ref(true);
 const loadError = ref(false);
+const catalogScroll = ref<HTMLElement | null>(null);
+let scrollFrame: number | null = null;
 
-/** 综合：按分类聚合商品为分组网格，展示全部启用分类（暂无商品的分类也保留占位） */
 const groups = computed<CategoryGroup[]>(() =>
-  categories.value.map((category) => ({
-    id: category.id,
-    title: category.name,
-    icon: category.icon,
-    iconText: category.cover,
-    items: products.value.filter((product) => product.categoryId === category.id),
-  })),
+  buildCategoryGroups(categories.value, products.value),
 );
 
-/** 排行榜：按销量降序，热度以榜首为 100 基准 */
-const ranks = computed<RankItem[]>(() => {
-  const sorted = [...products.value].sort((a, b) => b.sold - a.sold).slice(0, 10);
-  const top = sorted[0]?.sold ?? 0;
-  return sorted.map((product) => ({
-    product,
-    heat: top > 0 ? Math.round((product.sold / top) * 100) : 0,
-  }));
-});
+const visibleGroups = computed<CategoryGroup[]>(() =>
+  filterCategoryGroups(groups.value, keyword.value),
+);
 
-/** 公开商品接口有单页上限，分类目录需要读取全部页，避免第 101 件起静默缺失。 */
+/** 公开商品接口有单页上限，分类目录需要读取全部页，避免静默遗漏商品。 */
 async function listAllProducts(): Promise<ProductPublicView[]> {
   const firstPage = await commerceApi.listProducts({ page: 1, pageSize: PRODUCT_PAGE_SIZE });
   const productsById = new Map(firstPage.list.map((product) => [product.id, product]));
@@ -80,8 +68,74 @@ async function loadCatalog(): Promise<void> {
   }
 }
 
+function syncActiveCategory(): void {
+  const firstVisible = visibleGroups.value[0]?.id ?? '';
+  if (!visibleGroups.value.some((group) => group.id === activeCategoryId.value)) {
+    activeCategoryId.value = firstVisible;
+  }
+}
+
+function findGroupElement(categoryId: string): HTMLElement | null {
+  const container = catalogScroll.value;
+  if (!container) {
+    return null;
+  }
+  return [...container.querySelectorAll<HTMLElement>('[data-category-id]')]
+    .find((element) => element.dataset.categoryId === categoryId) ?? null;
+}
+
+function scrollToCategory(categoryId: string): void {
+  activeCategoryId.value = categoryId;
+  void nextTick(() => {
+    findGroupElement(categoryId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+function showAllProducts(categoryId: string): void {
+  if (keyword.value) {
+    keyword.value = '';
+  }
+  scrollToCategory(categoryId);
+}
+
+function updateActiveFromScroll(): void {
+  const container = catalogScroll.value;
+  if (!container) {
+    return;
+  }
+  const marker = container.getBoundingClientRect().top + 24;
+  let nearest = visibleGroups.value[0]?.id ?? '';
+  for (const group of visibleGroups.value) {
+    const element = findGroupElement(group.id);
+    if (element && element.getBoundingClientRect().top <= marker) {
+      nearest = group.id;
+    }
+  }
+  if (nearest) {
+    activeCategoryId.value = nearest;
+  }
+}
+
+function onCatalogScroll(): void {
+  if (scrollFrame !== null) {
+    return;
+  }
+  scrollFrame = window.requestAnimationFrame(() => {
+    scrollFrame = null;
+    updateActiveFromScroll();
+  });
+}
+
+watch(visibleGroups, syncActiveCategory, { immediate: true });
+
 onMounted(() => {
   void loadCatalog();
+});
+
+onBeforeUnmount(() => {
+  if (scrollFrame !== null) {
+    window.cancelAnimationFrame(scrollFrame);
+  }
 });
 </script>
 
@@ -89,13 +143,34 @@ onMounted(() => {
   <div class="category">
     <header class="category-head">
       <h1 class="page-title">
-        全部游戏
+        商品分类
       </h1>
-      <SegmentTabs
-        v-model="activeTab"
-        :tabs="TABS"
-        class="category-tabs"
-      />
+      <label class="search-box">
+        <AppIcon
+          name="search"
+          :size="17"
+        />
+        <input
+          v-model="keyword"
+          type="search"
+          name="category-search"
+          autocomplete="off"
+          placeholder="搜索商品名称"
+          aria-label="搜索商品名称"
+        >
+        <button
+          v-if="keyword"
+          type="button"
+          class="clear-search"
+          aria-label="清除搜索"
+          @click="keyword = ''"
+        >
+          <AppIcon
+            name="close"
+            :size="15"
+          />
+        </button>
+      </label>
     </header>
 
     <SelectedBoosterNotice />
@@ -125,161 +200,66 @@ onMounted(() => {
       </button>
     </section>
 
-    <!-- 综合：分类大标题 + 该分类商品明细 -->
     <section
-      v-else-if="activeTab === 0"
-      class="group-list"
+      v-else-if="!groups.length"
+      class="catalog-state card"
     >
-      <CategoryGroupCard
-        v-for="group in groups"
-        :key="group.id"
-        :group="group"
+      <AppIcon
+        name="grid"
+        :size="28"
       />
-      <p
-        v-if="!groups.length"
-        class="empty"
-      >
-        暂无启用分类
-      </p>
+      <p>暂无启用分类</p>
     </section>
 
-    <!-- 排行榜：热度榜单 -->
-    <section
+    <div
       v-else
-      class="rank-list"
+      class="catalog-layout"
     >
-      <RankItemCard
-        v-for="(item, index) in ranks"
-        :key="item.product.id"
-        :item="item"
-        :index="index"
-      />
-      <p
-        v-if="!ranks.length"
-        class="empty"
+      <aside
+        class="category-sidebar"
+        aria-label="商品分类"
       >
-        暂无上架商品
-      </p>
-    </section>
+        <button
+          v-for="group in visibleGroups"
+          :key="group.id"
+          type="button"
+          class="category-link"
+          :class="{ active: activeCategoryId === group.id }"
+          :aria-current="activeCategoryId === group.id ? 'true' : undefined"
+          @click="scrollToCategory(group.id)"
+        >
+          {{ group.title }}
+        </button>
+        <p
+          v-if="!visibleGroups.length"
+          class="sidebar-empty"
+        >
+          无匹配分类
+        </p>
+      </aside>
+
+      <section
+        ref="catalogScroll"
+        class="catalog-scroll"
+        aria-live="polite"
+        @scroll="onCatalogScroll"
+      >
+        <CategoryGroupCard
+          v-for="group in visibleGroups"
+          :key="group.id"
+          :group="group"
+          :data-category-id="group.id"
+          @show-all="showAllProducts"
+        />
+        <p
+          v-if="!visibleGroups.length"
+          class="empty"
+        >
+          未找到匹配的商品
+        </p>
+      </section>
+    </div>
   </div>
 </template>
 
-<style scoped>
-.category {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.group-list,
-.rank-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-
-.category-head {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-  padding: 4px 4px 14px;
-  border-bottom: 1px solid var(--c-border);
-}
-
-.page-title {
-  font-size: 20px;
-  font-weight: 800;
-  font-style: italic;
-  letter-spacing: 0;
-}
-
-.category-tabs :deep(.seg-btn) {
-  letter-spacing: 0;
-}
-
-.empty {
-  padding: 44px 16px;
-  text-align: center;
-  color: var(--c-text-muted);
-  font-size: 14px;
-}
-
-.catalog-state {
-  min-height: 220px;
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  text-align: center;
-}
-
-.catalog-state h2 {
-  font-size: 17px;
-}
-
-.catalog-state p {
-  font-size: 13px;
-  color: var(--c-text-secondary);
-}
-
-.state-loader {
-  width: 30px;
-  height: 30px;
-  border: 2px solid var(--c-border);
-  border-top-color: var(--c-accent);
-  border-radius: 50%;
-  animation: category-spin 0.8s linear infinite;
-}
-
-.retry {
-  min-width: 112px;
-  min-height: 42px;
-  padding: 0 18px;
-  color: var(--c-bg);
-  font-size: 14px;
-  font-weight: 800;
-  background: var(--c-accent);
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
-}
-
-@keyframes category-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (min-width: 768px) {
-  .category {
-    gap: 16px;
-  }
-
-  .category-head {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 56px;
-  }
-
-  .category-tabs {
-    width: 280px;
-    flex-shrink: 0;
-  }
-
-  .group-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-  }
-
-  .rank-list {
-    width: 100%;
-    max-width: 920px;
-    margin: 0 auto;
-    gap: 14px;
-  }
-}
-</style>
+<style scoped src="./CategoryView.css"></style>

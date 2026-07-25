@@ -1,0 +1,228 @@
+.category {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.category-head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 4px 4px 14px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.search-box {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+  color: var(--c-text-muted);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 21px;
+}
+
+.search-box:focus-within {
+  border-color: rgba(255, 176, 32, 0.65);
+  box-shadow: 0 0 0 2px rgba(255, 176, 32, 0.1);
+}
+
+.search-box input {
+  min-width: 0;
+  flex: 1;
+  color: var(--c-text);
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.search-box input::placeholder {
+  color: var(--c-text-muted);
+}
+
+.clear-search {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--c-text-muted);
+}
+
+.clear-search:hover {
+  color: var(--c-text);
+}
+
+.catalog-layout {
+  min-width: 0;
+  min-height: 360px;
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  background: color-mix(in srgb, var(--c-surface) 70%, transparent);
+}
+
+.category-sidebar {
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-right: 1px solid var(--c-border);
+  scrollbar-width: none;
+}
+
+.category-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.category-link {
+  position: relative;
+  width: 100%;
+  min-height: 52px;
+  display: block;
+  padding: 8px 8px;
+  color: var(--c-text-secondary);
+  font-size: 12px;
+  line-height: 17px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.category-link:hover {
+  color: var(--c-text);
+  background: rgba(255, 176, 32, 0.06);
+}
+
+.category-link.active {
+  color: var(--c-accent);
+  font-weight: 800;
+  background: var(--c-accent-dim);
+}
+
+.category-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  background: var(--c-accent);
+  box-shadow: 0 0 8px var(--c-accent);
+}
+
+.sidebar-empty {
+  padding: 16px 8px;
+  color: var(--c-text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.catalog-scroll {
+  min-width: 0;
+  height: clamp(360px, calc(100dvh - 238px), 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--c-border) transparent;
+}
+
+.catalog-scroll :deep(.group:first-child) {
+  padding-top: 18px;
+}
+
+.empty {
+  padding: 64px 16px;
+  color: var(--c-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.catalog-state {
+  min-height: 220px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--c-text-muted);
+  text-align: center;
+}
+
+.catalog-state h2 {
+  color: var(--c-text);
+  font-size: 17px;
+}
+
+.catalog-state p {
+  font-size: 13px;
+}
+
+.state-loader {
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--c-border);
+  border-top-color: var(--c-accent);
+  border-radius: 50%;
+  animation: category-spin 0.8s linear infinite;
+}
+
+.retry {
+  min-width: 112px;
+  min-height: 42px;
+  padding: 0 18px;
+  color: var(--c-bg);
+  font-size: 14px;
+  font-weight: 800;
+  background: var(--c-accent);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+@keyframes category-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (min-width: 768px) {
+  .category {
+    gap: 16px;
+  }
+
+  .category-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-height: 56px;
+  }
+
+  .search-box {
+    width: min(420px, 48%);
+  }
+
+  .catalog-layout {
+    grid-template-columns: 190px minmax(0, 1fr);
+    min-height: 560px;
+  }
+
+  .category-link {
+    min-height: 54px;
+    padding-inline: 16px;
+    font-size: 13px;
+  }
+
+  .catalog-scroll {
+    height: clamp(560px, calc(100dvh - 190px), 760px);
+  }
+}

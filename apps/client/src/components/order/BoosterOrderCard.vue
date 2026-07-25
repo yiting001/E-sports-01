@@ -5,8 +5,13 @@
  * （大厅传「接单」、订单中心对服务中订单传「完成订单」）；
  * 点击卡片体触发 open 事件供宿主跳转详情；账号信息仅在后端下发时展示（接单后可见）。
  */
-import { ORDER_STATUS_TEXT, OrderStatus, type OrderView } from '@app/contracts';
-import AppIcon from '@/components/common/AppIcon.vue';
+import {
+  BOOSTER_SERVICE_REGIONS,
+  ORDER_STATUS_TEXT,
+  OrderStatus,
+  type OrderView,
+} from "@app/contracts";
+import AppIcon from "@/components/common/AppIcon.vue";
 
 defineProps<{
   order: OrderView;
@@ -24,16 +29,26 @@ const emit = defineEmits<{
 /** 状态 → 徽标风格（进行中金色/完成绿色/取消灰色） */
 function statusClass(status: OrderStatus): string {
   if (status === OrderStatus.Cancelled) {
-    return 'tag--muted';
+    return "tag--muted";
   }
   if (status === OrderStatus.Completed) {
-    return 'tag--ok';
+    return "tag--ok";
   }
-  return 'tag--accent';
+  return "tag--accent";
 }
 
 function formatTime(iso: string): string {
-  return iso ? iso.slice(0, 16).replace('T', ' ') : '';
+  return iso ? iso.slice(0, 16).replace("T", " ") : "";
+}
+
+function serviceRegionText(value: OrderView["serviceRegion"]): string {
+  if (!value) {
+    return "区服待确认";
+  }
+  const label = BOOSTER_SERVICE_REGIONS.find(
+    (item) => item.value === value
+  )?.label;
+  return label?.replace(/^三角洲\s*-\s*/, "") ?? value;
 }
 </script>
 
@@ -56,7 +71,11 @@ function formatTime(iso: string): string {
       <div
         class="thumb"
         :class="{ 'thumb--image': order.productCover }"
-        :style="order.productCover ? { backgroundImage: `url(${order.productCover})` } : undefined"
+        :style="
+          order.productCover
+            ? { backgroundImage: `url(${order.productCover})` }
+            : undefined
+        "
       >
         <AppIcon
           v-if="!order.productCover"
@@ -67,12 +86,20 @@ function formatTime(iso: string): string {
       </div>
 
       <div class="mid">
-        <p class="title">
+        <p
+          class="title"
+          :title="order.productTitle"
+        >
           {{ order.productTitle }}
         </p>
-        <p class="sub">
+        <p class="service-meta">
+          <span class="region">{{
+            serviceRegionText(order.serviceRegion)
+          }}</span>
           <span>数量 ×{{ order.quantity }}</span>
-          <span>{{ formatTime(order.createdAt) }}</span>
+        </p>
+        <p class="sub">
+          下发 {{ formatTime(order.dispatchedAt || order.createdAt) }}
         </p>
         <p
           v-if="order.remark"
@@ -183,10 +210,29 @@ function formatTime(iso: string): string {
 
 .sub {
   margin-top: 6px;
-  display: flex;
-  gap: 12px;
   font-size: 12px;
   color: var(--c-text-muted);
+}
+
+.service-meta {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--c-text-secondary);
+  font-size: 12px;
+}
+
+.region {
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  color: var(--c-neon);
+  border: 1px solid color-mix(in srgb, var(--c-neon) 40%, var(--c-border));
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--c-neon) 8%, transparent);
+  font-weight: 700;
 }
 
 .remark {
@@ -218,7 +264,14 @@ function formatTime(iso: string): string {
   font-weight: 700;
   color: var(--c-bg);
   background: var(--c-accent);
-  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%,
+    0 8px
+  );
 }
 
 .action:disabled {

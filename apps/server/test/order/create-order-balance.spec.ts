@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BadRequestException, Logger } from '@nestjs/common';
 import {
+  BOOSTER_SERVICE_REGION,
   OrderBoosterSelectionMode,
   OrderPaymentMethod,
   OrderStatus,
@@ -43,6 +44,9 @@ function createFailureFixture(balanceFailure: Error, channelFailure: Error): Fai
     cover: '',
     serviceAgentId: '',
     priceFen: 500,
+    originPriceFen: 700,
+    pcPriceFen: 800,
+    pcOriginPriceFen: 1_000,
   });
   const orders = {
     create: (data: Partial<OrderEntity>) =>
@@ -60,11 +64,7 @@ function createFailureFixture(balanceFailure: Error, channelFailure: Error): Fai
       return order;
     },
     findById: async (id: string) => (storedOrder?.id === id ? storedOrder : null),
-    claimForCancellation: async (input: {
-      orderId: string;
-      userId: string;
-      cancelledAt: Date;
-    }) => {
+    claimForCancellation: async (input: { orderId: string; userId: string; cancelledAt: Date }) => {
       if (
         !storedOrder ||
         storedOrder.id !== input.orderId ||
@@ -159,6 +159,34 @@ test('创建余额订单遇到冻结或不足时取消订单并回退优惠券',
   assert.ok(fixture.currentOrder()?.cancelledAt instanceof Date);
   assert.deepEqual(fixture.restoredOrderIds, ['order-1']);
   assert.deepEqual(fixture.resolvedPaymentChannels, []);
+});
+
+test('创建订单按手机端或电脑端区服固化对应商品价格', async () => {
+  const cases = [
+    { serviceRegion: BOOSTER_SERVICE_REGION.Mobile, expectedAmountFen: 1_000 },
+    { serviceRegion: BOOSTER_SERVICE_REGION.Pc, expectedAmountFen: 1_600 },
+  ] as const;
+
+  for (const { serviceRegion, expectedAmountFen } of cases) {
+    const fixture = createFailureFixture(
+      new BadRequestException('钱包余额不足'),
+      new Error('unused'),
+    );
+
+    await assert.rejects(
+      fixture.useCase.execute('user-1', {
+        productId: 'product-1',
+        quantity: 2,
+        provider: OrderPaymentMethod.Balance,
+        gameAccountId: '123456',
+        serviceRegion,
+        boosterSelectionMode: OrderBoosterSelectionMode.Auto,
+      }),
+      /钱包余额不足/,
+    );
+
+    assert.equal(fixture.currentOrder()?.originalAmountFen, expectedAmountFen);
+  }
 });
 
 test('扫码渠道建单失败同样取消新订单并回退优惠券', async () => {

@@ -8,6 +8,7 @@ import {
   ProductStatus,
   calcDiscountedFen,
   fenToYuan,
+  resolveProductPrice,
 } from '@app/contracts';
 import { ConfigService } from '../../../config/application/config.service';
 import {
@@ -57,7 +58,8 @@ export class CreateOrderUseCase {
       throw new NotFoundException('商品不存在或已下架');
     }
     const requestedBooster = await this.resolveRequestedBooster(userId, payload);
-    const originalAmountFen = product.priceFen * payload.quantity;
+    const unitPrice = resolveProductPrice(product, payload.serviceRegion);
+    const originalAmountFen = unitPrice.priceFen * payload.quantity;
     if (originalAmountFen <= 0) {
       throw new BadRequestException('订单金额异常');
     }

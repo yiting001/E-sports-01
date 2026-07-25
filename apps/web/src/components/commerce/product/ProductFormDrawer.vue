@@ -1,28 +1,29 @@
 <script setup lang="ts">
-import type { CategoryView, ServiceAgentOption } from '@app/contracts';
-import { CircleCheckFilled, Headset } from '@element-plus/icons-vue';
-import ImageUploader from '@/components/common/ImageUploader.vue';
-import RichTextEditor from '@/components/common/RichTextEditor.vue';
-import type { ProductFormModel } from '@/components/commerce/commerce-ui.types';
+import type { CategoryView, ServiceAgentOption } from "@app/contracts";
+import { CircleCheckFilled, Headset } from "@element-plus/icons-vue";
+import ImageUploader from "@/components/common/ImageUploader.vue";
+import RichTextEditor from "@/components/common/RichTextEditor.vue";
+import type { ProductFormModel } from "@/components/commerce/commerce-ui.types";
 
 const props = defineProps<{
   modelValue: boolean;
   form: ProductFormModel;
   isEdit: boolean;
+  requirePositivePrices: boolean;
   categories: CategoryView[];
   agentOptions: ServiceAgentOption[];
   agentLoading: boolean;
 }>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean];
-  'update:form': [value: ProductFormModel];
+  "update:modelValue": [value: boolean];
+  "update:form": [value: ProductFormModel];
   submit: [];
   searchAgents: [keyword: string];
 }>();
 
 function updateForm(patch: Partial<ProductFormModel>): void {
-  emit('update:form', { ...props.form, ...patch });
+  emit("update:form", { ...props.form, ...patch });
 }
 
 function agentLabel(agent: ServiceAgentOption): string {
@@ -43,7 +44,11 @@ function agentLabel(agent: ServiceAgentOption): string {
         <Headset v-if="form.serviceAgentId" />
         <CircleCheckFilled v-else />
       </el-icon>
-      <span>{{ form.serviceAgentId ? '该商品已指定负责客服，用户咨询会优先关联到对应人员。' : '新建商品默认为下架状态，保存后可在列表中上架。' }}</span>
+      <span>{{
+        form.serviceAgentId
+          ? "该商品已指定负责客服，用户咨询会优先关联到对应人员。"
+          : "新建商品默认为下架状态，保存后可在列表中上架。"
+      }}</span>
     </div>
 
     <el-form
@@ -127,7 +132,10 @@ function agentLabel(agent: ServiceAgentOption): string {
       <section class="commerce-form__section">
         <h3>价格与承接</h3>
         <div class="commerce-form__grid">
-          <el-form-item label="现价">
+          <el-form-item
+            label="手机端现价"
+            :required="requirePositivePrices"
+          >
             <el-input-number
               :model-value="form.priceYuan"
               :min="0"
@@ -137,7 +145,7 @@ function agentLabel(agent: ServiceAgentOption): string {
               @update:model-value="(value: number | undefined) => updateForm({ priceYuan: value ?? 0 })"
             />
           </el-form-item>
-          <el-form-item label="原价">
+          <el-form-item label="手机端原价">
             <el-input-number
               :model-value="form.originPriceYuan"
               :min="0"
@@ -145,6 +153,29 @@ function agentLabel(agent: ServiceAgentOption): string {
               :step="1"
               controls-position="right"
               @update:model-value="(value: number | undefined) => updateForm({ originPriceYuan: value ?? 0 })"
+            />
+          </el-form-item>
+          <el-form-item
+            label="电脑端现价"
+            :required="requirePositivePrices"
+          >
+            <el-input-number
+              :model-value="form.pcPriceYuan"
+              :min="0"
+              :precision="2"
+              :step="1"
+              controls-position="right"
+              @update:model-value="(value: number | undefined) => updateForm({ pcPriceYuan: value ?? 0 })"
+            />
+          </el-form-item>
+          <el-form-item label="电脑端原价">
+            <el-input-number
+              :model-value="form.pcOriginPriceYuan"
+              :min="0"
+              :precision="2"
+              :step="1"
+              controls-position="right"
+              @update:model-value="(value: number | undefined) => updateForm({ pcOriginPriceYuan: value ?? 0 })"
             />
           </el-form-item>
         </div>
@@ -190,7 +221,7 @@ function agentLabel(agent: ServiceAgentOption): string {
           type="primary"
           @click="emit('submit')"
         >
-          {{ isEdit ? '保存' : '确定创建' }}
+          {{ isEdit ? "保存" : "确定创建" }}
         </el-button>
       </div>
     </template>

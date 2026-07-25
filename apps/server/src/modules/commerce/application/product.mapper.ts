@@ -18,6 +18,8 @@ export function toProductView(
     description: entity.description,
     priceFen: entity.priceFen,
     originPriceFen: entity.originPriceFen,
+    pcPriceFen: entity.pcPriceFen,
+    pcOriginPriceFen: entity.pcOriginPriceFen,
     sold: entity.sold,
     serviceAgentId: entity.serviceAgentId,
     serviceAgentName,
@@ -29,10 +31,7 @@ export function toProductView(
 }
 
 /** 领域实体 → C 端只读商品视图 */
-export function toProductPublicView(
-  entity: ProductEntity,
-  categoryName = '',
-): ProductPublicView {
+export function toProductPublicView(entity: ProductEntity, categoryName = ''): ProductPublicView {
   return {
     id: entity.id,
     categoryId: entity.categoryId,
@@ -44,6 +43,8 @@ export function toProductPublicView(
     description: entity.description,
     priceFen: entity.priceFen,
     originPriceFen: entity.originPriceFen,
+    pcPriceFen: entity.pcPriceFen,
+    pcOriginPriceFen: entity.pcOriginPriceFen,
     sold: entity.sold,
   };
 }

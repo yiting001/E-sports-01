@@ -1,19 +1,15 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { ProductView, UpdateProductPayload } from '@app/contracts';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ProductStatus, ProductView, UpdateProductPayload } from '@app/contracts';
 import { UserDirectory } from '../../../rbac/application/user-directory.service';
 import {
   CATEGORY_REPOSITORY,
   CategoryRepository,
 } from '../../domain/category-repository.interface';
+import { PRODUCT_REPOSITORY, ProductRepository } from '../../domain/product-repository.interface';
 import {
-  PRODUCT_REPOSITORY,
-  ProductRepository,
-} from '../../domain/product-repository.interface';
+  hasValidProductSalePrices,
+  PRODUCT_SALE_PRICE_REQUIRED_MESSAGE,
+} from '../../domain/product-pricing.rules';
 import { ProductViewAssembler } from '../product-view.assembler';
 
 /** 用例：更新商品（按需部分更新），校验分类与关联客服存在 */
@@ -65,11 +61,20 @@ export class UpdateProductUseCase {
     if (payload.originPriceFen !== undefined) {
       entity.originPriceFen = payload.originPriceFen;
     }
+    if (payload.pcPriceFen !== undefined) {
+      entity.pcPriceFen = payload.pcPriceFen;
+    }
+    if (payload.pcOriginPriceFen !== undefined) {
+      entity.pcOriginPriceFen = payload.pcOriginPriceFen;
+    }
     if (payload.sort !== undefined) {
       entity.sort = payload.sort;
     }
     if (payload.sold !== undefined) {
       entity.sold = payload.sold;
+    }
+    if (entity.status === ProductStatus.OnShelf && !hasValidProductSalePrices(entity)) {
+      throw new BadRequestException(PRODUCT_SALE_PRICE_REQUIRED_MESSAGE);
     }
     const saved = await this.repo.save(entity);
     return this.assembler.assemble(saved);

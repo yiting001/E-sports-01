@@ -1,4 +1,5 @@
 import type { BoosterServiceRegion } from "../booster/booster";
+import type { PaginationQuery } from "../common/pagination";
 
 /**
  * 服务订单（前后端共享契约）。
@@ -101,6 +102,17 @@ export const ORDER_LIMITS = {
   gameAccountIdMax: 32,
   gameTextIdMax: 64,
 } as const;
+
+/** 接单大厅筛选；列表只返回待接单安全投影。 */
+export interface HallOrderFilter {
+  /** 按订单号或商品名匹配。 */
+  keyword?: string;
+  /** 按手机端/电脑端区服筛选。 */
+  serviceRegion?: BoosterServiceRegion;
+}
+
+/** 接单大厅完整分页查询契约。 */
+export interface HallOrderQuery extends PaginationQuery, HallOrderFilter {}
 
 /** 备注附件类型 */
 export type RemarkMediaType = "image" | "video";

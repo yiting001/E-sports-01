@@ -3,8 +3,8 @@
  * 下单页：结构化游戏账号/区服 + 自动或指定打手 + 数量/备注/优惠/支付。
  * 跨页重新挑人时通过内存草稿恢复已填内容，不把敏感账号写入本地持久化。
  */
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {
   FEE_RATE_BASE,
   OrderBoosterSelectionMode,
@@ -13,29 +13,30 @@ import {
   calcCouponDeductionFen,
   calcDiscountedFen,
   fenToYuan,
+  resolveProductPrice,
   type BoosterServiceRegion,
   type CreateOrderResult,
   type ProductPublicView,
   type RemarkMediaItem,
   type UserCouponView,
-} from '@app/contracts';
-import AppIcon from '@/components/common/AppIcon.vue';
-import CheckoutPaymentMethods from '@/components/order/CheckoutPaymentMethods.vue';
-import CheckoutServiceForm from '@/components/order/CheckoutServiceForm.vue';
-import PayDialog from '@/components/order/PayDialog.vue';
-import { commerceApi } from '@/api/commerce.api';
-import { couponApi } from '@/api/coupon.api';
-import { memberApi } from '@/api/member.api';
-import { orderApi } from '@/api/order.api';
-import { useToast } from '@/composables/use-toast';
-import { useCheckoutDraftStore } from '@/stores/checkout-draft.store';
+} from "@app/contracts";
+import AppIcon from "@/components/common/AppIcon.vue";
+import CheckoutPaymentMethods from "@/components/order/CheckoutPaymentMethods.vue";
+import CheckoutServiceForm from "@/components/order/CheckoutServiceForm.vue";
+import PayDialog from "@/components/order/PayDialog.vue";
+import { commerceApi } from "@/api/commerce.api";
+import { couponApi } from "@/api/coupon.api";
+import { memberApi } from "@/api/member.api";
+import { orderApi } from "@/api/order.api";
+import { useToast } from "@/composables/use-toast";
+import { useCheckoutDraftStore } from "@/stores/checkout-draft.store";
 import {
   resolveCompatibleServiceRegion,
   resolveCheckoutServiceRegion,
-} from '@/utils/checkout-state';
-import { resolveMediaUrl } from '@/utils/media-url';
-import './CheckoutView.css';
-import './CheckoutView.responsive.css';
+} from "@/utils/checkout-state";
+import { resolveMediaUrl } from "@/utils/media-url";
+import "./CheckoutView.css";
+import "./CheckoutView.responsive.css";
 
 const route = useRoute();
 const router = useRouter();
@@ -47,22 +48,27 @@ const savedDraft = checkout.getDraft(productId);
 const product = ref<ProductPublicView | null>(null);
 const loading = ref(true);
 const loadError = ref(false);
-const gameAccountId = ref(savedDraft?.gameAccountId ?? '');
-const gameTextId = ref(savedDraft?.gameTextId ?? '');
-const accountInfo = ref(savedDraft?.accountInfo ?? '');
+const gameAccountId = ref(savedDraft?.gameAccountId ?? "");
+const gameTextId = ref(savedDraft?.gameTextId ?? "");
+const accountInfo = ref(savedDraft?.accountInfo ?? "");
 const quantity = ref(savedDraft?.quantity ?? 1);
-const remark = ref(savedDraft?.remark ?? '');
+const remark = ref(savedDraft?.remark ?? "");
 const remarkMedia = ref<RemarkMediaItem[]>(savedDraft?.remarkMedia ?? []);
-const provider = ref<OrderPaymentMethod>(savedDraft?.provider ?? OrderPaymentMethod.Alipay);
+const provider = ref<OrderPaymentMethod>(
+  savedDraft?.provider ?? OrderPaymentMethod.Alipay
+);
 const serviceRegion = ref<BoosterServiceRegion>(
-  resolveCheckoutServiceRegion(checkout.selectedBooster, savedDraft?.serviceRegion),
+  resolveCheckoutServiceRegion(
+    checkout.selectedBooster,
+    savedDraft?.serviceRegion
+  )
 );
 const submitting = ref(false);
 const payOrder = ref<CreateOrderResult | null>(null);
 const completed = ref(false);
 
 const coupons = ref<UserCouponView[]>([]);
-const selectedCouponId = ref(savedDraft?.selectedCouponId ?? '');
+const selectedCouponId = ref(savedDraft?.selectedCouponId ?? "");
 const couponListOpen = ref(false);
 const discountBp = ref(FEE_RATE_BASE);
 
@@ -75,23 +81,36 @@ const selectionMode = computed({
   set: (mode: OrderBoosterSelectionMode) => checkout.setSelectionMode(mode),
 });
 const selectedBooster = computed(() => checkout.selectedBooster);
-const coverUrl = computed(() => resolveMediaUrl(product.value?.cover ?? ''));
+const coverUrl = computed(() => resolveMediaUrl(product.value?.cover ?? ""));
+const regionPrice = computed(() =>
+  product.value ? resolveProductPrice(product.value, serviceRegion.value) : null
+);
 
 const memberAmountFen = computed(() =>
-  product.value
-    ? calcDiscountedFen(product.value.priceFen * quantity.value, discountBp.value)
-    : 0,
+  regionPrice.value
+    ? calcDiscountedFen(
+        regionPrice.value.priceFen * quantity.value,
+        discountBp.value
+      )
+    : 0
 );
 const usableCoupons = computed(() =>
   coupons.value.filter(
     (item) =>
       item.status === UserCouponStatus.Unused &&
       !item.expired &&
-      calcCouponDeductionFen(item.type, item.value, item.thresholdFen, memberAmountFen.value) > 0,
-  ),
+      calcCouponDeductionFen(
+        item.type,
+        item.value,
+        item.thresholdFen,
+        memberAmountFen.value
+      ) > 0
+  )
 );
-const selectedCoupon = computed(() =>
-  usableCoupons.value.find((item) => item.id === selectedCouponId.value) ?? null,
+const selectedCoupon = computed(
+  () =>
+    usableCoupons.value.find((item) => item.id === selectedCouponId.value) ??
+    null
 );
 const couponDeductionFen = computed(() => {
   const coupon = selectedCoupon.value;
@@ -102,17 +121,21 @@ const couponDeductionFen = computed(() => {
     coupon.type,
     coupon.value,
     coupon.thresholdFen,
-    memberAmountFen.value,
+    memberAmountFen.value
   );
   return Math.min(Math.max(deduction, 0), memberAmountFen.value);
 });
-const totalFen = computed(() => memberAmountFen.value - couponDeductionFen.value);
+const totalFen = computed(
+  () => memberAmountFen.value - couponDeductionFen.value
+);
 const totalYuan = computed(() => fenToYuan(totalFen.value));
 const couponRowText = computed(() => {
   if (selectedCoupon.value) {
     return `-¥${fenToYuan(couponDeductionFen.value)}`;
   }
-  return usableCoupons.value.length ? `${usableCoupons.value.length} 张可用` : '暂无可用';
+  return usableCoupons.value.length
+    ? `${usableCoupons.value.length} 张可用`
+    : "暂无可用";
 });
 
 function saveCurrentDraft(): void {
@@ -132,25 +155,28 @@ function saveCurrentDraft(): void {
 }
 
 function pickCoupon(id: string): void {
-  selectedCouponId.value = selectedCouponId.value === id ? '' : id;
+  selectedCouponId.value = selectedCouponId.value === id ? "" : id;
   couponListOpen.value = false;
 }
 
 function openBoosterPicker(): void {
   saveCurrentDraft();
   void router.push({
-    name: 'booster-list',
+    name: "booster-list",
     query: { returnTo: route.fullPath, serviceRegion: serviceRegion.value },
   });
 }
 
 function validateOrder(): boolean {
   if (!/^\d+$/.test(gameAccountId.value)) {
-    toast.show('请输入正确的数字游戏 ID');
+    toast.show("请输入正确的数字游戏 ID");
     return false;
   }
-  if (selectionMode.value === OrderBoosterSelectionMode.Specified && !checkout.specifiedBooster) {
-    toast.show('请先选择指定打手');
+  if (
+    selectionMode.value === OrderBoosterSelectionMode.Specified &&
+    !checkout.specifiedBooster
+  ) {
+    toast.show("请先选择指定打手");
     openBoosterPicker();
     return false;
   }
@@ -158,7 +184,7 @@ function validateOrder(): boolean {
     checkout.specifiedBooster &&
     !checkout.specifiedBooster.serviceRegions.includes(serviceRegion.value)
   ) {
-    toast.show('所选打手不支持当前区服，请重新选择');
+    toast.show("所选打手不支持当前区服，请重新选择");
     openBoosterPicker();
     return false;
   }
@@ -199,10 +225,12 @@ function onPaid(): void {
   payOrder.value = null;
   completed.value = true;
   checkout.clearOrderContext();
-  toast.show('支付成功，客服将尽快为您安排服务');
-  void router.replace(orderId
-    ? { name: 'order-detail', params: { id: orderId } }
-    : { name: 'orders' });
+  toast.show("支付成功，客服将尽快为您安排服务");
+  void router.replace(
+    orderId
+      ? { name: "order-detail", params: { id: orderId } }
+      : { name: "orders" }
+  );
 }
 
 async function loadCheckout(): Promise<void> {
@@ -213,18 +241,22 @@ async function loadCheckout(): Promise<void> {
     couponApi.mine(),
     memberApi.mine(),
   ]);
-  if (detailResult.status === 'fulfilled') {
+  if (detailResult.status === "fulfilled") {
     product.value = detailResult.value;
   } else {
     product.value = null;
     loadError.value = true;
   }
-  coupons.value = couponResult.status === 'fulfilled' ? couponResult.value : [];
-  discountBp.value = memberResult.status === 'fulfilled'
-    ? memberResult.value.discountBp
-    : FEE_RATE_BASE;
-  if (couponResult.status === 'rejected' || memberResult.status === 'rejected') {
-    toast.show('部分优惠信息加载失败，请确认价格后下单');
+  coupons.value = couponResult.status === "fulfilled" ? couponResult.value : [];
+  discountBp.value =
+    memberResult.status === "fulfilled"
+      ? memberResult.value.discountBp
+      : FEE_RATE_BASE;
+  if (
+    couponResult.status === "rejected" ||
+    memberResult.status === "rejected"
+  ) {
+    toast.show("部分优惠信息加载失败，请确认价格后下单");
   }
   loading.value = false;
 }
@@ -236,7 +268,7 @@ watch(
       serviceRegion.value = booster.serviceRegions[0] ?? serviceRegion.value;
     }
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 watch(serviceRegion, (region) => {
@@ -253,8 +285,8 @@ watch(serviceRegion, (region) => {
   }
   toast.show(
     compatibleRegion
-      ? '所选打手不支持该区服，请先更换打手'
-      : '所选打手暂未配置接单区服，请重新选择',
+      ? "所选打手不支持该区服，请先更换打手"
+      : "所选打手暂未配置接单区服，请重新选择"
   );
 });
 
@@ -316,7 +348,9 @@ onBeforeUnmount(() => {
           <div
             class="thumb"
             :class="{ 'thumb--image': coverUrl }"
-            :style="coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined"
+            :style="
+              coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined
+            "
           >
             <AppIcon
               v-if="!coverUrl"
@@ -330,10 +364,12 @@ onBeforeUnmount(() => {
               {{ product.title }}
             </p>
             <p class="sub">
-              {{ product.categoryName }} · 单价 ¥{{ fenToYuan(product.priceFen) }}
+              {{ product.categoryName }} · 单价 ¥{{
+                fenToYuan(regionPrice?.priceFen ?? 0)
+              }}
             </p>
           </div>
-          <span class="price">¥{{ fenToYuan(product.priceFen * quantity) }}</span>
+          <span class="price">¥{{ fenToYuan((regionPrice?.priceFen ?? 0) * quantity) }}</span>
         </section>
 
         <CheckoutServiceForm
@@ -361,7 +397,9 @@ onBeforeUnmount(() => {
               <span
                 class="coupon-text"
                 :class="{ active: selectedCoupon }"
-              >{{ couponRowText }}</span>
+              >{{
+                couponRowText
+              }}</span>
             </button>
             <div
               v-if="couponListOpen"
@@ -377,7 +415,16 @@ onBeforeUnmount(() => {
               >
                 <span class="coupon-title">{{ item.title }}</span>
                 <span class="coupon-off">
-                  -¥{{ fenToYuan(calcCouponDeductionFen(item.type, item.value, item.thresholdFen, memberAmountFen)) }}
+                  -¥{{
+                    fenToYuan(
+                      calcCouponDeductionFen(
+                        item.type,
+                        item.value,
+                        item.thresholdFen,
+                        memberAmountFen
+                      )
+                    )
+                  }}
                 </span>
               </button>
             </div>
@@ -404,7 +451,7 @@ onBeforeUnmount(() => {
         :disabled="submitting"
         @click="submit"
       >
-        {{ submitting ? '提交中…' : '立即下单' }}
+        {{ submitting ? "提交中…" : "立即下单" }}
       </button>
     </footer>
 

@@ -5,10 +5,14 @@
  * 详情为富文本 HTML，卡片预览仅取纯文本摘要，避免渲染标签。
  * 点击进入商品详情页下单。
  */
-import { computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { fenToYuan, type ProductPublicView } from '@app/contracts';
-import AppIcon from '@/components/common/AppIcon.vue';
+import { computed } from "vue";
+import { useRouter } from "vue-router";
+import {
+  fenToYuan,
+  lowestProductPriceFen,
+  type ProductPublicView,
+} from "@app/contracts";
+import AppIcon from "@/components/common/AppIcon.vue";
 
 const props = defineProps<{ product: ProductPublicView }>();
 
@@ -16,7 +20,10 @@ const router = useRouter();
 
 /** 富文本详情去标签后的纯文本摘要（卡片两行预览用） */
 const summary = computed(() =>
-  props.product.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+  props.product.description
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
 );
 </script>
 
@@ -28,7 +35,9 @@ const summary = computed(() =>
     <div
       class="cover"
       :class="{ 'cover--image': product.cover }"
-      :style="product.cover ? { backgroundImage: `url(${product.cover})` } : undefined"
+      :style="
+        product.cover ? { backgroundImage: `url(${product.cover})` } : undefined
+      "
     >
       <AppIcon
         v-if="!product.cover"
@@ -45,8 +54,7 @@ const summary = computed(() =>
         {{ summary }}
       </p>
       <div class="meta">
-        <span class="price">¥{{ fenToYuan(product.priceFen) }}</span>
-        <span class="origin">{{ fenToYuan(product.originPriceFen) }}</span>
+        <span class="price">¥{{ fenToYuan(lowestProductPriceFen(product)) }} 起</span>
         <span class="sold">已售 {{ product.sold }}</span>
       </div>
     </div>
