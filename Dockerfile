@@ -38,7 +38,7 @@ USER node
 
 EXPOSE 3000
 
-CMD ["node", "main.js"]
+CMD ["node", "main.js", "start"]
 
 FROM workspace AS frontend-build
 

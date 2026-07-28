@@ -18,6 +18,10 @@ const incompleteHistorySchema = `tenant_config_bad_history_${randomUUID()
 const recordedMigrationSchema = `tenant_config_recorded_${randomUUID()
   .replaceAll('-', '')
   .slice(0, 12)}`;
+const duplicateHistorySchema = `tenant_config_duplicate_${randomUUID()
+  .replaceAll('-', '')
+  .slice(0, 12)}`;
+const futureHistorySchema = `tenant_config_future_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
 const prerequisiteMigrations = [
   [1784246400000, 'AddBoosterOnboardingFields1784246400000'],
   [1784332800000, 'AddBoosterDirectoryOrderSelection1784332800000'],
@@ -48,6 +52,8 @@ before(async () => {
   await dataSource.query(`CREATE SCHEMA "${missingHistorySchema}"`);
   await dataSource.query(`CREATE SCHEMA "${incompleteHistorySchema}"`);
   await dataSource.query(`CREATE SCHEMA "${recordedMigrationSchema}"`);
+  await dataSource.query(`CREATE SCHEMA "${duplicateHistorySchema}"`);
+  await dataSource.query(`CREATE SCHEMA "${futureHistorySchema}"`);
 });
 
 after(async () => {
@@ -58,6 +64,8 @@ after(async () => {
   await dataSource.query(`DROP SCHEMA IF EXISTS "${missingHistorySchema}" CASCADE`);
   await dataSource.query(`DROP SCHEMA IF EXISTS "${incompleteHistorySchema}" CASCADE`);
   await dataSource.query(`DROP SCHEMA IF EXISTS "${recordedMigrationSchema}" CASCADE`);
+  await dataSource.query(`DROP SCHEMA IF EXISTS "${duplicateHistorySchema}" CASCADE`);
+  await dataSource.query(`DROP SCHEMA IF EXISTS "${futureHistorySchema}" CASCADE`);
   await dataSource.destroy();
 });
 
@@ -136,6 +144,49 @@ test('生产 SQL 在 migration history 表缺失时建表前拒绝执行', async
   } finally {
     await runner.query('ROLLBACK');
     await runner.release();
+  }
+});
+
+test('生产 SQL 在前置 history 包含重复或未来记录时拒绝执行', async () => {
+  const cases: ReadonlyArray<{
+    targetSchema: string;
+    extraMigration: readonly [number, string];
+  }> = [
+    {
+      targetSchema: duplicateHistorySchema,
+      extraMigration: prerequisiteMigrations[0],
+    },
+    {
+      targetSchema: futureHistorySchema,
+      extraMigration: [1999999999999, 'FutureMigration1999999999999'],
+    },
+  ];
+
+  for (const { targetSchema, extraMigration } of cases) {
+    const runner = dataSource.createQueryRunner();
+    await runner.connect();
+    try {
+      await createLegacyTables(runner, targetSchema);
+      await seedLegacyData(runner, targetSchema);
+      await createMigrationHistory(runner, targetSchema, [
+        ...prerequisiteMigrations,
+        extraMigration,
+      ]);
+
+      await assert.rejects(
+        runner.query(await loadProductionScript(targetSchema)),
+        /not the exact trusted prerequisite prefix/i,
+      );
+      await runner.query('ROLLBACK');
+
+      const rows = (await runner.query(`SELECT to_regclass($1) AS "table_name"`, [
+        `${targetSchema}.sys_tenant_config_override`,
+      ])) as Array<{ table_name: string | null }>;
+      assert.equal(rows[0]?.table_name, null);
+    } finally {
+      await runner.query('ROLLBACK');
+      await runner.release();
+    }
   }
 });
 

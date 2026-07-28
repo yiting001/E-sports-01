@@ -64,12 +64,20 @@ cp apps/server/.env.example apps/server/.env
 
 至少修改根目录 `.env` 中的 `POSTGRES_PASSWORD`，以及 `apps/server/.env` 中的 `JWT_SECRET`、`JWT_REFRESH_SECRET`、`SEED_ADMIN_PASSWORD`。数据库地址和 Redis 地址会由 Compose 覆盖为容器服务名。`VITE_CLIENT_BASE_URL` 必须是管理端用户的浏览器能访问的 C 端地址；示例默认为本机 `http://127.0.0.1:8081`。
 
-构建并启动：
+已有可信 schema 和 migration history 的环境，先构建并启动基础设施，再迁移并启动应用：
 
 ```bash
-docker compose up -d --build
+docker compose build
+docker compose up -d postgres redis uploads-init
+docker compose run --rm server node main.js migration:show
+docker compose run --rm server node main.js migration:run
+docker compose up -d server web client
 docker compose ps
 ```
+
+任一 migration 命令非零退出时不得启动 `server`。history 缺失时先用同一镜像执行
+`docker compose run --rm server node main.js migration:audit` 并完成人工 baseline 审核；全新
+空生产库当前不支持用增量 migration 初始化。
 
 默认入口仅绑定本机：
 
@@ -77,15 +85,19 @@ docker compose ps
 - C 端：`http://127.0.0.1:8081`
 - 后端直连：`http://127.0.0.1:3003/api`
 
-端口和绑定地址可在启动命令中覆盖：
+端口和绑定地址可先导出，再按相同的“基础设施、迁移、应用”顺序启动：
 
 ```bash
-HOST_BIND=0.0.0.0 \
-WEB_HOST_PORT=80 \
-CLIENT_HOST_PORT=8081 \
-SERVER_HOST_PORT=3003 \
-VITE_CLIENT_BASE_URL=https://client.example.com \
-docker compose up -d
+export HOST_BIND=0.0.0.0
+export WEB_HOST_PORT=80
+export CLIENT_HOST_PORT=8081
+export SERVER_HOST_PORT=3003
+export VITE_CLIENT_BASE_URL=https://client.example.com
+
+docker compose up -d postgres redis uploads-init
+docker compose run --rm server node main.js migration:show
+docker compose run --rm server node main.js migration:run
+docker compose up -d server web client
 ```
 
 公网部署应在容器前增加 TLS 反向代理，不要直接暴露 PostgreSQL 或 Redis。
@@ -95,13 +107,18 @@ docker compose up -d
 - PostgreSQL、Redis 和上传文件分别保存在 Compose 命名卷中。
 - `uploads-init` 仅在上传卷首次创建时把 `apps/server/uploads` 的现有文件复制进去。
 - `backups/` 下的 SQL 不会自动导入；恢复历史库时需人工确认目标库后执行。
-- 项目已提供 TypeORM migration 机制；正式环境必须使用 migration 并保持 `DB_SYNCHRONIZE=false`。当前 Docker 镜像尚未打包 migration CLI 与迁移文件，因此现有 Compose 仅适合本地初始化，不能作为正式迁移流程。
+- 项目已提供 TypeORM migration 机制；正式环境必须使用 migration 并保持 `DB_SYNCHRONIZE=false`。Docker 镜像中的同一个 `main.js` 已内联只读 audit 和 migration，可在启动服务前执行 `node main.js migration:audit/show/run`。空库仍因缺少初始 schema migration 而不支持直接生产初始化。
 
 常用维护命令：
 
 ```bash
 docker compose logs -f server web client
-docker compose up -d --build
+docker compose build
+docker compose stop server
+docker compose up -d postgres redis uploads-init
+docker compose run --rm server node main.js migration:show
+docker compose run --rm server node main.js migration:run
+docker compose up -d server web client
 docker compose down
 ```
 
@@ -191,6 +208,19 @@ pnpm -r build
 pnpm --filter @app/server migration:show
 pnpm --filter @app/server migration:run
 ```
+
+单文件产物使用同一安全入口，不需要源码或 TypeORM CLI：
+
+```bash
+cd /path/to/esports-server
+node main.js migration:audit  # history 缺失、为空或需重新审计时执行
+node main.js migration:show
+node main.js migration:run
+```
+
+命令要求 `typeorm_migrations` 已是可信且非空的连续基线；缺表、空表、断档、错配或数据库
+版本高于产物都会非零退出，不能忽略后继续启动。完整规则见
+[database-migrations.md](./database-migrations.md)。
 
 ### 6. PM2 启动后端
 
@@ -438,26 +468,28 @@ server {
 当前生产库已确认没有 `typeorm_migrations` 表。由于九条前置 migration 包含会员
 消费重算、退款尝试回填和不可逆 IM 脱敏，不能仅凭字段存在就伪造“已执行”
 历史。在该现状下，禁止直接运行 `migration:run`，也禁止直接执行建表 SQL。
-先备份数据库，再执行一次性只读核验：
+先备份数据库，再使用已部署的同一个 `main.js` 执行一次性只读核验：
 
 ```bash
-runuser -u postgres -- /www/server/pgsql/bin/psql -d esports \
-  -f apps/server/src/database/sql/audit-migration-baseline.sql
+cd /www/wwwroot/esports-server
+node main.js migration:audit > migration-audit.json
 ```
 
-核验脚本只输出九条前置 migration 的 history、结构证据和数据一致性统计，不会
-创建表、修改业务数据或写入 history。将完整输出回传后，再逐条核对并生成针对
-该生产库的 baseline SQL；未核对前不提供批量 `INSERT typeorm_migrations`。
+审计在 `REPEATABLE READ READ ONLY` 事务中输出 history、结构证据和数据一致性聚合统计，
+不会创建表、修改业务数据或写入 history，也不会输出业务正文。将完整 JSON 回传后，再逐条
+核对并生成针对该生产库的 baseline SQL；未核对前不提供批量
+`INSERT typeorm_migrations`。有完整源码的环境仍可使用
+`apps/server/src/database/sql/audit-migration-baseline.sql` 做辅助交叉检查。
 
-只有 `typeorm_migrations` 表存在、九条前置记录的时间戳与类名全部成对，且本次
-记录尚不存在时，才可执行：
+只有 `typeorm_migrations` 表存在、九条前置记录的时间戳与类名全部成对，且本次记录尚不
+存在时，才可优先使用单文件迁移：
 
 ```bash
-runuser -u postgres -- /www/server/pgsql/bin/psql -d esports \
-  -f apps/server/src/database/sql/1784995200000-add-tenant-config-overrides.sql
+node main.js migration:show
+node main.js migration:run
 ```
 
-建表脚本会在单一事务内取得与 TypeORM migration 相同的 advisory lock，回填存量
+migration 会在单一事务内取得固定 advisory lock，回填存量
 子租户、验证结构，对齐 `sys_config` 的 owner 与 CRUD 授权，最后登记本次 history。
 前置历史不完整、本次已登记、缺少父表或默认租户时整笔回滚。应用启动前确认：
 
@@ -521,7 +553,7 @@ cat apps/server/.env
 DB_SYNCHRONIZE=false
 ```
 
-之后用迁移或手动 SQL 管理表结构变更。
+之后只用经过评审并提交到仓库的 migration 管理表结构变更。
 
 ### 5. Git 自动 gc 提示 loose objects
 
@@ -549,6 +581,9 @@ pnpm --filter @app/contracts build
 pnpm --filter @app/server build
 pnpm --filter @app/client build
 pnpm --filter @app/web build
+pm2 stop e-sports-01-server
+pnpm --filter @app/server migration:show
+pnpm --filter @app/server migration:run
 pm2 restart e-sports-01-server --update-env
 pm2 restart e-sports-01-client-dev --update-env
 pm2 restart e-sports-01-web-dev --update-env

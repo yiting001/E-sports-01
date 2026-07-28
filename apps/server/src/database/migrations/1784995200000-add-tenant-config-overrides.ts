@@ -1,4 +1,5 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
+import { acquireTransactionMigrationLock } from '../migration-lock';
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 const MIGRATION_LOCK_NAME = '1784995200000-add-tenant-config-overrides';
@@ -186,6 +187,6 @@ export class AddTenantConfigOverrides1784995200000 implements MigrationInterface
     if (!queryRunner.isTransactionActive) {
       throw new Error(`${MIGRATION_LOCK_NAME} must run inside a transaction`);
     }
-    await queryRunner.query('SELECT pg_advisory_xact_lock(hashtext($1))', [MIGRATION_LOCK_NAME]);
+    await acquireTransactionMigrationLock(queryRunner, MIGRATION_LOCK_NAME);
   }
 }

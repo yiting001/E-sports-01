@@ -2,12 +2,28 @@
 
 BEGIN;
 
--- 与 TypeORM migration 使用同一事务级互斥键，防止该脚本被并发执行。
-SELECT pg_advisory_xact_lock(hashtext('1784995200000-add-tenant-config-overrides'));
+-- 与 TypeORM migration 使用同一事务级互斥键；有界轮询避免并发发布永久挂起。
+DO $migration_lock$
+DECLARE
+  lock_deadline timestamptz := clock_timestamp() + interval '30 seconds';
+BEGIN
+  LOOP
+    EXIT WHEN pg_try_advisory_xact_lock(
+      hashtext('1784995200000-add-tenant-config-overrides')
+    );
+    IF clock_timestamp() >= lock_deadline THEN
+      RAISE EXCEPTION 'timed out after 30 seconds waiting for the migration lock'
+        USING ERRCODE = '55P03';
+    END IF;
+    PERFORM pg_sleep(0.1);
+  END LOOP;
+END
+$migration_lock$;
 
 DO $preflight$
 DECLARE
   missing_migrations text;
+  history_count bigint;
 BEGIN
   IF to_regclass('public.typeorm_migrations') IS NULL THEN
     RAISE EXCEPTION 'missing required migration history table: public.typeorm_migrations';
@@ -45,6 +61,16 @@ BEGIN
        OR "name" = 'AddTenantConfigOverrides1784995200000'
   ) THEN
     RAISE EXCEPTION 'current migration is already recorded or conflicts with migration history';
+  END IF;
+
+  SELECT COUNT(*)
+  INTO history_count
+  FROM public.typeorm_migrations;
+
+  IF history_count <> 9 THEN
+    RAISE EXCEPTION
+      'migration history is not the exact trusted prerequisite prefix; expected 9 records, found %',
+      history_count;
   END IF;
 
   IF to_regclass('public.sys_tenant') IS NULL THEN

@@ -230,9 +230,10 @@ stateDiagram-v2
 在租户间已分歧，就拒绝回滚；全部一致时才折叠回 `sys_config` 并删除覆盖表。
 
 生产库如果尚未建立 `typeorm_migrations` 基线，不能直接执行全量 `migration:run`，也不能
-直接执行本次建表 SQL。先运行只读的
-`apps/server/src/database/sql/audit-migration-baseline.sql`，回传九条前置 migration 的结构与数据证据后再生成
-经核对的 baseline，不得根据列存在自动插入历史。
+直接执行本次建表 SQL。单文件部署先运行
+`node main.js migration:audit > migration-audit.json`；有源码环境可再用
+`apps/server/src/database/sql/audit-migration-baseline.sql` 交叉检查。回传九条前置 migration 的
+结构与聚合数据证据后再生成经核对的 baseline，不得根据列存在自动插入历史。
 
 生产手工升级脚本位于
 `apps/server/src/database/sql/1784995200000-add-tenant-config-overrides.sql`，仅在 history 表存在、九条前置时间戳/类名成对且本次未登记时执行。TypeORM 与手工 SQL 取得同一事务

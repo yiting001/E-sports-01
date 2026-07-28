@@ -3,7 +3,8 @@
  *
  * 将 `nest build` 产物（dist/main.js，已含装饰器元数据）经 esbuild 内联全部
  * 依赖，输出 bundle/main.js —— 部署时仅需上传该文件 + .env，node 直接运行，
- * 服务器无需安装依赖与编译。
+ * 服务器无需安装依赖与编译；同一文件支持 start、migration:audit、
+ * migration:show 和 migration:run，migration 类由源码中的静态 registry 纳入依赖图。
  *
  * OPTIONAL_EXTERNALS 列出的是各依赖库 try/catch 动态加载的可选包
  * （本项目未安装也用不到），标记为 external 让 require 保留在运行时，

@@ -1,6 +1,8 @@
 \set ON_ERROR_STOP on
 \pset pager off
 
+BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
+
 -- 只读核验：本脚本不创建表、不写入 migration history、不修改业务数据。
 SELECT
   current_database() AS database_name,
@@ -209,5 +211,7 @@ SELECT
 \else
 \echo 'IM_REDACTION_AUDIT_SKIPPED: required tables are missing'
 \endif
+
+ROLLBACK;
 
 \echo 'READ_ONLY_AUDIT_COMPLETE: do not insert migration history from this output alone'
