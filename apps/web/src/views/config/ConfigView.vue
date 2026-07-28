@@ -7,11 +7,13 @@ import { configApi } from '@/api/config.api';
 import ConfigDirectory from '@/components/config/ConfigDirectory.vue';
 import ConfigFormDialog from '@/components/config/ConfigFormDialog.vue';
 import ConfigStats from '@/components/config/ConfigStats.vue';
+import { buildConfigSaveForm } from '@/components/config/config-access';
 import {
   CONFIG_GROUP_META,
   CONFIG_TYPE_META,
   type ConfigFormModel,
 } from '@/components/config/config-ui';
+import { useAuthStore } from '@/stores/auth.store';
 import './ConfigView.css';
 import './ConfigView.responsive.css';
 
@@ -22,11 +24,14 @@ interface ConfigGroupOption {
 }
 
 const list = ref<ConfigItemView[]>([]);
+const auth = useAuthStore();
 const loading = ref(false);
 const dialogVisible = ref(false);
 const isEdit = ref(false);
 const keyword = ref('');
 const activeGroup = ref<ConfigGroup | ''>(ConfigGroup.System);
+const editingItem = ref<ConfigItemView | null>(null);
+const isSuper = computed(() => auth.profile?.isSuper === true);
 
 const groups = Object.values(ConfigGroup);
 const valueTypes = Object.values(ConfigValueType);
@@ -103,13 +108,18 @@ async function load(): Promise<void> {
 }
 
 function openCreate(): void {
+  if (!isSuper.value) {
+    return;
+  }
   isEdit.value = false;
+  editingItem.value = null;
   Object.assign(form, emptyForm());
   dialogVisible.value = true;
 }
 
 function openEdit(row: ConfigItemView): void {
   isEdit.value = true;
+  editingItem.value = row;
   Object.assign(form, {
     key: row.key,
     value: row.secret ? '' : row.value,
@@ -130,16 +140,19 @@ async function save(): Promise<void> {
     ElMessage.warning('配置键必填');
     return;
   }
-  await configApi.upsert({ ...form });
+  await configApi.upsert(buildConfigSaveForm(form, editingItem.value, isSuper.value));
   ElMessage.success('已保存');
   dialogVisible.value = false;
   await load();
 }
 
 async function remove(row: ConfigItemView): Promise<void> {
-  await ElMessageBox.confirm(`确认删除配置 ${row.key}？`, '提示', { type: 'warning' });
+  const message = isSuper.value
+    ? `确认删除配置 ${row.key}？`
+    : `确认移除 ${row.key} 的租户覆盖并恢复平台默认值？`;
+  await ElMessageBox.confirm(message, '提示', { type: 'warning' });
   await configApi.remove(row.key);
-  ElMessage.success('已删除');
+  ElMessage.success(isSuper.value ? '已删除' : '已恢复平台默认值');
   await load();
 }
 
@@ -162,6 +175,7 @@ onMounted(load);
       :group-options="groupOptions"
       :total="groupedList.length"
       :matched-count="filteredList.length"
+      :is-super="isSuper"
       @update:keyword="updateKeyword"
       @update:group="updateGroup"
       @refresh="load"
@@ -175,6 +189,7 @@ onMounted(load);
       :is-edit="isEdit"
       :value-types="valueTypes"
       :groups="groups"
+      :metadata-editable="isSuper"
       @update:form="updateForm"
       @submit="save"
     />

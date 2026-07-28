@@ -7,8 +7,9 @@
 
 | 模块 | 文档 | 一句话说明 |
 | --- | --- | --- |
-| 配置中心 | [config-center.md](./config-center.md) | 除连接信息外的全部可调参数集中入库 + Redis 缓存，消除硬编码 |
+| 配置中心 | [config-center.md](./config-center.md) | 可调参数集中入库 + Redis 缓存，五项站点配置按租户覆盖，基础设施配置保持平台全局 |
 | RBAC 权限 | [rbac.md](./rbac.md) | 用户/角色/权限三层模型，JWT 双令牌，API/菜单/按钮级颗粒度 |
+| 多租户隔离 | [multi-tenant.md](./multi-tenant.md) | HTTP/JWT/IM 行级数据隔离、租户站点入口、配置覆盖、平台权限边界与 migration |
 | 文件上传 | [upload.md](./upload.md) | 策略模式，local 默认 / oss 可切，驱动由配置中心选择 |
 | 短信登录 | [sms.md](./sms.md) | 多云短信、开发固定码、生产安全门、Redis 原子限流与一次性验证码 |
 | WebSocket IM | [im.md](./im.md) | JWT 握手鉴权、会话收发、订单群标题、成员安全展示名、历史手机号脱敏及 C 端未读角标 |
@@ -30,6 +31,7 @@
 | 登录注册 UI | [auth-ui.md](./auth-ui.md) | 企业级电竞风格登录/注册/短信验证码入口，仅重做 UI 不改鉴权逻辑 |
 | 工作台 UI | [dashboard-ui.md](./dashboard-ui.md) | 响应式账号概览、业务入口、快捷访问和权限摘要 |
 | 数据统计仪表盘 | [dashboard.md](./dashboard.md) | 订单/财务/用户/打手四块只读聚合统计（ECharts），日/月/年时间范围，按权限分块展示 |
+| 单文件数据库迁移 | [database-migrations.md](./database-migrations.md) | 同一 main.js 支持只读 audit、安全 show/run、静态迁移清单、可信基线校验、并发锁与失败回滚 |
 | 部署文档 | [deployment.md](./deployment.md) | 环境变量、构建顺序、PM2 启停、Nginx 反代与更新部署检查清单 |
 | API 参考 | [api-reference.md](./api-reference.md) | 全部 REST 端点与 WS 事件、统一响应结构、权限码一览 |
 | 宝塔部署 | [deploy-bt.md](./deploy-bt.md) | 宝塔面板（CentOS 7+）单站点部署：前后端同域名，Nginx 按路径转发（/、/admin/、/api、/socket.io、/static） |

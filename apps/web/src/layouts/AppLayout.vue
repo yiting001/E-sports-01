@@ -14,9 +14,9 @@ import {
 } from "@element-plus/icons-vue";
 import AppMenu from "./AppMenu.vue";
 import { AUTH_SESSION_EXPIRED_EVENT } from "@/api/http";
+import { tokenStorage } from "@/api/token-storage";
 import { createImSocket } from "@/composables/use-im-socket";
 import { useMenus } from "@/composables/use-menus";
-import { STORAGE_KEYS } from "@/config/env";
 import { useAuthStore } from "@/stores/auth.store";
 import { useMenuStore } from "@/stores/menu.store";
 import { MENU_BADGE_CODES, useMenuBadgeStore } from "@/stores/menu-badge.store";
@@ -68,8 +68,7 @@ function onSessionExpired(): void {
 function onAuthStorageChange(event: StorageEvent): void {
   const isTokenRemoval =
     event.newValue === null &&
-    (event.key === STORAGE_KEYS.accessToken ||
-      event.key === STORAGE_KEYS.refreshToken);
+    tokenStorage.isCurrentTenantTokenKey(event.key);
   if (isTokenRemoval) {
     onSessionExpired();
   }

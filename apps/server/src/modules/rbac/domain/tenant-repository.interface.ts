@@ -8,6 +8,8 @@ export interface TenantRepository {
   findById(id: string): Promise<TenantEntity | null>;
   findByCode(code: string): Promise<TenantEntity | null>;
   findByIds(ids: string[]): Promise<TenantEntity[]>;
+  /** 启动播种用：读取全部租户。 */
+  findAll(): Promise<TenantEntity[]>;
   existsByCode(code: string): Promise<boolean>;
   paginate(skip: number, take: number, keyword?: string): Promise<[TenantEntity[], number]>;
   create(data: Partial<TenantEntity>): TenantEntity;

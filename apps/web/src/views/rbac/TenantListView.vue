@@ -1,74 +1,86 @@
 <script setup lang="ts">
-import type { CreateTenantPayload, TenantView } from '@app/contracts';
-import { PAGINATION_DEFAULTS, TenantStatus } from '@app/contracts';
-import { computed, onMounted, reactive, ref } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import { tenantApi } from '@/api/tenant.api';
-import CreateTenantDialog from '@/components/rbac/tenant/CreateTenantDialog.vue';
-import EditTenantDialog from '@/components/rbac/tenant/EditTenantDialog.vue';
-import TenantDirectory from '@/components/rbac/tenant/TenantDirectory.vue';
-import TenantStats from '@/components/rbac/tenant/TenantStats.vue';
-import type { EditTenantForm } from '@/components/rbac/tenant/tenant-ui.types';
-import './TenantListView.css';
-import './TenantListView.responsive.css';
+import type { CreateTenantPayload, TenantView } from "@app/contracts";
+import { PAGINATION_DEFAULTS, TenantStatus } from "@app/contracts";
+import { computed, onMounted, reactive, ref } from "vue";
+import { ElMessage } from "element-plus";
+import { tenantApi } from "@/api/tenant.api";
+import CreateTenantDialog from "@/components/rbac/tenant/CreateTenantDialog.vue";
+import EditTenantDialog from "@/components/rbac/tenant/EditTenantDialog.vue";
+import TenantDirectory from "@/components/rbac/tenant/TenantDirectory.vue";
+import TenantStats from "@/components/rbac/tenant/TenantStats.vue";
+import { tenantAdminPasswordError } from "@/components/rbac/tenant/tenant-credentials";
+import { buildTenantSiteUrl } from "@/components/rbac/tenant/tenant-site-url";
+import type { EditTenantForm } from "@/components/rbac/tenant/tenant-ui.types";
+import { ENV } from "@/config/env";
+import "./TenantListView.css";
+import "./TenantListView.responsive.css";
 
 const list = ref<TenantView[]>([]);
 const total = ref(0);
 const page = ref<number>(PAGINATION_DEFAULTS.page);
 const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const loading = ref(false);
-const keyword = ref('');
+const keyword = ref("");
 
 const createVisible = ref(false);
+const creating = ref(false);
 const createForm = reactive<CreateTenantPayload>({
-  code: '',
-  name: '',
-  remark: '',
-  adminUsername: '',
-  adminPassword: '',
+  code: "",
+  name: "",
+  remark: "",
+  adminUsername: "",
+  adminPassword: "",
 });
 
 const editVisible = ref(false);
 const editForm = reactive<EditTenantForm>({
-  id: '',
-  name: '',
+  id: "",
+  name: "",
   status: TenantStatus.Enabled,
-  remark: '',
+  remark: "",
   builtin: false,
 });
 
 const statusOptions = [
-  { label: '启用', value: TenantStatus.Enabled },
-  { label: '停用', value: TenantStatus.Disabled },
+  { label: "启用", value: TenantStatus.Enabled },
+  { label: "停用", value: TenantStatus.Disabled },
 ];
 
 const enabledCount = computed(
-  () => list.value.filter((item) => item.status === TenantStatus.Enabled).length,
+  () => list.value.filter((item) => item.status === TenantStatus.Enabled).length
 );
-const builtinCount = computed(() => list.value.filter((item) => item.builtin).length);
-const normalCount = computed(() => Math.max(total.value - builtinCount.value, 0));
+const builtinCount = computed(
+  () => list.value.filter((item) => item.builtin).length
+);
+const normalCount = computed(() =>
+  Math.max(total.value - builtinCount.value, 0)
+);
 
 function statusLabel(status: TenantStatus): string {
-  return status === TenantStatus.Enabled ? '启用' : '停用';
+  return status === TenantStatus.Enabled ? "启用" : "停用";
 }
 
 function formatDate(value: string): string {
   if (!value) {
-    return '-';
+    return "-";
   }
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(new Date(value));
 }
 
 async function load(): Promise<void> {
   loading.value = true;
   try {
-    const res = await tenantApi.list(page.value, pageSize.value, keyword.value || undefined);
+    const res = await tenantApi.list(
+      page.value,
+      pageSize.value,
+      keyword.value || undefined
+    );
     list.value = res.list;
     total.value = res.total;
   } finally {
@@ -82,7 +94,7 @@ async function search(): Promise<void> {
 }
 
 async function resetSearch(): Promise<void> {
-  keyword.value = '';
+  keyword.value = "";
   await search();
 }
 
@@ -98,11 +110,11 @@ async function changePageSize(value: number): Promise<void> {
 }
 
 function openCreate(): void {
-  createForm.code = '';
-  createForm.name = '';
-  createForm.remark = '';
-  createForm.adminUsername = '';
-  createForm.adminPassword = '';
+  createForm.code = "";
+  createForm.name = "";
+  createForm.remark = "";
+  createForm.adminUsername = "";
+  createForm.adminPassword = "";
   createVisible.value = true;
 }
 
@@ -112,19 +124,29 @@ function updateCreateForm(value: CreateTenantPayload): void {
 
 async function create(): Promise<void> {
   if (!createForm.code || !createForm.name) {
-    ElMessage.warning('租户编码与名称必填');
+    ElMessage.warning("租户编码与名称必填");
     return;
   }
-  await tenantApi.create({
-    code: createForm.code,
-    name: createForm.name,
-    remark: createForm.remark || undefined,
-    adminUsername: createForm.adminUsername || undefined,
-    adminPassword: createForm.adminPassword || undefined,
-  });
-  ElMessage.success('创建成功，已自动生成租户管理员账号');
-  createVisible.value = false;
-  await load();
+  const passwordError = tenantAdminPasswordError(createForm.adminPassword);
+  if (passwordError) {
+    ElMessage.warning(passwordError);
+    return;
+  }
+  creating.value = true;
+  try {
+    await tenantApi.create({
+      code: createForm.code,
+      name: createForm.name,
+      remark: createForm.remark || undefined,
+      adminUsername: createForm.adminUsername || undefined,
+      adminPassword: createForm.adminPassword,
+    });
+    ElMessage.success("创建成功，已自动生成租户管理员账号");
+    createVisible.value = false;
+    await load();
+  } finally {
+    creating.value = false;
+  }
 }
 
 function openEdit(row: TenantView): void {
@@ -134,6 +156,19 @@ function openEdit(row: TenantView): void {
   editForm.remark = row.remark;
   editForm.builtin = row.builtin;
   editVisible.value = true;
+}
+
+function visitTenant(row: TenantView): void {
+  const target = buildTenantSiteUrl(
+    ENV.clientBaseUrl,
+    row.code,
+    window.location.origin
+  );
+  if (!target) {
+    ElMessage.error("C 端站点地址未配置，请联系系统管理员");
+    return;
+  }
+  window.open(target, "_blank", "noopener,noreferrer");
 }
 
 function updateEditForm(value: EditTenantForm): void {
@@ -146,19 +181,8 @@ async function saveEdit(): Promise<void> {
     status: editForm.status,
     remark: editForm.remark,
   });
-  ElMessage.success('已保存');
+  ElMessage.success("已保存");
   editVisible.value = false;
-  await load();
-}
-
-async function remove(row: TenantView): Promise<void> {
-  await ElMessageBox.confirm(
-    `确认删除租户「${row.name}」？该租户下的数据将无法再访问。`,
-    '提示',
-    { type: 'warning' },
-  );
-  await tenantApi.remove(row.id);
-  ElMessage.success('已删除');
   await load();
 }
 
@@ -187,11 +211,12 @@ onMounted(load);
       @reset="resetSearch"
       @create="openCreate"
       @edit="openEdit"
-      @remove="remove"
+      @visit="visitTenant"
     />
     <create-tenant-dialog
       v-model="createVisible"
       :form="createForm"
+      :submitting="creating"
       @update:form="updateCreateForm"
       @submit="create"
     />

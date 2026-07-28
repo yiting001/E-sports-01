@@ -15,11 +15,13 @@ import { USER_REPOSITORY } from './domain/user-repository.interface';
 import { ROLE_REPOSITORY } from './domain/role-repository.interface';
 import { PERMISSION_REPOSITORY } from './domain/permission-repository.interface';
 import { TENANT_REPOSITORY } from './domain/tenant-repository.interface';
+import { TENANT_PROVISIONING_TRANSACTION } from './domain/tenant-provisioning-transaction.interface';
 
 import { TypeormUserRepository } from './infrastructure/user.repository';
 import { TypeormRoleRepository } from './infrastructure/role.repository';
 import { TypeormPermissionRepository } from './infrastructure/permission.repository';
 import { TypeormTenantRepository } from './infrastructure/tenant.repository';
+import { TypeormTenantProvisioningTransaction } from './infrastructure/tenant-provisioning.transaction';
 import { PasswordService } from './infrastructure/password.service';
 import { RbacSeeder } from './infrastructure/rbac.seeder';
 
@@ -52,6 +54,7 @@ import { UpdateRoleUseCase } from './application/use-cases/update-role.usecase';
 import { RemoveRoleUseCase } from './application/use-cases/remove-role.usecase';
 import { AssignRolePermissionsUseCase } from './application/use-cases/assign-role-permissions.usecase';
 import { ListPermissionsUseCase } from './application/use-cases/list-permissions.usecase';
+import { ListGrantablePermissionsUseCase } from './application/use-cases/list-grantable-permissions.usecase';
 import { GetMyMenusUseCase } from './application/use-cases/get-my-menus.usecase';
 import { CreatePermissionUseCase } from './application/use-cases/create-permission.usecase';
 import { UpdatePermissionUseCase } from './application/use-cases/update-permission.usecase';
@@ -60,6 +63,7 @@ import { RemovePermissionUseCase } from './application/use-cases/remove-permissi
 import { JwtStrategy } from './interfaces/auth/jwt.strategy';
 import { JwtAuthGuard } from './interfaces/auth/jwt-auth.guard';
 import { PermissionsGuard } from './interfaces/auth/permissions.guard';
+import { TenantAccessGuard } from './interfaces/auth/tenant-access.guard';
 
 import { AuthLoginController } from './interfaces/controllers/auth.login.controller';
 import { AuthSmsCodeController } from './interfaces/controllers/auth.sms-code.controller';
@@ -80,6 +84,7 @@ import { RoleCreateController } from './interfaces/controllers/role.create.contr
 import { RoleUpdateController } from './interfaces/controllers/role.update.controller';
 import { RoleRemoveController } from './interfaces/controllers/role.remove.controller';
 import { RoleAssignPermissionsController } from './interfaces/controllers/role.assign-permissions.controller';
+import { RoleGrantablePermissionsController } from './interfaces/controllers/role.grantable-permissions.controller';
 import { PermissionListController } from './interfaces/controllers/permission.list.controller';
 import { PermissionCreateController } from './interfaces/controllers/permission.create.controller';
 import { PermissionUpdateController } from './interfaces/controllers/permission.update.controller';
@@ -123,6 +128,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     RoleUpdateController,
     RoleRemoveController,
     RoleAssignPermissionsController,
+    RoleGrantablePermissionsController,
     PermissionListController,
     PermissionCreateController,
     PermissionUpdateController,
@@ -138,6 +144,10 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     { provide: ROLE_REPOSITORY, useClass: TypeormRoleRepository },
     { provide: PERMISSION_REPOSITORY, useClass: TypeormPermissionRepository },
     { provide: TENANT_REPOSITORY, useClass: TypeormTenantRepository },
+    {
+      provide: TENANT_PROVISIONING_TRANSACTION,
+      useClass: TypeormTenantProvisioningTransaction,
+    },
     PasswordService,
     TokenService,
     PermissionResolver,
@@ -147,6 +157,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     JwtStrategy,
     RbacSeeder,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: TenantAccessGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     LoginUseCase,
     SmsLoginUseCase,
@@ -168,6 +179,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     RemoveRoleUseCase,
     AssignRolePermissionsUseCase,
     ListPermissionsUseCase,
+    ListGrantablePermissionsUseCase,
     CreatePermissionUseCase,
     UpdatePermissionUseCase,
     RemovePermissionUseCase,
@@ -177,6 +189,6 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     UpdateTenantUseCase,
     RemoveTenantUseCase,
   ],
-  exports: [TokenService, PermissionResolver, UserDirectory, RoleGranter],
+  exports: [TokenService, PermissionResolver, TenantResolver, UserDirectory, RoleGranter],
 })
 export class RbacModule {}

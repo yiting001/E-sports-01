@@ -20,6 +20,12 @@ export const DEFAULT_TENANT_CODE = 'default';
  */
 export const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 
+/** 租户初始管理员密码规则：必须同时包含大小写字母、数字和特殊字符。 */
+export const TENANT_ADMIN_PASSWORD_MIN_LENGTH = 12;
+export const TENANT_ADMIN_PASSWORD_MAX_LENGTH = 128;
+export const TENANT_ADMIN_PASSWORD_PATTERN =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s])\S+$/;
+
 /** 租户对外视图 */
 export interface TenantView {
   id: string;
@@ -41,8 +47,8 @@ export interface CreateTenantPayload {
   remark?: string;
   /** 初始管理员账号（选填，默认 `<code>_admin`） */
   adminUsername?: string;
-  /** 初始管理员密码（选填，默认平台约定值） */
-  adminPassword?: string;
+  /** 初始管理员独立强密码，不得复用平台播种密码 */
+  adminPassword: string;
 }
 
 /** 更新租户入参（编码不可改） */

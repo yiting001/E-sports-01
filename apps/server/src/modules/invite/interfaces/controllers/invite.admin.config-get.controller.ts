@@ -9,7 +9,7 @@ export class InviteAdminConfigGetController {
   constructor(private readonly configService: InviteConfigService) {}
 
   @Get('admin/config')
-  @Permissions(PERMS.invite.configSet)
+  @Permissions(PERMS.invite.configView)
   get(): Promise<InviteConfigView> {
     return this.configService.get();
   }

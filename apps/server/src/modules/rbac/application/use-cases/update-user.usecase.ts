@@ -1,17 +1,10 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { UserView } from '@app/contracts';
-import {
-  USER_REPOSITORY,
-  UserRepository,
-} from '../../domain/user-repository.interface';
+import { USER_REPOSITORY, UserRepository } from '../../domain/user-repository.interface';
 import { UserStatus } from '../../domain/user.entity';
 import { PasswordService } from '../../infrastructure/password.service';
 import { toUserView } from '../user.mapper';
+import { PermissionResolver } from '../permission-resolver.service';
 
 /** 更新用户入参（均为可选，按需更新） */
 export interface UpdateUserInput {
@@ -27,6 +20,7 @@ export class UpdateUserUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     private readonly password: PasswordService,
+    private readonly permissions: PermissionResolver,
   ) {}
 
   async execute(id: string, input: UpdateUserInput): Promise<UserView> {
@@ -49,6 +43,8 @@ export class UpdateUserUseCase {
     if (input.password) {
       user.passwordHash = await this.password.hash(input.password);
     }
-    return toUserView(await this.userRepo.save(user));
+    const saved = await this.userRepo.save(user);
+    await this.permissions.invalidate(id);
+    return toUserView(saved);
   }
 }

@@ -44,7 +44,7 @@ yum install -y postgresql16-server
 systemctl enable --now postgresql-16
 ```
 
-创建业务库与账号（口令请自行替换为强口令）：
+创建目标库与账号（口令请自行替换为强口令）：
 
 ```bash
 sudo -u postgres psql <<'SQL'
@@ -54,6 +54,21 @@ SQL
 ```
 
 > 数据库只需本机访问，保持默认监听 127.0.0.1，不要对公网开放 5432。
+
+仓库当前只有增量 migration，没有从零创建全部业务表的初始 migration，因此上面的空库不能
+直接启动生产服务。首次迁移前必须先恢复一份已经验收的基础 schema/备份，再按本文执行
+`migration:audit/show/run`。自定义格式和纯 SQL 备份分别使用：
+
+```bash
+runuser -u postgres -- /www/server/pgsql/bin/pg_restore \
+  --clean --if-exists --no-owner --role=esports -d esports /safe/path/esports.dump
+
+# 仅当备份是经过核对的纯 SQL 文件时使用
+runuser -u postgres -- /www/server/pgsql/bin/psql \
+  -v ON_ERROR_STOP=1 -d esports -f /safe/path/esports.sql
+```
+
+恢复前确认备份来源、目标库和可回滚副本；已有生产库不得执行上述 `--clean` 恢复命令。
 
 ## 3. 拉取代码并安装依赖
 
@@ -86,8 +101,8 @@ DB_PORT=5432
 DB_USER=esports
 DB_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
 DB_NAME=esports
-# 首次部署可临时设为 true 让 TypeORM 自动建表，建表完成后改回 false 再重启
-DB_SYNCHRONIZE=true
+# 生产始终关闭自动同步，所有结构变更必须走已提交的 migration
+DB_SYNCHRONIZE=false
 
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
@@ -109,7 +124,11 @@ SEED_ADMIN_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
 ```ini
 VITE_API_BASE_URL=https://example.com/api
 VITE_WS_BASE_URL=https://example.com
+VITE_CLIENT_BASE_URL=/
 ```
+
+`VITE_CLIENT_BASE_URL=/` 表示管理端的“访问站点”打开同域根路径 C 端；不得留空，
+否则生产构建会 fail-closed 并禁止跳转。
 
 ## 5. 构建
 
@@ -117,10 +136,11 @@ VITE_WS_BASE_URL=https://example.com
 
 ```bash
 cd /www/wwwroot/esports
+pnpm --filter @app/contracts build
 pnpm build:server
 pnpm build:client
 # 管理端挂在 /admin/ 子路径，须以 VITE_BASE 指定构建 base
-VITE_BASE=/admin/ pnpm build:web
+VITE_BASE=/admin/ VITE_CLIENT_BASE_URL=/ pnpm build:web
 ```
 
 ### 5.1 后端单文件打包（推荐，服务器免编译免装依赖）
@@ -144,9 +164,18 @@ pnpm --filter @app/server bundle
 
 ```bash
 cd /www/wwwroot/esports-server
-pm2 start main.js --name esports-server
+node main.js --help
+node main.js migration:show
+node main.js migration:run
+pm2 start main.js --name esports-server -- start
 pm2 save && pm2 startup
 ```
+
+`migration:audit/show/run` 使用同一个 `main.js`，服务器无需源码、pnpm 或 TypeORM CLI。若
+`migration:show` 报 `typeorm_migrations is missing` 或 `is empty`，不得继续执行或开启
+`DB_SYNCHRONIZE`；先执行 `node main.js migration:audit > migration-audit.json`，再按
+[单文件数据库迁移](./database-migrations.md) 人工核对并建立可信 baseline。迁移必须使用表
+owner 或受控 DDL 账号，成功后再启动 PM2。
 
 前端也在本地构建（命令同上），把 `apps/client/dist` 内容上传到站点根目录、
 `apps/web/dist` 内容上传到站点 `admin/` 子目录即可，服务器无需 pnpm/仓库。
@@ -155,14 +184,14 @@ pm2 save && pm2 startup
 
 产物：
 
-| 应用 | 产物目录 | 访问路径 |
-| --- | --- | --- |
-| 后端 | `apps/server/dist`（或单文件 `apps/server/bundle/main.js`） | PM2 常驻，Nginx 反代 `/api` `/socket.io` `/static` |
-| C 端 | `apps/client/dist` | 站点根路径 `/` |
-| 管理端 | `apps/web/dist` | 子路径 `/admin/` |
+| 应用   | 产物目录                                                    | 访问路径                                           |
+| ------ | ----------------------------------------------------------- | -------------------------------------------------- |
+| 后端   | `apps/server/dist`（或单文件 `apps/server/bundle/main.js`） | PM2 常驻，Nginx 反代 `/api` `/socket.io` `/static` |
+| C 端   | `apps/client/dist`                                          | 站点根路径 `/`                                     |
+| 管理端 | `apps/web/dist`                                             | 子路径 `/admin/`                                   |
 
-> `packages/contracts` 为共享包，`pnpm build:server` 前会随工作区自动构建；
-> 若单独构建报找不到 `@app/contracts`，先执行一次 `pnpm build`。
+> `packages/contracts` 为共享包，干净检出时必须先执行
+> `pnpm --filter @app/contracts build`，再执行 `pnpm build:server`。
 
 ## 6. PM2 启动后端
 
@@ -176,10 +205,16 @@ pm2 save && pm2 startup
 或命令行：
 
 ```bash
+cd /www/wwwroot/esports
+pnpm --filter @app/server migration:show
+pnpm --filter @app/server migration:run
 cd /www/wwwroot/esports/apps/server
-pm2 start dist/main.js --name esports-server
+pm2 start dist/main.js --name esports-server -- start
 pm2 save && pm2 startup
 ```
+
+这一步同样要求数据库已恢复基础 schema 且 migration history 是可信连续基线；命令失败时
+不得启动 PM2。
 
 启动日志出现 Nest 路由映射即成功；`curl http://127.0.0.1:3000/api/config/branding`
 应返回 JSON。
@@ -264,25 +299,48 @@ location / {
 cd /www/wwwroot/esports
 git pull origin esports
 pnpm install
-pnpm build:server && pnpm build:client && VITE_BASE=/admin/ pnpm build:web
-pm2 restart esports-server
+pnpm --filter @app/contracts build
+pnpm build:server
+pnpm build:client
+VITE_BASE=/admin/ VITE_CLIENT_BASE_URL=/ pnpm build:web
+pm2 stop esports-server
+pnpm --filter @app/server migration:show
+pnpm --filter @app/server migration:run
+pm2 restart esports-server --update-env
 ```
 
-若采用 5.1 单文件方式：本地 `pnpm --filter @app/server bundle` 后上传新的
-`main.js` 覆盖，再 `pm2 restart esports-server`；前端重新上传 dist 内容即可。
+若采用 5.1 单文件方式：本地 `pnpm --filter @app/server bundle` 后上传新的 `main.js`。
+数据库升级不能直接覆盖后重启，必须先备份数据库并停止全部旧版本 API、worker 和支付回调
+写流量，再执行：
+
+```bash
+cd /www/wwwroot/esports-server
+pm2 stop esports-server
+node main.js migration:show
+node main.js migration:run
+pm2 restart esports-server --update-env
+curl --fail http://127.0.0.1:3000/api/commerce/public/categories
+pm2 save
+```
+
+任一迁移命令非零退出时保持服务停止并处理根因，不得删除 history 或打开 synchronize。
+前端重新上传 dist 内容即可。
 
 前端为纯静态产物，构建完成即生效（浏览器强刷新）。
 
 ## 10. 常见问题
 
-| 现象 | 排查 |
-| --- | --- |
-| 后端启动报「缺少必需的环境变量」 | `.env` 未放在 `apps/server/` 下，或 PM2 工作目录不对 |
-| 前端接口 404 | Nginx 未配置 `/api/` 反代，或 `VITE_API_BASE_URL` 少了 `/api` 后缀 |
-| `/admin/` 白屏或资源 404 | 管理端构建时未加 `VITE_BASE=/admin/`，或 Nginx `alias` 路径末尾少了 `/` |
-| `/admin/xxx` 刷新 404 | `location /admin/` 缺少 `try_files ... /admin/index.html` 回退 |
-| 客服/IM 连不上、控制台报 websocket error | 缺少 `/socket.io/` 的 Upgrade 反代配置 |
-| 上传图片显示 127.0.0.1 链接 | 配置中心 `upload.local.baseUrl` 未改为公网地址 |
-| 上传大视频报 413 | Nginx `client_max_body_size` 过小 |
-| 支付回调收不到 | 配置中心 `wallet.notifyBaseUrl` 未设为公网 https 地址 |
-| 建表报 `uuid_generate_v4() does not exist` | 旧版本代码依赖 uuid-ossp 扩展；现已改用 PG 13+ 内置 `gen_random_uuid()`，更新后端后重建库即可 |
+| 现象                                       | 排查                                                                                                                                              |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 后端启动报「缺少必需的环境变量」           | `.env` 未放在 `apps/server/` 下，或 PM2 工作目录不对                                                                                              |
+| 前端接口 404                               | Nginx 未配置 `/api/` 反代，或 `VITE_API_BASE_URL` 少了 `/api` 后缀                                                                                |
+| `/admin/` 白屏或资源 404                   | 管理端构建时未加 `VITE_BASE=/admin/`，或 Nginx `alias` 路径末尾少了 `/`                                                                           |
+| `/admin/xxx` 刷新 404                      | `location /admin/` 缺少 `try_files ... /admin/index.html` 回退                                                                                    |
+| 租户目录“访问站点”报未配置                 | 管理端构建时缺少 `VITE_CLIENT_BASE_URL=/`                                                                                                         |
+| 客服/IM 连不上、控制台报 websocket error   | 缺少 `/socket.io/` 的 Upgrade 反代配置                                                                                                            |
+| 上传图片显示 127.0.0.1 链接                | 配置中心 `upload.local.baseUrl` 未改为公网地址                                                                                                    |
+| 上传大视频报 413                           | Nginx `client_max_body_size` 过小                                                                                                                 |
+| 支付回调收不到                             | 配置中心 `wallet.notifyBaseUrl` 未设为公网 https 地址                                                                                             |
+| 单文件启动后接口报缺字段                   | 发布时跳过了 `node main.js migration:show/run`；立即停写，history 缺失或为空时先运行 `node main.js migration:audit` 并按迁移文档核对可信 baseline |
+| migration 提示 `must be owner of table`    | 当前数据库账号不是既有表 owner；改用受控 DDL/owner 账号执行，不要给常驻应用账号永久超级权限                                                       |
+| 建表报 `uuid_generate_v4() does not exist` | 旧版本代码依赖 uuid-ossp 扩展；现已改用 PG 13+ 内置 `gen_random_uuid()`，更新后端后重建库即可                                                     |

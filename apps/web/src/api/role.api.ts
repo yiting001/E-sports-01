@@ -1,4 +1,4 @@
-import type { PaginatedResult, RoleView } from '@app/contracts';
+import type { PaginatedResult, PermissionNode, RoleView } from '@app/contracts';
 import { http } from './http';
 
 /** 新建角色入参 */
@@ -18,6 +18,9 @@ export interface UpdateRoleBody {
 export const roleApi = {
   list(page: number, pageSize: number): Promise<PaginatedResult<RoleView>> {
     return http.get('/rbac/roles', { params: { page, pageSize } });
+  },
+  grantablePermissions(): Promise<PermissionNode[]> {
+    return http.get('/rbac/roles/grantable-permissions');
   },
   create(body: CreateRoleBody): Promise<RoleView> {
     return http.post('/rbac/roles', body);

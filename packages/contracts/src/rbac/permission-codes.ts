@@ -59,6 +59,7 @@ export const PERMS = {
   realname: {
     list: 'realname:list',
     review: 'realname:review',
+    policyView: 'realname:policy:view',
     policy: 'realname:policy',
   },
   feedback: {
@@ -124,7 +125,9 @@ export const PERMS = {
     remove: 'coupon:remove',
   },
   invite: {
-    /** 邀请奖励配置读写（管理端） */
+    /** 邀请奖励配置读取（管理端） */
+    configView: 'invite:config:view',
+    /** 邀请奖励配置写入（仅平台超管） */
     configSet: 'invite:config:set',
     /** 邀请记录查询（管理端） */
     recordList: 'invite:record:list',

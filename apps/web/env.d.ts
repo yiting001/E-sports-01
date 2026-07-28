@@ -7,6 +7,8 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string;
   /** WebSocket 基础地址，例如 http://127.0.0.1:3000 */
   readonly VITE_WS_BASE_URL: string;
+  /** C 端站点地址；生产构建必须显式配置 */
+  readonly VITE_CLIENT_BASE_URL?: string;
 }
 
 interface ImportMeta {

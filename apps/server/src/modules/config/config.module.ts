@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigItem } from './domain/config-item.entity';
+import { TenantConfigOverride } from './domain/tenant-config-override.entity';
 import { CONFIG_REPOSITORY } from './domain/config-repository.interface';
+import { TENANT_CONFIG_OVERRIDE_REPOSITORY } from './domain/tenant-config-override-repository.interface';
 import { TypeormConfigRepository } from './infrastructure/config.repository';
+import { TypeormTenantConfigOverrideRepository } from './infrastructure/tenant-config-override.repository';
 import { ConfigSeeder } from './infrastructure/config.seeder';
 import { ConfigService } from './application/config.service';
 import { ListConfigsUseCase } from './application/use-cases/list-configs.usecase';
@@ -24,7 +27,7 @@ import { RemoveConfigController } from './interfaces/remove-config.controller';
  * 其它模块通过它读取可调参数，杜绝硬编码。
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([ConfigItem])],
+  imports: [TypeOrmModule.forFeature([ConfigItem, TenantConfigOverride])],
   controllers: [
     GetBrandingController,
     GetAgreementController,
@@ -35,6 +38,10 @@ import { RemoveConfigController } from './interfaces/remove-config.controller';
   ],
   providers: [
     { provide: CONFIG_REPOSITORY, useClass: TypeormConfigRepository },
+    {
+      provide: TENANT_CONFIG_OVERRIDE_REPOSITORY,
+      useClass: TypeormTenantConfigOverrideRepository,
+    },
     ConfigService,
     ConfigSeeder,
     ListConfigsUseCase,

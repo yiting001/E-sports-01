@@ -8,6 +8,7 @@ import { authApi } from '@/api/auth.api';
 import AuthHeroPanel from '@/components/auth/AuthHeroPanel.vue';
 import { useAuthStore } from '@/stores/auth.store';
 import { useBrandingStore } from '@/stores/branding.store';
+import { tenantContext } from '@/tenant/tenant-context';
 import './LoginView.css';
 
 const auth = useAuthStore();
@@ -24,7 +25,7 @@ const loading = ref(false);
 const form = reactive({ account: '', username: '', password: '', nickname: '', phone: '' });
 const smsForm = reactive({ phone: '', code: '' });
 /** 租户编码（选填）：留空则归入平台默认租户，多租户下用于消解同名账号歧义 */
-const tenantCode = ref('');
+const tenantCode = ref(tenantContext.getCode());
 
 /** 验证码发送冷却倒计时（秒） */
 const countdown = ref(0);
@@ -42,6 +43,17 @@ function startCountdown(seconds: number): void {
 }
 
 onUnmounted(() => clearInterval(timer));
+
+function activateTenant(): string | null {
+  try {
+    const code = tenantContext.setCode(tenantCode.value);
+    tenantCode.value = code;
+    return code;
+  } catch (error) {
+    ElMessage.warning(error instanceof Error ? error.message : '租户编码格式不正确');
+    return null;
+  }
+}
 
 /** 登录成功后跳转回原目标页，缺省进入工作台 */
 async function goRedirect(): Promise<void> {
@@ -62,7 +74,10 @@ async function submit(): Promise<void> {
   }
   loading.value = true;
   try {
-    const code = tenantCode.value.trim() || undefined;
+    const code = activateTenant();
+    if (!code) {
+      return;
+    }
     if (mode.value === 'login') {
       await auth.login({ account: form.account, password: form.password, tenantCode: code });
     } else {
@@ -88,9 +103,13 @@ async function sendCode(): Promise<void> {
   }
   sending.value = true;
   try {
+    const code = activateTenant();
+    if (!code) {
+      return;
+    }
     const { cooldown } = await authApi.sendSmsCode({
       phone: smsForm.phone,
-      tenantCode: tenantCode.value.trim() || undefined,
+      tenantCode: code,
     });
     ElMessage.success('验证码已发送');
     startCountdown(cooldown);
@@ -107,10 +126,14 @@ async function smsSubmit(): Promise<void> {
   }
   loading.value = true;
   try {
+    const code = activateTenant();
+    if (!code) {
+      return;
+    }
     await auth.smsLogin({
       phone: smsForm.phone,
       code: smsForm.code,
-      tenantCode: tenantCode.value.trim() || undefined,
+      tenantCode: code,
     });
     await goRedirect();
   } finally {

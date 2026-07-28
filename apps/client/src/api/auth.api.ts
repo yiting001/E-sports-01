@@ -9,7 +9,12 @@ import type {
   UpdateProfilePayload,
   UserView,
 } from '@app/contracts';
+import { tenantContext } from '@/tenant/tenant-context';
 import { http } from './http';
+
+function withCurrentTenant<T extends { tenantCode?: string }>(payload: T): T {
+  return { ...payload, tenantCode: tenantContext.getCode() };
+}
 
 /**
  * 鉴权接口封装（C 端）。
@@ -23,19 +28,19 @@ export const authApi = {
   },
   /** 发送「登录」短信验证码（要求手机号已注册） */
   sendLoginCode(payload: SendSmsCodePayload): Promise<SendSmsCodeResult> {
-    return http.post('/auth/sms/code', payload);
+    return http.post('/auth/sms/code', withCurrentTenant(payload));
   },
   /** 短信验证码登录 */
   smsLogin(payload: SmsLoginPayload): Promise<TokenPair> {
-    return http.post('/auth/sms/login', payload);
+    return http.post('/auth/sms/login', withCurrentTenant(payload));
   },
   /** 发送「注册」短信验证码（要求手机号未注册） */
   sendRegisterCode(payload: SendSmsCodePayload): Promise<SendSmsCodeResult> {
-    return http.post('/auth/sms/register-code', payload);
+    return http.post('/auth/sms/register-code', withCurrentTenant(payload));
   },
   /** 短信验证码注册，注册用户默认分配 member 角色 */
   smsRegister(payload: SmsRegisterPayload): Promise<TokenPair> {
-    return http.post('/auth/sms/register', payload);
+    return http.post('/auth/sms/register', withCurrentTenant(payload));
   },
   /** 获取当前登录用户资料 */
   profile(): Promise<AuthProfile> {

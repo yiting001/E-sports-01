@@ -287,3 +287,15 @@ pnpm --filter @app/client dev   # http://127.0.0.1:5174
 ```
 
 无短信密钥时，仅可在 `NODE_ENV=development` 使用 `sms.development.fixedCode` 联调。默认固定码为 `000000`，仍需先点击发送验证码；`log` 驱动不会发送或输出验证码。
+
+## 多租户站点入口
+
+C 端按 URL `?tenantCode=<code>`、自身 `sessionStorage`、`default` 的顺序确定站点，并在
+所有 HTTP 请求中携带 `X-Tenant-Code`。access/refresh token 使用
+`client.accessToken.<tenantCode>` / `client.refreshToken.<tenantCode>` 独立存储；切换站点
+后清空内存档案、订单草稿和常驻连接，再读取目标租户自己的令牌。
+
+品牌和门户 store 会在租户变化时重置默认状态并进入 `validating / ready / rejected` 三态重新加载，revision 防止旧租户晚到响应
+覆盖新站点。HTTP 刷新请求也按租户并发去重；切换后旧刷新结果不会保存令牌、清除新会话
+或显示错误提示。profile 返回的 `tenantCode` 与当前入口不一致时立即登出。服务端隔离、
+配置覆盖与未知/停用租户处理见 [multi-tenant.md](./multi-tenant.md)。

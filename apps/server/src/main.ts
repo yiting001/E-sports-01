@@ -5,6 +5,11 @@ import { resolve } from 'node:path';
 import { CONFIG_KEYS } from '@app/contracts';
 import { AppModule } from './app.module';
 import { loadEnvConfig } from './bootstrap/env.config';
+import {
+  resolveServerCommand,
+  runMigrationCommand,
+  SERVER_COMMAND_USAGE,
+} from './database/migration-command';
 import { ConfigService } from './modules/config/application/config.service';
 import { AllExceptionsFilter } from './shared/http/all-exceptions.filter';
 import { ResponseInterceptor } from './shared/http/response.interceptor';
@@ -57,4 +62,21 @@ async function serveLocalUploads(app: NestExpressApplication): Promise<void> {
   app.useStaticAssets(resolve(process.cwd(), dir), { prefix });
 }
 
-void bootstrap();
+async function runServerProcess(): Promise<void> {
+  const command = resolveServerCommand(process.argv.slice(2));
+  if (command === 'help') {
+    process.stdout.write(`${SERVER_COMMAND_USAGE}\n`);
+    return;
+  }
+  if (command === 'start') {
+    await bootstrap();
+    return;
+  }
+  await runMigrationCommand(command);
+}
+
+void runServerProcess().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : 'Unknown server startup failure';
+  process.stderr.write(`[server] ${message}\n`);
+  process.exitCode = 1;
+});

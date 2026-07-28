@@ -3,8 +3,9 @@
 ## 模块职责
 
 平台**唯一的可调参数登记处**。除数据库/Redis 连接信息与部署密钥（这些走 `.env`）外，
-所有业务可调参数（令牌有效期、上传驱动、OSS 凭证、IM 历史条数等）全部入库，
-其它模块只通过 `ConfigService` 读取，从根本上消除散落各处的硬编码常量。
+所有业务可调参数（令牌有效期、上传驱动、OSS 凭证、IM 历史条数等）全部入库。
+`sys_config` 保存平台默认值和元数据，五个站点展示键可由
+`sys_tenant_config_override` 按租户覆盖；其它模块只通过 `ConfigService` 读取。
 
 实现的功能：
 
@@ -12,6 +13,8 @@
 - 配置项**列表查询**（密钥类配置值脱敏返回 `******`）。
 - 配置项**新增/更新**（upsert）并失效缓存。
 - 配置项**删除**并失效缓存。
+- 租户管理员只可查看和维护网站名称、Logo、首页横幅、排行榜开关与用户协议；支付、
+  短信、上传、令牌和其他非白名单配置仅平台超级管理员可维护。
 - 统一**读穿透缓存**（Redis，TTL 300s），并按类型（string/number/boolean/json/richtext/image）安全读取，缓存不可用时降级回源。
 - **富文本配置（richtext）**：值为 HTML 字符串（读取等同 string），配置中心编辑时启用富文本编辑器（AiEditor，图片/视频走 `POST /upload` 返回 URL），渲染前经 DOMPurify 净化防 XSS。如 `im.service.welcome`。
 - **图片配置（image）**：值为图片上传后的可访问 URL（读取等同 string），配置中心编辑时用图片上传控件（走 `POST /upload` 返回 URL）并预览。如软件图标 `system.appLogo`。
@@ -28,6 +31,9 @@ modules/config/
 ├── domain/
 │   ├── config-item.entity.ts           配置项实体（key/value/type/group/remark/secret）
 │   ├── config-repository.interface.ts  仓储端口 + 注入令牌
+│   ├── tenant-config-override.entity.ts / *-repository.interface.ts
+│   │                                    租户覆盖实体与仓储端口
+│   ├── tenant-config-keys.ts           五项可覆盖键白名单
 │   ├── config-defaults.ts              默认配置清单（含打手公告图）
 │   └── sms-config-defaults.ts          短信配置清单（由主清单组合）
 ├── application/
@@ -39,6 +45,7 @@ modules/config/
 │       └── remove-config.usecase.ts
 ├── infrastructure/
 │   ├── config.repository.ts            TypeORM 仓储实现
+│   ├── tenant-config-override.repository.ts
 │   └── config.seeder.ts                启动播种器（OnApplicationBootstrap）
 └── interfaces/
     ├── dto/upsert-config.dto.ts
@@ -66,10 +73,13 @@ flowchart TB
   subgraph domain
     ENT[ConfigItem 实体]
     REPOI[[ConfigRepository 端口]]
+    OVERRIDE[租户配置覆盖实体]
+    OREPOI[[TenantConfigOverrideRepository 端口]]
     DEF[DEFAULT_CONFIGS 默认清单]
   end
   subgraph infrastructure
     REPO[config.repository]
+    OREPO[tenant-config-override.repository]
     SEED[config.seeder]
   end
 
@@ -80,9 +90,11 @@ flowchart TB
   UU --> CS
   RU --> CS
   REPO -. 实现 .-> REPOI
+  OREPO -. 实现 .-> OREPOI
   SEED --> DEF
   SEED --> REPOI
   CS --> REPOI
+  CS --> OREPOI
   CS --> RD[(Redis)]
   REPO --> PG[(PostgreSQL)]
 ```
@@ -97,18 +109,39 @@ sequenceDiagram
   participant DB as PostgreSQL
 
   M->>CS: getNumber(key, fallback)
-  CS->>RD: GET config:key
+  CS->>RD: GET config:v2:tenant:<tenantId>:key
   alt 命中
     RD-->>CS: 值
   else 未命中 / 缓存不可用
-    CS->>DB: findByKey(key)
-    DB-->>CS: ConfigItem | null
-    CS->>RD: SET config:key 值 EX 300（失败忽略）
+    CS->>DB: 读取租户覆盖；缺失时读取 sys_config 全局值
+    DB-->>CS: TenantOverride | ConfigItem | null
+    CS->>RD: 分租户或全局缓存，EX 300（失败忽略）
   end
   CS-->>M: 解析为目标类型，缺失则返回 fallback
 ```
 
-写操作（upsert/remove）完成后调用 `ConfigService.invalidate(key)` 删除缓存，下次读取回源，保证一致性。
+子租户管理员写入/删除白名单键时只操作当前租户覆盖并失效当前租户缓存；默认租户
+的非超管只能读取全局值，任何配置写入或删除均返回 403。平台超级管理员写入
+`sys_config` 全局默认值并失效全局缓存。没有覆盖的租户随后立即读取新的全局值。
+平台删除白名单全局键时，外键级联清理覆盖行，服务通过 Redis `SCAN` 分批删除该键的
+全部租户缓存；Redis 失败不回滚已成功的数据库删除，残留缓存最迟 300 秒 TTL 后消失。
+
+## 租户配置覆盖
+
+仅以下键允许写入租户覆盖表：
+
+| 配置键 | 作用 |
+| --- | --- |
+| `system.appName` | 网站名称 |
+| `system.appLogo` | 网站 Logo / favicon |
+| `portal.homeBanner` | 首页横幅 |
+| `portal.showRank` | 排行榜入口开关 |
+| `auth.userAgreement` | 用户协议 |
+
+`sys_tenant_config_override` 对 `(tenant_id, key)` 建唯一约束，并分别外键引用
+`sys_tenant(id)` 与 `sys_config(key)`。migration 为存量子租户复制升级前当前值，默认租户
+继续读取平台全局值；检测到租户有效值分歧时 `down` 拒绝有损回滚。完整状态、安全与生产
+执行方式见 [multi-tenant.md](./multi-tenant.md) 和 [deployment.md](./deployment.md)。
 
 ## 默认配置清单
 
@@ -158,8 +191,8 @@ flowchart LR
   Parse --> View["items 最多 10 项 / interval 1～3 秒"]
 ```
 
-- 该配置沿用全局 `sys_config`，不带 `tenantId`；活动关联只保存 UUID，不把活动内容复制进配置。
-- 活动数据仍受原活动接口的登录与租户隔离保护。多租户若要求各租户独立横幅，需要建立租户实体和 migration，不应继续扩展此全局键。
+- 该配置允许写入租户覆盖；活动关联只保存 UUID，不把活动内容复制进配置。
+- 活动数据仍受原活动接口的登录与租户隔离保护，横幅和绑定活动必须属于同一当前租户。
 - 管理端通常通过“运营通知”页维护该 JSON；配置中心直接写入的脏值会在公开读取时被归一化或丢弃。
 
 ## 打手入驻公告图
@@ -189,7 +222,7 @@ sequenceDiagram
 权限与边界：
 
 - 进入配置页并查看目录需要 `config:menu`、`config:list`；保存需要 `config:save`；上传新图还需要 `upload:file:upload`。
-- 公告图配置是全平台唯一键，`sys_config` 不带租户字段；任一有权管理员的修改会影响全部租户的 C 端入驻页。
+- 公告图配置是全平台唯一键，仅平台超级管理员可修改；变更会影响全部租户的 C 端入驻页。
 - 管理端图片控件在浏览器侧限制为 `image/*` 且不超过 5 MB；服务端仍以 `upload.maxFileSize` 为最终大小上限，当前不校验真实图片内容。
 - 清空或替换配置只改变 URL，不会删除 Upload 模块中的原文件和元数据；需要在文件管理中显式清理。反向操作也需谨慎，删除仍被配置引用的文件会使 C 端加载失败。
 - 配置为空时 C 端保留公告文字但不显示图片；URL 加载失败时前端显示失败提示，不阻断申请表单。
@@ -217,7 +250,8 @@ sequenceDiagram
 - 配置目录支持按配置键、分组、类型、备注和非敏感值快速搜索，敏感值不参与前端明文匹配。
 - 敏感项列表脱敏展示，编辑敏感项时不回填原值。
 - 富文本配置继续按需加载 `RichTextEditor`，列表预览仍先经 `sanitizeHtml` 净化。
-- 新增/编辑弹窗维护 key、value、type、group、remark、secret。
+- 平台超级管理员可新增配置并编辑全部元数据；子租户管理员只能修改五项白名单配置的值，
+  不能伪造类型、分组、备注或敏感标记，删除操作表示恢复平台默认值；默认租户非超管只读。
 - 按钮权限继续沿用 `v-permission`，接口调用仍复用 `configApi`。
 
 ```mermaid
@@ -230,3 +264,11 @@ flowchart TD
   FormDialog --> RichText["RichTextEditor 按需加载"]
   Directory --> Sanitize["sanitizeHtml 富文本预览净化"]
 ```
+
+## 测试范围
+
+- 租户配置单元测试覆盖白名单、双租户不同值、全局回退、默认租户只读、全租户缓存清理与
+  Redis 删除/扫描失败降级。
+- PostgreSQL migration E2E 覆盖存量值复制、唯一约束、双外键、owner/CRUD 授权、事务锁、
+  有损回滚拒绝，以及手工 SQL 的 history 缺表/缺前置/重复/成功登记。
+- 管理端测试覆盖租户管理员只能提交原始元数据与新值，且不能新增配置。

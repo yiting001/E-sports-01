@@ -63,7 +63,7 @@ sequenceDiagram
 | 权限码             | 名称             | 守卫接口                                  |
 | ------------------ | ---------------- | ----------------------------------------- |
 | `member:menu`      | 会员等级（菜单） | 前端动态路由 `/member/levels`（管理后台） |
-| `member:level:set` | 会员-等级配置    | `PUT /member/levels`                      |
+| `member:level:set` | 会员-等级配置    | 平台超管调用 `PUT /member/levels`         |
 
 > `GET /member/mine`、`GET /member/levels` 仅需登录态。
 
@@ -73,7 +73,7 @@ sequenceDiagram
 | ---- | ---------------- | ------------------ | ----------------------------------------------------------------------------------- |
 | GET  | `/member/mine`   | 登录               | `{ level, levelName, discountBp, spendFen, spendYuan, nextLevelName, nextNeedFen }` |
 | GET  | `/member/levels` | 登录               | 档位列表                                                                            |
-| PUT  | `/member/levels` | `member:level:set` | 保存档位 `{ tiers }`                                                                |
+| PUT  | `/member/levels` | 平台超管 + `member:level:set` | 保存全局档位 `{ tiers }`                                                      |
 
 ## 设计要点（无硬编码 / 最小化）
 

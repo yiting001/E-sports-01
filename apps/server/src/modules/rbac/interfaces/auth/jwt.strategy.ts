@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { loadEnvConfig } from '../../../../bootstrap/env.config';
 import { TenantContextService } from '../../../../shared/tenant/tenant-context.service';
 import { PermissionResolver } from '../../application/permission-resolver.service';
+import { TenantResolver } from '../../application/tenant-resolver.service';
 import { TokenPayload } from '../../application/token.service';
 import { AuthUser } from './metadata';
 
@@ -17,6 +18,7 @@ import { AuthUser } from './metadata';
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly resolver: PermissionResolver,
+    private readonly tenants: TenantResolver,
     private readonly tenant: TenantContextService,
   ) {
     super({
@@ -28,7 +30,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: TokenPayload): Promise<AuthUser> {
     const auth = await this.resolver.resolve(payload.sub);
-    this.tenant.set(payload.tenantId ?? null, auth.isSuper);
+    if (
+      payload.type !== 'access' ||
+      !auth.enabled ||
+      !auth.tenantId ||
+      auth.tenantId !== payload.tenantId
+    ) {
+      throw new UnauthorizedException('访问令牌对应的用户或租户无效');
+    }
+    await this.tenants.assertTenantEnabled(auth.tenantId);
+    this.tenant.set(auth.tenantId, auth.isSuper);
     return { id: payload.sub, username: payload.username };
   }
 }

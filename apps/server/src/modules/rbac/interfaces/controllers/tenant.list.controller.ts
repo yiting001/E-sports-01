@@ -4,9 +4,11 @@ import { ListTenantsUseCase } from '../../application/use-cases/list-tenants.use
 import { PaginationQueryDto } from '../../../../shared/http/pagination.dto';
 import { PERMS } from '../../domain/permission-codes';
 import { Permissions } from '../auth/permissions.decorator';
+import { PlatformOnly } from '../auth/platform-only.decorator';
 
 /** 路由：分页查询租户列表（仅平台超管） */
 @Controller('rbac/tenants')
+@PlatformOnly()
 export class TenantListController {
   constructor(private readonly useCase: ListTenantsUseCase) {}
 

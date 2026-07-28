@@ -7,6 +7,8 @@ export interface RoleRepository {
   findById(id: string): Promise<Role | null>;
   findByIds(ids: string[]): Promise<Role[]>;
   findByCode(code: string): Promise<Role | null>;
+  /** 启动播种和跨租户平台流程用：显式限定租户查询角色。 */
+  findByCodeForTenant(code: string, tenantId: string): Promise<Role | null>;
   /** 启动播种用：跨租户查询同一内置角色码。 */
   findAllByCode(code: string): Promise<Role[]>;
   existsByCode(code: string): Promise<boolean>;

@@ -3,10 +3,12 @@ import { TenantView } from '@app/contracts';
 import { CreateTenantUseCase } from '../../application/use-cases/create-tenant.usecase';
 import { PERMS } from '../../domain/permission-codes';
 import { Permissions } from '../auth/permissions.decorator';
+import { PlatformOnly } from '../auth/platform-only.decorator';
 import { CreateTenantDto } from '../dto/create-tenant.dto';
 
 /** 路由：新建租户（仅平台超管） */
 @Controller('rbac/tenants')
+@PlatformOnly()
 export class TenantCreateController {
   constructor(private readonly useCase: CreateTenantUseCase) {}
 

@@ -9,11 +9,12 @@ JWT **双令牌**（access + refresh）鉴权，超级管理员走 bypass 拥有
 
 - **认证**：注册、登录（发放双令牌）、刷新令牌、获取当前用户 profile。
 - **用户管理**：列表/创建/更新/删除、给用户分配角色。
-- **角色管理**：列表/创建/更新/删除、给角色分配权限。
+- **角色管理**：列表/创建/更新/删除、给角色分配权限；内置角色禁止通用删除。
 - **权限管理**：列表/创建/更新/删除（权限带类型：api/menu/button）。
-- **鉴权基础设施**：JWT 守卫 + 权限守卫，`@Public` / `@Permissions` 装饰器，`@CurrentUser` 注入。
-- **权限解析缓存**：`PermissionResolver` 将用户的扁平权限码集合缓存到 Redis（TTL 600s），超管直接放行。
-- **启动播种**：创建超级管理员角色 `admin` 与初始管理员账号，按权限码登记处播种 api 权限，并按 contracts `MENU_DEFINITIONS` 播种 menu 权限（菜单码按「业务命名空间 + `:menu`」组织，如 `rbac:user:menu`、`im:service:menu`，使其与同域接口/按钮权限归并到同一棵权限树；启动时清理不在清单内的历史 menu 权限）。新增内置角色权限需幂等补齐；退款审核权限实际补给存量 `tenant_admin` 后，播种器通过 `PermissionResolver` 统一失效 Redis 权限缓存。
+- **鉴权基础设施**：JWT、租户访问与权限三段守卫；`@TenantPublic` 建立免登录租户上下文，
+  `@PlatformOnly` 保护租户/权限目录，`@Permissions` 校验业务权限。
+- **权限实时解析**：`PermissionResolver` 每次从用户真实角色聚合权限，不做跨请求缓存，用户停用、撤权和租户停用立即生效。
+- **启动播种**：创建超级管理员角色 `admin` 与初始管理员账号，按权限码登记处播种 api 权限，并按 contracts `MENU_DEFINITIONS` 播种 menu 权限（菜单码按「业务命名空间 + `:menu`」组织，如 `rbac:user:menu`、`im:service:menu`，使其与同域接口/按钮权限归并到同一棵权限树；启动时清理不在清单内的历史 menu 权限）。新增内置角色权限需幂等补齐；退款审核权限实际补给存量 `tenant_admin`。
 - **可见菜单下发**：`GET /rbac/menus/mine` 返回当前用户可见菜单（按其授权码过滤，超管全量），前端据此渲染菜单并动态注册路由。
 
 ## 目录结构（DDD 四层）
@@ -27,7 +28,7 @@ modules/rbac/
 │   ├── permission-defaults.ts           默认权限/菜单清单
 │   └── rbac.constants.ts                SUPER_ADMIN_ROLE 等领域常量
 ├── application/
-│   ├── permission-resolver.service.ts   解析并缓存用户权限上下文（Redis 600s）
+│   ├── permission-resolver.service.ts   实时解析用户、角色、权限和租户安全上下文
 │   ├── token.service.ts                 签发/校验 access & refresh 令牌
 │   ├── {user,role,permission}.mapper.ts 实体 ↔ DTO
 │   └── use-cases/                       20 个用例，一个动作一个文件
@@ -80,7 +81,7 @@ sequenceDiagram
   participant PW as password.service
   participant TK as token.service
   participant PR as PermissionResolver
-  participant RD as Redis
+  participant DB as RBAC 仓储
 
   C->>Lg: POST /api/auth/login {username,password}
   Lg->>LU: execute(dto)
@@ -92,13 +93,8 @@ sequenceDiagram
 
   Note over C,RD: 后续受保护请求
   C->>PR: 携带 Bearer access 调用受保护接口
-  PR->>RD: GET 权限上下文缓存
-  alt 命中
-    RD-->>PR: { isSuper, permissions[] }
-  else 未命中
-    PR->>PR: 聚合用户角色→权限码
-    PR->>RD: SET 缓存 EX 600
-  end
+  PR->>DB: 读取用户、同租户角色和权限
+  PR->>PR: 聚合权限码 + 校验用户启用状态
   PR-->>C: 守卫校验通过 / 403
 ```
 
@@ -107,18 +103,27 @@ sequenceDiagram
 ```mermaid
 flowchart LR
   REQ[请求] --> JG[JwtAuthGuard]
-  JG -->|@Public 跳过| PASS1[放行]
-  JG -->|校验 access 令牌| PG[PermissionsGuard]
+  JG -->|@Public / @TenantPublic 跳过 JWT| TG[TenantAccessGuard]
+  JG -->|校验 access 令牌| TG
+  TG -->|解析公开租户/核对 JWT 与 header| PG[PermissionsGuard]
   PG -->|无 @Permissions 要求| PASS2[放行]
   PG -->|isSuper=true| PASS3[放行]
   PG -->|拥有所需权限码| PASS4[放行]
   PG -->|否则| DENY[403 Forbidden]
 ```
 
-- `@Public()`：标记免鉴权端点（登录、注册、刷新）。
+- `@TenantPublic()`：登录、注册、刷新和公开业务接口免 JWT，但必须解析并校验租户。
+- `@Public()`：仅用于支付、充值等由业务标识恢复租户且依赖外部签名的回调。
+- `@PlatformOnly()`：只有默认租户的 `admin` 超级管理员可访问。
 - `@Permissions(code)`：声明端点所需权限码，由 `PermissionsGuard` 校验。
 - `@CurrentUser()`：将解析出的登录身份注入控制器方法参数。
-- **超管 bypass**：`isSuper` 为真时所有权限校验直接放行；其 profile 的显式 `permissions` 为空，前端据 `isSuper` 字段同步放行（见 [frontend.md](./frontend.md)）。
+- **超管 bypass**：用户和 `admin` 角色必须都属于固定默认租户才产生 `isSuper`；子租户
+  创建同名角色不能越权。其 profile 的显式 `permissions` 为空，前端据 `isSuper` 放行。
+- **租户管理员边界**：内置 `tenant_admin` 不授予租户/权限目录，也不授予会员等级、
+  打手等级、押金策略、实名策略和邀请奖励五类平台全局写权限；对应 Controller 同时由
+  `@PlatformOnly()` 作后端二次保护。
+- **内置角色生命周期**：`admin`、`tenant_admin`、`member`、`service`、`booster` 由系统播种或领域流程
+  维护，通用删除接口返回 409；自定义角色仍可删除。
 
 ## 权限颗粒度
 
@@ -132,10 +137,11 @@ flowchart LR
 
 ## 设计要点
 
-- **解析器 + 缓存**：`PermissionResolver` 把"用户→角色→权限码"的多表聚合结果缓存到 Redis，避免每次请求重复 JOIN。角色权限关系变化后必须复用解析器的单用户或全量失效能力，禁止业务/播种代码跨层操作 Redis key；缓存服务异常时不阻断权限持久化，最迟由 600 秒 TTL 收敛。
+- **实时权限解析**：`PermissionResolver` 聚合“用户→同租户角色→权限码”，同时返回用户启用状态、真实租户和默认租户超管判定；角色权限关系变化无需等待缓存失效。
 - **端口-适配器**：用例只依赖仓储接口，TypeORM 实现可替换。
 - **用例粒度**：20 个动作各自独立文件，符合"一个函数只做一件事"。
 - **密码安全**：`password.service` 用 bcrypt，明文密码不落库、不出现在响应。
+- **租户开通事务**：`TenantProvisioningTransaction` 端口保证租户、四类内置角色和初始管理员账号同事务创建；初始管理员密码必填且强度由 contracts 常量统一校验。
 
 ## 相关端点
 

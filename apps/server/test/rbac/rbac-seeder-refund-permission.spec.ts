@@ -67,6 +67,8 @@ test('RbacSeeder 补齐所有存量租户管理员退款权限后立即失效缓
     findById: async (id) => roles.find((role) => role.id === id) ?? null,
     findByIds: async (ids) => roles.filter((role) => ids.includes(role.id)),
     findByCode: async (code) => roles.find((role) => role.code === code) ?? null,
+    findByCodeForTenant: async (code, tenantId) =>
+      roles.find((role) => role.code === code && role.tenantId === tenantId) ?? null,
     findAllByCode: async (code) => roles.filter((role) => role.code === code),
     existsByCode: async (code) => roles.some((role) => role.code === code),
     paginate: async () => [roles, roles.length],
@@ -93,6 +95,7 @@ test('RbacSeeder 补齐所有存量租户管理员退款权限后立即失效缓
     findById: async (id) => (id === DEFAULT_TENANT_ID ? tenant : null),
     findByCode: async () => tenant,
     findByIds: async () => [tenant],
+    findAll: async () => [tenant],
     existsByCode: async () => true,
     paginate: async () => [[tenant], 1],
     create: (data) => Object.assign(new TenantEntity(), data),

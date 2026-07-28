@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/auth.store';
  * 判定逻辑集中一处，路由表只声明 meta.requiresAuth，互不耦合。
  */
 export function registerAuthGuard(router: Router): void {
-  router.beforeEach((to) => {
+  router.beforeEach(async (to) => {
     const auth = useAuthStore();
 
     if (to.meta.requiresAuth && !auth.isAuthenticated) {
@@ -17,6 +17,14 @@ export function registerAuthGuard(router: Router): void {
 
     if (to.name === 'login' && auth.isAuthenticated) {
       return { name: 'home' };
+    }
+
+    if (to.meta.requiresAuth && auth.isAuthenticated && !auth.loaded) {
+      try {
+        await auth.loadProfile();
+      } catch {
+        return { name: 'login', query: { redirect: to.fullPath } };
+      }
     }
 
     return true;

@@ -38,15 +38,17 @@ USER node
 
 EXPOSE 3000
 
-CMD ["node", "main.js"]
+CMD ["node", "main.js", "start"]
 
 FROM workspace AS frontend-build
 
 ARG VITE_API_BASE_URL=/api
 ARG VITE_WS_BASE_URL=
+ARG VITE_CLIENT_BASE_URL=
 
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 ENV VITE_WS_BASE_URL=${VITE_WS_BASE_URL}
+ENV VITE_CLIENT_BASE_URL=${VITE_CLIENT_BASE_URL}
 
 RUN pnpm --filter @app/contracts build \
   && pnpm --filter @app/web build \

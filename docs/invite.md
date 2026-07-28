@@ -55,7 +55,7 @@ apps/client/src/
 | GET | /invite/mine | 我的邀请（码/奖励说明/记录） | 登录 |
 | POST | /invite/bind | 填码绑定邀请关系并发放奖励 | 登录 |
 | GET | /invite/admin/config | 读取邀请奖励配置 | invite:config:set |
-| PUT | /invite/admin/config | 保存邀请奖励配置 | invite:config:set |
+| PUT | /invite/admin/config | 保存全局邀请奖励配置 | 平台超管 + invite:config:set |
 | GET | /invite/admin/records | 分页查询邀请记录 | invite:record:list |
 
 ## 设计要点
