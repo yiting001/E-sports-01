@@ -1,14 +1,7 @@
-import {
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { DEFAULT_TENANT_CODE, TenantStatus } from '@app/contracts';
 import { TenantEntity } from '../domain/tenant.entity';
-import {
-  TENANT_REPOSITORY,
-  TenantRepository,
-} from '../domain/tenant-repository.interface';
+import { TENANT_REPOSITORY, TenantRepository } from '../domain/tenant-repository.interface';
 
 /**
  * 租户解析服务。
@@ -17,20 +10,15 @@ import {
  */
 @Injectable()
 export class TenantResolver {
-  constructor(
-    @Inject(TENANT_REPOSITORY) private readonly tenantRepo: TenantRepository,
-  ) {}
+  constructor(@Inject(TENANT_REPOSITORY) private readonly tenantRepo: TenantRepository) {}
 
   /**
    * 登录用：把可选租户编码解析为租户 id。
-   * 编码为空时返回 undefined（按全局解析，兼容单租户/默认租户）。
+   * 编码为空时解析默认租户，避免公开认证查询退化为全库查询。
    */
-  async resolveOptionalId(code?: string): Promise<string | undefined> {
+  async resolveOptionalId(code?: string): Promise<string> {
     const trimmed = code?.trim();
-    if (!trimmed) {
-      return undefined;
-    }
-    const tenant = await this.tenantRepo.findByCode(trimmed);
+    const tenant = await this.tenantRepo.findByCode(trimmed || DEFAULT_TENANT_CODE);
     if (!tenant || tenant.status !== TenantStatus.Enabled) {
       throw new UnauthorizedException('租户不存在或已停用');
     }
@@ -55,8 +43,8 @@ export class TenantResolver {
   /** 校验指定租户处于启用状态，否则拒绝登录 */
   async assertTenantEnabled(tenantId: string): Promise<void> {
     const tenant = await this.tenantRepo.findById(tenantId);
-    if (tenant && tenant.status !== TenantStatus.Enabled) {
-      throw new UnauthorizedException('所属租户已停用');
+    if (!tenant || tenant.status !== TenantStatus.Enabled) {
+      throw new UnauthorizedException('所属租户不存在或已停用');
     }
   }
 

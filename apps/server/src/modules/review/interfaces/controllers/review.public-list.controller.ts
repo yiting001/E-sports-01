@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ProductReviewPage } from '@app/contracts';
 import { ListProductReviewsUseCase } from '../../application/use-cases/list-product-reviews.usecase';
-import { Public } from '../../../rbac/interfaces/auth/public.decorator';
+import { TenantPublic } from '../../../rbac/interfaces/auth/tenant-public.decorator';
 import { PaginationQueryDto } from '../../../../shared/http/pagination.dto';
 
 /**
@@ -13,16 +13,11 @@ export class ReviewPublicListController {
   constructor(private readonly useCase: ListProductReviewsUseCase) {}
 
   @Get(':productId')
-  @Public()
+  @TenantPublic()
   list(
     @Param('productId') productId: string,
     @Query() query: PaginationQueryDto,
   ): Promise<ProductReviewPage> {
-    return this.useCase.execute(
-      productId,
-      query.page,
-      query.pageSize,
-      query.skip,
-    );
+    return this.useCase.execute(productId, query.page, query.pageSize, query.skip);
   }
 }

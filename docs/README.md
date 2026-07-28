@@ -7,8 +7,9 @@
 
 | 模块 | 文档 | 一句话说明 |
 | --- | --- | --- |
-| 配置中心 | [config-center.md](./config-center.md) | 除连接信息外的全部可调参数集中入库 + Redis 缓存，消除硬编码 |
+| 配置中心 | [config-center.md](./config-center.md) | 可调参数集中入库 + Redis 缓存，五项站点配置按租户覆盖，基础设施配置保持平台全局 |
 | RBAC 权限 | [rbac.md](./rbac.md) | 用户/角色/权限三层模型，JWT 双令牌，API/菜单/按钮级颗粒度 |
+| 多租户隔离 | [multi-tenant.md](./multi-tenant.md) | HTTP/JWT/IM 行级数据隔离、租户站点入口、配置覆盖、平台权限边界与 migration |
 | 文件上传 | [upload.md](./upload.md) | 策略模式，local 默认 / oss 可切，驱动由配置中心选择 |
 | 短信登录 | [sms.md](./sms.md) | 多云短信、开发固定码、生产安全门、Redis 原子限流与一次性验证码 |
 | WebSocket IM | [im.md](./im.md) | JWT 握手鉴权、会话收发、订单群标题、成员安全展示名、历史手机号脱敏及 C 端未读角标 |

@@ -1,23 +1,25 @@
 <script setup lang="ts">
-import type { CreateTenantPayload } from '@app/contracts';
-import { CircleCheckFilled } from '@element-plus/icons-vue';
+import type { CreateTenantPayload } from "@app/contracts";
+import { CircleCheckFilled } from "@element-plus/icons-vue";
+import { TENANT_ADMIN_PASSWORD_HINT } from "./tenant-credentials";
 
 const props = defineProps<{
   modelValue: boolean;
   form: CreateTenantPayload;
+  submitting: boolean;
 }>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean];
-  'update:form': [value: CreateTenantPayload];
+  "update:modelValue": [value: boolean];
+  "update:form": [value: CreateTenantPayload];
   submit: [];
 }>();
 
 function updateField<K extends keyof CreateTenantPayload>(
   key: K,
-  value: CreateTenantPayload[K],
+  value: CreateTenantPayload[K]
 ): void {
-  emit('update:form', { ...props.form, [key]: value });
+  emit("update:form", { ...props.form, [key]: value });
 }
 </script>
 
@@ -70,12 +72,16 @@ function updateField<K extends keyof CreateTenantPayload>(
             @update:model-value="(value: string) => updateField('adminUsername', value)"
           />
         </el-form-item>
-        <el-form-item label="管理员密码">
+        <el-form-item
+          label="管理员密码"
+          required
+        >
           <el-input
             :model-value="form.adminPassword"
             type="password"
             show-password
-            placeholder="选填，默认平台初始密码"
+            autocomplete="new-password"
+            :placeholder="TENANT_ADMIN_PASSWORD_HINT"
             @update:model-value="(value: string) => updateField('adminPassword', value)"
           />
         </el-form-item>
@@ -88,6 +94,7 @@ function updateField<K extends keyof CreateTenantPayload>(
         </el-button>
         <el-button
           type="primary"
+          :loading="submitting"
           @click="emit('submit')"
         >
           确定创建

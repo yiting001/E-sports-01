@@ -12,6 +12,7 @@ import { ConversationMemberEntity } from '../../src/modules/im/domain/conversati
 import { ImGateway } from '../../src/modules/im/interfaces/ws/im.gateway';
 import { TraceContextService } from '../../src/modules/observability/application/trace-context.service';
 import type { PermissionResolver } from '../../src/modules/rbac/application/permission-resolver.service';
+import type { TenantResolver } from '../../src/modules/rbac/application/tenant-resolver.service';
 import type { TokenService } from '../../src/modules/rbac/application/token.service';
 import { TenantContextService } from '../../src/shared/tenant/tenant-context.service';
 
@@ -19,6 +20,80 @@ interface EmittedEvent {
   event: string;
   payload: unknown;
 }
+
+interface GatewayAuthOptions {
+  authEnabled?: boolean;
+  authTenantId?: string;
+  payloadTenantId?: string;
+  payloadType?: 'access' | 'refresh';
+  tenantEnabled?: boolean;
+}
+
+test('IM 握手拒绝刷新令牌和用户真实租户不一致的访问令牌', async () => {
+  const refresh = await createGatewayHarness(false, false, [], {
+    payloadType: 'refresh',
+  });
+  assert.equal(refresh.socket.connected, false);
+
+  const crossTenant = await createGatewayHarness(false, false, [], {
+    authTenantId: 'tenant-2',
+    payloadTenantId: 'tenant-1',
+  });
+  assert.equal(crossTenant.socket.connected, false);
+
+  const disabledUser = await createGatewayHarness(false, false, [], {
+    authEnabled: false,
+  });
+  assert.equal(disabledUser.socket.connected, false);
+
+  const disabledTenant = await createGatewayHarness(false, false, [], {
+    tenantEnabled: false,
+  });
+  assert.equal(disabledTenant.socket.connected, false);
+});
+
+test('IM 每次入站事件都重新校验账号状态并拒绝停用后的旧连接', async () => {
+  const authState: GatewayAuthOptions = {};
+  const harness = await createGatewayHarness(false, false, [], authState);
+  authState.authEnabled = false;
+
+  const result = await harness.gateway.onMarkRead(harness.socket, {
+    conversationId: 'conversation-1',
+    messageId: 'message-1',
+  });
+
+  assert.equal(result, false);
+  assert.equal(harness.socket.connected, false);
+  assert.deepEqual(harness.accessChecks, []);
+  assert.deepEqual(harness.markReadCalls, []);
+});
+
+test('IM 每次入站事件都拒绝真实租户发生变化的旧连接', async () => {
+  const authState: GatewayAuthOptions = {};
+  const harness = await createGatewayHarness(false, false, [], authState);
+  authState.authTenantId = 'tenant-2';
+
+  await harness.gateway.onSend(harness.socket, {
+    conversationId: 'conversation-1',
+    type: MessageType.Text,
+    content: '不应发送',
+  });
+
+  assert.equal(harness.socket.connected, false);
+  assert.deepEqual(harness.sendMessageCalls, []);
+});
+
+test('IM 每次入站事件都重新校验租户状态并拒绝停用后的旧连接', async () => {
+  const authState: GatewayAuthOptions = {};
+  const harness = await createGatewayHarness(false, false, [], authState);
+  authState.tenantEnabled = false;
+
+  const history = await harness.gateway.onJoin(harness.socket, 'conversation-1');
+
+  assert.deepEqual(history, []);
+  assert.equal(harness.socket.connected, false);
+  assert.deepEqual(harness.accessChecks, []);
+});
 
 test('成员标记已读成功调用用例，越权失败不推进已读位点', async () => {
   const allowed = await createGatewayHarness(false);
@@ -82,6 +157,7 @@ async function createGatewayHarness(
   denyAccess: boolean,
   serviceAgent = false,
   historyMessages: ChatMessage[] = [],
+  authOptions: GatewayAuthOptions = {},
 ): Promise<{
   accessChecks: string[];
   emitted: EmittedEvent[];
@@ -89,6 +165,7 @@ async function createGatewayHarness(
   joinedRooms: string[];
   markReadCalls: string[];
   realtime: ChatRealtimeService;
+  sendMessageCalls: string[];
   socket: Parameters<ImGateway['onMarkRead']>[0];
 }> {
   const tokens: Pick<TokenService, 'verifyAccess'> = {
@@ -96,18 +173,27 @@ async function createGatewayHarness(
       return {
         sub: 'user-1',
         username: 'operator',
-        tenantId: 'tenant-1',
-        type: 'access',
+        tenantId: authOptions.payloadTenantId ?? 'tenant-1',
+        type: authOptions.payloadType ?? 'access',
       };
     },
   };
   const permissions: Pick<PermissionResolver, 'resolve'> = {
     async resolve() {
       return {
+        tenantId: authOptions.authTenantId ?? 'tenant-1',
+        enabled: authOptions.authEnabled ?? true,
         roles: [],
         permissions: serviceAgent ? [PERMS.im.serviceAgent] : [],
         isSuper: false,
       };
+    },
+  };
+  const tenants: Pick<TenantResolver, 'assertTenantEnabled'> = {
+    async assertTenantEnabled() {
+      if (authOptions.tenantEnabled === false) {
+        throw new Error('所属租户已停用');
+      }
     },
   };
   const accessChecks: string[] = [];
@@ -129,9 +215,20 @@ async function createGatewayHarness(
       markReadCalls.push(`${conversationId}:${userId}:${messageId}`);
     },
   };
+  const sendMessageCalls: string[] = [];
   const sendMessage: Pick<SendMessageUseCase, 'execute'> = {
-    async execute() {
-      throw new Error('本测试不调用发送消息');
+    async execute(payload, senderId) {
+      sendMessageCalls.push(`${payload.conversationId}:${senderId}:${payload.content}`);
+      return {
+        id: 'message-sent-1',
+        conversationId: payload.conversationId,
+        senderId,
+        type: payload.type,
+        content: payload.content,
+        mentions: null,
+        replyTo: null,
+        createdAt: 1,
+      };
     },
   };
   const history: Pick<GetHistoryUseCase, 'execute'> = {
@@ -150,7 +247,7 @@ async function createGatewayHarness(
       isSuper: false,
     },
     disconnect(): void {
-      return undefined;
+      this.connected = false;
     },
     emit(event: string, payload: unknown): void {
       emitted.push({ event, payload });
@@ -166,6 +263,7 @@ async function createGatewayHarness(
   const gateway = new ImGateway(
     tokens as TokenService,
     permissions as PermissionResolver,
+    tenants as TenantResolver,
     sendMessage as SendMessageUseCase,
     history as GetHistoryUseCase,
     markRead as MarkReadUseCase,
@@ -184,6 +282,7 @@ async function createGatewayHarness(
     joinedRooms,
     markReadCalls,
     realtime,
+    sendMessageCalls,
     socket,
   };
 }

@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import type { TenantView } from '@app/contracts';
-import { PERMS, TenantStatus } from '@app/contracts';
-import { Clock, Delete, EditPen, Plus, Refresh, Search } from '@element-plus/icons-vue';
-import AppDataTable from '@/components/common/AppDataTable.vue';
-import AppPanel from '@/components/common/AppPanel.vue';
-import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
+import type { TenantView } from "@app/contracts";
+import { PERMS, TenantStatus } from "@app/contracts";
+import {
+  Clock,
+  EditPen,
+  Plus,
+  Refresh,
+  Search,
+  TopRight,
+} from "@element-plus/icons-vue";
+import AppDataTable from "@/components/common/AppDataTable.vue";
+import AppPanel from "@/components/common/AppPanel.vue";
+import { PAGE_SIZE_OPTIONS } from "@/config/pagination";
 
 defineProps<{
   list: TenantView[];
@@ -18,14 +25,14 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  'update:keyword': [value: string];
-  'update:page': [value: number];
+  "update:keyword": [value: string];
+  "update:page": [value: number];
   search: [];
   reset: [];
   create: [];
   edit: [row: TenantView];
-  remove: [row: TenantView];
-  'update:pageSize': [value: number];
+  visit: [row: TenantView];
+  "update:pageSize": [value: number];
 }>();
 </script>
 
@@ -86,7 +93,9 @@ const emit = defineEmits<{
       >
         <template #default="{ row }">
           <div class="tenant-identity">
-            <span class="tenant-avatar">{{ row.code.slice(0, 2).toUpperCase() }}</span>
+            <span class="tenant-avatar">{{
+              row.code.slice(0, 2).toUpperCase()
+            }}</span>
             <div>
               <strong>{{ row.name }}</strong>
               <small>{{ row.code }}</small>
@@ -113,7 +122,7 @@ const emit = defineEmits<{
       >
         <template #default="{ row }">
           <span :class="['tenant-type', row.builtin ? 'is-builtin' : '']">
-            {{ row.builtin ? '内置租户' : '普通租户' }}
+            {{ row.builtin ? "内置租户" : "普通租户" }}
           </span>
         </template>
       </el-table-column>
@@ -124,7 +133,7 @@ const emit = defineEmits<{
         show-overflow-tooltip
       >
         <template #default="{ row }">
-          <span class="tenant-muted">{{ row.remark || '暂无备注' }}</span>
+          <span class="tenant-muted">{{ row.remark || "暂无备注" }}</span>
         </template>
       </el-table-column>
       <el-table-column
@@ -140,10 +149,19 @@ const emit = defineEmits<{
       </el-table-column>
       <el-table-column
         label="操作"
-        width="160"
+        width="180"
       >
         <template #default="{ row }">
           <div class="tenant-actions">
+            <el-button
+              type="primary"
+              link
+              :icon="TopRight"
+              :disabled="row.status !== TenantStatus.Enabled"
+              @click="emit('visit', row)"
+            >
+              访问站点
+            </el-button>
             <el-button
               v-permission="PERMS.tenant.update"
               type="primary"
@@ -152,16 +170,6 @@ const emit = defineEmits<{
               @click="emit('edit', row)"
             >
               编辑
-            </el-button>
-            <el-button
-              v-permission="PERMS.tenant.remove"
-              type="danger"
-              link
-              :icon="Delete"
-              :disabled="row.builtin"
-              @click="emit('remove', row)"
-            >
-              删除
             </el-button>
           </div>
         </template>

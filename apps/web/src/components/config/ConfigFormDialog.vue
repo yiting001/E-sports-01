@@ -18,6 +18,7 @@ const props = defineProps<{
   isEdit: boolean;
   valueTypes: ConfigValueType[];
   groups: ConfigFormModel['group'][];
+  metadataEditable: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -77,7 +78,10 @@ function updateForm(patch: Partial<ConfigFormModel>): void {
           @update:model-value="(value: string) => updateForm({ value })"
         />
       </el-form-item>
-      <el-form-item label="类型">
+      <el-form-item
+        v-if="metadataEditable"
+        label="类型"
+      >
         <el-select
           :model-value="form.type"
           @update:model-value="(value: ConfigValueType) => updateForm({ type: value })"
@@ -90,7 +94,10 @@ function updateForm(patch: Partial<ConfigFormModel>): void {
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="分组">
+      <el-form-item
+        v-if="metadataEditable"
+        label="分组"
+      >
         <el-select
           :model-value="form.group"
           @update:model-value="(value: ConfigFormModel['group']) => updateForm({ group: value })"
@@ -103,14 +110,20 @@ function updateForm(patch: Partial<ConfigFormModel>): void {
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="备注">
+      <el-form-item
+        v-if="metadataEditable"
+        label="备注"
+      >
         <el-input
           :model-value="form.remark"
           placeholder="用于说明配置用途"
           @update:model-value="(value: string) => updateForm({ remark: value })"
         />
       </el-form-item>
-      <el-form-item label="敏感项">
+      <el-form-item
+        v-if="metadataEditable"
+        label="敏感项"
+      >
         <el-switch
           :model-value="form.secret"
           @update:model-value="(value: boolean) => updateForm({ secret: value })"

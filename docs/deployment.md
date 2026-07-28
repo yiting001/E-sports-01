@@ -62,7 +62,7 @@ cp .env.docker.example .env
 cp apps/server/.env.example apps/server/.env
 ```
 
-至少修改根目录 `.env` 中的 `POSTGRES_PASSWORD`，以及 `apps/server/.env` 中的 `JWT_SECRET`、`JWT_REFRESH_SECRET`、`SEED_ADMIN_PASSWORD`。数据库地址和 Redis 地址会由 Compose 覆盖为容器服务名。
+至少修改根目录 `.env` 中的 `POSTGRES_PASSWORD`，以及 `apps/server/.env` 中的 `JWT_SECRET`、`JWT_REFRESH_SECRET`、`SEED_ADMIN_PASSWORD`。数据库地址和 Redis 地址会由 Compose 覆盖为容器服务名。`VITE_CLIENT_BASE_URL` 必须是管理端用户的浏览器能访问的 C 端地址；示例默认为本机 `http://127.0.0.1:8081`。
 
 构建并启动：
 
@@ -84,6 +84,7 @@ HOST_BIND=0.0.0.0 \
 WEB_HOST_PORT=80 \
 CLIENT_HOST_PORT=8081 \
 SERVER_HOST_PORT=3003 \
+VITE_CLIENT_BASE_URL=https://client.example.com \
 docker compose up -d
 ```
 
@@ -154,6 +155,7 @@ JWT_REFRESH_SECRET=<强随机密钥>
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:3000/api
 VITE_WS_BASE_URL=http://127.0.0.1:3000
+VITE_CLIENT_BASE_URL=http://127.0.0.1:5174
 ```
 
 生产环境建议把 `VITE_API_BASE_URL` 和 `VITE_WS_BASE_URL` 改为正式域名，例如：
@@ -161,6 +163,7 @@ VITE_WS_BASE_URL=http://127.0.0.1:3000
 ```env
 VITE_API_BASE_URL=https://api.example.com/api
 VITE_WS_BASE_URL=https://api.example.com
+VITE_CLIENT_BASE_URL=https://client.example.com
 ```
 
 ### 4. 构建
@@ -425,6 +428,58 @@ server {
 ```
 
 ## 常见问题
+
+### 多租户配置表升级
+
+本次站点配置隔离新增 `sys_tenant_config_override`。标准环境使用
+`1784995200000-add-tenant-config-overrides.ts`：升级时复制所有存量租户的五个站点展示
+配置，之后各租户独立修改；回滚检测到有效值分歧时会拒绝。
+
+当前生产库已确认没有 `typeorm_migrations` 表。由于九条前置 migration 包含会员
+消费重算、退款尝试回填和不可逆 IM 脱敏，不能仅凭字段存在就伪造“已执行”
+历史。在该现状下，禁止直接运行 `migration:run`，也禁止直接执行建表 SQL。
+先备份数据库，再执行一次性只读核验：
+
+```bash
+runuser -u postgres -- /www/server/pgsql/bin/psql -d esports \
+  -f apps/server/src/database/sql/audit-migration-baseline.sql
+```
+
+核验脚本只输出九条前置 migration 的 history、结构证据和数据一致性统计，不会
+创建表、修改业务数据或写入 history。将完整输出回传后，再逐条核对并生成针对
+该生产库的 baseline SQL；未核对前不提供批量 `INSERT typeorm_migrations`。
+
+只有 `typeorm_migrations` 表存在、九条前置记录的时间戳与类名全部成对，且本次
+记录尚不存在时，才可执行：
+
+```bash
+runuser -u postgres -- /www/server/pgsql/bin/psql -d esports \
+  -f apps/server/src/database/sql/1784995200000-add-tenant-config-overrides.sql
+```
+
+建表脚本会在单一事务内取得与 TypeORM migration 相同的 advisory lock，回填存量
+子租户、验证结构，对齐 `sys_config` 的 owner 与 CRUD 授权，最后登记本次 history。
+前置历史不完整、本次已登记、缺少父表或默认租户时整笔回滚。应用启动前确认：
+
+```sql
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'sys_tenant_config_override'
+ORDER BY ordinal_position;
+
+SELECT "timestamp", "name"
+FROM typeorm_migrations
+WHERE "timestamp" = 1784995200000
+  AND "name" = 'AddTenantConfigOverrides1784995200000';
+```
+
+预期表存在，并含 `tenant_id`、`key`、`value`；`(tenant_id, key)` 必须唯一，
+`tenant_id` 必须外键引用 `sys_tenant(id)`。完整模型和回滚规则见
+[multi-tenant.md](./multi-tenant.md)。
+
+脚本末尾还会输出新表授权。生产应用角色（当前环境为 `esports`，或它继承的数据库角色）
+必须拥有上述四项权限，且新表 owner 必须与 `sys_config` 一致；缺失时不要启动新版本服务。
 
 ### 1. contracts 类型没更新
 

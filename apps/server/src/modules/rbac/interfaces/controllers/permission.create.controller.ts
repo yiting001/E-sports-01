@@ -4,10 +4,12 @@ import { CreatePermissionUseCase } from '../../application/use-cases/create-perm
 import { buildPermissionTree } from '../../application/permission.mapper';
 import { PERMS } from '../../domain/permission-codes';
 import { Permissions } from '../auth/permissions.decorator';
+import { PlatformOnly } from '../auth/platform-only.decorator';
 import { CreatePermissionDto } from '../dto/create-permission.dto';
 
 /** 路由：新建权限（菜单/按钮/接口统一权限树节点） */
 @Controller('rbac/permissions')
+@PlatformOnly()
 export class PermissionCreateController {
   constructor(private readonly useCase: CreatePermissionUseCase) {}
 

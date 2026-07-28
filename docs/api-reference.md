@@ -1,7 +1,9 @@
 # API 参考
 
-全局前缀 `/api`。除标注 **公开** 外，所有端点需在请求头携带 `Authorization: Bearer <accessToken>`，
-并满足对应的权限码（超管自动放行）。响应统一包装为 `ApiResponse<T>`：
+全局前缀 `/api`。除支付/充值回调外，租户业务请求还需携带
+`X-Tenant-Code: <tenantCode>`；缺省只使用 `default`，不会查询全部租户。除标注 **公开** 外，
+所有端点需在请求头携带 `Authorization: Bearer <accessToken>`，并满足对应的权限码。
+登录后请求头租户必须与 JWT 租户一致。响应统一包装为 `ApiResponse<T>`：
 
 ```jsonc
 { "code": 0, "message": "ok", "data": <T>, "timestamp": 1782447482340 }
@@ -13,11 +15,11 @@
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| POST | `/api/auth/register` | 公开 | 注册用户 `{ username, password, nickname?, phone? }`（phone 选填绑定） |
-| POST | `/api/auth/login` | 公开 | 登录 `{ account, password }`（account 为用户名或手机号），返回 `{ accessToken, refreshToken }` |
-| POST | `/api/auth/refresh` | 公开 | 用 refresh 令牌换发新双令牌 |
-| POST | `/api/auth/sms/code` | 公开 | 发送登录短信验证码 `{ phone }` → `{ cooldown }`（仅已绑定启用账号） |
-| POST | `/api/auth/sms/login` | 公开 | 短信验证码登录 `{ phone, code }`，返回双令牌 |
+| POST | `/api/auth/register` | 公开 | 当前租户注册 `{ username, password, nickname?, phone?, tenantCode? }` |
+| POST | `/api/auth/login` | 公开 | 当前租户登录 `{ account, password, tenantCode? }`，返回双令牌 |
+| POST | `/api/auth/refresh` | 公开 | 当前站点租户与 refresh token 租户一致时换发新双令牌 |
+| POST | `/api/auth/sms/code` | 公开 | 当前租户发送登录验证码 `{ phone, tenantCode? }` → `{ cooldown }` |
+| POST | `/api/auth/sms/login` | 公开 | 当前租户短信登录 `{ phone, code, tenantCode? }`，返回双令牌 |
 | GET | `/api/auth/profile` | 登录 | 当前用户 `{ id, username, nickname, avatar, phone, roles[], permissions[], isSuper }` |
 | PUT | `/api/auth/profile` | 登录 | 自助更新本人资料 `{ nickname?, avatar?, phone? }`（手机号唯一校验，传空串解绑），返回更新后的 `UserView` |
 
@@ -35,9 +37,11 @@
 | 方法 | 路径 | 权限码 |
 | --- | --- | --- |
 | GET | `/api/rbac/tenants` | `rbac:tenant:list` |
-| POST | `/api/rbac/tenants` | `rbac:tenant:create` |
+| POST | `/api/rbac/tenants` | `rbac:tenant:create`；需传独立强密码 `adminPassword` |
 | PATCH | `/api/rbac/tenants/:id` | `rbac:tenant:update` |
-| DELETE | `/api/rbac/tenants/:id` | `rbac:tenant:remove` |
+| DELETE | `/api/rbac/tenants/:id` | `rbac:tenant:remove`；当前统一返回 400，禁止物理删除 |
+
+`DELETE` 当前明确拒绝物理删除租户；请使用 `PATCH` 停用，避免留下无法完整清理的业务数据、文件、缓存和索引。
 
 > 多租户行级隔离设计见 [multi-tenant.md](./multi-tenant.md)。
 
@@ -56,9 +60,10 @@
 | 方法 | 路径 | 权限码 |
 | --- | --- | --- |
 | GET | `/api/rbac/roles` | `rbac:role:list` |
+| GET | `/api/rbac/roles/grantable-permissions` | `rbac:role:assignPermissions`；按当前操作者过滤可授予权限 |
 | POST | `/api/rbac/roles` | `rbac:role:create` |
 | PATCH | `/api/rbac/roles/:id` | `rbac:role:update` |
-| DELETE | `/api/rbac/roles/:id` | `rbac:role:remove` |
+| DELETE | `/api/rbac/roles/:id` | `rbac:role:remove`；内置角色返回 409 |
 | POST | `/api/rbac/roles/:id/permissions` | `rbac:role:assignPermissions` |
 
 ### 权限
@@ -82,8 +87,8 @@
 | --- | --- | --- | --- |
 | GET | `/api/config/branding` | 公开 | 品牌信息 `{ appName, appLogo }`，登录前可读 |
 | GET | `/api/config` | `config:list` | 列表（密钥项值脱敏 `******`） |
-| POST | `/api/config` | `config:save` | 新增/更新（upsert），写后失效缓存 |
-| DELETE | `/api/config/:key` | `config:remove` | 删除并失效缓存 |
+| POST | `/api/config` | `config:save` | 新增/更新（upsert）；默认租户非超管返回 403 |
+| DELETE | `/api/config/:key` | `config:remove` | 删除并失效缓存；默认租户非超管返回 403 |
 
 ```jsonc
 // POST /api/config 请求
@@ -177,7 +182,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | GET | `/api/realname` | `realname:list` | 分页审核列表 `?page&pageSize&status`，按提交时间倒序 |
 | POST | `/api/realname/:id/review` | `realname:review` | 审核 `{ approve, rejectReason? }`（驳回必填理由；仅待审核记录可审） |
 | GET | `/api/realname/policy` | `realname:policy` | 读取需实名的角色集合 `{ requiredRoleCodes }` |
-| PUT | `/api/realname/policy` | `realname:policy` | 设置需实名的角色集合 `{ requiredRoleCodes }` |
+| PUT | `/api/realname/policy` | 平台超管 + `realname:policy` | 设置全局需实名的角色集合 `{ requiredRoleCodes }` |
 
 ```jsonc
 // POST /api/realname  请求
@@ -209,9 +214,9 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | PUT | `/api/booster/:id/voice` | `booster:update` | 管理端 multipart `file` 上传/更换指定打手试听语音 |
 | DELETE | `/api/booster/:id/voice` | `booster:update` | 管理端清空指定打手试听语音 |
 | GET | `/api/booster/levels` | 登录 | 等级档位列表 |
-| PUT | `/api/booster/levels` | `booster:level:set` | 保存等级档位 `{ tiers }` |
+| PUT | `/api/booster/levels` | 平台超管 + `booster:level:set` | 保存全局等级档位 `{ tiers }` |
 | GET | `/api/booster/deposit/policy` | 登录 | 押金策略 `{ minFen, maxFen }` |
-| PUT | `/api/booster/deposit/policy` | `booster:deposit:policy:set` | 保存押金策略 `{ minFen, maxFen }` |
+| PUT | `/api/booster/deposit/policy` | 平台超管 + `booster:deposit:policy:set` | 保存全局押金策略 `{ minFen, maxFen }` |
 | POST | `/api/booster/deposit/pay` | 登录 | 已入驻打手从钱包缴纳 `{ amountFen }` |
 | POST | `/api/booster/:id/deposit/refund` | `booster:deposit:refund` | 管理端全额退还押金 |
 
@@ -266,6 +271,17 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
   "unavailableReason": ""
 }
 ```
+
+## 会员等级与邀请奖励
+
+这两类规则保存在平台全局配置中，读取按原接口权限执行，写入只能由平台超级管理员调用。
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/member/levels` | 登录 | 读取会员等级档位 |
+| PUT | `/api/member/levels` | 平台超管 + `member:level:set` | 保存全局会员等级档位 `{ tiers }` |
+| GET | `/api/invite/admin/config` | `invite:config:set` | 读取邀请奖励配置 |
+| PUT | `/api/invite/admin/config` | 平台超管 + `invite:config:set` | 保存全局邀请奖励配置 |
 
 ## 反馈管理
 

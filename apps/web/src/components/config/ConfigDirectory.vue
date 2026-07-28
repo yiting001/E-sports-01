@@ -15,6 +15,7 @@ defineProps<{
   groupOptions: Array<{ label: string; value: ConfigGroup | ''; count: number }>;
   total: number;
   matchedCount: number;
+  isSuper: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -53,6 +54,7 @@ function typeTone(type: ConfigValueType): string {
           刷新
         </el-button>
         <el-button
+          v-if="isSuper"
           v-permission="PERMS.config.save"
           type="primary"
           :icon="Plus"
@@ -200,7 +202,7 @@ function typeTone(type: ConfigValueType): string {
               :icon="Delete"
               @click="emit('remove', row)"
             >
-              删除
+              {{ isSuper ? '删除' : '恢复默认' }}
             </el-button>
           </div>
         </template>

@@ -44,7 +44,7 @@ export class SmsRegisterUseCase {
     if (await this.userRepo.existsByPhone(payload.phone, undefined, tenantId)) {
       throw new ConflictException('该手机号已注册，请直接登录');
     }
-    const memberRole = await this.roleRepo.findByCode(MEMBER_ROLE);
+    const memberRole = await this.roleRepo.findByCodeForTenant(MEMBER_ROLE, tenantId);
     if (!memberRole) {
       throw new InternalServerErrorException('缺少默认用户角色，请联系管理员');
     }

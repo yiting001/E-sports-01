@@ -12,7 +12,7 @@ export class RealnamePolicyGetController {
   constructor(private readonly useCase: GetRealnamePolicyUseCase) {}
 
   @Get('policy')
-  @Permissions(PERMS.realname.policy)
+  @Permissions(PERMS.realname.policyView)
   get(): Promise<RealnamePolicyView> {
     return this.useCase.execute();
   }

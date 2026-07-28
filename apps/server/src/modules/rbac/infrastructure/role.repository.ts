@@ -40,6 +40,13 @@ export class TypeormRoleRepository implements RoleRepository {
     });
   }
 
+  findByCodeForTenant(code: string, tenantId: string): Promise<Role | null> {
+    return this.repo.findOne({
+      where: { code, tenantId },
+      relations: { permissions: true },
+    });
+  }
+
   findAllByCode(code: string): Promise<Role[]> {
     return this.repo.find({ where: { code }, relations: { permissions: true } });
   }

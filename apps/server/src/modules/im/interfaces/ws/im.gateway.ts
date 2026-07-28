@@ -13,6 +13,7 @@ import { ChatMessage, IM_EVENTS, MarkReadPayload, PERMS, SendMessagePayload } fr
 import { TenantContextService } from '../../../../shared/tenant/tenant-context.service';
 import { TraceContextService } from '../../../observability/application/trace-context.service';
 import { PermissionResolver } from '../../../rbac/application/permission-resolver.service';
+import { TenantResolver } from '../../../rbac/application/tenant-resolver.service';
 import { TokenService } from '../../../rbac/application/token.service';
 import { ChatRealtimeService } from '../../application/chat-realtime.service';
 import { UserPresenceService } from '../../application/user-presence.service';
@@ -42,6 +43,7 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
   constructor(
     private readonly tokens: TokenService,
     private readonly permissions: PermissionResolver,
+    private readonly tenants: TenantResolver,
     private readonly sendMessage: SendMessageUseCase,
     private readonly getHistory: GetHistoryUseCase,
     private readonly markRead: MarkReadUseCase,
@@ -60,8 +62,21 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
    * 在独立链路上下文中执行 WS 消息处理。
    * 每次消息生成新的 traceId/spanId，并带上握手身份，使 WS 行为与 HTTP 一致可追踪。
    */
-  private async runInTrace<T>(socket: AuthedSocket, handler: () => Promise<T>): Promise<T> {
+  private async runInTrace<T>(
+    socket: AuthedSocket,
+    deniedValue: T,
+    handler: () => Promise<T>,
+  ): Promise<T> {
     await this.authReady.get(socket);
+    if (!socket.connected) {
+      return deniedValue;
+    }
+    try {
+      await this.assertCurrentIdentity(socket);
+    } catch {
+      this.deny(socket, '账号或所属租户已失效，请重新登录');
+      return deniedValue;
+    }
     return this.trace.run(
       {
         traceId: TraceContextService.newTraceId(),
@@ -80,6 +95,20 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
     );
   }
 
+  /** 每个入站事件重新读取账号和租户，避免旧连接继续沿用失效身份。 */
+  private async assertCurrentIdentity(socket: AuthedSocket): Promise<void> {
+    const auth = await this.permissions.resolve(socket.data.userId);
+    if (
+      !auth.enabled ||
+      !auth.tenantId ||
+      auth.tenantId !== socket.data.tenantId ||
+      auth.isSuper !== socket.data.isSuper
+    ) {
+      throw new Error('连接身份已失效');
+    }
+    await this.tenants.assertTenantEnabled(auth.tenantId);
+  }
+
   handleConnection(socket: Socket): Promise<void> {
     const ready = this.authenticate(socket);
     this.authReady.set(socket, ready);
@@ -96,16 +125,25 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
     try {
       const payload = await this.tokens.verifyAccess(token);
       const auth = await this.permissions.resolve(payload.sub);
+      if (
+        payload.type !== 'access' ||
+        !auth.enabled ||
+        !auth.tenantId ||
+        auth.tenantId !== payload.tenantId
+      ) {
+        throw new Error('访问令牌对应的用户或租户无效');
+      }
+      await this.tenants.assertTenantEnabled(auth.tenantId);
       (socket as AuthedSocket).data = {
         userId: payload.sub,
-        tenantId: payload.tenantId ?? null,
+        tenantId: auth.tenantId,
         isSuper: auth.isSuper,
       };
       await socket.join(this.realtime.userRoom(payload.sub));
       if (!socket.connected) {
         return;
       }
-      this.presence.register(socket.id, payload.sub, payload.tenantId ?? null);
+      this.presence.register(socket.id, payload.sub, auth.tenantId);
       this.logger.debug(`IM 连接已鉴权：${payload.sub}`);
     } catch {
       this.deny(socket, '访问令牌无效或已过期');
@@ -122,7 +160,7 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
     @ConnectedSocket() socket: AuthedSocket,
     @MessageBody() conversationId: string,
   ): Promise<ChatMessage[]> {
-    return this.runInTrace(socket, async () => {
+    return this.runInTrace<ChatMessage[]>(socket, [], async () => {
       if (!conversationId) {
         return [];
       }
@@ -144,7 +182,7 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
     @ConnectedSocket() socket: AuthedSocket,
     @MessageBody() payload: SendMessagePayload,
   ): Promise<void> {
-    await this.runInTrace(socket, async () => {
+    await this.runInTrace<void>(socket, undefined, async () => {
       try {
         const message = await this.sendMessage.execute(payload, socket.data.userId);
         await this.markRead.execute(message.conversationId, socket.data.userId, message.id);
@@ -161,7 +199,7 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
     @ConnectedSocket() socket: AuthedSocket,
     @MessageBody() payload: MarkReadPayload,
   ): Promise<boolean> {
-    return this.runInTrace(socket, async () => {
+    return this.runInTrace<boolean>(socket, false, async () => {
       if (
         !payload ||
         typeof payload.conversationId !== 'string' ||
@@ -185,13 +223,13 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
   /** 管理端布局只观察队列变化，不进入自动分配在线索引。 */
   @SubscribeMessage(IM_EVENTS.observeService)
   async onObserveService(@ConnectedSocket() socket: AuthedSocket): Promise<void> {
-    await this.runInTrace(socket, () => this.subscribeService(socket, false));
+    await this.runInTrace<void>(socket, undefined, () => this.subscribeService(socket, false));
   }
 
   /** 客服工作台订阅队列：校验权限后加入租户房间并登记在线。 */
   @SubscribeMessage(IM_EVENTS.watchService)
   async onWatchService(@ConnectedSocket() socket: AuthedSocket): Promise<void> {
-    await this.runInTrace(socket, () => this.subscribeService(socket, true));
+    await this.runInTrace<void>(socket, undefined, () => this.subscribeService(socket, true));
   }
 
   private async subscribeService(
@@ -227,6 +265,8 @@ export class ImGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayD
   }
 
   private deny(socket: Socket, reason: string): void {
+    this.realtime.unregisterAgent(socket.id);
+    this.presence.unregister(socket.id);
     socket.emit(IM_EVENTS.error, { message: reason });
     socket.disconnect(true);
   }

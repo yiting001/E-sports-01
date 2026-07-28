@@ -45,7 +45,7 @@ C 端：`client/views/profile/RealnameView.vue`（路由 `/profile/realname`，�
 | `realname:menu`   | 实名管理（菜单） | 前端动态路由 `/realname`（管理后台）                |
 | `realname:list`   | 实名-审核列表    | `GET /realname`                                     |
 | `realname:review` | 实名-审核        | `POST /realname/:id/review`                         |
-| `realname:policy` | 实名-策略配置    | `GET /realname/policy`、`PUT /realname/policy`      |
+| `realname:policy` | 实名-策略配置    | GET 可授权读取；平台超管 PUT 全局策略               |
 
 > `GET /realname/mine`、`POST /realname` 仅需登录态，所有角色可用（自助）。管理类接口默认仅超管，其余角色在「角色管理」按需分配。
 
@@ -58,7 +58,7 @@ C 端：`client/views/profile/RealnameView.vue`（路由 `/profile/realname`，�
 | GET  | `/realname`            | `realname:list`   | 分页 `?page&pageSize&status`                              |
 | POST | `/realname/:id/review` | `realname:review` | `{ approve, rejectReason? }`                              |
 | GET  | `/realname/policy`     | `realname:policy` | `{ requiredRoleCodes }`                                   |
-| PUT  | `/realname/policy`     | `realname:policy` | `{ requiredRoleCodes }`                                   |
+| PUT  | `/realname/policy`     | 平台超管 + `realname:policy` | `{ requiredRoleCodes }`                           |
 
 ## 设计要点（无硬编码 / 最小化）
 

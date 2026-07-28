@@ -308,9 +308,9 @@ pnpm --filter @app/server migration:revert
 | PUT    | `/api/booster/:id/voice`          | `booster:update`             | 管理端 multipart `file` 上传或更换语音                                                             |
 | DELETE | `/api/booster/:id/voice`          | `booster:update`             | 管理端清空语音 URL                                                                                 |
 | GET    | `/api/booster/levels`             | 登录                         | 获取等级档位                                                                                       |
-| PUT    | `/api/booster/levels`             | `booster:level:set`          | 保存 `{ tiers }`                                                                                   |
+| PUT    | `/api/booster/levels`             | 平台超管 + `booster:level:set`          | 保存全局 `{ tiers }`                                                                    |
 | GET    | `/api/booster/deposit/policy`     | 登录                         | 获取最低 / 最高押金                                                                                |
-| PUT    | `/api/booster/deposit/policy`     | `booster:deposit:policy:set` | 保存 `{ minFen, maxFen }`                                                                          |
+| PUT    | `/api/booster/deposit/policy`     | 平台超管 + `booster:deposit:policy:set` | 保存全局 `{ minFen, maxFen }`                                                             |
 | POST   | `/api/booster/deposit/pay`        | 登录                         | 已入驻用户从钱包缴纳 `{ amountFen }`                                                               |
 | POST   | `/api/booster/:id/deposit/refund` | `booster:deposit:refund`     | 全额退还押金                                                                                       |
 

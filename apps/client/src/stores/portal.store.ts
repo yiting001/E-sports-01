@@ -12,16 +12,25 @@ export const usePortalStore = defineStore('portal', () => {
   const showRank = ref(true);
   /** 配置是否已加载完成（页面守卫需等加载后再判断显隐） */
   const loaded = ref(false);
+  let loadRevision = 0;
 
   /** 拉取门户开关配置（失败时静默保留默认值，不阻塞应用） */
   async function load(): Promise<void> {
+    const revision = ++loadRevision;
+    showRank.value = true;
+    loaded.value = false;
     try {
       const data = await configApi.portal();
+      if (revision !== loadRevision) {
+        return;
+      }
       showRank.value = data.showRank;
     } catch {
       // 公开配置接口不可用时保留默认展示，不打扰用户
     } finally {
-      loaded.value = true;
+      if (revision === loadRevision) {
+        loaded.value = true;
+      }
     }
   }
 

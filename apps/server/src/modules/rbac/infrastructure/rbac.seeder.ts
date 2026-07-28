@@ -17,6 +17,7 @@ import { DEFAULT_PERMISSIONS } from '../domain/permission-defaults';
 import { DEFAULT_MENU_PERMISSIONS } from '../domain/menu-defaults';
 import {
   MEMBER_ROLE,
+  isPlatformOnlyPermission,
   SERVICE_ROLE,
   SERVICE_ROLE_PERMISSION_CODES,
   SUPER_ADMIN_ROLE,
@@ -61,14 +62,12 @@ export class RbacSeeder implements OnApplicationBootstrap {
     }
     await this.pruneObsoleteMenus();
     const superRole = await this.ensureSuperRole();
+    await this.ensureTenantBaseRoles();
     await this.ensureTenantAdminRefundPermission();
-    await this.ensureMemberRole();
-    await this.ensureServiceRole();
-    await this.ensureBoosterRole();
     await this.ensureAdminUser(superRole.id);
   }
 
-  /** 存量租户管理员按其“全部业务权限”语义补齐新增的退款审核权限。 */
+  /** 保留升级兼容：存量租户管理员至少具备退款审核权限。 */
   private async ensureTenantAdminRefundPermission(): Promise<void> {
     const roles = await this.roleRepo.findAllByCode(TENANT_ADMIN_ROLE);
     let changed = false;
@@ -78,6 +77,99 @@ export class RbacSeeder implements OnApplicationBootstrap {
     if (changed) {
       await this.permissions.invalidateAll();
     }
+  }
+
+  /** 为全部存量租户幂等补齐四类基础角色及其内置权限。 */
+  private async ensureTenantBaseRoles(): Promise<void> {
+    const tenants = await this.tenantRepo.findAll();
+    const allPermissions = await this.permRepo.findAll();
+    const tenantAdminPermissions = allPermissions.filter(
+      (permission) => !isPlatformOnlyPermission(permission.code),
+    );
+    let changed = false;
+    for (const tenant of tenants) {
+      if (tenant.id !== DEFAULT_TENANT_ID) {
+        changed = (await this.ensureTenantAdminRole(tenant.id, tenantAdminPermissions)) || changed;
+      }
+      changed =
+        (await this.ensureBuiltinRole(
+          tenant.id,
+          MEMBER_ROLE,
+          '普通用户',
+          '内置角色，短信自助注册用户默认角色',
+        )) || changed;
+      changed =
+        (await this.ensureBuiltinRole(
+          tenant.id,
+          SERVICE_ROLE,
+          '客服',
+          '内置角色，负责接待用户咨询/处理订单，可被商品关联为负责客服',
+          SERVICE_ROLE_PERMISSION_CODES,
+        )) || changed;
+      changed =
+        (await this.ensureBuiltinRole(
+          tenant.id,
+          BOOSTER_ROLE_CODE,
+          '打手',
+          '内置角色，打手入驻申请审核通过后自动授予',
+        )) || changed;
+    }
+    if (changed) {
+      await this.permissions.invalidateAll();
+    }
+  }
+
+  private async ensureTenantAdminRole(
+    tenantId: string,
+    permissions: Permission[],
+  ): Promise<boolean> {
+    const existing = await this.roleRepo.findByCodeForTenant(TENANT_ADMIN_ROLE, tenantId);
+    if (!existing) {
+      await this.roleRepo.save(
+        this.roleRepo.create({
+          code: TENANT_ADMIN_ROLE,
+          name: '租户管理员',
+          remark: '内置角色，拥有本租户业务权限',
+          tenantId,
+          permissions,
+        }),
+      );
+      return true;
+    }
+    const current = new Set((existing.permissions ?? []).map((permission) => permission.code));
+    const expected = new Set(permissions.map((permission) => permission.code));
+    const unchanged =
+      current.size === expected.size && [...expected].every((code) => current.has(code));
+    if (unchanged) {
+      return false;
+    }
+    existing.permissions = permissions;
+    await this.roleRepo.save(existing);
+    return true;
+  }
+
+  private async ensureBuiltinRole(
+    tenantId: string,
+    code: string,
+    name: string,
+    remark: string,
+    permissionCodes: string[] = [],
+  ): Promise<boolean> {
+    let role = await this.roleRepo.findByCodeForTenant(code, tenantId);
+    if (!role) {
+      role = await this.roleRepo.save(
+        this.roleRepo.create({
+          code,
+          name,
+          remark,
+          tenantId,
+          permissions: [],
+        }),
+      );
+      await this.ensureRolePermissions(role, permissionCodes);
+      return true;
+    }
+    return this.ensureRolePermissions(role, permissionCodes);
   }
 
   /**
@@ -115,7 +207,7 @@ export class RbacSeeder implements OnApplicationBootstrap {
   }
 
   private async ensureSuperRole() {
-    const existing = await this.roleRepo.findByCode(SUPER_ADMIN_ROLE);
+    const existing = await this.roleRepo.findByCodeForTenant(SUPER_ADMIN_ROLE, DEFAULT_TENANT_ID);
     if (existing) {
       return existing;
     }
@@ -127,64 +219,6 @@ export class RbacSeeder implements OnApplicationBootstrap {
     });
     this.logger.log('已创建超级管理员角色');
     return this.roleRepo.save(role);
-  }
-
-  /**
-   * 确保默认租户下存在普通用户（会员）角色。
-   * 短信注册的自助用户默认分配该角色；初始无任何权限，管理员可按需在角色管理中授予。
-   */
-  private async ensureMemberRole(): Promise<void> {
-    const existing = await this.roleRepo.findByCode(MEMBER_ROLE);
-    if (existing) {
-      return;
-    }
-    const role = this.roleRepo.create({
-      code: MEMBER_ROLE,
-      name: '普通用户',
-      remark: '内置角色，短信自助注册用户默认角色',
-      tenantId: DEFAULT_TENANT_ID,
-    });
-    await this.roleRepo.save(role);
-    this.logger.log('已创建普通用户角色');
-  }
-
-  /**
-   * 确保默认租户下存在「客服」角色，并幂等补齐坐席工作台所需权限。
-   * 管理员在用户管理中为客服人员分配该角色；商品「关联负责客服」候选仅取该角色用户。
-   * 客服需能进入管理端「即时通讯 / 客服工作台」并接待访客，故授予对应菜单与坐席接口权限。
-   */
-  private async ensureServiceRole(): Promise<void> {
-    let role = await this.roleRepo.findByCode(SERVICE_ROLE);
-    if (!role) {
-      role = this.roleRepo.create({
-        code: SERVICE_ROLE,
-        name: '客服',
-        remark: '内置角色，负责接待用户咨询/处理订单，可被商品关联为负责客服',
-        tenantId: DEFAULT_TENANT_ID,
-      });
-      role = await this.roleRepo.save(role);
-      this.logger.log('已创建客服角色');
-    }
-    await this.ensureRolePermissions(role, SERVICE_ROLE_PERMISSION_CODES);
-  }
-
-  /**
-   * 确保默认租户下存在「打手」角色。
-   * 用户在个人中心提交入驻申请、管理员审核通过后自动授予该角色；初始无管理权限。
-   */
-  private async ensureBoosterRole(): Promise<void> {
-    const existing = await this.roleRepo.findByCode(BOOSTER_ROLE_CODE);
-    if (existing) {
-      return;
-    }
-    const role = this.roleRepo.create({
-      code: BOOSTER_ROLE_CODE,
-      name: '打手',
-      remark: '内置角色，打手入驻申请审核通过后自动授予',
-      tenantId: DEFAULT_TENANT_ID,
-    });
-    await this.roleRepo.save(role);
-    this.logger.log('已创建打手角色');
   }
 
   /** 幂等地为角色补齐给定权限码（仅新增缺失项，保留管理员后续手动授予的权限） */
@@ -212,7 +246,7 @@ export class RbacSeeder implements OnApplicationBootstrap {
 
   private async ensureAdminUser(superRoleId: string): Promise<void> {
     const { adminUsername, adminPassword } = this.env.seed;
-    if (await this.userRepo.existsByUsername(adminUsername)) {
+    if (await this.userRepo.existsByUsername(adminUsername, DEFAULT_TENANT_ID)) {
       return;
     }
     const role = await this.roleRepo.findById(superRoleId);

@@ -1,4 +1,4 @@
-import { PERMS } from '@app/contracts';
+import { BOOSTER_ROLE_CODE, PERMS } from '@app/contracts';
 
 /**
  * 超级管理员角色码。
@@ -8,7 +8,7 @@ export const SUPER_ADMIN_ROLE = 'admin';
 
 /**
  * 租户管理员角色码（每个租户内置一份）。
- * 拥有本租户内全部业务权限，但不含平台级「租户管理」权限，故不能跨租户。
+ * 拥有本租户业务权限，但不含平台目录与全局规则写权限。
  */
 export const TENANT_ADMIN_ROLE = 'tenant_admin';
 
@@ -23,6 +23,48 @@ export const MEMBER_ROLE = 'member';
  * 管理员在用户管理中为客服人员分配该角色；创建商品时「关联负责客服」的候选列表仅取该角色用户。
  */
 export const SERVICE_ROLE = 'service';
+
+/** 仅由系统播种或领域流程维护，不能通过通用角色接口创建的内置角色。 */
+export const RESERVED_ROLE_CODES = [
+  SUPER_ADMIN_ROLE,
+  TENANT_ADMIN_ROLE,
+  MEMBER_ROLE,
+  SERVICE_ROLE,
+  BOOSTER_ROLE_CODE,
+] as const;
+
+export const RESERVED_ROLE_CODE_SET: ReadonlySet<string> = new Set(RESERVED_ROLE_CODES);
+
+function permissionFamilyPrefix(code: string): string {
+  return `${code.split(':').slice(0, 2).join(':')}:`;
+}
+
+/** 仅平台超级管理员可持有的权限目录。 */
+export const PLATFORM_ONLY_PERMISSION_PREFIXES = [
+  permissionFamilyPrefix(PERMS.tenant.list),
+  permissionFamilyPrefix(PERMS.permission.list),
+] as const;
+
+/** 仅平台超管可执行的全局业务规则写权限。 */
+export const PLATFORM_ONLY_PERMISSION_CODES = [
+  PERMS.member.levelSet,
+  PERMS.booster.levelSet,
+  PERMS.booster.depositPolicySet,
+  PERMS.realname.policy,
+  PERMS.invite.configSet,
+] as const;
+
+const PLATFORM_ONLY_PERMISSION_CODE_SET: ReadonlySet<string> = new Set(
+  PLATFORM_ONLY_PERMISSION_CODES,
+);
+
+/** 统一判定权限是否属于平台级，供新建与存量租户角色共用。 */
+export function isPlatformOnlyPermission(code: string): boolean {
+  return (
+    PLATFORM_ONLY_PERMISSION_PREFIXES.some((prefix) => code.startsWith(prefix)) ||
+    PLATFORM_ONLY_PERMISSION_CODE_SET.has(code)
+  );
+}
 
 /**
  * 客服角色默认权限码：管理端「即时通讯 / 客服工作台」菜单 + 消息历史 + 坐席接口，

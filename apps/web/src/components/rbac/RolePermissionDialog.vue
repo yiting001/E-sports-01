@@ -2,7 +2,6 @@
 import type { PermissionNode, RoleView } from '@app/contracts';
 import { computed, nextTick, ref, watch } from 'vue';
 import { ElMessage, ElTree } from 'element-plus';
-import { permissionApi } from '@/api/permission.api';
 import { roleApi } from '@/api/role.api';
 import {
   buildNamespaceTree,
@@ -41,7 +40,7 @@ const treeRef = ref<InstanceType<typeof ElTree>>();
 async function loadTree(role: RoleView): Promise<void> {
   loading.value = true;
   try {
-    const flat = await permissionApi.tree();
+    const flat = await roleApi.grantablePermissions();
     tree.value = buildNamespaceTree(flat);
     await nextTick();
     treeRef.value?.setCheckedKeys(

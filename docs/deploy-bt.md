@@ -109,7 +109,11 @@ SEED_ADMIN_PASSWORD=REPLACE_WITH_STRONG_PASSWORD
 ```ini
 VITE_API_BASE_URL=https://example.com/api
 VITE_WS_BASE_URL=https://example.com
+VITE_CLIENT_BASE_URL=/
 ```
+
+`VITE_CLIENT_BASE_URL=/` 表示管理端的“访问站点”打开同域根路径 C 端；不得留空，
+否则生产构建会 fail-closed 并禁止跳转。
 
 ## 5. 构建
 
@@ -120,7 +124,7 @@ cd /www/wwwroot/esports
 pnpm build:server
 pnpm build:client
 # 管理端挂在 /admin/ 子路径，须以 VITE_BASE 指定构建 base
-VITE_BASE=/admin/ pnpm build:web
+VITE_BASE=/admin/ VITE_CLIENT_BASE_URL=/ pnpm build:web
 ```
 
 ### 5.1 后端单文件打包（推荐，服务器免编译免装依赖）
@@ -264,7 +268,7 @@ location / {
 cd /www/wwwroot/esports
 git pull origin esports
 pnpm install
-pnpm build:server && pnpm build:client && VITE_BASE=/admin/ pnpm build:web
+pnpm build:server && pnpm build:client && VITE_BASE=/admin/ VITE_CLIENT_BASE_URL=/ pnpm build:web
 pm2 restart esports-server
 ```
 
@@ -281,6 +285,7 @@ pm2 restart esports-server
 | 前端接口 404 | Nginx 未配置 `/api/` 反代，或 `VITE_API_BASE_URL` 少了 `/api` 后缀 |
 | `/admin/` 白屏或资源 404 | 管理端构建时未加 `VITE_BASE=/admin/`，或 Nginx `alias` 路径末尾少了 `/` |
 | `/admin/xxx` 刷新 404 | `location /admin/` 缺少 `try_files ... /admin/index.html` 回退 |
+| 租户目录“访问站点”报未配置 | 管理端构建时缺少 `VITE_CLIENT_BASE_URL=/` |
 | 客服/IM 连不上、控制台报 websocket error | 缺少 `/socket.io/` 的 Upgrade 反代配置 |
 | 上传图片显示 127.0.0.1 链接 | 配置中心 `upload.local.baseUrl` 未改为公网地址 |
 | 上传大视频报 413 | Nginx `client_max_body_size` 过小 |

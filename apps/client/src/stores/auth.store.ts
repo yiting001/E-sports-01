@@ -1,10 +1,19 @@
-import type { AuthProfile, SmsLoginPayload, SmsRegisterPayload, TokenPair } from '@app/contracts';
+import type {
+  AuthProfile,
+  SmsLoginPayload,
+  SmsRegisterPayload,
+  TokenPair,
+} from '@app/contracts';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { authApi } from '@/api/auth.api';
+import { isStaleTenantRequestError } from '@/api/http';
 import { tokenStorage } from '@/api/token-storage';
 import { useCheckoutDraftStore } from '@/stores/checkout-draft.store';
 import { useMemberStore } from '@/stores/member.store';
+import { tenantContext } from '@/tenant/tenant-context';
+
+const TENANT_PROFILE_MISMATCH = 'TENANT_PROFILE_MISMATCH';
 
 /**
  * C 端鉴权状态。
@@ -16,6 +25,8 @@ export const useAuthStore = defineStore('auth', () => {
   const authed = ref<boolean>(Boolean(tokenStorage.getAccess()));
   /** 当前登录用户资料，未登录或未加载为 null */
   const profile = ref<AuthProfile | null>(null);
+  /** 当前租户的档案是否已完成校验 */
+  const loaded = ref(false);
 
   /** 是否已登录 */
   const isAuthenticated = computed(() => authed.value);
@@ -23,14 +34,21 @@ export const useAuthStore = defineStore('auth', () => {
   function clearSessionState(): void {
     authed.value = false;
     profile.value = null;
+    loaded.value = false;
     useCheckoutDraftStore().clearOrderContext();
     useMemberStore().reset();
   }
 
   tokenStorage.onChange(() => {
-    if (!tokenStorage.getAccess()) {
+    authed.value = Boolean(tokenStorage.getAccess());
+    if (!authed.value) {
       clearSessionState();
     }
+  });
+
+  tenantContext.onChange(() => {
+    clearSessionState();
+    authed.value = Boolean(tokenStorage.getAccess());
   });
 
   /** 保存令牌对并标记为已登录 */
@@ -54,9 +72,17 @@ export const useAuthStore = defineStore('auth', () => {
   /** 加载当前用户资料；令牌失效时清空登录态 */
   async function loadProfile(): Promise<void> {
     try {
-      profile.value = await authApi.profile();
-    } catch {
-      logout();
+      const data = await authApi.profile();
+      if (data.tenantCode !== tenantContext.getCode()) {
+        throw new Error(TENANT_PROFILE_MISMATCH);
+      }
+      profile.value = data;
+      loaded.value = true;
+    } catch (error) {
+      if (!isStaleTenantRequestError(error)) {
+        logout();
+      }
+      throw error;
     }
   }
 
@@ -66,5 +92,13 @@ export const useAuthStore = defineStore('auth', () => {
     clearSessionState();
   }
 
-  return { isAuthenticated, profile, smsLogin, smsRegister, loadProfile, logout };
+  return {
+    isAuthenticated,
+    profile,
+    loaded,
+    smsLogin,
+    smsRegister,
+    loadProfile,
+    logout,
+  };
 });

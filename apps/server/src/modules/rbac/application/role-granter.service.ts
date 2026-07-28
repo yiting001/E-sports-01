@@ -1,12 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import {
-  ROLE_REPOSITORY,
-  RoleRepository,
-} from '../domain/role-repository.interface';
-import {
-  USER_REPOSITORY,
-  UserRepository,
-} from '../domain/user-repository.interface';
+import { ROLE_REPOSITORY, RoleRepository } from '../domain/role-repository.interface';
+import { USER_REPOSITORY, UserRepository } from '../domain/user-repository.interface';
 import { PermissionResolver } from './permission-resolver.service';
 
 /**
@@ -37,7 +31,7 @@ export class RoleGranter {
     if ((user.roles ?? []).some((r) => r.code === roleCode)) {
       return;
     }
-    const role = await this.roles.findByCode(roleCode);
+    const role = await this.roles.findByCodeForTenant(roleCode, user.tenantId);
     if (!role) {
       throw new NotFoundException(`角色 ${roleCode} 不存在`);
     }

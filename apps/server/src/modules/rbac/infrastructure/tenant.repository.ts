@@ -27,15 +27,17 @@ export class TypeormTenantRepository implements TenantRepository {
     return this.repo.find({ where: { id: In(ids) } });
   }
 
+  findAll(): Promise<TenantEntity[]> {
+    return this.repo.find({ order: { createdAt: 'ASC' } });
+  }
+
   async existsByCode(code: string): Promise<boolean> {
     return (await this.repo.countBy({ code })) > 0;
   }
 
   paginate(skip: number, take: number, keyword?: string): Promise<[TenantEntity[], number]> {
     return this.repo.findAndCount({
-      where: keyword
-        ? [{ code: ILike(`%${keyword}%`) }, { name: ILike(`%${keyword}%`) }]
-        : {},
+      where: keyword ? [{ code: ILike(`%${keyword}%`) }, { name: ILike(`%${keyword}%`) }] : {},
       order: { createdAt: 'DESC' },
       skip,
       take,

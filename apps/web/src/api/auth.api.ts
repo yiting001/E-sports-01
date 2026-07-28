@@ -9,23 +9,28 @@ import type {
   UpdateProfilePayload,
   UserView,
 } from '@app/contracts';
+import { tenantContext } from '@/tenant/tenant-context';
 import { http } from './http';
+
+function withCurrentTenant<T extends { tenantCode?: string }>(payload: T): T {
+  return { ...payload, tenantCode: tenantContext.getCode() };
+}
 
 /** 鉴权相关接口：登录 / 注册 / 短信验证码 / 拉取当前用户档案 */
 export const authApi = {
   login(payload: LoginPayload): Promise<TokenPair> {
-    return http.post('/auth/login', payload);
+    return http.post('/auth/login', withCurrentTenant(payload));
   },
   register(payload: RegisterPayload): Promise<TokenPair> {
-    return http.post('/auth/register', payload);
+    return http.post('/auth/register', withCurrentTenant(payload));
   },
   /** 发送登录短信验证码 */
   sendSmsCode(payload: SendSmsCodePayload): Promise<SendSmsCodeResult> {
-    return http.post('/auth/sms/code', payload);
+    return http.post('/auth/sms/code', withCurrentTenant(payload));
   },
   /** 短信验证码登录 */
   smsLogin(payload: SmsLoginPayload): Promise<TokenPair> {
-    return http.post('/auth/sms/login', payload);
+    return http.post('/auth/sms/login', withCurrentTenant(payload));
   },
   profile(): Promise<AuthProfile> {
     return http.get('/auth/profile');

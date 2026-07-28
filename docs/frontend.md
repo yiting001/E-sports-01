@@ -355,7 +355,9 @@ flowchart LR
 
 - **单一判定入口**：所有鉴权收敛到 `hasPermission`，避免分散判断逻辑漂移。
 - **响应解包在拦截层**：视图直接拿 `data`，无需层层 `res.data.data`。
-- **令牌存储集中**：`token-storage` 统一键名（`infra.accessToken` / `infra.refreshToken`）。
+- **令牌存储集中**：`token-storage` 按租户使用
+  `infra.accessToken.<tenantCode>` / `infra.refreshToken.<tenantCode>`，默认租户仅一次性迁移
+  旧键，避免跨租户复用会话。
 - **权限码共享**：路由 `meta.permission` 与指令复用 contracts 的 `PERMS`，与后端同源。
 
 ## 视图清单
@@ -375,3 +377,13 @@ flowchart LR
 | `/im` | ImView | `im:menu` |
 | `/im/service` | ServiceConsoleView | `im:service:menu` |
 | `/logs` | LogView | `observability:log:menu` |
+
+## 管理端租户上下文
+
+管理端按 `?tenantCode=`、自身 `sessionStorage`、`default` 的顺序建立上下文，HTTP 统一
+注入 `X-Tenant-Code`。登录页在发请求前切换租户；profile 租户不一致会清除会话。
+租户目录的“访问站点”根据 `VITE_CLIENT_BASE_URL` 打开 C 端租户链接。开发模式默认
+`http://127.0.0.1:5174`；生产空配置、无效 URL 或非 HTTP(S) 协议会提示错误并禁止跳转，
+不会误打开管理端。切换租户时会清空管理端内存档案、菜单、IM 连接和待办轮询，品牌进入
+`validating / ready / rejected` 三态重新加载，旧租户刷新令牌的晚到响应不能污染新会话。完整后端边界见
+[multi-tenant.md](./multi-tenant.md)。

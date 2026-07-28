@@ -30,7 +30,10 @@ export const configApi = {
   },
   /** 读取平台品牌信息（公开，登录前即可调用） */
   branding(): Promise<BrandingView> {
-    const options: AxiosRequestConfig & RequestOptions = { silent: true };
+    const options: AxiosRequestConfig & RequestOptions = {
+      silent: true,
+      tenantEntryProbe: true,
+    };
     return http.get('/config/branding', options);
   },
 };
