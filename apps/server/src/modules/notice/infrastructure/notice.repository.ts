@@ -39,6 +39,13 @@ export class TypeormNoticeRepository implements NoticeRepository {
     });
   }
 
+  findLatestPopup(tenantId: string): Promise<NoticeEntity | null> {
+    return this.repo.findOne({
+      where: { tenantId, enabled: true, popup: true },
+      order: { sort: 'ASC', createdAt: 'DESC' },
+    });
+  }
+
   create(data: Partial<NoticeEntity>): NoticeEntity {
     return this.repo.create(data);
   }

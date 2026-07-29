@@ -177,6 +177,12 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     UpdateTenantUseCase,
     RemoveTenantUseCase,
   ],
-  exports: [TokenService, PermissionResolver, UserDirectory, RoleGranter],
+  exports: [
+    TokenService,
+    PermissionResolver,
+    UserDirectory,
+    RoleGranter,
+    TenantResolver,
+  ],
 })
 export class RbacModule {}

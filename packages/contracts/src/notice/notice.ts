@@ -30,6 +30,8 @@ export interface UpsertNoticePayload {
   content: string;
   /** 是否启用（仅启用的通知对 C 端可见） */
   enabled: boolean;
+  /** 是否作为弹窗公告（C 端首次进入弹窗展示） */
+  popup: boolean;
   /** 排序权重，越小越靠前 */
   sort: number;
 }
@@ -40,6 +42,7 @@ export interface NoticeView {
   title: string;
   content: string;
   enabled: boolean;
+  popup: boolean;
   sort: number;
   createdAt: string;
   updatedAt: string;
@@ -52,6 +55,15 @@ export interface NoticePublicView {
   /** 富文本 HTML，前端须净化后渲染 */
   content: string;
   createdAt: string;
+}
+
+/**
+ * 弹窗公告公开视图（C 端首次进入展示）。
+ * 比普通公开视图多一个 `updatedAt`，作为弹窗版本号：
+ * 内容更新后已关闭过的用户会重新看到弹窗。
+ */
+export interface NoticePopupView extends NoticePublicView {
+  updatedAt: string;
 }
 
 /** 首页运营横幅条目 */

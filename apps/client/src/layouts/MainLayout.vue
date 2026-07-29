@@ -4,9 +4,11 @@
  * 移动端（<768px）：底部悬浮 TabBar；PC 端（>=768px）：顶部导航条 + 居中内容容器。
  * 断点由 CSS 媒体查询控制，两套导航同时渲染、按视口显隐，避免 JS 侦听窗口尺寸。
  * 页面底色与网格纹理由 base.css 的 body 统一绘制。
+ * 首次进入的弹窗公告挂在布局层，全站只拉取一次。
  */
 import AppTabBar from '@/components/common/AppTabBar.vue';
 import AppTopNav from '@/components/common/AppTopNav.vue';
+import NoticePopupDialog from '@/components/notice/NoticePopupDialog.vue';
 </script>
 
 <template>
@@ -16,6 +18,7 @@ import AppTopNav from '@/components/common/AppTopNav.vue';
       <router-view />
     </main>
     <AppTabBar class="tab-bar" />
+    <NoticePopupDialog />
   </div>
 </template>
 
