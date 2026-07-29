@@ -8,6 +8,7 @@ function member(displayName = '用户0942'): ConversationMemberView {
     userId: 'booster-1',
     displayName,
     role: ConversationMemberRole.Member,
+    tag: '',
     joinedAt: 0,
     lastReadAt: null,
   };

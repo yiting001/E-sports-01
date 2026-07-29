@@ -41,6 +41,10 @@ export class WithdrawalOrderEntity extends TenantScopedEntity {
   @Column({ length: 64 })
   accountName!: string;
 
+  /** 收款方身份证号（报税用；历史单据为空） */
+  @Column({ type: 'varchar', length: 18, nullable: true })
+  idCardNo!: string | null;
+
   /** 渠道转账单号（成功后回填） */
   @Column({ type: 'varchar', length: 64, nullable: true })
   providerOrderId!: string | null;

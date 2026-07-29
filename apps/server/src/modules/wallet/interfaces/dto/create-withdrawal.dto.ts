@@ -1,5 +1,9 @@
-import { IsEnum, IsInt, IsString, Length, Min } from 'class-validator';
-import { CreateWithdrawalBody, PayoutProvider } from '@app/contracts';
+import { IsEnum, IsInt, IsString, Length, Matches, Min } from 'class-validator';
+import {
+  CreateWithdrawalBody,
+  ID_CARD_NO_PATTERN,
+  PayoutProvider,
+} from '@app/contracts';
 
 /** 发起提现入参 DTO */
 export class CreateWithdrawalDto implements CreateWithdrawalBody {
@@ -20,4 +24,9 @@ export class CreateWithdrawalDto implements CreateWithdrawalBody {
   @IsString()
   @Length(1, 64)
   accountName!: string;
+
+  /** 收款方身份证号（报税用，18 位） */
+  @IsString()
+  @Matches(ID_CARD_NO_PATTERN, { message: '身份证号格式不正确' })
+  idCardNo!: string;
 }

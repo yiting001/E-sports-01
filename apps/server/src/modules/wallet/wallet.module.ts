@@ -53,6 +53,7 @@ import { ListMyWithdrawalsUseCase } from './application/use-cases/list-my-withdr
 import { ListWithdrawalsUseCase } from './application/use-cases/list-withdrawals.usecase';
 import { ApproveWithdrawalUseCase } from './application/use-cases/approve-withdrawal.usecase';
 import { RejectWithdrawalUseCase } from './application/use-cases/reject-withdrawal.usecase';
+import { ExportWithdrawalTaxUseCase } from './application/use-cases/export-withdrawal-tax.usecase';
 
 import { WalletMineController } from './interfaces/controllers/wallet.mine.controller';
 import { WalletStatsController } from './interfaces/controllers/wallet.stats.controller';
@@ -68,6 +69,7 @@ import { WalletAdminAdjustController } from './interfaces/controllers/wallet.adm
 import { WithdrawalAdminListController } from './interfaces/controllers/withdrawal.admin.list.controller';
 import { WithdrawalAdminApproveController } from './interfaces/controllers/withdrawal.admin.approve.controller';
 import { WithdrawalAdminRejectController } from './interfaces/controllers/withdrawal.admin.reject.controller';
+import { WithdrawalAdminExportController } from './interfaces/controllers/withdrawal.admin.export.controller';
 
 /**
  * 钱包模块。
@@ -102,6 +104,7 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
     WithdrawalAdminListController,
     WithdrawalAdminApproveController,
     WithdrawalAdminRejectController,
+    WithdrawalAdminExportController,
   ],
   providers: [
     { provide: WALLET_REPOSITORY, useClass: TypeormWalletRepository },
@@ -162,6 +165,7 @@ import { WithdrawalAdminRejectController } from './interfaces/controllers/withdr
     ListWithdrawalsUseCase,
     ApproveWithdrawalUseCase,
     RejectWithdrawalUseCase,
+    ExportWithdrawalTaxUseCase,
   ],
   // 导出支付/退款渠道解析器，供订单复用同一套支付宝/微信配置与驱动
   exports: [

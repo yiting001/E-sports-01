@@ -78,7 +78,7 @@ test('隔离目录中的单文件 audit 使用只读事务且不创建 history',
   const report = JSON.parse(stdout) as {
     guardrails: { transactionReadOnly: boolean; isolation: string };
     history: { state: string; records: unknown[] };
-    checks: unknown[];
+    checks: Array<{ migrationName: string; status: string }>;
     summary: { manualBaselineRequired: boolean };
   };
 
@@ -89,6 +89,17 @@ test('隔离目录中的单文件 audit 使用只读事务且不创建 history',
   assert.equal(report.history.state, 'missing');
   assert.deepEqual(report.history.records, []);
   assert.equal(report.checks.length, SERVER_MIGRATION_DEFINITIONS.length + 3);
+  assert.equal(
+    report.checks.find(
+      ({ migrationName }) => migrationName === 'AddConversationMemberTag1785600000000',
+    )?.status,
+    'pass',
+  );
+  assert.equal(
+    report.checks.find(({ migrationName }) => migrationName === 'AddWithdrawalIdCard1785700000000')
+      ?.status,
+    'pass',
+  );
   assert.equal(report.summary.manualBaselineRequired, true);
 
   const rows = (await adminDataSource.query(`SELECT to_regclass($1)::text AS "tableName"`, [
@@ -184,7 +195,7 @@ test('两个 migration runner 并发串行化，首次执行一次且后续幂�
     `${concurrentSchema}.sys_tenant_config_override`,
   ])) as Array<{ tableName: string | null }>;
   assert.equal(tableRows[0]?.tableName, `${concurrentSchema}.sys_tenant_config_override`);
-  await assertNoticePopupColumn(concurrentSchema);
+  await assertManagedMigrationColumns(concurrentSchema);
   assert.equal(
     outputs.filter((output) => output.join('').includes(`executed ${currentMigration.name}`))
       .length,
@@ -239,11 +250,15 @@ test('隔离目录中的真实 bundle 可完成 show、run 与重复幂等执行
   const showResult = await runBundleCommand(bundleSchema, 'migration:show');
   assert.match(showResult.stdout, /\[ \].*AddTenantConfigOverrides1784995200000/);
   assert.match(showResult.stdout, /\[ \].*AddNoticePopup1785500000000/);
-  assert.match(showResult.stdout, /2 pending migration\(s\)/i);
+  assert.match(showResult.stdout, /\[ \].*AddConversationMemberTag1785600000000/);
+  assert.match(showResult.stdout, /\[ \].*AddWithdrawalIdCard1785700000000/);
+  assert.match(showResult.stdout, /4 pending migration\(s\)/i);
 
   const runResult = await runBundleCommand(bundleSchema, 'migration:run');
   assert.match(runResult.stdout, /executed AddTenantConfigOverrides1784995200000/);
   assert.match(runResult.stdout, /executed AddNoticePopup1785500000000/);
+  assert.match(runResult.stdout, /executed AddConversationMemberTag1785600000000/);
+  assert.match(runResult.stdout, /executed AddWithdrawalIdCard1785700000000/);
 
   const currentMigration = latestMigration();
   const rows = (await adminDataSource.query(
@@ -262,7 +277,7 @@ test('隔离目录中的真实 bundle 可完成 show、run 与重复幂等执行
   )) as Array<{ tableName: string | null; historyCount: number }>;
   assert.equal(rows[0]?.tableName, `${bundleSchema}.sys_tenant_config_override`);
   assert.equal(rows[0]?.historyCount, 1);
-  await assertNoticePopupColumn(bundleSchema);
+  await assertManagedMigrationColumns(bundleSchema);
 
   const repeatResult = await runBundleCommand(bundleSchema, 'migration:run');
   assert.match(repeatResult.stdout, /no pending migrations/i);
@@ -342,9 +357,21 @@ async function createTrustedBaseline(schema: string, includeConfig: boolean): Pr
       CONSTRAINT "PK_${schema}_notice" PRIMARY KEY ("id")
     )
   `);
+  await adminDataSource.query(`
+    CREATE TABLE "${schema}"."sys_conversation_member" (
+      "id" uuid NOT NULL DEFAULT gen_random_uuid(),
+      CONSTRAINT "PK_${schema}_conversation_member" PRIMARY KEY ("id")
+    )
+  `);
+  await adminDataSource.query(`
+    CREATE TABLE "${schema}"."wallet_withdrawal_order" (
+      "id" uuid NOT NULL DEFAULT gen_random_uuid(),
+      CONSTRAINT "PK_${schema}_withdrawal_order" PRIMARY KEY ("id")
+    )
+  `);
   await createMigrationHistoryTable(schema);
 
-  for (const migration of SERVER_MIGRATION_DEFINITIONS.slice(0, -2)) {
+  for (const migration of SERVER_MIGRATION_DEFINITIONS.slice(0, -4)) {
     await adminDataSource.query(
       `INSERT INTO "${schema}"."typeorm_migrations" ("timestamp", "name")
        VALUES ($1, $2)`,
@@ -371,16 +398,36 @@ async function createTrustedBaseline(schema: string, includeConfig: boolean): Pr
   );
 }
 
-async function assertNoticePopupColumn(schema: string): Promise<void> {
+async function assertManagedMigrationColumns(schema: string): Promise<void> {
   const rows = (await adminDataSource.query(
-    `SELECT EXISTS (
-       SELECT 1
-       FROM information_schema.columns
-       WHERE table_schema = $1 AND table_name = 'notice' AND column_name = 'popup'
-     ) AS "present"`,
+    `SELECT
+       EXISTS (
+         SELECT 1 FROM information_schema.columns
+         WHERE table_schema = $1 AND table_name = 'notice' AND column_name = 'popup'
+       ) AS "noticePopup",
+       EXISTS (
+         SELECT 1 FROM information_schema.columns
+         WHERE table_schema = $1 AND table_name = 'sys_conversation_member'
+           AND column_name = 'tag' AND character_maximum_length = 16
+           AND is_nullable = 'NO' AND column_default IS NOT NULL
+       ) AS "conversationMemberTag",
+       EXISTS (
+         SELECT 1 FROM information_schema.columns
+         WHERE table_schema = $1 AND table_name = 'wallet_withdrawal_order'
+           AND column_name = 'idCardNo' AND character_maximum_length = 18
+           AND is_nullable = 'YES'
+       ) AS "withdrawalIdCard"`,
     [schema],
-  )) as Array<{ present: boolean }>;
-  assert.equal(rows[0]?.present, true);
+  )) as Array<{
+    noticePopup: boolean;
+    conversationMemberTag: boolean;
+    withdrawalIdCard: boolean;
+  }>;
+  assert.deepEqual(rows[0], {
+    noticePopup: true,
+    conversationMemberTag: true,
+    withdrawalIdCard: true,
+  });
 }
 
 async function createMigrationHistoryTable(schema: string): Promise<void> {

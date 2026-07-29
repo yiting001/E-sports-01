@@ -60,6 +60,7 @@ export class CompleteBoosterOrderUseCase {
     order.commissionRateBp = tier.commissionRateBp;
     const saved = await this.orders.save(order);
     await this.orderGroup.syncTitle(saved);
+    await this.orderGroup.notifyCompleted(saved);
     return toBoosterOrderView(saved);
   }
 }

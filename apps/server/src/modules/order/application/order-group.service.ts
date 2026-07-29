@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { formatPublicUserDisplayName } from '@app/contracts';
+import { CONVERSATION_MEMBER_TAGS, formatPublicUserDisplayName } from '@app/contracts';
 import { GroupFacade, SystemGroupTitleSyncResult } from '../../im/application/group-facade.service';
 import { UserDirectory } from '../../rbac/application/user-directory.service';
 import { SUPER_ADMIN_ROLE, TENANT_ADMIN_ROLE } from '../../rbac/domain/rbac.constants';
@@ -57,17 +57,47 @@ export class OrderGroupService {
     const memberIds = [latest.userId, latest.serviceAgentId, latest.boosterId, ...adminIds];
     const ownerId = latest.serviceAgentId || adminIds[0] || latest.userId;
     const title = buildOrderGroupTitle(latest.productTitle, latest.status);
+    const memberTags: Record<string, string> = {};
+    for (const adminId of adminIds) {
+      memberTags[adminId] = CONVERSATION_MEMBER_TAGS.admin;
+    }
+    if (latest.boosterId) {
+      memberTags[latest.boosterId] = CONVERSATION_MEMBER_TAGS.booster;
+    }
+    if (latest.serviceAgentId) {
+      memberTags[latest.serviceAgentId] = CONVERSATION_MEMBER_TAGS.agent;
+    }
+    memberTags[latest.userId] = CONVERSATION_MEMBER_TAGS.boss;
     const conversationId = await this.groups.ensureSystemGroup(
       latest.id,
       ownerId,
       title,
       memberIds,
       `订单 ${latest.orderNo} 已支付成功，客服将尽快为您安排服务`,
+      memberTags,
     );
     await this.orders.updateConversationId(latest.id, conversationId);
     latest.conversationId = conversationId;
     order.conversationId = conversationId;
     return latest;
+  }
+
+  /** 订单完成后向订单群广播服务结束系统消息（失败仅记日志，不阻断完成主流程） */
+  async notifyCompleted(order: OrderEntity): Promise<void> {
+    if (!order.conversationId) {
+      return;
+    }
+    try {
+      await this.groups.postSystemNotice(
+        order.conversationId,
+        `订单 ${order.orderNo} 已完成，本次客服会话已结束，感谢您的支持`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `订单 ${order.orderNo} 完成通知发送失败`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
   }
 
   /** 打手接单/被指派后加入订单群并广播系统消息 */
@@ -90,6 +120,7 @@ export class OrderGroupService {
         order.conversationId,
         boosterId,
         `打手 ${name} 已接单，加入群聊为您服务`,
+        CONVERSATION_MEMBER_TAGS.booster,
       );
     } catch (err) {
       this.logger.error(

@@ -81,7 +81,7 @@ test('空 history 表不构成可信基线且不得执行历史 migration', asyn
 
 test('migration:show 返回待执行状态并始终关闭连接', async () => {
   const dataSource = new FakeMigrationDataSource('typeorm_migrations');
-  dataSource.history = migrationHistory().slice(0, -1);
+  dataSource.history = migrationHistory().slice(0, -2);
   const output: string[] = [];
 
   await runMigrationCommand('migration:show', {
@@ -91,14 +91,18 @@ test('migration:show 返回待执行状态并始终关闭连接', async () => {
 
   assert.equal(dataSource.runCalls, 0);
   assert.equal(dataSource.destroyCalls, 1);
-  assert.match(output.join(''), /\[ \].*AddNoticePopup1785500000000/);
-  assert.match(output.join(''), /1 pending migration/i);
+  assert.match(output.join(''), /\[ \].*AddConversationMemberTag1785600000000/);
+  assert.match(output.join(''), /\[ \].*AddWithdrawalIdCard1785700000000/);
+  assert.match(output.join(''), /2 pending migration/i);
 });
 
 test('migration:run 以单事务执行并输出实际完成的迁移', async () => {
   const dataSource = new FakeMigrationDataSource('typeorm_migrations');
-  dataSource.history = migrationHistory().slice(0, -1);
-  dataSource.executedMigrations = [{ name: 'AddNoticePopup1785500000000' }];
+  dataSource.history = migrationHistory().slice(0, -2);
+  dataSource.executedMigrations = [
+    { name: 'AddConversationMemberTag1785600000000' },
+    { name: 'AddWithdrawalIdCard1785700000000' },
+  ];
   const output: string[] = [];
 
   await runMigrationCommand('migration:run', {
@@ -112,7 +116,8 @@ test('migration:run 以单事务执行并输出实际完成的迁移', async () 
   assert.equal(dataSource.unlockCalls, 1);
   assert.equal(dataSource.releaseCalls, 1);
   assert.equal(dataSource.destroyCalls, 1);
-  assert.match(output.join(''), /AddNoticePopup1785500000000/);
+  assert.match(output.join(''), /AddConversationMemberTag1785600000000/);
+  assert.match(output.join(''), /AddWithdrawalIdCard1785700000000/);
 });
 
 test('migration 执行失败时保留原始错误并关闭连接', async () => {

@@ -31,6 +31,8 @@ export enum ConfigGroup {
   Portal = 'portal',
   /** 邀请奖励（邀请人/被邀请人奖励方式与额度） */
   Invite = 'invite',
+  /** 订单（自动派单等策略） */
+  Order = 'order',
 }
 
 /** 配置项对外结构（敏感项的值在传输前会被脱敏） */
@@ -159,6 +161,10 @@ export const CONFIG_KEYS = {
     /** 不记录访问日志的路径前缀（JSON 字符串数组） */
     excludePaths: 'log.excludePaths',
   },
+  order: {
+    /** 支付成功后自动下发接单大厅（夜间无人值守时开启；指定打手订单不受影响） */
+    autoDispatchHall: 'order.autoDispatchHall',
+  },
   invite: {
     /** 邀请人奖励方式：none / coupon / wallet */
     inviterRewardType: 'invite.inviter.rewardType',
@@ -186,6 +192,8 @@ export const CONFIG_KEYS = {
     minWithdrawFen: 'wallet.minWithdrawFen',
     /** 提现手续费率（万分比，如 100 = 1%；0 表示免手续费） */
     withdrawFeeRateBp: 'wallet.withdrawFeeRateBp',
+    /** 阶梯税费配置（JSON 数组 [{"minFen":0,"rateBp":100},...]，按提现金额选档；空则用单一费率） */
+    withdrawTaxTiers: 'wallet.withdrawTaxTiers',
     /** 支付回调可达的公网基础地址，用于拼接异步通知 URL，例如 https://api.example.com */
     notifyBaseUrl: 'wallet.notifyBaseUrl',
     /** 支付宝 */

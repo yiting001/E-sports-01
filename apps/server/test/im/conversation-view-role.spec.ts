@@ -138,6 +138,7 @@ test('会话详情与私聊标题只投影昵称，不外发手机号派生登�
     userId: 'booster-123456',
     displayName: '用户0942',
     role: ConversationMemberRole.Member,
+    tag: '',
     joinedAt: new Date('2026-07-22T00:00:00.000Z').getTime(),
     lastReadAt: null,
   });

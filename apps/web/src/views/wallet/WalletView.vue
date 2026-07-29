@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import {
   FundDirection,
+  ID_CARD_NO_PATTERN,
   PaymentProvider,
   PayoutProvider,
   WALLET_TXN_TYPE_TEXT,
@@ -45,6 +46,7 @@ const withdrawForm = reactive<WalletWithdrawForm>({
   provider: PayoutProvider.Alipay,
   account: '',
   accountName: '',
+  idCardNo: '',
 });
 
 const walletStatusLabel = computed(() =>
@@ -103,6 +105,7 @@ function openWithdraw(): void {
   withdrawForm.provider = PayoutProvider.Alipay;
   withdrawForm.account = '';
   withdrawForm.accountName = '';
+  withdrawForm.idCardNo = '';
   withdrawVisible.value = true;
 }
 
@@ -115,6 +118,10 @@ async function submitWithdraw(): Promise<void> {
     ElMessage.warning('请填写收款支付宝账号与真实姓名');
     return;
   }
+  if (!ID_CARD_NO_PATTERN.test(withdrawForm.idCardNo.trim())) {
+    ElMessage.warning('请填写正确的 18 位身份证号（报税用）');
+    return;
+  }
   withdrawSubmitting.value = true;
   try {
     const result = await walletApi.withdraw({
@@ -122,6 +129,7 @@ async function submitWithdraw(): Promise<void> {
       provider: withdrawForm.provider,
       account: withdrawForm.account,
       accountName: withdrawForm.accountName,
+      idCardNo: withdrawForm.idCardNo.trim().toUpperCase(),
     });
     if (result.status === WithdrawalStatus.Pending) {
       ElMessage.success('提现申请已提交，等待财务审核后到账');

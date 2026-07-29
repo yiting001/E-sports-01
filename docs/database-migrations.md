@@ -91,6 +91,18 @@ stateDiagram-v2
   Pending --> Blocked: "基线复验失败"
 ```
 
+当前静态 registry 的最新受管变更包括：
+
+| 时间戳        | migration                               | `up` 与历史数据语义                                                                        | `down` 风险                  |
+| ------------- | --------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------- |
+| 1785600000000 | `AddConversationMemberTag1785600000000` | `sys_conversation_member.tag` 新增为 `varchar(16) NOT NULL DEFAULT ''`，历史成员回填空标签 | 删除列并永久丢失已有身份标签 |
+| 1785700000000 | `AddWithdrawalIdCard1785700000000`      | `wallet_withdrawal_order.idCardNo` 新增为可空 `varchar(18)`，历史提现单保持 `NULL`         | 删除列并永久丢失身份证号     |
+
+两项结构均进入单文件 bundle 的静态清单和 baseline audit。history 尚未记录时，目标字段缺失表示
+可由 pending migration 正常创建；字段已存在但 history 未记录则审计失败，必须人工确认来源，禁止
+伪造 history。两项 `ALTER TABLE` 都需要取得目标表的 DDL 锁，执行前应停止写流量；如需回滚，必须
+先备份对应业务数据。
+
 ## 命令与退出语义
 
 ```bash
@@ -221,6 +233,14 @@ DDL 账号，不需要把高权限密码写进长期运行配置。
 - 根 `package.json` 尚未配置 `format:check`，该命令已执行并明确返回“Command not found”；
   本次代码、测试和新增迁移文档已使用项目现有 Prettier 做定向检查并通过；
 - 管理端生产构建仍有既有的大 chunk 警告，本功能未增加前端依赖或 chunk。
+
+2026-07-29 两项新增 migration 的增量验证结果：
+
+- migration 命令单元测试 11 项通过，静态 registry 已与 13 个 migration 文件一一对应；
+- 会话成员标签与提现身份证字段 PostgreSQL `up/down` E2E 共 2 项通过；
+- migration 命令 PostgreSQL E2E 7 项通过，新单文件 bundle 已真实完成 4 项 pending migration 的
+  `audit/show/run/run`、并发串行化和失败整体回滚；
+- 服务端 `typecheck`、单文件 bundle 构建、目标文件 Prettier 与 `git diff --check` 通过。
 
 ## 新增 migration 检查清单
 

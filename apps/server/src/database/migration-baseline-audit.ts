@@ -197,7 +197,9 @@ function toStructuralCheck(
   const allPresent = readBoolean(row, 'allPresent');
   const isManagedPendingMigration =
     migrationName === 'AddTenantConfigOverrides1784995200000' ||
-    migrationName === 'AddNoticePopup1785500000000';
+    migrationName === 'AddNoticePopup1785500000000' ||
+    migrationName === 'AddConversationMemberTag1785600000000' ||
+    migrationName === 'AddWithdrawalIdCard1785700000000';
   const recorded = history.some(
     (record) => record.name === migrationName && record.timestamp === migrationTimestamp,
   );
@@ -207,8 +209,8 @@ function toStructuralCheck(
       migrationTimestamp,
       status: allPresent ? 'fail' : 'pass',
       detail: allPresent
-        ? 'target table already exists but the migration is not recorded'
-        : 'target table is absent and can be created by the pending migration',
+        ? 'required artifacts already exist but the migration is not recorded'
+        : 'required artifacts are absent and can be created by the pending migration',
     };
   }
   if (

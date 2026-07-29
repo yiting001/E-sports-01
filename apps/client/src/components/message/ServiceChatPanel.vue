@@ -9,6 +9,7 @@ import {
   ConversationType,
   MessageType,
   type ChatMessage,
+  type ConversationMemberView,
   type ConversationView,
 } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
@@ -66,6 +67,7 @@ let disposed = false;
 const activeConversation = ref<ConversationView | null>(null);
 const activeConversationId = ref('');
 const messages = ref<ChatMessage[]>([]);
+const conversationMembers = ref<ConversationMemberView[]>([]);
 const draft = ref('');
 const loading = ref(false);
 const uploading = ref(false);
@@ -92,7 +94,7 @@ function senderNameOf(message: ChatMessage): string {
   if (message.senderId === auth.profile?.id) {
     return '我';
   }
-  return resolveChatMemberName(compose.members.value, message.senderId);
+  return resolveChatMemberName(conversationMembers.value, message.senderId);
 }
 
 async function scrollToBottom(): Promise<void> {
@@ -125,6 +127,8 @@ async function joinConversation(target: ConversationView | null): Promise<void> 
     activeConversationId.value = '';
     activeConversation.value = null;
     messages.value = [];
+    conversationMembers.value = [];
+    compose.setMembers([]);
     loading.value = false;
     return;
   }
@@ -143,6 +147,9 @@ async function joinConversation(target: ConversationView | null): Promise<void> 
   joinRevision = currentRevision;
   joiningConversationId = target.id;
   loading.value = true;
+  messages.value = [];
+  conversationMembers.value = [];
+  compose.setMembers([]);
   resetSocket();
   try {
     activeConversation.value = target;
@@ -195,10 +202,12 @@ async function loadMembers(conversationId: string, revision: number): Promise<vo
   try {
     const detail = await imApi.conversationDetail(conversationId);
     if (revision === joinRevision) {
+      conversationMembers.value = detail.members;
       compose.setMembers(detail.members, auth.profile?.id);
     }
   } catch {
     if (revision === joinRevision) {
+      conversationMembers.value = [];
       compose.setMembers([]);
     }
   }
@@ -311,7 +320,7 @@ onBeforeUnmount(() => {
         :empty-text="emptyText"
         :can-send="canSend"
         :self-id="auth.profile?.id"
-        :members="compose.members.value"
+        :members="conversationMembers"
         @reply="compose.setReply"
       />
     </div>

@@ -116,7 +116,24 @@ export const STRUCTURAL_ARTIFACT_QUERY = `
           WHERE table_schema = current_schema() AND table_name = 'notice'
             AND column_name = 'popup' AND is_nullable = 'NO'
         )
-          AND to_regclass(format('%I.%I', current_schema(), 'IDX_notice_popup')) IS NOT NULL)
+          AND to_regclass(format('%I.%I', current_schema(), 'IDX_notice_popup')) IS NOT NULL),
+      (1785600000000::bigint, 'AddConversationMemberTag1785600000000',
+        'conversation member tag column',
+        EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema() AND table_name = 'sys_conversation_member'
+            AND column_name = 'tag' AND data_type = 'character varying'
+            AND character_maximum_length = 16 AND is_nullable = 'NO'
+            AND column_default IS NOT NULL
+        )),
+      (1785700000000::bigint, 'AddWithdrawalIdCard1785700000000',
+        'withdrawal ID card column',
+        EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema() AND table_name = 'wallet_withdrawal_order'
+            AND column_name = 'idCardNo' AND data_type = 'character varying'
+            AND character_maximum_length = 18 AND is_nullable = 'YES'
+        ))
   )
   SELECT
     migration_timestamp::text AS "migrationTimestamp",

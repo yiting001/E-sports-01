@@ -15,9 +15,10 @@
   - 微信支付 v3 `Native 下单`，返回 `code_url` 供前端渲染二维码。
   - 用户支付后由渠道**异步回调**，经**验签**（支付宝公钥 / 微信平台证书）后**幂等入账**。
   - **主动查单兜底**：充值二维码弹窗轮询 `GET /wallet/recharge/:outTradeNo/status`，后端调渠道官方查单接口（支付宝 `alipay.trade.query` / 微信 `GET /v3/pay/transactions/out-trade-no`），查到已支付则与回调共用同一幂等入账口径——回调丢失/延迟也能正常到账关闭弹窗。
-- **提现（审核制 + 转账到账）**：用户填写支付宝账号/实名提交申请，申请即校验余额并**冻结扣减**、按配置费率计手续费后置 `pending`（待审核）；财务在「财务 → 提现管理」**审核**：通过即调支付宝 `alipay.fund.trans.uni.transfer` 向收款账号转账**到账金额 = 提现金额 - 手续费**（成功置 `success`，失败回滚余额置 `failed`）；驳回则全额退回余额置 `rejected` 并留存理由。微信提现为**预留位**（调用即提示未开通）。
+- **提现（审核制 + 转账到账）**：用户填写支付宝账号/实名/**身份证号（报税用，18 位格式校验，落库到提现单）**提交申请，申请即校验余额并**冻结扣减**、按配置费率计手续费后置 `pending`（待审核）；财务在「财务 → 提现管理」**审核**：通过即调支付宝 `alipay.fund.trans.uni.transfer` 向收款账号转账**到账金额 = 提现金额 - 手续费**（成功置 `success`，失败回滚余额置 `failed`）；驳回则全额退回余额置 `rejected` 并留存理由。微信提现为**预留位**（调用即提示未开通）。
 - **转账场景报备**：支付宝「商家转账」要求报备的商户需在配置中心填写 `wallet.alipay.transferSceneName`（转账场景名称，如「业务结算」）、`wallet.alipay.transferReportInfoType`（报备信息类型，如「结算款项名称」）、`wallet.alipay.transferReportInfoContent`（报备信息内容，如「游戏账号租赁结算款」）；转账时随 `transfer_scene_name` / `transfer_scene_report_info` 上送，场景名称留空则不传（兼容未要求报备的商户）。
-- **提现手续费**：费率万分比配置（`wallet.withdrawFeeRateBp`，如 100 = 1%，0 免费），前端提现弹层实时展示手续费与预计到账金额（费率随 `GET /wallet/mine` 下发），计算函数 `calcWithdrawFeeFen` 前后端共享。
+- **提现手续费（阶梯税费）**：支持阶梯式可调税费配置 `wallet.withdrawTaxTiers`（JSON 数组 `[{"minFen":0,"rateBp":100},{"minFen":100000,"rateBp":300}]`，按提现金额取「minFen ≤ 金额」的最高档费率），未配置/配置非法时回退单一费率 `wallet.withdrawFeeRateBp`（万分比，如 100 = 1%，0 免费）；前端提现弹层实时展示税费与预计到账金额（费率与阶梯配置随 `GET /wallet/mine` 下发），选档/计算函数 `pickWithdrawFeeRateBp`、`sanitizeWithdrawTaxTiers`、`calcWithdrawFeeFen` 前后端共享。
+- **报税表单导出**：财务在「财务 → 提现管理」一键导出报税表单（`GET /wallet/admin/withdrawals/tax-export`，需 `finance:withdrawal:list` 权限）：导出当前租户全部「已到账」提现单的 CSV（姓名/身份证号/收款账号/提现金额/税费/到账金额/单号/时间），前端加 UTF-8 BOM 生成文件下载，Excel 打开中文不乱码；历史无身份证号的单据该列为空。
 - **C 端提现记录**：钱包页「流水明细 / 提现记录」页签，提现记录展示每笔提现的金额/手续费/到账金额、审核状态（待审核/处理中/已到账/转账失败/已驳回）与失败原因（`GET /wallet/withdrawals/mine`，仅见本人）；提现提交后自动切到该页签。
 - **支付宝证书模式**：应用公钥证书/支付宝公钥证书/根证书三证齐全时自动启用证书签名（转账等资金接口必须证书模式），否则回退公钥模式；支付/转账共用同一 SDK 工厂。
 - **收支明细**：分页查询本人流水，按时间倒序，含金额、方向、变更后余额快照、备注。
@@ -40,7 +41,7 @@
 | `wallet:admin:transaction`  | 钱包-明细查看     | 接口/按钮 | `GET /wallet/admin/wallets/:userId/transactions`（前端「明细」按钮 `v-permission`）                                               |
 | `wallet:admin:adjust`       | 钱包-余额调整     | 接口/按钮 | `POST /wallet/admin/wallets/:userId/adjust`（前端「调整余额」按钮 `v-permission`）                                                |
 | `finance:withdrawal:menu`   | 提现管理          | 菜单      | 侧边栏「财务 → 提现管理」动态路由 `/finance/withdrawals`                                                                          |
-| `finance:withdrawal:list`   | 财务-提现工单列表 | 接口      | `GET /wallet/admin/withdrawals`                                                                                                   |
+| `finance:withdrawal:list`   | 财务-提现工单列表 | 接口      | `GET /wallet/admin/withdrawals`、`GET /wallet/admin/withdrawals/tax-export`（报税导出）                                           |
 | `finance:withdrawal:review` | 财务-提现审核     | 接口/按钮 | `POST /wallet/admin/withdrawals/:id/approve`、`POST /wallet/admin/withdrawals/:id/reject`（前端「通过/驳回」按钮 `v-permission`） |
 | `finance:penalty:menu`      | 罚款管理          | 菜单      | 侧边栏「财务 → 罚款管理」动态路由 `/finance/penalties`                                                                            |
 | `finance:penalty:list`      | 财务-罚款记录列表 | 接口      | `GET /finance/penalties`                                                                                                          |
@@ -253,7 +254,8 @@ sequenceDiagram
 | `wallet.payout.provider`          | 默认提现渠道（alipay）                                     |      |
 | `wallet.minRechargeFen`           | 最小充值金额（分）                                         |      |
 | `wallet.minWithdrawFen`           | 最小提现金额（分）                                         |      |
-| `wallet.withdrawFeeRateBp`        | 提现手续费率（万分比，100 = 1%，0 免费）                   |      |
+| `wallet.withdrawFeeRateBp`        | 提现手续费率（万分比，100 = 1%，0 免费；阶梯未命中时回退） |      |
+| `wallet.withdrawTaxTiers`         | 阶梯税费配置（JSON 数组，按提现金额选档；空数组用单一费率） |      |
 | `wallet.notifyBaseUrl`            | 回调公网基础地址（拼接异步通知 URL）                       |      |
 | `wallet.alipay.appId`             | 支付宝应用 AppId                                           |      |
 | `wallet.alipay.privateKey`        | 支付宝应用私钥（PEM）                                      | ✓    |

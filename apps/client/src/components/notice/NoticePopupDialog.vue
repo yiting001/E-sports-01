@@ -5,16 +5,18 @@
  * 关闭后按「公告 id + 更新时间」记在本机，同一条公告不再重复弹出，
  * 后台更新内容或换新公告则重新弹出。接口失败静默降级，不打扰主流程。
  */
-import DOMPurify from "dompurify";
-import { computed, onMounted, ref } from "vue";
-import type { NoticePopupView } from "@app/contracts";
-import { noticeApi } from "@/api/notice.api";
-import { tenantContext } from "@/tenant/tenant-context";
-import { formatNoticeDate } from "@/views/notice/notice-format";
+import DOMPurify from 'dompurify';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import type { NoticePopupView } from '@app/contracts';
+import { noticeApi } from '@/api/notice.api';
+import { tenantContext } from '@/tenant/tenant-context';
+import { formatNoticeDate } from '@/views/notice/notice-format';
 
 /** 已读弹窗公告的本机存储键（按租户隔离，避免同域多租户入口串号） */
 const SEEN_KEY_PREFIX = "client.notice.popup.seen.";
 
+const router = useRouter();
 const notice = ref<NoticePopupView | null>(null);
 const open = ref(false);
 const popupTenantCode = ref("");
@@ -67,6 +69,16 @@ function close(): void {
   open.value = false;
 }
 
+/** 点击查看详情：记已读关闭弹窗后进入公告详情页 */
+function goDetail(): void {
+  if (!notice.value) {
+    return;
+  }
+  const id = notice.value.id;
+  close();
+  void router.push({ name: 'notice-detail', params: { id } });
+}
+
 onMounted(loadPopup);
 </script>
 
@@ -106,6 +118,12 @@ onMounted(loadPopup);
           <!-- eslint-enable vue/no-v-html -->
         </div>
         <footer class="popup-foot">
+          <button
+            class="popup-detail"
+            @click="goDetail"
+          >
+            查看详情
+          </button>
           <button
             class="popup-confirm"
             @click="close"
@@ -196,12 +214,25 @@ onMounted(loadPopup);
 }
 
 .popup-foot {
+  display: flex;
+  gap: 10px;
   padding: 12px 16px;
   border-top: 1px solid var(--c-border);
 }
 
+.popup-detail {
+  flex: 1;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text);
+  background: none;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+}
+
 .popup-confirm {
-  width: 100%;
+  flex: 1;
   padding: 10px 0;
   font-size: 14px;
   font-weight: 600;

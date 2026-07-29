@@ -310,14 +310,15 @@ onMounted(() => {
 }
 
 .info {
-  padding: 14px 16px;
+  padding: 16px;
 }
 
 .title {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 800;
+  line-height: 1.45;
   border-left: 3px solid var(--c-accent);
-  padding-left: 8px;
+  padding-left: 10px;
 }
 
 .meta {
@@ -330,17 +331,19 @@ onMounted(() => {
 .sold {
   margin-left: 0;
   font-size: 12px;
-  color: var(--c-text-muted);
+  color: var(--c-text-secondary);
 }
 
 .category {
   display: inline-block;
-  margin-top: 8px;
-  padding: 2px 10px;
+  margin-top: 12px;
+  padding: 3px 12px;
   font-size: 11px;
-  color: var(--c-text-secondary);
-  border: 1px solid var(--c-border);
-  border-radius: 999px;
+  letter-spacing: 0;
+  color: var(--c-accent);
+  background: var(--c-accent-dim);
+  border: 1px solid rgba(255, 176, 32, 0.3);
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
 }
 
 .selected-booster-notice {
@@ -418,7 +421,9 @@ onMounted(() => {
   gap: 14px;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--c-border);
-  background: var(--c-surface);
+  background: color-mix(in srgb, var(--c-surface) 88%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .total {
@@ -441,13 +446,24 @@ onMounted(() => {
 }
 
 .buy {
-  padding: 11px 34px;
+  padding: 12px 38px;
   font-size: 15px;
   font-weight: 800;
   font-style: italic;
+  letter-spacing: 0;
   color: var(--c-bg);
-  background: var(--c-accent);
-  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #ffd066, var(--c-accent) 55%, #e89400);
+  box-shadow: 0 6px 20px rgba(255, 176, 32, 0.32);
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.buy:hover {
+  filter: brightness(1.08);
+}
+
+.buy:active {
+  transform: translateY(1px);
 }
 
 .desktop-buy {

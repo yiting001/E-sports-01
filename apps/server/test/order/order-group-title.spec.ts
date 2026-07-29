@@ -122,6 +122,7 @@ test('完成订单保存成功后同步已结束标题，保存失败时不提�
   const order = createOrder(OrderStatus.Serving);
   order.boosterId = 'booster-1';
   let synchronized = 0;
+  let notified = 0;
   let failSave = false;
   const orders = {
     findById: async () => order,
@@ -154,6 +155,10 @@ test('完成订单保存成功后同步已结束标题，保存失败时不提�
       synchronized += 1;
       assert.equal(saved.status, OrderStatus.Completed);
     },
+    notifyCompleted: async (saved: OrderEntity) => {
+      notified += 1;
+      assert.equal(saved.status, OrderStatus.Completed);
+    },
   } as unknown as OrderGroupService;
   const useCase = new CompleteBoosterOrderUseCase(
     orders,
@@ -168,12 +173,14 @@ test('完成订单保存成功后同步已结束标题，保存失败时不提�
 
   assert.equal(result.status, OrderStatus.Completed);
   assert.equal(synchronized, 1);
+  assert.equal(notified, 1);
 
   order.status = OrderStatus.Serving;
   order.completedAt = null;
   failSave = true;
   await assert.rejects(useCase.execute('booster-1', order.id), /订单保存失败/);
   assert.equal(synchronized, 1);
+  assert.equal(notified, 1);
 });
 
 test('订单群标题同步使用数据库最新状态，旧副作用不能把标题倒退', async () => {

@@ -120,6 +120,8 @@ export interface WalletView {
   status: WalletStatus;
   /** 当前提现手续费率（万分比），供前端在提现前实时展示手续费与到账金额 */
   withdrawFeeRateBp: number;
+  /** 阶梯税费配置（按提现金额选档；空数组时回退到 withdrawFeeRateBp 单一费率） */
+  withdrawTaxTiers: WithdrawTaxTier[];
 }
 
 /** 钱包统计视图 */
@@ -214,6 +216,8 @@ export interface CreateWithdrawalBody {
   account: string;
   /** 收款方真实姓名 */
   accountName: string;
+  /** 收款方身份证号（报税用，18 位） */
+  idCardNo: string;
 }
 
 /** 提现结果视图 */
@@ -265,11 +269,23 @@ export interface WithdrawalAdminView {
   account: string;
   /** 收款方真实姓名 */
   accountName: string;
+  /** 收款方身份证号（报税用；历史单据可能为空） */
+  idCardNo: string | null;
   /** 渠道转账单号（成功后回填） */
   providerOrderId: string | null;
   /** 失败/驳回原因 */
   failReason: string | null;
   createdAt: string;
+}
+
+/** 报税表单导出结果（财务后台一键导出，前端生成文件下载） */
+export interface WithdrawalTaxExportView {
+  /** 建议文件名（含导出日期） */
+  filename: string;
+  /** CSV 正文（UTF-8，前端自行加 BOM 保证 Excel 中文不乱码） */
+  csv: string;
+  /** 导出记录数 */
+  count: number;
 }
 
 /** 提现驳回入参（管理端） */
@@ -313,6 +329,63 @@ export function calcWithdrawFeeFen(amountFen: number, rateBp: number): number {
     return 0;
   }
   return Math.ceil((amountFen * rateBp) / FEE_RATE_BASE);
+}
+
+/** 阶梯税费档位：提现金额 ≥ minFen 时适用 rateBp（万分比）费率 */
+export interface WithdrawTaxTier {
+  /** 档位起始金额（分，含），0 表示从任意金额起 */
+  minFen: number;
+  /** 该档税费率（万分比，如 100 = 1%） */
+  rateBp: number;
+}
+
+/** 身份证号格式（18 位，末位可为 X） */
+export const ID_CARD_NO_PATTERN = /^\d{17}[\dXx]$/;
+
+/**
+ * 校验并规整阶梯税费配置（配置中心 JSON 值，前后端共用）：
+ * 只保留合法档位（整数、minFen ≥ 0、0 ≤ rateBp ≤ 万分之万），按 minFen 升序去重；
+ * 非数组或全部非法时返回空数组（回退单一费率）。
+ */
+export function sanitizeWithdrawTaxTiers(value: unknown): WithdrawTaxTier[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const tiers = value.filter((item): item is WithdrawTaxTier => {
+    if (typeof item !== 'object' || item === null) {
+      return false;
+    }
+    const tier = item as Partial<WithdrawTaxTier>;
+    return (
+      Number.isInteger(tier.minFen) &&
+      (tier.minFen as number) >= 0 &&
+      Number.isInteger(tier.rateBp) &&
+      (tier.rateBp as number) >= 0 &&
+      (tier.rateBp as number) <= FEE_RATE_BASE
+    );
+  });
+  const byMin = new Map(tiers.map((t) => [t.minFen, t.rateBp]));
+  return [...byMin.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([minFen, rateBp]) => ({ minFen, rateBp }));
+}
+
+/**
+ * 按提现金额选取阶梯税费率（万分比）：
+ * 取「minFen ≤ 提现金额」的最高档；无档位命中或未配置阶梯时回退 fallbackRateBp。
+ */
+export function pickWithdrawFeeRateBp(
+  amountFen: number,
+  tiers: WithdrawTaxTier[],
+  fallbackRateBp: number,
+): number {
+  let matched: WithdrawTaxTier | null = null;
+  for (const tier of tiers) {
+    if (tier.minFen <= amountFen) {
+      matched = tier;
+    }
+  }
+  return matched ? matched.rateBp : fallbackRateBp;
 }
 
 /** 钱包默认参数（配置中心未设置时回退；杜绝散落的硬编码阈值） */

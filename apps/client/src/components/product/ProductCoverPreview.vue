@@ -111,6 +111,18 @@ function handleError(): void {
   overflow: hidden;
 }
 
+.product-cover-preview::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: 34%;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(180deg, transparent, rgba(11, 14, 20, 0.55));
+}
+
 .product-cover-preview__trigger {
   position: absolute;
   inset: 0;

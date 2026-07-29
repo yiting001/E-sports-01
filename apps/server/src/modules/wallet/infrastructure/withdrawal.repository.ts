@@ -59,4 +59,11 @@ export class TypeormWithdrawalRepository implements WithdrawalOrderRepository {
       take,
     });
   }
+
+  listByStatus(status: WithdrawalStatus): Promise<WithdrawalOrderEntity[]> {
+    return this.repo.find({
+      where: withTenant<WithdrawalOrderEntity>(this.tenant, { status }),
+      order: { createdAt: 'ASC' },
+    });
+  }
 }

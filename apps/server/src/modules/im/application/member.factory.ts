@@ -6,11 +6,13 @@ export function buildMember(
   conversationId: string,
   userId: string,
   role: ConversationMemberRole,
+  tag = '',
 ): ConversationMemberEntity {
   const member = new ConversationMemberEntity();
   member.conversationId = conversationId;
   member.userId = userId;
   member.role = role;
+  member.tag = tag;
   member.lastReadAt = null;
   return member;
 }

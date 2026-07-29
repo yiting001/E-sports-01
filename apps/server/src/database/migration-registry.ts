@@ -10,6 +10,8 @@ import { RedactImPhoneSystemMessages1784736300000 } from './migrations/178473630
 import { AddProductPcPrices1784908800000 } from './migrations/1784908800000-add-product-pc-prices';
 import { AddTenantConfigOverrides1784995200000 } from './migrations/1784995200000-add-tenant-config-overrides';
 import { AddNoticePopup1785500000000 } from './migrations/1785500000000-add-notice-popup';
+import { AddConversationMemberTag1785600000000 } from './migrations/1785600000000-add-conversation-member-tag';
+import { AddWithdrawalIdCard1785700000000 } from './migrations/1785700000000-add-withdrawal-idcard';
 
 export type ServerMigrationConstructor = new () => MigrationInterface;
 
@@ -35,6 +37,8 @@ export const SERVER_MIGRATIONS: ServerMigrationConstructor[] = [
   AddProductPcPrices1784908800000,
   AddTenantConfigOverrides1784995200000,
   AddNoticePopup1785500000000,
+  AddConversationMemberTag1785600000000,
+  AddWithdrawalIdCard1785700000000,
 ];
 
 export const SERVER_MIGRATION_DEFINITIONS: ServerMigrationDefinition[] =

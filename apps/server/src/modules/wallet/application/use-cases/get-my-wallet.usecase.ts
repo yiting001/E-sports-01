@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { CONFIG_KEYS, WALLET_DEFAULTS, WalletView } from '@app/contracts';
+import {
+  CONFIG_KEYS,
+  WALLET_DEFAULTS,
+  WalletView,
+  WithdrawTaxTier,
+  sanitizeWithdrawTaxTiers,
+} from '@app/contracts';
 import { ConfigService } from '../../../config/application/config.service';
 import { WalletService } from '../wallet.service';
 import { toWalletView } from '../wallet.mapper';
@@ -21,6 +27,12 @@ export class GetMyWalletUseCase {
       CONFIG_KEYS.wallet.withdrawFeeRateBp,
       WALLET_DEFAULTS.withdrawFeeRateBp,
     );
-    return toWalletView(wallet, feeRateBp);
+    const taxTiers = sanitizeWithdrawTaxTiers(
+      await this.config.getJson<WithdrawTaxTier[]>(
+        CONFIG_KEYS.wallet.withdrawTaxTiers,
+        [],
+      ),
+    );
+    return toWalletView(wallet, feeRateBp, taxTiers);
   }
 }

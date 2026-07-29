@@ -21,6 +21,10 @@ export class ConversationMemberEntity extends TenantScopedEntity {
   @Column({ type: 'varchar', length: 16 })
   role!: ConversationMemberRole;
 
+  /** 业务身份标签（老板/客服/打手/管理员），无则空串 */
+  @Column({ length: 16, default: '' })
+  tag!: string;
+
   /** 该成员最后读到的时间点，用于计算未读数 */
   @Column({ name: 'last_read_at', type: 'timestamptz', nullable: true })
   lastReadAt!: Date | null;

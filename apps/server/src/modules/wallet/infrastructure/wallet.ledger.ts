@@ -87,6 +87,7 @@ export class TypeormWalletLedger implements WalletLedger {
         status: WithdrawalStatus.Pending,
         account: input.account,
         accountName: input.accountName,
+        idCardNo: input.idCardNo,
         providerOrderId: null,
         failReason: null,
       });

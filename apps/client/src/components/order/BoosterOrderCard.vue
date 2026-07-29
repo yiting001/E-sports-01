@@ -10,8 +10,8 @@ import {
   ORDER_STATUS_TEXT,
   OrderStatus,
   type OrderView,
-} from "@app/contracts";
-import AppIcon from "@/components/common/AppIcon.vue";
+} from '@app/contracts';
+import AppIcon from '@/components/common/AppIcon.vue';
 
 defineProps<{
   order: OrderView;
@@ -50,6 +50,7 @@ function serviceRegionText(value: OrderView["serviceRegion"]): string {
   )?.label;
   return label?.replace(/^三角洲\s*-\s*/, "") ?? value;
 }
+
 </script>
 
 <template>
@@ -100,6 +101,9 @@ function serviceRegionText(value: OrderView["serviceRegion"]): string {
         </p>
         <p class="sub">
           下发 {{ formatTime(order.dispatchedAt || order.createdAt) }}
+        </p>
+        <p class="sub">
+          <span>游戏ID：{{ order.gameAccountId || '接单后可查看' }}</span>
         </p>
         <p
           v-if="order.remark"

@@ -58,7 +58,8 @@
     grid-row: 1 / span 3;
     position: sticky;
     top: 24px;
-    padding: 20px;
+    padding: 22px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
   }
 
   .detail .title.title {
@@ -69,13 +70,16 @@
   .detail .product-platform-prices.product-platform-prices {
     grid-template-columns: 1fr;
   }
-
   .detail .price.price {
-    font-size: 26px;
+    font-size: 32px;
   }
 
   .detail .category.category {
-    margin-top: 12px;
+    margin-top: 14px;
+  }
+
+  .detail .desktop-buy.desktop-buy:hover {
+    filter: brightness(1.08);
   }
 
   .detail .product-intro-section.product-intro-section,

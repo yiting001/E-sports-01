@@ -41,6 +41,10 @@ function senderNameForId(senderId: string): string {
   return resolveChatMemberName(props.members, senderId);
 }
 
+function senderTagForId(senderId: string): string {
+  return props.members.find((member) => member.userId === senderId)?.tag ?? '';
+}
+
 function mentionedMe(message: ChatMessage): boolean {
   return Boolean(props.selfId && message.mentions?.includes(props.selfId));
 }
@@ -98,7 +102,13 @@ function formatTime(timestamp: number): string {
       :class="{ 'row--self': isSelf(message) }"
     >
       <div class="col">
-        <span class="sender">{{ senderNameForId(message.senderId) }}</span>
+        <span class="sender">
+          {{ senderNameForId(message.senderId) }}
+          <span
+            v-if="senderTagForId(message.senderId)"
+            class="sender-tag"
+          >{{ senderTagForId(message.senderId) }}</span>
+        </span>
         <div
           class="bubble"
           :class="{ 'bubble--mention': mentionedMe(message) }"

@@ -206,6 +206,10 @@ onMounted(() => {
               </dd>
             </div>
             <div class="row">
+              <dt>游戏ID</dt>
+              <dd>接单后可查看</dd>
+            </div>
+            <div class="row">
               <dt>订单金额</dt>
               <dd class="total">
                 ¥{{ order.amountYuan }}

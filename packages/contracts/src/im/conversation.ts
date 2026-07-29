@@ -18,12 +18,25 @@ export enum ConversationStatus {
   Closed = 'closed',
 }
 
+/** 会话成员业务身份标签（订单群内备注，供消息区展示） */
+export const CONVERSATION_MEMBER_TAGS = {
+  boss: '老板',
+  agent: '客服',
+  booster: '打手',
+  admin: '管理员',
+} as const;
+
+export type ConversationMemberTag =
+  (typeof CONVERSATION_MEMBER_TAGS)[keyof typeof CONVERSATION_MEMBER_TAGS];
+
 /** 会话成员对外结构 */
 export interface ConversationMemberView {
   userId: string;
   /** 隐私安全展示名，不包含登录用户名或手机号 */
   displayName: string;
   role: ConversationMemberRole;
+  /** 业务身份标签（老板/客服/打手/管理员），无则空串 */
+  tag: string;
   joinedAt: number;
   lastReadAt: number | null;
 }

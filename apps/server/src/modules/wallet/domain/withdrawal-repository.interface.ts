@@ -25,4 +25,7 @@ export interface WithdrawalOrderRepository {
     take: number,
     status?: WithdrawalStatus,
   ): Promise<[WithdrawalOrderEntity[], number]>;
+
+  /** 按状态查询全量提现订单（报税导出用，按创建时间升序） */
+  listByStatus(status: WithdrawalStatus): Promise<WithdrawalOrderEntity[]>;
 }
