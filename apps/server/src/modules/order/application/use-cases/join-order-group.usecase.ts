@@ -33,11 +33,12 @@ export class JoinOrderGroupUseCase {
     }
     const names = await this.users.resolveNames([operatorId]);
     const name = names.get(operatorId) ?? operatorId;
-    const tag =
-      operatorId === order.serviceAgentId
-        ? CONVERSATION_MEMBER_TAGS.agent
-        : CONVERSATION_MEMBER_TAGS.admin;
-    await this.groups.joinGroup(order.conversationId, operatorId, `${tag} ${name} 加入群聊`, tag);
+    const isAgent = operatorId === order.serviceAgentId;
+    const tag = isAgent ? CONVERSATION_MEMBER_TAGS.agent : CONVERSATION_MEMBER_TAGS.admin;
+    const notice = isAgent
+      ? `客服 ${name} 已介入，将为您跟进处理，有问题请在群内留言`
+      : `管理员 ${name} 加入群聊`;
+    await this.groups.joinGroup(order.conversationId, operatorId, notice, tag);
     return { conversationId: order.conversationId };
   }
 }

@@ -69,6 +69,24 @@ export class OrderGroupService {
     await this.orders.save(order);
   }
 
+  /** 订单完成后向订单群广播服务结束系统消息（失败仅记日志，不阻断完成主流程） */
+  async notifyCompleted(order: OrderEntity): Promise<void> {
+    if (!order.conversationId) {
+      return;
+    }
+    try {
+      await this.groups.postSystemNotice(
+        order.conversationId,
+        `订单 ${order.orderNo} 已完成，本次客服会话已结束，感谢您的支持`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `订单 ${order.orderNo} 完成通知发送失败`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+  }
+
   /** 打手接单/被指派后加入订单群并广播系统消息 */
   async joinBooster(order: OrderEntity, boosterId: string): Promise<void> {
     if (!order.conversationId) {

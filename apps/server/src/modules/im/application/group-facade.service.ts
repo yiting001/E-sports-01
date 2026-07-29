@@ -94,6 +94,15 @@ export class GroupFacade {
     return conversation.id;
   }
 
+  /** 向群聊发送系统提示消息（会话不存在则跳过） */
+  async postSystemNotice(conversationId: string, content: string): Promise<void> {
+    const conversation = await this.conversations.findById(conversationId);
+    if (!conversation) {
+      return;
+    }
+    await this.systemMessage.post(conversationId, content);
+  }
+
   /** 幂等地把用户加入群聊（已在群则跳过），可附带系统提示消息 */
   async joinGroup(
     conversationId: string,
