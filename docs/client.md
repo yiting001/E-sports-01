@@ -12,6 +12,7 @@
 - **短信登录**：手机号 + 验证码登录（要求手机号已注册），调用后端 `POST /auth/sms/code`、`POST /auth/sms/login`。
 - **短信注册**：手机号 + 验证码 + 可选昵称注册（要求手机号未注册），调用后端 `POST /auth/sms/register-code`、`POST /auth/sms/register`；注册成功后端直接签发令牌，前端即自动登录。
 - **品牌配置共用**：C 端软件名称/图标与管理端共用配置中心品牌配置（`system.appName` / `system.appLogo`，公开接口 `GET /config/branding`）；启动即拉取（`stores/branding.store.ts`），登录页与 PC 顶部导航展示配置名称/图标（未配图标回退默认徽标），浏览器标题按「页标题 · 软件名称」拼合并同步 favicon。
+- **按需调试面板**：启动时通过公开 `GET /config/portal` 读取 `portal.vConsoleEnabled`；默认关闭，开启后动态加载 vConsole，关闭或加载失败时保持无调试入口，后台修改后刷新生效。
 - **用户协议**：登录/注册均需勾选「我已阅读并同意《用户协议》」才可提交；协议正文为后台配置中心富文本（`auth.userAgreement` 键），公开接口 `GET /config/agreement` 登录前可读，弹层（`AgreementDialog`）内 DOMPurify 消毒后展示。
 - **登录守卫**：访问带 `meta.requiresAuth` 的页面（我的 / 消息）未登录时自动重定向到 `/login` 并带 `redirect` 回跳地址；已登录再访问登录页直接回首页。
 - **登录态展示**：「我的」页头部登录后展示昵称与用户 ID 并提供退出登录；头像旁会员等级徽标与会员卡共用 `member.store` 的服务端权威等级，失败时不伪造 `Lv.1`。未登录展示「立即登录」入口；PC 端个人页采用左右两列，右侧订单与更多功能紧凑衔接。
@@ -34,6 +35,19 @@
 
 挑人目录使用服务端 `BoosterPublicView`，不在浏览器建立打手资料副本；`online` 映射服务端持久化接单状态，`selectable` 和 `unavailableReason` 随接口响应计算。结算草稿由 Pinia 内存 store 管理，刷新页面、退出登录或令牌清理都会丢失，账号信息不会写入 IndexedDB、localStorage 或 URL。前端本身没有数据库表和 migration；结构化订单字段、语音 URL 与接单状态由服务端 migration 管理，详见 [order.md](./order.md) 与 [booster.md](./booster.md)。
 
+## vConsole 启停流程
+
+```mermaid
+flowchart LR
+  Start["C 端启动"] --> Portal["portal.store 读取公开配置"]
+  Portal -->|开启| Import["动态 import vconsole"]
+  Import --> Manager["创建单例"]
+  Portal -->|关闭或失败| Disabled["保持关闭"]
+  Manager -->|页面卸载| Destroy["销毁实例"]
+```
+
+`vconsole@3.15.1` 是 C 端运行时依赖，但默认关闭时不会加载。只启用 System、Network、Element 面板，明确排除 Storage；Network 仍可能展示请求头和响应，因此该全局开关仅用于短时排障。加载器通过 revision 丢弃过期异步结果；按用户白名单、实时推送和自动过期关闭不在本次范围。
+
 ## 目录结构导图（本次相关部分）
 
 ```
@@ -46,9 +60,12 @@ apps/client/src
 │  └─ auth.api.ts          # 短信登录/注册/发码 + 拉取档案
 ├─ utils/http-error.ts     # 统一错误信息提取
 ├─ utils/media-url.ts      # 相对路径 / 历史本机媒体地址归一化（含富文本媒体）
+├─ utils/vconsole.ts       # vConsole 按需加载、竞态保护与销毁
+├─ utils/vconsole.spec.ts  # 单例、关闭竞态、非浏览器和加载失败测试
 ├─ stores/auth.store.ts    # 鉴权状态：令牌生命周期 + 当前用户档案
 ├─ stores/member.store.ts  # 个人中心会员等级单一来源 + 登出会话隔离
 ├─ stores/member.store.spec.ts # 真实等级、失败重试与晚到响应测试
+├─ stores/portal.store.ts  # 排行榜显隐与 vConsole 调试开关
 ├─ router
 │  ├─ index.ts             # 路由表：登录、商品/结算、挑人目录/主页与 requiresAuth 页面
 │  └─ guard.ts             # 全局前置守卫（未登录拦截并带 redirect）

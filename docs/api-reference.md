@@ -86,6 +86,7 @@
 | 方法 | 路径 | 权限码 | 说明 |
 | --- | --- | --- | --- |
 | GET | `/api/config/branding` | 公开 | 品牌信息 `{ appName, appLogo }`，登录前可读 |
+| GET | `/api/config/portal` | 公开 | 门户开关 `{ showRank, vConsoleEnabled }`，vConsole 缺失或异常时默认关闭 |
 | GET | `/api/config` | `config:list` | 列表（密钥项值脱敏 `******`） |
 | POST | `/api/config` | `config:save` | 新增/更新（upsert）；默认租户非超管返回 403 |
 | DELETE | `/api/config/:key` | `config:remove` | 删除并失效缓存；默认租户非超管返回 403 |

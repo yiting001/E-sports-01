@@ -33,12 +33,13 @@ describe('C 端门户配置租户切换', () => {
 
     const firstLoad = store.load();
     const secondLoad = store.load();
-    second.resolve({ showRank: false });
+    second.resolve({ showRank: false, vConsoleEnabled: true });
     await secondLoad;
-    first.resolve({ showRank: true });
+    first.resolve({ showRank: true, vConsoleEnabled: false });
     await firstLoad;
 
     expect(store.showRank).toBe(false);
+    expect(store.vConsoleEnabled).toBe(true);
     expect(store.loaded).toBe(true);
   });
 });

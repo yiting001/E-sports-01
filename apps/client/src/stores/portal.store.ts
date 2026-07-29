@@ -4,12 +4,14 @@ import { configApi } from '@/api/config.api';
 
 /**
  * C 端门户开关状态。
- * 单一职责：承载后台配置中心下发的门户显隐开关（排行榜等），
+ * 单一职责：承载后台配置中心下发的门户显隐与调试开关，
  * 启动即拉取公开接口，供个人中心入口与对应页面统一消费。
  */
 export const usePortalStore = defineStore('portal', () => {
   /** 是否展示排行榜入口与排行榜页（后台 portal.showRank 控制） */
   const showRank = ref(true);
+  /** 是否加载 vConsole（后台 portal.vConsoleEnabled 控制，默认关闭） */
+  const vConsoleEnabled = ref(false);
   /** 配置是否已加载完成（页面守卫需等加载后再判断显隐） */
   const loaded = ref(false);
   let loadRevision = 0;
@@ -18,6 +20,7 @@ export const usePortalStore = defineStore('portal', () => {
   async function load(): Promise<void> {
     const revision = ++loadRevision;
     showRank.value = true;
+    vConsoleEnabled.value = false;
     loaded.value = false;
     try {
       const data = await configApi.portal();
@@ -25,6 +28,7 @@ export const usePortalStore = defineStore('portal', () => {
         return;
       }
       showRank.value = data.showRank;
+      vConsoleEnabled.value = data.vConsoleEnabled === true;
     } catch {
       // 公开配置接口不可用时保留默认展示，不打扰用户
     } finally {
@@ -34,5 +38,5 @@ export const usePortalStore = defineStore('portal', () => {
     }
   }
 
-  return { showRank, loaded, load };
+  return { showRank, vConsoleEnabled, loaded, load };
 });

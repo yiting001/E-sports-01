@@ -56,6 +56,8 @@ export interface BrandingView {
 export interface PortalConfigView {
   /** 是否展示排行榜入口与排行榜页 */
   showRank: boolean;
+  /** 是否在 C 端加载 vConsole 调试面板 */
+  vConsoleEnabled: boolean;
 }
 
 /** 用户协议（公开，登录前即可读取） */
@@ -83,6 +85,8 @@ export const CONFIG_KEYS = {
     homeBanner: 'portal.homeBanner',
     /** C 端是否展示排行榜（个人中心入口与排行榜页） */
     showRank: 'portal.showRank',
+    /** C 端是否加载 vConsole 调试面板（默认关闭） */
+    vConsoleEnabled: 'portal.vConsoleEnabled',
   },
   auth: {
     accessTokenTtl: 'auth.accessTokenTtl',

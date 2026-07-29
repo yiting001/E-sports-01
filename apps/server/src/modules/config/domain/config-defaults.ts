@@ -99,6 +99,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: 'C 端是否展示排行榜（个人中心入口与排行榜页），关闭后隐藏',
   },
   {
+    key: CONFIG_KEYS.portal.vConsoleEnabled,
+    value: 'false',
+    type: ConfigValueType.Boolean,
+    group: ConfigGroup.Portal,
+    remark: 'C 端是否加载 vConsole 调试面板（全体访客可见，刷新后生效，默认关闭）',
+  },
+  {
     key: CONFIG_KEYS.booster.onboardingNoticeImage,
     value: '',
     type: ConfigValueType.Image,

@@ -7,7 +7,7 @@
 
 | 模块 | 文档 | 一句话说明 |
 | --- | --- | --- |
-| 配置中心 | [config-center.md](./config-center.md) | 可调参数集中入库 + Redis 缓存，五项站点配置按租户覆盖，基础设施配置保持平台全局 |
+| 配置中心 | [config-center.md](./config-center.md) | 可调参数集中入库 + Redis 缓存，五项站点配置按租户覆盖，vConsole 保持平台全局 |
 | RBAC 权限 | [rbac.md](./rbac.md) | 用户/角色/权限三层模型，JWT 双令牌，API/菜单/按钮级颗粒度 |
 | 多租户隔离 | [multi-tenant.md](./multi-tenant.md) | HTTP/JWT/IM 行级数据隔离、租户站点入口、配置覆盖、平台权限边界与 migration |
 | 文件上传 | [upload.md](./upload.md) | 策略模式，local 默认 / oss 可切，驱动由配置中心选择 |
@@ -27,7 +27,7 @@
 | 商品管理 | [commerce.md](./commerce.md) | 分类 + 商品 CRUD、手机/电脑双端价格、左右分类目录、方形完整主图与正式 migration |
 | 前端基座 | [frontend.md](./frontend.md) | Vue3 + Pinia，鉴权 store、动态路由守卫、v-permission 指令 |
 | 菜单待办角标 | [menu-badges.md](./menu-badges.md) | 管理端实名、订单、打手、即时通讯和客服待办数量，权限裁剪、实时刷新、轮询重试与并发防旧响应 |
-| C 端用户应用 | [client.md](./client.md) | 左右分类目录、双端结算、接单大厅检索、挑选打手和短信登录说明 |
+| C 端用户应用 | [client.md](./client.md) | 左右分类目录、双端结算、接单大厅检索、挑选打手、短信登录及按需 vConsole 调试 |
 | 登录注册 UI | [auth-ui.md](./auth-ui.md) | 企业级电竞风格登录/注册/短信验证码入口，仅重做 UI 不改鉴权逻辑 |
 | 工作台 UI | [dashboard-ui.md](./dashboard-ui.md) | 响应式账号概览、业务入口、快捷访问和权限摘要 |
 | 数据统计仪表盘 | [dashboard.md](./dashboard.md) | 订单/财务/用户/打手四块只读聚合统计（ECharts），日/月/年时间范围，按权限分块展示 |

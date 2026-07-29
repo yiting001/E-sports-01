@@ -14,12 +14,13 @@
 - 配置项**新增/更新**（upsert）并失效缓存。
 - 配置项**删除**并失效缓存。
 - 租户管理员只可查看和维护网站名称、Logo、首页横幅、排行榜开关与用户协议；支付、
-  短信、上传、令牌和其他非白名单配置仅平台超级管理员可维护。
+  短信、上传、令牌、vConsole 和其他非白名单配置仅平台超级管理员可维护。
 - 统一**读穿透缓存**（Redis，TTL 300s），并按类型（string/number/boolean/json/richtext/image）安全读取，缓存不可用时降级回源。
 - **富文本配置（richtext）**：值为 HTML 字符串（读取等同 string），配置中心编辑时启用富文本编辑器（AiEditor，图片/视频走 `POST /upload` 返回 URL），渲染前经 DOMPurify 净化防 XSS。如 `im.service.welcome`。
 - **图片配置（image）**：值为图片上传后的可访问 URL（读取等同 string），配置中心编辑时用图片上传控件（走 `POST /upload` 返回 URL）并预览。如软件图标 `system.appLogo`。
 - **打手入驻公告图**：`booster.onboardingNoticeImage` 在「打手」分组维护，默认空串；C 端不直接读取配置列表，而是由打手模块通过 `GET /booster/mine` 下发给登录用户。
 - **品牌信息**：`system.appName`（软件名称）与 `system.appLogo`（软件图标）可在配置中心修改，并经公开接口 `GET /config/branding` 在登录前下发给前端，用于浏览器标题、favicon、登录页与侧边栏 logo。
+- **C 端调试开关**：`portal.vConsoleEnabled` 默认关闭且保持平台全局；只有平台超管可在「运营」分组启停，C 端刷新后按需加载或销毁 vConsole。
 - **用户协议**：`auth.userAgreement`（富文本）在配置中心「认证」组编辑，经公开接口 `GET /config/agreement` 登录前下发；C 端登录/注册页需勾选同意后才可提交，弹层查看全文。
 - **开发短信固定码**：`sms.development.fixedCode` 默认 `000000`，仅服务端 `NODE_ENV=development` 生效；清空即关闭，生产环境始终忽略。
 - **历史迁移（幂等）**：`im.service.welcome` 由 string 改为 richtext 仅纠正类型、保留已编辑内容；`upload.maxFileSize` 旧字节默认值迁移为 MB。
@@ -150,6 +151,7 @@ sequenceDiagram
 | `system.appName` | System | `基础设施平台` | 软件名称（标题/登录页/侧边栏） | |
 | `system.appLogo` | System | （空） | 软件图标（image，作 logo 与 favicon） | |
 | `portal.homeBanner` | Portal | `{ "items": [], "intervalSeconds": 3 }` | C 端首页横幅列表、活动关联与 1～3 秒轮播间隔（json） | |
+| `portal.vConsoleEnabled` | Portal | `false` | C 端是否加载 vConsole 调试面板，刷新后生效（boolean） | |
 | `booster.onboardingNoticeImage` | Booster | （空） | C 端打手入驻页公告图片（image） | |
 | `auth.accessTokenTtl` | Auth | `3600` | 访问令牌有效期（秒） | |
 | `auth.refreshTokenTtl` | Auth | `604800` | 刷新令牌有效期（秒） | |
@@ -194,6 +196,28 @@ flowchart LR
 - 该配置允许写入租户覆盖；活动关联只保存 UUID，不把活动内容复制进配置。
 - 活动数据仍受原活动接口的登录与租户隔离保护，横幅和绑定活动必须属于同一当前租户。
 - 管理端通常通过“运营通知”页维护该 JSON；配置中心直接写入的脏值会在公开读取时被归一化或丢弃。
+
+## C 端 vConsole 调试开关
+
+`portal.vConsoleEnabled` 使用现有配置表和播种器，不需要 migration。它不在租户覆盖白名单中，平台超管通过既有 `config:list`、`config:save` 权限维护；子租户管理员不可见也不可写。
+
+```mermaid
+sequenceDiagram
+  actor Admin as 平台超管
+  participant Config as 配置中心
+  participant Client as C端 portal.store
+  participant Loader as vConsoleManager
+  Admin->>Config: 保存全局布尔开关
+  Client->>Config: GET /api/config/portal
+  Config-->>Client: vConsoleEnabled
+  alt 开启
+    Client->>Loader: 动态加载并创建单例
+  else 关闭或失败
+    Client->>Loader: 销毁或保持关闭
+  end
+```
+
+开启后所有 C 端访客都能看到调试入口，Network 面板可能暴露请求头和业务响应，因此只允许短时排障并应及时关闭。配置缺失、接口失败、模块加载失败或非浏览器环境均回退为关闭；用户白名单、实时推送和自动过期关闭属于明确非目标。
 
 ## 打手入驻公告图
 

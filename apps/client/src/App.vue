@@ -15,6 +15,7 @@ import { useHallBadgeStore } from '@/stores/hall-badge.store';
 import { usePortalStore } from '@/stores/portal.store';
 import { useUnreadStore } from '@/stores/unread.store';
 import { TenantEntryStatus, tenantContext } from '@/tenant/tenant-context';
+import { vConsoleManager } from '@/utils/vconsole';
 
 const router = useRouter();
 const invalidTenantEntry = tenantContext.entryError;
@@ -43,6 +44,12 @@ const stopTenantConfigWatch = watch(
     void branding.load();
     void portal.load();
   },
+  { immediate: true },
+);
+
+const stopVConsoleWatch = watch(
+  () => portal.vConsoleEnabled,
+  (enabled) => void vConsoleManager.sync(enabled),
   { immediate: true },
 );
 
@@ -111,6 +118,8 @@ onBeforeUnmount(() => {
   stopPresenceWatch();
   stopTenantConfigWatch();
   stopTenantStatusWatch();
+  stopVConsoleWatch();
+  vConsoleManager.destroy();
   presence.dispose();
   badges.forEach((badge) => badge.stopPolling());
   document.removeEventListener('visibilitychange', refreshVisibleBadges);
