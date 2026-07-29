@@ -14,11 +14,13 @@ import { SaveNoticeUseCase } from './application/use-cases/save-notice.usecase';
 import { RemoveNoticeUseCase } from './application/use-cases/remove-notice.usecase';
 import { ListPublicNoticesUseCase } from './application/use-cases/list-public-notices.usecase';
 import { GetPublicNoticeUseCase } from './application/use-cases/get-public-notice.usecase';
+import { GetPopupNoticeUseCase } from './application/use-cases/get-popup-notice.usecase';
 import { GetPortalBannerUseCase } from './application/use-cases/get-portal-banner.usecase';
 import { UpdatePortalBannerUseCase } from './application/use-cases/update-portal-banner.usecase';
 
 import { BannerGetController } from './interfaces/controllers/banner.get.controller';
 import { BannerUpdateController } from './interfaces/controllers/banner.update.controller';
+import { NoticePopupController } from './interfaces/controllers/notice.popup.controller';
 import { NoticePublicListController } from './interfaces/controllers/notice.public-list.controller';
 import { NoticePublicDetailController } from './interfaces/controllers/notice.public-detail.controller';
 import { NoticeListController } from './interfaces/controllers/notice.list.controller';
@@ -37,6 +39,7 @@ import { NoticeRemoveController } from './interfaces/controllers/notice.remove.c
   controllers: [
     BannerGetController,
     BannerUpdateController,
+    NoticePopupController,
     NoticePublicListController,
     NoticePublicDetailController,
     NoticeListController,
@@ -51,6 +54,7 @@ import { NoticeRemoveController } from './interfaces/controllers/notice.remove.c
     RemoveNoticeUseCase,
     ListPublicNoticesUseCase,
     GetPublicNoticeUseCase,
+    GetPopupNoticeUseCase,
     GetPortalBannerUseCase,
     UpdatePortalBannerUseCase,
   ],

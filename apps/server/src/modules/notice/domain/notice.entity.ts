@@ -21,6 +21,11 @@ export class NoticeEntity extends TenantScopedEntity {
   @Column({ default: true })
   enabled!: boolean;
 
+  /** 是否作为弹窗公告（C 端首次进入弹窗展示最新一条） */
+  @Index()
+  @Column({ default: false })
+  popup!: boolean;
+
   /** 排序权重，越小越靠前 */
   @Column({ type: 'int', default: 0 })
   sort!: number;
