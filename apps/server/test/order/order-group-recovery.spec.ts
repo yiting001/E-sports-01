@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { Logger } from '@nestjs/common';
 import { OrderPaymentMethod, OrderStatus } from '@app/contracts';
+import type { ConfigService } from '../../src/modules/config/application/config.service';
 import type { ConversationNotifier } from '../../src/modules/im/application/conversation-notifier.service';
 import { GroupFacade } from '../../src/modules/im/application/group-facade.service';
 import type { SystemMessageService } from '../../src/modules/im/application/system-message.service';
@@ -236,10 +237,20 @@ test('支付已落账但首次建群失败时，主动查单会补建且不回�
     run: <T>(_context: { tenantId: string | null; isSuper: boolean }, callback: () => T): T =>
       callback(),
   } as unknown as TenantContextService;
-  const payment = new OrderPaymentSettleService(settlement, memberProgress, orderGroup, tenant);
   const orders = {
     findById: async (id: string) => (id === order.id ? order : null),
   } as unknown as OrderRepository;
+  const config = {
+    getBoolean: async () => false,
+  } as unknown as ConfigService;
+  const payment = new OrderPaymentSettleService(
+    settlement,
+    orders,
+    memberProgress,
+    orderGroup,
+    tenant,
+    config,
+  );
   const paymentResolver = {
     resolve: () => {
       throw new Error('已支付订单不应再次查询支付渠道');

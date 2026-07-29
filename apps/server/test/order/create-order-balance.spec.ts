@@ -248,9 +248,11 @@ test('支付事务提交后的会员累计失败不会冒泡为支付失败', as
   };
   const service = new OrderPaymentSettleService(
     settlement,
+    { save: async (saved: OrderEntity) => saved } as unknown as OrderRepository,
     memberProgress as unknown as MemberProgressService,
     orderGroup as unknown as OrderGroupService,
     tenant as unknown as TenantContextService,
+    { getBoolean: async () => false } as unknown as ConfigService,
   );
 
   await assert.doesNotReject(service.payWithBalance(order.id, order.userId, 300));

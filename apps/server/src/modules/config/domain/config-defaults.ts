@@ -333,6 +333,14 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: '提现手续费率（万分比，如 100 = 1%；0 表示免手续费），从提现金额中扣除',
   },
   {
+    key: CONFIG_KEYS.order.autoDispatchHall,
+    value: 'false',
+    type: ConfigValueType.Boolean,
+    group: ConfigGroup.Order,
+    remark:
+      '支付成功后自动下发接单大厅（夜间无人值守时开启，白天关闭改为客服手动下派；指定打手订单不受影响）',
+  },
+  {
     key: CONFIG_KEYS.wallet.notifyBaseUrl,
     value: '',
     type: ConfigValueType.String,

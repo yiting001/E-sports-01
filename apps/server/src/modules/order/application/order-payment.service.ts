@@ -1,12 +1,22 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { OrderPaymentMethod } from '@app/contracts';
+import {
+  CONFIG_KEYS,
+  OrderBoosterSelectionMode,
+  OrderPaymentMethod,
+  OrderStatus,
+} from '@app/contracts';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
+import { ConfigService } from '../../config/application/config.service';
 import { MemberProgressService } from '../../member/application/member-progress.service';
 import { OrderEntity } from '../domain/order.entity';
 import {
   ORDER_PAYMENT_SETTLEMENT,
   OrderPaymentSettlement,
 } from '../domain/order-payment-settlement.interface';
+import {
+  ORDER_REPOSITORY,
+  OrderRepository,
+} from '../domain/order-repository.interface';
 import { OrderGroupService } from './order-group.service';
 
 /**
@@ -23,9 +33,12 @@ export class OrderPaymentSettleService {
   constructor(
     @Inject(ORDER_PAYMENT_SETTLEMENT)
     private readonly settlement: OrderPaymentSettlement,
+    @Inject(ORDER_REPOSITORY)
+    private readonly orders: OrderRepository,
     private readonly memberProgress: MemberProgressService,
     private readonly orderGroup: OrderGroupService,
     private readonly tenant: TenantContextService,
+    private readonly config: ConfigService,
   ) {}
 
   async markPaid(
@@ -89,6 +102,40 @@ export class OrderPaymentSettleService {
       );
     }
     await this.ensureGroupSafely(paidOrder);
+    await this.autoDispatchSafely(paidOrder);
+  }
+
+  /**
+   * 自动派单：配置开启时，支付后直接下发接单大厅（待客服处理 → 待接单）；
+   * 指定打手订单不自动下发，仍走客服确认指派；失败仅记日志，不影响落账。
+   */
+  private async autoDispatchSafely(order: OrderEntity): Promise<void> {
+    try {
+      if (order.status !== OrderStatus.PendingService) {
+        return;
+      }
+      if (
+        order.boosterSelectionMode === OrderBoosterSelectionMode.Specified ||
+        order.requestedBoosterId
+      ) {
+        return;
+      }
+      const enabled = await this.config.getBoolean(
+        CONFIG_KEYS.order.autoDispatchHall,
+        false,
+      );
+      if (!enabled) {
+        return;
+      }
+      order.status = OrderStatus.Dispatching;
+      order.dispatchedAt = new Date();
+      await this.orders.save(order);
+    } catch (error) {
+      this.logger.error(
+        `订单 ${order.orderNo} 自动下发大厅失败`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   private async ensureGroupSafely(paidOrder: OrderEntity): Promise<void> {

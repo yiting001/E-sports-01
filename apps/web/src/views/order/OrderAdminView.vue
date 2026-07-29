@@ -6,6 +6,9 @@
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
+  CONFIG_KEYS,
+  ConfigGroup,
+  ConfigValueType,
   ORDER_PAYMENT_METHOD_TEXT,
   ORDER_STATUS_TEXT,
   OrderStatus,
@@ -22,6 +25,7 @@ import OrderDetailDrawer from '@/components/order/OrderDetailDrawer.vue';
 import AssignBoosterDialog from '@/components/order/AssignBoosterDialog.vue';
 import ProductPreviewDialog from '@/components/order/ProductPreviewDialog.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
+import { configApi } from '@/api/config.api';
 import { orderApi } from '@/api/order.api';
 
 const router = useRouter();
@@ -130,6 +134,39 @@ function openDetail(row: AdminOrderView): void {
   detailVisible.value = true;
 }
 
+/** 自动派单开关：开启后新支付订单自动下发大厅（夜间无人值守），关闭则客服手动下派 */
+const autoDispatch = ref(false);
+const autoDispatchLoading = ref(false);
+
+async function loadAutoDispatch(): Promise<void> {
+  try {
+    const items = await configApi.list(ConfigGroup.Order);
+    autoDispatch.value =
+      items.find((item) => item.key === CONFIG_KEYS.order.autoDispatchHall)?.value === 'true';
+  } catch {
+    /* 无配置查看权限时保持默认关闭展示，开关本身另受保存权限控制 */
+  }
+}
+
+async function toggleAutoDispatch(value: string | number | boolean): Promise<void> {
+  const next = value === true;
+  autoDispatchLoading.value = true;
+  try {
+    await configApi.upsert({
+      key: CONFIG_KEYS.order.autoDispatchHall,
+      value: String(next),
+      type: ConfigValueType.Boolean,
+      group: ConfigGroup.Order,
+      remark: '支付成功后自动下发接单大厅（夜间无人值守时开启；指定打手订单不受影响）',
+    });
+    ElMessage.success(next ? '已开启自动派单，新支付订单将自动下发大厅' : '已关闭自动派单，改为客服手动下派');
+  } catch {
+    autoDispatch.value = !next;
+  } finally {
+    autoDispatchLoading.value = false;
+  }
+}
+
 /** 把「待客服处理」订单下发到接单大厅 */
 async function dispatch(row: AdminOrderView): Promise<void> {
   await ElMessageBox.confirm(
@@ -142,7 +179,10 @@ async function dispatch(row: AdminOrderView): Promise<void> {
   await load();
 }
 
-onMounted(load);
+onMounted(() => {
+  void load();
+  void loadAutoDispatch();
+});
 </script>
 
 <template>
@@ -154,6 +194,17 @@ onMounted(load);
     >
       <template #actions>
         <div class="admin-actions">
+          <div
+            v-permission="PERMS.config.save"
+            class="auto-dispatch"
+          >
+            <span class="auto-dispatch__label">自动派单</span>
+            <el-switch
+              v-model="autoDispatch"
+              :loading="autoDispatchLoading"
+              @change="toggleAutoDispatch"
+            />
+          </div>
           <el-select
             v-model="statusFilter"
             placeholder="全部状态"
@@ -340,6 +391,17 @@ onMounted(load);
 
 .order-filter {
   width: 140px;
+}
+
+.auto-dispatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auto-dispatch__label {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .order-filter--input {

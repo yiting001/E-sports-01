@@ -31,6 +31,8 @@ export enum ConfigGroup {
   Portal = 'portal',
   /** 邀请奖励（邀请人/被邀请人奖励方式与额度） */
   Invite = 'invite',
+  /** 订单（自动派单等策略） */
+  Order = 'order',
 }
 
 /** 配置项对外结构（敏感项的值在传输前会被脱敏） */
@@ -152,6 +154,10 @@ export const CONFIG_KEYS = {
     retentionDays: 'log.retentionDays',
     /** 不记录访问日志的路径前缀（JSON 字符串数组） */
     excludePaths: 'log.excludePaths',
+  },
+  order: {
+    /** 支付成功后自动下发接单大厅（夜间无人值守时开启；指定打手订单不受影响） */
+    autoDispatchHall: 'order.autoDispatchHall',
   },
   invite: {
     /** 邀请人奖励方式：none / coupon / wallet */
