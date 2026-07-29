@@ -11,6 +11,7 @@
 - **商品 CRUD + 上下架**：管理端分页查询（按分类 / 状态 / 关键字过滤）、创建、更新、删除、上下架切换。新建商品默认「下架」，需显式上架后 C 端才可见。
 - **封面图片 + 富文本详情**：商品含封面图片（`cover`，走现有 `/upload` 上传返回 URL）与富文本详情（`description` 存 HTML，管理端用 AiEditor 编辑，图片/视频复用上传接口）。C 端详情主图只展示封面，`coverTitle / coverSub` 在图下独立展示；富文本先净化再转换历史本机媒体地址。
 - **关联负责客服（仅客服角色）**：商品可选关联一名「负责客服」（`serviceAgentId`，可空），为后续「下单拉群只拉指定客服」打基础。候选人**仅取拥有内置「客服」角色（`service`）的用户**（非全部用户），管理端表单经 `/commerce/service-agents` 按用户名/昵称远程搜索。客服角色由 `RbacSeeder` 幂等播种，管理员在用户管理中为客服人员分配。
+- **C 端商品详情页视觉**：价格区采用战术金渐变面板（大号价格 + 折扣标签 + 划线原价 + 已售），封面底部渐隐衔接，下单按钮为斜切金色渐变；移动端与 PC 端（双栏 + 右侧吸顶信息卡）均适配。
 - **C 端只读公开接口**：`/commerce/public/categories`（启用分类）、`/commerce/public/products`（上架商品，可按分类过滤）与 `/commerce/public/products/:id`（单个上架商品），免登录，供首页、分类和详情页渲染。
 - **营销工具**：商品列表「营销」入口弹窗，可编辑已售销量（`sold` 走商品更新接口，需 `commerce:product:update`），并可为商品添加自定义评论（昵称/头像自设，走 `POST /review/marketing`，详见 `docs/review.md`）。
 - **金额以「分」存储**：`priceFen` / `originPriceFen` 为整数分，杜绝浮点误差；展示层统一 `fenToYuan` 转元。

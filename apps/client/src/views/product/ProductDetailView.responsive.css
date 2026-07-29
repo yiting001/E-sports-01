@@ -57,7 +57,8 @@
     grid-row: 1 / span 3;
     position: sticky;
     top: 24px;
-    padding: 20px;
+    padding: 22px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
   }
 
   .detail .title.title {
@@ -65,22 +66,21 @@
     line-height: 1.35;
   }
 
-  .detail .meta.meta {
-    flex-wrap: wrap;
-    gap: 8px 10px;
-  }
-
   .detail .price.price {
-    font-size: 26px;
+    font-size: 32px;
   }
 
-  .detail .sold.sold {
-    width: 100%;
-    margin-left: 0;
+  .detail .price-panel.price-panel {
+    margin-top: 14px;
+    padding: 12px 14px;
   }
 
   .detail .category.category {
-    margin-top: 12px;
+    margin-top: 14px;
+  }
+
+  .detail .desktop-buy.desktop-buy:hover {
+    filter: brightness(1.08);
   }
 
   .detail .product-intro-section.product-intro-section,
