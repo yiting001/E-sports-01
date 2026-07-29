@@ -141,6 +141,16 @@
   color: var(--c-accent);
 }
 
+.chat-panel .sender-tag {
+  margin-left: 4px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--c-accent);
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+}
+
 .chat-panel .bubble {
   padding: 10px 12px;
   background: var(--c-surface-2);

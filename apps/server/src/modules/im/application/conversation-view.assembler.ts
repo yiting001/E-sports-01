@@ -105,6 +105,7 @@ export class ConversationViewAssembler {
       userId: member.userId,
       username,
       role: member.role as ConversationMemberRole,
+      tag: member.tag,
       joinedAt: member.createdAt.getTime(),
       lastReadAt: member.lastReadAt ? member.lastReadAt.getTime() : null,
     };

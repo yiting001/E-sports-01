@@ -71,6 +71,7 @@ export class GroupFacade {
     title: string,
     memberIds: string[],
     welcomeText?: string,
+    memberTags?: Record<string, string>,
   ): Promise<string> {
     const ids = [...new Set([ownerId, ...memberIds].filter(Boolean))];
     const { conversation, created } = await this.findOrCreateSystemGroup(
@@ -82,6 +83,7 @@ export class GroupFacade {
       conversation.id,
       conversation.ownerId ?? ownerId,
       ids,
+      memberTags,
     );
     if (created && welcomeText) {
       await this.postWelcomeSafely(conversation.id, welcomeText);
@@ -93,7 +95,12 @@ export class GroupFacade {
   }
 
   /** 幂等地把用户加入群聊（已在群则跳过），可附带系统提示消息 */
-  async joinGroup(conversationId: string, userId: string, noticeText?: string): Promise<void> {
+  async joinGroup(
+    conversationId: string,
+    userId: string,
+    noticeText?: string,
+    tag = '',
+  ): Promise<void> {
     const conversation = await this.conversations.findById(conversationId);
     if (!conversation) {
       return;
@@ -101,7 +108,7 @@ export class GroupFacade {
     const existing = await this.members.findByConversation(conversationId);
     if (!existing.some((m) => m.userId === userId)) {
       await this.members.saveMany([
-        buildMember(conversationId, userId, ConversationMemberRole.Member),
+        buildMember(conversationId, userId, ConversationMemberRole.Member, tag),
       ]);
     }
     if (noticeText) {
@@ -152,6 +159,7 @@ export class GroupFacade {
     conversationId: string,
     ownerId: string,
     userIds: string[],
+    tags?: Record<string, string>,
   ): Promise<boolean> {
     const existing = await this.members.findByConversation(conversationId);
     const existingIds = new Set(existing.map((member) => member.userId));
@@ -166,6 +174,7 @@ export class GroupFacade {
             conversationId,
             userId,
             userId === ownerId ? ConversationMemberRole.Owner : ConversationMemberRole.Member,
+            tags?.[userId] ?? '',
           ),
         ),
       );

@@ -115,7 +115,16 @@ function senderNameOf(message: ChatMessage): string {
     return '我';
   }
   const member = compose.members.value.find((m) => m.userId === message.senderId);
-  return member?.username ?? '对方';
+  if (member?.username) {
+    return member.username;
+  }
+  return activeConversation.value?.type === ConversationType.Service ? '客服' : '对方';
+}
+
+/** 发送者业务身份标签（老板/客服/打手/管理员），无则空串不展示 */
+function senderTagOf(message: ChatMessage): string {
+  const member = compose.members.value.find((m) => m.userId === message.senderId);
+  return member?.tag ?? '';
 }
 
 /** 系统富文本消息净化后渲染，防止 XSS */
@@ -341,7 +350,13 @@ onBeforeUnmount(() => socket.disconnect());
           :class="{ 'row--self': isSelf(msg) }"
         >
           <div class="col">
-            <span class="sender">{{ isSelf(msg) ? '我' : '客服' }}</span>
+            <span class="sender">
+              {{ senderNameOf(msg) }}
+              <span
+                v-if="senderTagOf(msg)"
+                class="sender-tag"
+              >{{ senderTagOf(msg) }}</span>
+            </span>
             <div
               class="bubble"
               :class="{ 'bubble--mention': mentionedMe(msg) }"

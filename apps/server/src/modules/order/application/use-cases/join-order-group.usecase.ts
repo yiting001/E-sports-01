@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { OrderGroupJoinResult } from '@app/contracts';
+import { CONVERSATION_MEMBER_TAGS, OrderGroupJoinResult } from '@app/contracts';
 import { GroupFacade } from '../../../im/application/group-facade.service';
 import { UserDirectory } from '../../../rbac/application/user-directory.service';
 import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository.interface';
@@ -33,7 +33,11 @@ export class JoinOrderGroupUseCase {
     }
     const names = await this.users.resolveNames([operatorId]);
     const name = names.get(operatorId) ?? operatorId;
-    await this.groups.joinGroup(order.conversationId, operatorId, `工作人员 ${name} 加入群聊`);
+    const tag =
+      operatorId === order.serviceAgentId
+        ? CONVERSATION_MEMBER_TAGS.agent
+        : CONVERSATION_MEMBER_TAGS.admin;
+    await this.groups.joinGroup(order.conversationId, operatorId, `${tag} ${name} 加入群聊`, tag);
     return { conversationId: order.conversationId };
   }
 }

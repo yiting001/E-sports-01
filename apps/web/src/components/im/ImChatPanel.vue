@@ -79,6 +79,12 @@ function senderNameOf(message: ChatMessage): string {
   return member?.username ?? message.senderId.slice(0, 8);
 }
 
+/** 发送者业务身份标签（老板/客服/打手/管理员），无则空串不展示 */
+function senderTagOf(message: ChatMessage): string {
+  const member = props.members.find((m) => m.userId === message.senderId);
+  return member?.tag ?? '';
+}
+
 /** 发送：带上有效提及与引用 id，发完清空引用状态 */
 function handleSend(): void {
   emit('send', {
@@ -191,7 +197,14 @@ watch(
               </span>
               <div class="im-message__content">
                 <div class="im-message__meta">
-                  <span>{{ message.senderId.slice(0, 8) }}</span>
+                  <span>{{ senderNameOf(message) }}</span>
+                  <el-tag
+                    v-if="senderTagOf(message)"
+                    size="small"
+                    effect="plain"
+                  >
+                    {{ senderTagOf(message) }}
+                  </el-tag>
                   <span>{{ messageTypeLabel(message.type) }}</span>
                   <time>{{ formatImTime(message.createdAt) }}</time>
                   <el-button

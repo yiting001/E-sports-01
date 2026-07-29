@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { CONVERSATION_MEMBER_TAGS } from '@app/contracts';
 import { GroupFacade } from '../../im/application/group-facade.service';
 import { UserDirectory } from '../../rbac/application/user-directory.service';
 import { SUPER_ADMIN_ROLE, TENANT_ADMIN_ROLE } from '../../rbac/domain/rbac.constants';
@@ -45,12 +46,24 @@ export class OrderGroupService {
     const memberIds = [order.userId, order.serviceAgentId, order.boosterId, ...adminIds];
     const ownerId = order.serviceAgentId || adminIds[0] || order.userId;
     const title = `订单群·${order.productTitle}`;
+    const memberTags: Record<string, string> = {};
+    for (const adminId of adminIds) {
+      memberTags[adminId] = CONVERSATION_MEMBER_TAGS.admin;
+    }
+    if (order.boosterId) {
+      memberTags[order.boosterId] = CONVERSATION_MEMBER_TAGS.booster;
+    }
+    if (order.serviceAgentId) {
+      memberTags[order.serviceAgentId] = CONVERSATION_MEMBER_TAGS.agent;
+    }
+    memberTags[order.userId] = CONVERSATION_MEMBER_TAGS.boss;
     const conversationId = await this.groups.ensureSystemGroup(
       order.id,
       ownerId,
       title,
       memberIds,
       `订单 ${order.orderNo} 已支付成功，客服将尽快为您安排服务`,
+      memberTags,
     );
     order.conversationId = conversationId;
     await this.orders.save(order);
@@ -68,6 +81,7 @@ export class OrderGroupService {
         order.conversationId,
         boosterId,
         `打手 ${name} 已接单，加入群聊为您服务`,
+        CONVERSATION_MEMBER_TAGS.booster,
       );
     } catch (err) {
       this.logger.error(
