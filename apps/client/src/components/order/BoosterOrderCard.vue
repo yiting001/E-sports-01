@@ -5,7 +5,12 @@
  * （大厅传「接单」、订单中心对服务中订单传「完成订单」）；
  * 点击卡片体触发 open 事件供宿主跳转详情；账号信息仅在后端下发时展示（接单后可见）。
  */
-import { ORDER_STATUS_TEXT, OrderStatus, type OrderView } from '@app/contracts';
+import {
+  BOOSTER_SERVICE_REGIONS,
+  ORDER_STATUS_TEXT,
+  OrderStatus,
+  type OrderView,
+} from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 
 defineProps<{
@@ -34,6 +39,11 @@ function statusClass(status: OrderStatus): string {
 
 function formatTime(iso: string): string {
   return iso ? iso.slice(0, 16).replace('T', ' ') : '';
+}
+
+/** 区服值 → 展示文案；历史订单为空串时不展示 */
+function regionLabel(value: string): string {
+  return BOOSTER_SERVICE_REGIONS.find((item) => item.value === value)?.label ?? '';
 }
 </script>
 
@@ -73,6 +83,10 @@ function formatTime(iso: string): string {
         <p class="sub">
           <span>数量 ×{{ order.quantity }}</span>
           <span>{{ formatTime(order.createdAt) }}</span>
+        </p>
+        <p class="sub">
+          <span v-if="regionLabel(order.serviceRegion)">{{ regionLabel(order.serviceRegion) }}</span>
+          <span>游戏ID：{{ order.gameAccountId || '接单后可查看' }}</span>
         </p>
         <p
           v-if="order.remark"

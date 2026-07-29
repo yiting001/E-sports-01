@@ -6,7 +6,11 @@
  */
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ORDER_STATUS_TEXT, type OrderView } from '@app/contracts';
+import {
+  BOOSTER_SERVICE_REGIONS,
+  ORDER_STATUS_TEXT,
+  type OrderView,
+} from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import RemarkMediaGallery from '@/components/order/RemarkMediaGallery.vue';
 import { boosterApi } from '@/api/booster.api';
@@ -27,6 +31,11 @@ const availabilityError = ref(false);
 
 function formatTime(iso: string): string {
   return iso ? iso.slice(0, 19).replace('T', ' ') : '-';
+}
+
+/** 区服值 → 展示文案；历史订单为空串时展示占位 */
+function regionLabel(value: string): string {
+  return BOOSTER_SERVICE_REGIONS.find((item) => item.value === value)?.label ?? '-';
 }
 
 /** 接单：成功后提示并返回大厅 */
@@ -133,6 +142,14 @@ onMounted(async () => {
             <div class="row">
               <dt>下单时间</dt>
               <dd>{{ formatTime(order.createdAt) }}</dd>
+            </div>
+            <div class="row">
+              <dt>游戏区服</dt>
+              <dd>{{ regionLabel(order.serviceRegion) }}</dd>
+            </div>
+            <div class="row">
+              <dt>游戏ID</dt>
+              <dd>接单后可查看</dd>
             </div>
             <div class="row">
               <dt>用户备注</dt>
