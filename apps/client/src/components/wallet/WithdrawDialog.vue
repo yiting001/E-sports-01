@@ -1,15 +1,18 @@
 <script setup lang="ts">
 /**
- * 提现弹层：金额（元）+ 支付宝收款账号/姓名 → 提交提现申请（审核制）。
- * 输入金额时按配置费率实时展示手续费与到账金额；提交后等待财务审核。
+ * 提现弹层：金额（元）+ 支付宝收款账号/姓名/身份证号（报税）→ 提交提现申请（审核制）。
+ * 输入金额时按阶梯税费/配置费率实时展示税费与到账金额；提交后等待财务审核。
  */
 import { computed, ref } from 'vue';
 import {
+  ID_CARD_NO_PATTERN,
   PayoutProvider,
   WALLET_DEFAULTS,
   WithdrawalStatus,
+  type WithdrawTaxTier,
   calcWithdrawFeeFen,
   fenToYuan,
+  pickWithdrawFeeRateBp,
   yuanToFen,
 } from '@app/contracts';
 import { walletApi } from '@/api/wallet.api';
@@ -20,6 +23,8 @@ const props = defineProps<{
   balanceFen: number;
   /** 提现手续费率（万分比），用于实时展示手续费与到账金额 */
   feeRateBp: number;
+  /** 阶梯税费配置（按金额选档；空数组回退 feeRateBp 单一费率） */
+  taxTiers: WithdrawTaxTier[];
 }>();
 const emit = defineEmits<{ done: []; close: [] }>();
 
@@ -28,6 +33,7 @@ const toast = useToast();
 const amountYuan = ref('');
 const account = ref('');
 const accountName = ref('');
+const idCardNo = ref('');
 const submitting = ref(false);
 
 /** 手续费（分），随输入金额实时计算 */
@@ -36,7 +42,8 @@ const feeFen = computed(() => {
   if (!Number.isInteger(amountFen) || amountFen <= 0) {
     return 0;
   }
-  return calcWithdrawFeeFen(amountFen, props.feeRateBp);
+  const rateBp = pickWithdrawFeeRateBp(amountFen, props.taxTiers, props.feeRateBp);
+  return calcWithdrawFeeFen(amountFen, rateBp);
 });
 
 /** 到账金额（分）= 提现金额 - 手续费 */
@@ -62,6 +69,10 @@ async function submit(): Promise<void> {
     toast.show('请填写支付宝账号与真实姓名');
     return;
   }
+  if (!ID_CARD_NO_PATTERN.test(idCardNo.value.trim())) {
+    toast.show('请填写正确的 18 位身份证号（报税用）');
+    return;
+  }
   submitting.value = true;
   try {
     const result = await walletApi.withdraw({
@@ -69,6 +80,7 @@ async function submit(): Promise<void> {
       provider: PayoutProvider.Alipay,
       account: account.value.trim(),
       accountName: accountName.value.trim(),
+      idCardNo: idCardNo.value.trim().toUpperCase(),
     });
     if (result.status === WithdrawalStatus.Failed) {
       toast.show(result.failReason || '提现失败，请稍后重试');
@@ -127,12 +139,22 @@ async function submit(): Promise<void> {
           placeholder="收款方实名"
         >
       </label>
+      <label class="field">
+        <span class="label">身份证号（报税用）</span>
+        <input
+          v-model="idCardNo"
+          class="input"
+          type="text"
+          maxlength="18"
+          placeholder="18 位身份证号"
+        >
+      </label>
 
       <p
         v-if="arriveFen > 0"
         class="fee-tip"
       >
-        手续费 ¥{{ fenToYuan(feeFen) }}，预计到账 ¥{{ fenToYuan(arriveFen) }}
+        税费 ¥{{ fenToYuan(feeFen) }}，预计到账 ¥{{ fenToYuan(arriveFen) }}
       </p>
 
       <button

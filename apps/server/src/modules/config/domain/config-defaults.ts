@@ -333,6 +333,14 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: '提现手续费率（万分比，如 100 = 1%；0 表示免手续费），从提现金额中扣除',
   },
   {
+    key: CONFIG_KEYS.wallet.withdrawTaxTiers,
+    value: '[]',
+    type: ConfigValueType.Json,
+    group: ConfigGroup.Wallet,
+    remark:
+      '阶梯税费配置：JSON 数组 [{"minFen":0,"rateBp":100},{"minFen":100000,"rateBp":300}]，按提现金额取「minFen ≤ 金额」的最高档费率（万分比）；空数组回退单一费率 wallet.withdrawFeeRateBp',
+  },
+  {
     key: CONFIG_KEYS.order.autoDispatchHall,
     value: 'false',
     type: ConfigValueType.Boolean,

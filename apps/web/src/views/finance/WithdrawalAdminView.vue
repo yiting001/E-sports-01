@@ -14,7 +14,7 @@ import {
   type WithdrawalAdminView,
 } from '@app/contracts';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Check, Close, Money, Refresh, Search, View } from '@element-plus/icons-vue';
+import { Check, Close, Download, Money, Refresh, Search, View } from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
@@ -27,6 +27,7 @@ const page = ref(1);
 const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const statusFilter = ref<WithdrawalStatus | undefined>(undefined);
 const loading = ref(false);
+const exporting = ref(false);
 const detailVisible = ref(false);
 const currentWithdrawal = ref<WithdrawalAdminView | null>(null);
 
@@ -109,6 +110,30 @@ function syncCurrentWithdrawal(id: string): void {
   detailVisible.value = latest !== null;
 }
 
+/** 一键导出报税表单：拉取已到账提现单 CSV，加 BOM 生成文件下载（Excel 中文不乱码） */
+async function exportTaxReport(): Promise<void> {
+  exporting.value = true;
+  try {
+    const result = await financeApi.exportTaxReport();
+    if (result.count === 0) {
+      ElMessage.info('暂无已到账的提现单可导出');
+      return;
+    }
+    const blob = new Blob([`\uFEFF${result.csv}`], {
+      type: 'text/csv;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = result.filename;
+    link.click();
+    URL.revokeObjectURL(url);
+    ElMessage.success(`已导出 ${result.count} 条报税记录`);
+  } finally {
+    exporting.value = false;
+  }
+}
+
 async function approve(row: WithdrawalAdminView): Promise<void> {
   await ElMessageBox.confirm(
     `确认通过 ${row.nickname || row.username} 的提现申请？将立即向支付宝账号 ${row.account}（${row.accountName}）转账 ¥${row.arriveYuan}。`,
@@ -169,6 +194,15 @@ onMounted(() => {
             @click="load"
           >
             刷新
+          </el-button>
+          <el-button
+            v-permission="PERMS.finance.withdrawalList"
+            type="primary"
+            :icon="Download"
+            :loading="exporting"
+            @click="exportTaxReport"
+          >
+            导出报税表单
           </el-button>
         </div>
       </template>
@@ -342,6 +376,9 @@ onMounted(() => {
           </el-descriptions-item>
           <el-descriptions-item label="收款姓名">
             {{ currentWithdrawal.accountName }}
+          </el-descriptions-item>
+          <el-descriptions-item label="身份证号">
+            {{ currentWithdrawal.idCardNo || '-' }}
           </el-descriptions-item>
           <el-descriptions-item label="渠道单号">
             {{ currentWithdrawal.providerOrderId || '-' }}

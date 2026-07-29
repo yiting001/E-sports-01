@@ -186,6 +186,8 @@ export const CONFIG_KEYS = {
     minWithdrawFen: 'wallet.minWithdrawFen',
     /** 提现手续费率（万分比，如 100 = 1%；0 表示免手续费） */
     withdrawFeeRateBp: 'wallet.withdrawFeeRateBp',
+    /** 阶梯税费配置（JSON 数组 [{"minFen":0,"rateBp":100},...]，按提现金额选档；空则用单一费率） */
+    withdrawTaxTiers: 'wallet.withdrawTaxTiers',
     /** 支付回调可达的公网基础地址，用于拼接异步通知 URL，例如 https://api.example.com */
     notifyBaseUrl: 'wallet.notifyBaseUrl',
     /** 支付宝 */

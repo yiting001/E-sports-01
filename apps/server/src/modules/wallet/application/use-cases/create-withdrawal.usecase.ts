@@ -10,8 +10,11 @@ import {
   WALLET_DEFAULTS,
   WithdrawalResultView,
   WithdrawalStatus,
+  WithdrawTaxTier,
   calcWithdrawFeeFen,
   fenToYuan,
+  pickWithdrawFeeRateBp,
+  sanitizeWithdrawTaxTiers,
 } from '@app/contracts';
 import { ConfigService } from '../../../config/application/config.service';
 import { WALLET_LEDGER, WalletLedger } from '../../domain/ledger.interface';
@@ -52,10 +55,17 @@ export class CreateWithdrawalUseCase {
       throw new NotImplementedException('该提现渠道暂未开通，请改用支付宝提现');
     }
 
-    const feeRateBp = await this.config.getNumber(
+    const flatRateBp = await this.config.getNumber(
       CONFIG_KEYS.wallet.withdrawFeeRateBp,
       WALLET_DEFAULTS.withdrawFeeRateBp,
     );
+    const tiers = sanitizeWithdrawTaxTiers(
+      await this.config.getJson<WithdrawTaxTier[]>(
+        CONFIG_KEYS.wallet.withdrawTaxTiers,
+        [],
+      ),
+    );
+    const feeRateBp = pickWithdrawFeeRateBp(body.amountFen, tiers, flatRateBp);
     const feeFen = calcWithdrawFeeFen(body.amountFen, feeRateBp);
     if (feeFen >= body.amountFen) {
       throw new BadRequestException('提现金额过小，扣除手续费后无可到账金额');
@@ -69,6 +79,7 @@ export class CreateWithdrawalUseCase {
       provider: body.provider,
       account: body.account,
       accountName: body.accountName,
+      idCardNo: body.idCardNo,
       outBizNo: buildOrderNo('W'),
     });
     return {

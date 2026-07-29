@@ -23,6 +23,8 @@ export interface ReserveWithdrawalInput {
   provider: PayoutProvider;
   account: string;
   accountName: string;
+  /** 收款方身份证号（报税用） */
+  idCardNo: string;
   outBizNo: string;
 }
 

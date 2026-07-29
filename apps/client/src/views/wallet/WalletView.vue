@@ -207,6 +207,7 @@ onMounted(() => {
       v-if="withdrawing && wallet"
       :balance-fen="wallet.balanceFen"
       :fee-rate-bp="wallet.withdrawFeeRateBp"
+      :tax-tiers="wallet.withdrawTaxTiers"
       @done="onWithdrawn"
       @close="withdrawing = false"
     />

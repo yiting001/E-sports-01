@@ -32,6 +32,7 @@ export function toWithdrawalAdminView(
     status: order.status,
     account: order.account,
     accountName: order.accountName,
+    idCardNo: order.idCardNo,
     providerOrderId: order.providerOrderId,
     failReason: order.failReason,
     createdAt: order.createdAt.toISOString(),

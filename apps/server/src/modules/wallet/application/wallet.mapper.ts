@@ -1,10 +1,16 @@
-import { WalletStatsView, WalletView, fenToYuan } from '@app/contracts';
+import {
+  WalletStatsView,
+  WalletView,
+  WithdrawTaxTier,
+  fenToYuan,
+} from '@app/contracts';
 import { WalletEntity } from '../domain/wallet.entity';
 
-/** 实体 + 当前手续费率 → 钱包视图 */
+/** 实体 + 当前手续费率/阶梯税费 → 钱包视图 */
 export function toWalletView(
   wallet: WalletEntity,
   withdrawFeeRateBp: number,
+  withdrawTaxTiers: WithdrawTaxTier[],
 ): WalletView {
   return {
     id: wallet.id,
@@ -12,6 +18,7 @@ export function toWalletView(
     balanceYuan: fenToYuan(wallet.balanceFen),
     status: wallet.status,
     withdrawFeeRateBp,
+    withdrawTaxTiers,
   };
 }
 

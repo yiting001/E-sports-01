@@ -7,6 +7,8 @@ export interface WalletWithdrawForm {
   provider: PayoutProvider;
   account: string;
   accountName: string;
+  /** 收款方身份证号（报税用，18 位） */
+  idCardNo: string;
 }
 
 const props = defineProps<{
@@ -78,6 +80,14 @@ function updateForm(patch: Partial<WalletWithdrawForm>): void {
           :model-value="form.accountName"
           placeholder="收款人真实姓名"
           @update:model-value="(value: string) => updateForm({ accountName: value })"
+        />
+      </el-form-item>
+      <el-form-item label="身份证号（报税用）">
+        <el-input
+          :model-value="form.idCardNo"
+          maxlength="18"
+          placeholder="收款人 18 位身份证号"
+          @update:model-value="(value: string) => updateForm({ idCardNo: value })"
         />
       </el-form-item>
     </el-form>

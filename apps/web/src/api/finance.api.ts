@@ -7,6 +7,7 @@ import type {
   WithdrawalAdminView,
   WithdrawalResultView,
   WithdrawalStatus,
+  WithdrawalTaxExportView,
 } from '@app/contracts';
 import { http } from './http';
 
@@ -35,6 +36,10 @@ export const financeApi = {
   /** 驳回：退回余额并留存驳回原因 */
   reject(id: string, body: RejectWithdrawalBody): Promise<WithdrawalResultView> {
     return http.post(`/wallet/admin/withdrawals/${id}/reject`, body);
+  },
+  /** 一键导出报税表单（已到账提现单 CSV） */
+  exportTaxReport(): Promise<WithdrawalTaxExportView> {
+    return http.get('/wallet/admin/withdrawals/tax-export');
   },
   /** 分页查询罚款记录 */
   listPenalties(query: PenaltyListQuery): Promise<PaginatedResult<PenaltyView>> {
