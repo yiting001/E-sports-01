@@ -7,6 +7,7 @@
  */
 import DOMPurify from 'dompurify';
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import type { NoticePopupView } from '@app/contracts';
 import { noticeApi } from '@/api/notice.api';
 import { resolveTenantCode } from '@/utils/tenant';
@@ -15,6 +16,7 @@ import { formatNoticeDate } from '@/views/notice/notice-format';
 /** 已读弹窗公告的本机存储键（按租户隔离，避免同域多租户入口串号） */
 const SEEN_KEY_PREFIX = 'client.notice.popup.seen.';
 
+const router = useRouter();
 const notice = ref<NoticePopupView | null>(null);
 const open = ref(false);
 
@@ -50,6 +52,16 @@ function close(): void {
     );
   }
   open.value = false;
+}
+
+/** 点击查看详情：记已读关闭弹窗后进入公告详情页 */
+function goDetail(): void {
+  if (!notice.value) {
+    return;
+  }
+  const id = notice.value.id;
+  close();
+  void router.push({ name: 'notice-detail', params: { id } });
 }
 
 onMounted(loadPopup);
@@ -89,6 +101,12 @@ onMounted(loadPopup);
           <!-- eslint-enable vue/no-v-html -->
         </div>
         <footer class="popup-foot">
+          <button
+            class="popup-detail"
+            @click="goDetail"
+          >
+            查看详情
+          </button>
           <button
             class="popup-confirm"
             @click="close"
@@ -179,12 +197,25 @@ onMounted(loadPopup);
 }
 
 .popup-foot {
+  display: flex;
+  gap: 10px;
   padding: 12px 16px;
   border-top: 1px solid var(--c-border);
 }
 
+.popup-detail {
+  flex: 1;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text);
+  background: none;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+}
+
 .popup-confirm {
-  width: 100%;
+  flex: 1;
   padding: 10px 0;
   font-size: 14px;
   font-weight: 600;
