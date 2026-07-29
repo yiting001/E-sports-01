@@ -195,11 +195,13 @@ function toStructuralCheck(
   const migrationName = readString(row, 'migrationName');
   const migrationTimestamp = readSafeInteger(row, 'migrationTimestamp');
   const allPresent = readBoolean(row, 'allPresent');
-  const isLatestMigration = migrationName === 'AddTenantConfigOverrides1784995200000';
+  const isManagedPendingMigration =
+    migrationName === 'AddTenantConfigOverrides1784995200000' ||
+    migrationName === 'AddNoticePopup1785500000000';
   const recorded = history.some(
     (record) => record.name === migrationName && record.timestamp === migrationTimestamp,
   );
-  if (isLatestMigration && !recorded) {
+  if (isManagedPendingMigration && !recorded) {
     return {
       migrationName,
       migrationTimestamp,

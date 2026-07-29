@@ -2,6 +2,7 @@
 /**
  * 运营通知管理页：首页横幅设置 + 通知公告 CRUD。
  * 通知在 C 端首页公告条滚动展示，点击进入详情；仅启用中的通知对 C 端可见。
+ * 标记为弹窗公告的通知，会在 C 端首次进入时以弹窗展示最新一条。
  */
 import { onMounted, reactive, ref } from 'vue';
 import {
@@ -31,7 +32,7 @@ const editingId = ref('');
 const form = reactive<UpsertNoticePayload>(emptyForm());
 
 function emptyForm(): UpsertNoticePayload {
-  return { title: '', content: '', enabled: true, sort: 0 };
+  return { title: '', content: '', enabled: true, popup: false, sort: 0 };
 }
 
 function formatDate(value: string): string {
@@ -78,6 +79,7 @@ function openEdit(row: NoticeView): void {
     title: row.title,
     content: row.content,
     enabled: row.enabled,
+    popup: row.popup,
     sort: row.sort,
   });
   dialogVisible.value = true;
@@ -115,9 +117,23 @@ async function toggleEnabled(row: NoticeView, enabled: boolean): Promise<void> {
     title: row.title,
     content: row.content,
     sort: row.sort,
+    popup: row.popup,
     enabled,
   });
   ElMessage.success(enabled ? '已启用' : '已停用');
+  await load();
+}
+
+/** 行内弹窗公告切换：多条同时开启时 C 端只弹最新一条 */
+async function togglePopup(row: NoticeView, popup: boolean): Promise<void> {
+  await noticeApi.update(row.id, {
+    title: row.title,
+    content: row.content,
+    sort: row.sort,
+    enabled: row.enabled,
+    popup,
+  });
+  ElMessage.success(popup ? '已设为弹窗公告' : '已取消弹窗公告');
   await load();
 }
 
@@ -140,7 +156,7 @@ onMounted(load);
     <app-panel
       title="通知公告"
       eyebrow="Notices"
-      description="C 端首页公告条滚动展示启用中的通知，点击可查看详情"
+      description="C 端首页公告条滚动展示启用中的通知；开启「弹窗」的通知会在 C 端首次进入时弹出"
     >
       <template #actions>
         <div class="admin-actions">
@@ -186,6 +202,18 @@ onMounted(load);
               v-permission="PERMS.notice.save"
               :model-value="row.enabled"
               @change="toggleEnabled(row, $event as boolean)"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="弹窗"
+          width="90"
+        >
+          <template #default="{ row }">
+            <el-switch
+              v-permission="PERMS.notice.save"
+              :model-value="row.popup"
+              @change="togglePopup(row, $event as boolean)"
             />
           </template>
         </el-table-column>

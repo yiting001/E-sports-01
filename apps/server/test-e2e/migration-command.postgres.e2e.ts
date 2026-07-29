@@ -184,6 +184,7 @@ test('两个 migration runner 并发串行化，首次执行一次且后续幂�
     `${concurrentSchema}.sys_tenant_config_override`,
   ])) as Array<{ tableName: string | null }>;
   assert.equal(tableRows[0]?.tableName, `${concurrentSchema}.sys_tenant_config_override`);
+  await assertNoticePopupColumn(concurrentSchema);
   assert.equal(
     outputs.filter((output) => output.join('').includes(`executed ${currentMigration.name}`))
       .length,
@@ -237,10 +238,12 @@ test('隔离目录中的真实 bundle 可完成 show、run 与重复幂等执行
 
   const showResult = await runBundleCommand(bundleSchema, 'migration:show');
   assert.match(showResult.stdout, /\[ \].*AddTenantConfigOverrides1784995200000/);
-  assert.match(showResult.stdout, /1 pending migration/i);
+  assert.match(showResult.stdout, /\[ \].*AddNoticePopup1785500000000/);
+  assert.match(showResult.stdout, /2 pending migration\(s\)/i);
 
   const runResult = await runBundleCommand(bundleSchema, 'migration:run');
   assert.match(runResult.stdout, /executed AddTenantConfigOverrides1784995200000/);
+  assert.match(runResult.stdout, /executed AddNoticePopup1785500000000/);
 
   const currentMigration = latestMigration();
   const rows = (await adminDataSource.query(
@@ -259,6 +262,7 @@ test('隔离目录中的真实 bundle 可完成 show、run 与重复幂等执行
   )) as Array<{ tableName: string | null; historyCount: number }>;
   assert.equal(rows[0]?.tableName, `${bundleSchema}.sys_tenant_config_override`);
   assert.equal(rows[0]?.historyCount, 1);
+  await assertNoticePopupColumn(bundleSchema);
 
   const repeatResult = await runBundleCommand(bundleSchema, 'migration:run');
   assert.match(repeatResult.stdout, /no pending migrations/i);
@@ -332,9 +336,15 @@ async function createTrustedBaseline(schema: string, includeConfig: boolean): Pr
       )
     `);
   }
+  await adminDataSource.query(`
+    CREATE TABLE "${schema}"."notice" (
+      "id" uuid NOT NULL DEFAULT gen_random_uuid(),
+      CONSTRAINT "PK_${schema}_notice" PRIMARY KEY ("id")
+    )
+  `);
   await createMigrationHistoryTable(schema);
 
-  for (const migration of SERVER_MIGRATION_DEFINITIONS.slice(0, -1)) {
+  for (const migration of SERVER_MIGRATION_DEFINITIONS.slice(0, -2)) {
     await adminDataSource.query(
       `INSERT INTO "${schema}"."typeorm_migrations" ("timestamp", "name")
        VALUES ($1, $2)`,
@@ -359,6 +369,18 @@ async function createTrustedBaseline(schema: string, includeConfig: boolean): Pr
        ('portal.showRank', 'true'),
        ('auth.userAgreement', '测试协议')`,
   );
+}
+
+async function assertNoticePopupColumn(schema: string): Promise<void> {
+  const rows = (await adminDataSource.query(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM information_schema.columns
+       WHERE table_schema = $1 AND table_name = 'notice' AND column_name = 'popup'
+     ) AS "present"`,
+    [schema],
+  )) as Array<{ present: boolean }>;
+  assert.equal(rows[0]?.present, true);
 }
 
 async function createMigrationHistoryTable(schema: string): Promise<void> {

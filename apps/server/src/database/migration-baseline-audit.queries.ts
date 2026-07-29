@@ -108,7 +108,15 @@ export const STRUCTURAL_ARTIFACT_QUERY = `
         'tenant config override target table',
         to_regclass(
           format('%I.%I', current_schema(), 'sys_tenant_config_override')
-        ) IS NOT NULL)
+        ) IS NOT NULL),
+      (1785500000000::bigint, 'AddNoticePopup1785500000000',
+        'notice popup column and index',
+        EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = current_schema() AND table_name = 'notice'
+            AND column_name = 'popup' AND is_nullable = 'NO'
+        )
+          AND to_regclass(format('%I.%I', current_schema(), 'IDX_notice_popup')) IS NOT NULL)
   )
   SELECT
     migration_timestamp::text AS "migrationTimestamp",

@@ -226,7 +226,7 @@ DDL 账号，不需要把高权限密码写进长期运行配置。
 
 1. 在 `apps/server/src/database/migrations/` 新增含 `up/down` 的 migration。
 2. 按时间戳顺序显式加入 `migration-registry.ts`。
-3. 为结构、历史数据、失败回滚和幂等边界增加 PostgreSQL E2E。
+3. 为结构、历史数据、失败回滚和幂等边界增加 PostgreSQL E2E；新增结构同步加入 baseline audit 查询。
 4. 构建新 `main.js`；旧 bundle 永远不会凭空包含新 migration。
 5. 在影子库恢复生产备份并执行 `migration:show`、`migration:run`、重复 `migration:run`。
 6. 备份生产库、停止写流量、迁移成功后再启动新版本并做健康检查。

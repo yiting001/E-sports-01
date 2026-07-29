@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 通知编辑弹窗：标题 + 排序 + 启用开关 + 富文本详情。
+ * 通知编辑弹窗：标题 + 排序 + 启用开关 + 弹窗公告开关 + 富文本详情。
  * 新建与编辑复用同一表单，由父组件通过 isEdit 区分标题。
  */
 import { NOTICE_LIMITS, type UpsertNoticePayload } from '@app/contracts';
@@ -39,6 +39,10 @@ const emit = defineEmits<{ submit: [] }>();
       </el-form-item>
       <el-form-item label="启用">
         <el-switch v-model="form.enabled" />
+      </el-form-item>
+      <el-form-item label="弹窗公告">
+        <el-switch v-model="form.popup" />
+        <span class="notice-form__hint">C 端首次进入弹窗展示最新一条弹窗公告</span>
       </el-form-item>
       <el-form-item label="详情">
         <rich-text-editor

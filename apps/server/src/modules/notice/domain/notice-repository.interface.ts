@@ -10,6 +10,8 @@ export interface NoticeRepository {
   paginate(skip: number, take: number): Promise<[NoticeEntity[], number]>;
   /** C 端启用中的通知（排序权重升序 + 创建时间倒序） */
   findEnabled(): Promise<NoticeEntity[]>;
+  /** 当前租户最新一条启用中的弹窗公告（排序权重升序 + 创建时间倒序） */
+  findLatestPopup(): Promise<NoticeEntity | null>;
   create(data: Partial<NoticeEntity>): NoticeEntity;
   save(entity: NoticeEntity): Promise<NoticeEntity>;
   remove(entity: NoticeEntity): Promise<void>;
