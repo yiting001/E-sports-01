@@ -31,3 +31,4 @@ export * from './coupon/coupon';
 export * from './activity/activity';
 export * from './rank/rank';
 export * from './invite/invite';
+export * from './theme/theme';

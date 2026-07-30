@@ -146,6 +146,12 @@ export const PERMS = {
     remove: 'notice:remove',
     banner: 'notice:banner',
   },
+  theme: {
+    /** 主题特效配置查看 */
+    list: 'theme:effects:list',
+    /** 主题特效配置保存 */
+    save: 'theme:effects:save',
+  },
   category: {
     list: 'commerce:category:list',
     create: 'commerce:category:create',
