@@ -9,14 +9,17 @@
 import AppTabBar from '@/components/common/AppTabBar.vue';
 import AppTopNav from '@/components/common/AppTopNav.vue';
 import NoticePopupDialog from '@/components/notice/NoticePopupDialog.vue';
+import ThemeEffectLayer from '@/components/theme/ThemeEffectLayer.vue';
 </script>
 
 <template>
   <div class="layout">
-    <AppTopNav class="top-nav" />
-    <main class="page">
-      <router-view />
-    </main>
+    <ThemeEffectLayer>
+      <AppTopNav class="top-nav" />
+      <main class="page">
+        <router-view />
+      </main>
+    </ThemeEffectLayer>
     <AppTabBar class="tab-bar" />
     <NoticePopupDialog />
   </div>

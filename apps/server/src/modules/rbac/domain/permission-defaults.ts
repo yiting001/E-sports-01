@@ -84,6 +84,8 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.notice.save]: '通知-新建/编辑',
   [PERMS.notice.remove]: '通知-删除',
   [PERMS.notice.banner]: '通知-首页横幅设置',
+  [PERMS.theme.list]: '主题特效-查看',
+  [PERMS.theme.save]: '主题特效-保存',
   [PERMS.category.list]: '分类-查询',
   [PERMS.category.create]: '分类-创建',
   [PERMS.category.update]: '分类-更新',
