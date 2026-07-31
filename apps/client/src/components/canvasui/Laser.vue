@@ -1,4 +1,6 @@
 <script lang="ts">
+import { mergeDefinedOptions } from "./canvas-options";
+
 export interface LaserOptions {
   /** Animation speed of the beam wave, flicker, and sparkle. 1 is normal. */
   speed?: number;
@@ -67,6 +69,12 @@ const DEFAULTS: Required<LaserOptions> = {
   sparkle: 0.25,
   reactivity: 1,
 };
+
+export function resolveLaserOptions(
+  options: LaserOptions = {},
+): Required<LaserOptions> {
+  return mergeDefinedOptions(DEFAULTS, options);
+}
 
 type PaintableCanvas = HTMLCanvasElement & {
   onpaint?: (() => void) | null;
@@ -284,7 +292,7 @@ export function createLaser(
   elements: LaserElements,
   options: LaserOptions = {},
 ): LaserInstance | null {
-  const config = { ...DEFAULTS, ...options };
+  const config = resolveLaserOptions(options);
   const { source, content, output } = elements;
 
   const gl = output.getContext("webgl2", {
@@ -617,7 +625,7 @@ export function createLaser(
 
   return {
     setOptions(next) {
-      Object.assign(config, next);
+      Object.assign(config, mergeDefinedOptions(config, next));
       start();
     },
     resize() {
@@ -694,7 +702,7 @@ onBeforeUnmount(() => {
 
 watch(
   () => ({ ...props }),
-  (next) => instance?.setOptions(next),
+  (next) => instance?.setOptions(resolveLaserOptions(next)),
   { deep: true },
 );
 </script>

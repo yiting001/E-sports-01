@@ -12,6 +12,7 @@ import { AddTenantConfigOverrides1784995200000 } from './migrations/178499520000
 import { AddNoticePopup1785500000000 } from './migrations/1785500000000-add-notice-popup';
 import { AddConversationMemberTag1785600000000 } from './migrations/1785600000000-add-conversation-member-tag';
 import { AddWithdrawalIdCard1785700000000 } from './migrations/1785700000000-add-withdrawal-idcard';
+import { AddThemeEffectSetting1785800000000 } from './migrations/1785800000000-add-theme-effect-setting';
 
 export type ServerMigrationConstructor = new () => MigrationInterface;
 
@@ -39,6 +40,7 @@ export const SERVER_MIGRATIONS: ServerMigrationConstructor[] = [
   AddNoticePopup1785500000000,
   AddConversationMemberTag1785600000000,
   AddWithdrawalIdCard1785700000000,
+  AddThemeEffectSetting1785800000000,
 ];
 
 export const SERVER_MIGRATION_DEFINITIONS: ServerMigrationDefinition[] =

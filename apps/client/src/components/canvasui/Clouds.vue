@@ -1,4 +1,6 @@
 <script lang="ts">
+import { mergeDefinedOptions } from "./canvas-options";
+
 export interface CloudsOptions {
   scale?: number;
   speed?: number;
@@ -57,6 +59,12 @@ const DEFAULTS: Required<CloudsOptions> = {
   fogBlur: 0,
   quality: 1,
 };
+
+export function resolveCloudsOptions(
+  options: CloudsOptions = {},
+): Required<CloudsOptions> {
+  return mergeDefinedOptions(DEFAULTS, options);
+}
 
 const VERT = `#version 300 es
 precision highp float;
@@ -264,7 +272,7 @@ export function createClouds(
   elements: CloudsElements,
   options: CloudsOptions = {},
 ): CloudsInstance | null {
-  const config = { ...DEFAULTS, ...options };
+  const config = resolveCloudsOptions(options);
   const { source, content, output } = elements;
 
   const gl = output.getContext("webgl2", {
@@ -735,7 +743,7 @@ export function createClouds(
 
   return {
     setOptions(next) {
-      Object.assign(config, next);
+      Object.assign(config, mergeDefinedOptions(config, next));
       syncCanvasSize();
       syncBaseColor();
       start();
@@ -829,7 +837,7 @@ onBeforeUnmount(() => {
 
 watch(
   () => ({ ...props }),
-  (next) => instance?.setOptions(next),
+  (next) => instance?.setOptions(resolveCloudsOptions(next)),
   { deep: true },
 );
 </script>

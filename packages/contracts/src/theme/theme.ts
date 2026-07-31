@@ -1,7 +1,7 @@
 /**
  * 主题特效（Canvas UI 背景特效）共享契约。
  * 管理端按租户勾选启用的特效（可多选同时启用），C 端按租户编码拉取后包裹全站布局渲染。
- * 特效基于 Chrome html-in-canvas API，浏览器不支持时自动降级为普通页面。
+ * 特效基于 Chrome html-in-canvas API，内容在不支持时自动降级；WebGL2 不可用时关闭特效。
  */
 
 /** 可启用的 Canvas UI 背景特效 */
@@ -14,6 +14,8 @@ export enum ThemeEffect {
   Laser = 'laser',
   /** 3D 瓷砖：页面化为 3D 瓷砖网格，光标掀起波纹 */
   Grid = 'grid',
+  /** 冰霜融化：冰层覆盖页面，光标划过时融化并随时间重新冻结 */
+  Frost = 'frost',
 }
 
 /** 特效选项（管理端勾选列表用） */
@@ -41,6 +43,11 @@ export const THEME_EFFECT_OPTIONS: ReadonlyArray<{
     value: ThemeEffect.Grid,
     label: '3D 瓷砖波纹',
     description: '页面化为 3D 瓷砖网格，光标划过掀起放大波纹',
+  },
+  {
+    value: ThemeEffect.Frost,
+    label: '冰霜融化',
+    description: '冰层覆盖页面，光标划过时融化并留下轨迹，随后逐渐重新冻结',
   },
 ];
 

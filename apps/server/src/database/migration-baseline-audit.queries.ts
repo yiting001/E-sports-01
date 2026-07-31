@@ -133,7 +133,14 @@ export const STRUCTURAL_ARTIFACT_QUERY = `
           WHERE table_schema = current_schema() AND table_name = 'wallet_withdrawal_order'
             AND column_name = 'idCardNo' AND data_type = 'character varying'
             AND character_maximum_length = 18 AND is_nullable = 'YES'
-        ))
+        )),
+      (1785800000000::bigint, 'AddThemeEffectSetting1785800000000',
+        'theme effect setting table and tenant index',
+        to_regclass(format('%I.%I', current_schema(), 'theme_effect_setting')) IS NOT NULL
+          AND to_regclass(
+            format('%I.%I', current_schema(), 'IDX_theme_effect_setting_tenant')
+          ) IS NOT NULL
+        )
   )
   SELECT
     migration_timestamp::text AS "migrationTimestamp",

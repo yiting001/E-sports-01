@@ -97,11 +97,12 @@ stateDiagram-v2
 | ------------- | --------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------- |
 | 1785600000000 | `AddConversationMemberTag1785600000000` | `sys_conversation_member.tag` 新增为 `varchar(16) NOT NULL DEFAULT ''`，历史成员回填空标签 | 删除列并永久丢失已有身份标签 |
 | 1785700000000 | `AddWithdrawalIdCard1785700000000`      | `wallet_withdrawal_order.idCardNo` 新增为可空 `varchar(18)`，历史提现单保持 `NULL`         | 删除列并永久丢失身份证号     |
+| 1785800000000 | `AddThemeEffectSetting1785800000000`    | 新建 `theme_effect_setting` 与租户索引，历史租户默认无特效配置                             | 删除表并永久丢失主题配置     |
 
-两项结构均进入单文件 bundle 的静态清单和 baseline audit。history 尚未记录时，目标字段缺失表示
-可由 pending migration 正常创建；字段已存在但 history 未记录则审计失败，必须人工确认来源，禁止
-伪造 history。两项 `ALTER TABLE` 都需要取得目标表的 DDL 锁，执行前应停止写流量；如需回滚，必须
-先备份对应业务数据。
+三项结构均进入单文件 bundle 的静态清单和 baseline audit。history 尚未记录时，目标字段或表缺失
+表示可由 pending migration 正常创建；结构已存在但 history 未记录则审计失败，必须人工确认来源，
+禁止伪造 history。前两项 `ALTER TABLE` 与主题配置表的 `CREATE TABLE` 都会取得 DDL 锁，执行前应
+停止写流量；如需回滚，必须先备份对应业务数据。
 
 ## 命令与退出语义
 

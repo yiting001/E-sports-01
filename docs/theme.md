@@ -8,11 +8,13 @@
 
 ## 已实现能力
 
-- 4 个 [Canvas UI](https://canvasui.dev) 特效（Vue 版源码按官方 shadcn 方式落库于 `apps/client/src/components/canvasui/`，为第三方原样引入，不受本仓库 500 行文件上限约束）：
-  - `clouds` 云雾漂浮、`blaze` 底部火焰、`laser` 激光扫描、`grid` 3D 瓷砖波纹。
+- 5 个 [Canvas UI](https://canvasui.dev) 特效（Vue 版源码按官方实现落库于 `apps/client/src/components/canvasui/`）：
+  - `clouds` 云雾漂浮、`blaze` 底部火焰、`laser` 激光扫描、`grid` 3D 瓷砖波纹；
+  - `frost` 冰霜覆盖页面，光标划过时融化并留下轨迹，随后逐渐重新冻结。
 - 服务端 `theme` 模块（DDD 四层）+ 建表 migration `AddThemeEffectSetting1785800000000`。
 - 管理端「主题特效」菜单页（勾选保存，权限 `theme:effects:list` / `theme:effects:save`）。
 - C 端 `ThemeEffectLayer` 挂在 `MainLayout`，特效组件按需懒加载，不进入首屏包。
+- 五个 C 端特效统一忽略 Vue 可选 props 中的 `undefined`，初次创建和运行时更新均不会覆盖组件默认参数。
 
 ## 非目标
 
@@ -22,8 +24,9 @@
 ## 浏览器兼容与降级
 
 特效基于 Chrome html-in-canvas API：本地体验需开启 `chrome://flags/#canvas-draw-element`；
-生产可为域名注册 Chrome Origin Trial 免开关生效。不支持的浏览器中组件自动降级——
-内容按普通 HTML 渲染、无特效、无报错。
+生产可为域名注册 Chrome Origin Trial 免开关生效。不支持该 API 时，页面内容仍按普通
+HTML 渲染，特效退化为不采样页面内容的透明覆盖层；WebGL2 也不可用时完全关闭特效，
+两种情况都不影响页面交互。
 
 ## 目录结构
 
@@ -39,6 +42,14 @@ apps/server/src/modules/theme/
 
 共享契约：`packages/contracts/src/theme/theme.ts`（`ThemeEffect` 枚举、
 `THEME_EFFECT_OPTIONS` 选项、`sanitizeThemeEffects` 清洗函数）。
+
+```text
+apps/client/src/components/
+├── theme/           ThemeEffectLayer.vue（拉取配置并懒加载）、ThemeEffectNest.vue（递归嵌套）
+└── canvasui/        Clouds.vue、Blaze.vue、Laser.vue、Grid.vue、Frost.vue
+                     canvas-options.ts（仅合并值不为 undefined 的参数）
+                     frost-*.ts（Frost 选项、画布捕获、着色器、WebGL 资源与运行时）
+```
 
 ## 模块结构图
 
@@ -61,7 +72,7 @@ sequenceDiagram
   S->>S: TenantResolver 解析租户（缺省默认租户）
   S->>DB: 按 tenant_id 查配置
   DB-->>S: effects JSON
-  S-->>C: { effects: ["clouds","laser"] }
+  S-->>C: { effects: ["clouds","frost"] }
   C->>C: 懒加载对应组件并自外向内嵌套包裹页面内容
 ```
 
@@ -82,14 +93,22 @@ sequenceDiagram
 
 - 配置缺失、JSON 损坏或含非法值：`sanitizeThemeEffects` 安全回退（过滤/空列表）。
 - C 端接口失败：`ThemeEffectLayer` 静默降级为直接渲染内容。
-- 浏览器不支持 html-in-canvas：特效组件自动降级为普通 HTML。
+- 浏览器不支持 html-in-canvas：内容按普通 HTML 渲染，特效使用不采样内容的透明覆盖层；
+  WebGL2 也不可用时完全关闭特效。
+- 可选参数未传或值为 `undefined`：保留默认值；显式 `0` 等有效值仍正常生效，避免颜色数组访问时运行时崩溃。
 
 ## 测试与验证
 
 - 单测 `apps/server/test/theme/theme-effects.spec.ts`：清洗过滤/去重、JSON 损坏回退、
   公开接口租户解析（缺省默认租户/显式租户）、更新用例整量覆盖持久化。
-- `pnpm lint` / `pnpm typecheck` / `pnpm build` / `pnpm test` 全绿。
-- 未做真实数据库 migration 执行与浏览器端到端验证。
+- C 端单测 `apps/client/src/components/canvasui/canvas-options.spec.ts`：覆盖五个特效的无参数默认颜色、
+  `undefined` 过滤、显式零值和运行时部分更新。
+- `pnpm lint` / `pnpm typecheck` / `pnpm build` / `pnpm build:server` / `pnpm test` 全绿；
+  `pnpm format:check` 脚本未配置。
+- 本地管理端 `/theme` 已显示第五项“冰霜融化”；验收期间临时启用 Frost 后公开接口返回
+  `{ effects: ["frost"] }`，C 端真实入口挂载 `1280 x 910` Frost 输出画布，冰霜覆盖、
+  指针融化轨迹和重新冻结均正常，连续运行无控制台错误，验收结束后已恢复原配置。
+- 本次未改数据库且未执行 migration；未新增自动化浏览器 E2E。
 
 ## 风险与后续扩展
 

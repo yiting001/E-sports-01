@@ -5,37 +5,37 @@
 
 ## 文档索引
 
-| 模块 | 文档 | 一句话说明 |
-| --- | --- | --- |
-| 配置中心 | [config-center.md](./config-center.md) | 可调参数集中入库 + Redis 缓存，五项站点配置按租户覆盖，vConsole 保持平台全局 |
-| RBAC 权限 | [rbac.md](./rbac.md) | 用户/角色/权限三层模型，JWT 双令牌，API/菜单/按钮级颗粒度 |
-| 多租户隔离 | [multi-tenant.md](./multi-tenant.md) | HTTP/JWT/IM 行级数据隔离、租户站点入口、配置覆盖、平台权限边界与 migration |
-| 文件上传 | [upload.md](./upload.md) | 策略模式，local 默认 / oss 可切，驱动由配置中心选择 |
-| 短信登录 | [sms.md](./sms.md) | 多云短信、开发固定码、生产安全门、Redis 原子限流与一次性验证码 |
-| WebSocket IM | [im.md](./im.md) | JWT 握手鉴权、会话收发、订单群标题、成员安全展示名、历史手机号脱敏及 C 端未读角标 |
-| 链路追踪与日志 | [observability.md](./observability.md) | AsyncLocalStorage 链路追踪，结构化日志异步落库 + RBAC 查询/链路详情/清理 |
-| 钱包 | [wallet.md](./wallet.md) | 钱包充值/提现/明细，以及服务订单余额支付的锁、流水和一致性边界 |
-| 用户会员等级 | [member.md](./member.md) | 累计消费实时定级、下单折扣，以及 C 端头像徽标与会员卡的单一数据源 |
-| 用户资料自助 | [user-profile.md](./user-profile.md) | 登录用户自助改头像/昵称/手机号，免授权自助上传，个人中心页 |
-| 实名认证 | [realname.md](./realname.md) | 证件提交 + 人工审核状态机，身份证 AES-256-GCM 加密脱敏，超管按角色配置需实名 |
-| 反馈管理 | [feedback.md](./feedback.md) | 投诉关联真实订单/打手，管理端原子幂等扣款 + 回复，C 端联系客服复用既有 IM |
-| 运营通知 | [notice.md](./notice.md) | 首页多图轮播、活动关联和后台配置（兼容历史单图）+ 通知公告 CRUD + C 端首次进入弹窗公告 |
-| 主题特效 | [theme.md](./theme.md) | Canvas UI 背景特效：管理端按租户勾选启用（可多选），C 端公开接口拉取后懒加载嵌套渲染，浏览器不支持时自动降级 |
-| 服务订单 | [order.md](./order.md) | 双端权威计价、结构化游戏资料、大厅检索、并发安全派单、三种支付方式与三阶段群标题 |
-| 订单退款 | [order-refund.md](./order-refund.md) | 用户申请、后台审核、客服独立授权、余额与支付宝/微信原路退款、并发幂等及失败恢复 |
-| 商品评论 | [review.md](./review.md) | 订单完成后一单一评（打星 + 文字），商品详情页脱敏展示评论与平均分，管理端隐藏/恢复/删除治理 |
-| 打手入驻 | [booster.md](./booster.md) | 入驻审核、打手自主上下线、脱敏挑人目录/主页和安全语音试听，含 migration 与隐私边界 |
-| 商品管理 | [commerce.md](./commerce.md) | 分类 + 商品 CRUD、手机/电脑双端价格、左右分类目录、方形完整主图与正式 migration |
-| 前端基座 | [frontend.md](./frontend.md) | Vue3 + Pinia，鉴权 store、动态路由守卫、v-permission 指令 |
-| 菜单待办角标 | [menu-badges.md](./menu-badges.md) | 管理端实名、订单、打手、即时通讯和客服待办数量，权限裁剪、实时刷新、轮询重试与并发防旧响应 |
-| C 端用户应用 | [client.md](./client.md) | 左右分类目录、双端结算、接单大厅检索、挑选打手、短信登录及按需 vConsole 调试 |
-| 登录注册 UI | [auth-ui.md](./auth-ui.md) | 企业级电竞风格登录/注册/短信验证码入口，仅重做 UI 不改鉴权逻辑 |
-| 工作台 UI | [dashboard-ui.md](./dashboard-ui.md) | 响应式账号概览、业务入口、快捷访问和权限摘要 |
-| 数据统计仪表盘 | [dashboard.md](./dashboard.md) | 订单/财务/用户/打手四块只读聚合统计（ECharts），日/月/年时间范围，按权限分块展示 |
-| 单文件数据库迁移 | [database-migrations.md](./database-migrations.md) | 同一 main.js 支持只读 audit、安全 show/run、静态迁移清单、可信基线校验、并发锁与失败回滚 |
-| 部署文档 | [deployment.md](./deployment.md) | 环境变量、构建顺序、PM2 启停、Nginx 反代与更新部署检查清单 |
-| API 参考 | [api-reference.md](./api-reference.md) | 全部 REST 端点与 WS 事件、统一响应结构、权限码一览 |
-| 宝塔部署 | [deploy-bt.md](./deploy-bt.md) | 宝塔面板（CentOS 7+）单站点部署：前后端同域名，Nginx 按路径转发（/、/admin/、/api、/socket.io、/static） |
+| 模块             | 文档                                               | 一句话说明                                                                                                   |
+| ---------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 配置中心         | [config-center.md](./config-center.md)             | 可调参数集中入库 + Redis 缓存，五项站点配置按租户覆盖，vConsole 保持平台全局                                 |
+| RBAC 权限        | [rbac.md](./rbac.md)                               | 用户/角色/权限三层模型，JWT 双令牌，API/菜单/按钮级颗粒度                                                    |
+| 多租户隔离       | [multi-tenant.md](./multi-tenant.md)               | HTTP/JWT/IM 行级数据隔离、租户站点入口、配置覆盖、平台权限边界与 migration                                   |
+| 文件上传         | [upload.md](./upload.md)                           | 策略模式，local 默认 / oss 可切，驱动由配置中心选择                                                          |
+| 短信登录         | [sms.md](./sms.md)                                 | 多云短信、开发固定码、生产安全门、Redis 原子限流与一次性验证码                                               |
+| WebSocket IM     | [im.md](./im.md)                                   | JWT 握手鉴权、会话收发、订单群标题、成员安全展示名、历史手机号脱敏及 C 端未读角标                            |
+| 链路追踪与日志   | [observability.md](./observability.md)             | AsyncLocalStorage 链路追踪，结构化日志异步落库 + RBAC 查询/链路详情/清理                                     |
+| 钱包             | [wallet.md](./wallet.md)                           | 钱包充值/提现/明细，以及服务订单余额支付的锁、流水和一致性边界                                               |
+| 用户会员等级     | [member.md](./member.md)                           | 累计消费实时定级、下单折扣，以及 C 端头像徽标与会员卡的单一数据源                                            |
+| 用户资料自助     | [user-profile.md](./user-profile.md)               | 登录用户自助改头像/昵称/手机号，免授权自助上传，个人中心页                                                   |
+| 实名认证         | [realname.md](./realname.md)                       | 证件提交 + 人工审核状态机，身份证 AES-256-GCM 加密脱敏，超管按角色配置需实名                                 |
+| 反馈管理         | [feedback.md](./feedback.md)                       | 投诉关联真实订单/打手，管理端原子幂等扣款 + 回复，C 端联系客服复用既有 IM                                    |
+| 运营通知         | [notice.md](./notice.md)                           | 首页多图轮播、活动关联和后台配置（兼容历史单图）+ 通知公告 CRUD + C 端首次进入弹窗公告                       |
+| 主题特效         | [theme.md](./theme.md)                             | 5 种 Canvas UI 背景特效：管理端按租户勾选启用（可多选），C 端公开接口拉取后懒加载嵌套渲染并兼容降级         |
+| 服务订单         | [order.md](./order.md)                             | 双端权威计价、结构化游戏资料、大厅检索、并发安全派单、三种支付方式与三阶段群标题                             |
+| 订单退款         | [order-refund.md](./order-refund.md)               | 用户申请、后台审核、客服独立授权、余额与支付宝/微信原路退款、并发幂等及失败恢复                              |
+| 商品评论         | [review.md](./review.md)                           | 订单完成后一单一评（打星 + 文字），商品详情页脱敏展示评论与平均分，管理端隐藏/恢复/删除治理                  |
+| 打手入驻         | [booster.md](./booster.md)                         | 入驻审核、打手自主上下线、脱敏挑人目录/主页和安全语音试听，含 migration 与隐私边界                           |
+| 商品管理         | [commerce.md](./commerce.md)                       | 分类 + 商品 CRUD、手机/电脑双端价格、左右分类目录、方形完整主图与正式 migration                              |
+| 前端基座         | [frontend.md](./frontend.md)                       | Vue3 + Pinia，鉴权 store、动态路由守卫、v-permission 指令                                                    |
+| 菜单待办角标     | [menu-badges.md](./menu-badges.md)                 | 管理端实名、订单、打手、即时通讯和客服待办数量，权限裁剪、实时刷新、轮询重试与并发防旧响应                   |
+| C 端用户应用     | [client.md](./client.md)                           | 左右分类目录、双端结算、接单大厅检索、挑选打手、短信登录及按需 vConsole 调试                                 |
+| 登录注册 UI      | [auth-ui.md](./auth-ui.md)                         | 企业级电竞风格登录/注册/短信验证码入口，仅重做 UI 不改鉴权逻辑                                               |
+| 工作台 UI        | [dashboard-ui.md](./dashboard-ui.md)               | 响应式账号概览、业务入口、快捷访问和权限摘要                                                                 |
+| 数据统计仪表盘   | [dashboard.md](./dashboard.md)                     | 订单/财务/用户/打手四块只读聚合统计（ECharts），日/月/年时间范围，按权限分块展示                             |
+| 单文件数据库迁移 | [database-migrations.md](./database-migrations.md) | 同一 main.js 支持只读 audit、安全 show/run、静态迁移清单、可信基线校验、并发锁与失败回滚                     |
+| 部署文档         | [deployment.md](./deployment.md)                   | 环境变量、构建顺序、PM2 启停、Nginx 反代与更新部署检查清单                                                   |
+| API 参考         | [api-reference.md](./api-reference.md)             | 全部 REST 端点与 WS 事件、统一响应结构、权限码一览                                                           |
+| 宝塔部署         | [deploy-bt.md](./deploy-bt.md)                     | 宝塔面板（CentOS 7+）单站点部署：前后端同域名，Nginx 按路径转发（/、/admin/、/api、/socket.io、/static）     |
 
 ## 总体架构
 
@@ -140,7 +140,14 @@ pnpm --filter @app/client dev           # http://127.0.0.1:5174
 所有 REST 响应经全局拦截器包装为 `ApiResponse<T>`：
 
 ```jsonc
-{ "code": 0, "message": "ok", "data": { /* ... */ }, "timestamp": 1782447482340 }
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    /* ... */
+  },
+  "timestamp": 1782447482340
+}
 ```
 
 `code` 为业务码（`0` 成功）；分页数据统一形如 `{ list, total, page, pageSize }`。

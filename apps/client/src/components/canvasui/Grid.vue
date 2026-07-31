@@ -1,4 +1,6 @@
 <script lang="ts">
+import { mergeDefinedOptions } from "./canvas-options";
+
 export interface GridOptions {
   /** Size of each grid tile in CSS pixels. */
   tileSize?: number;
@@ -73,6 +75,12 @@ const DEFAULTS: Required<GridOptions> = {
   tintStrength: 0.1,
   idleRipples: 0,
 };
+
+export function resolveGridOptions(
+  options: GridOptions = {},
+): Required<GridOptions> {
+  return mergeDefinedOptions(DEFAULTS, options);
+}
 
 const MAX_TRAIL = 64;
 const TRAIL_SPACING = 0.03;
@@ -320,7 +328,7 @@ export function createGrid(
   elements: GridElements,
   options: GridOptions = {},
 ): GridInstance | null {
-  const config = { ...DEFAULTS, ...options };
+  const config = resolveGridOptions(options);
   const { source, content, output } = elements;
 
   const gl = output.getContext("webgl2", {
@@ -765,7 +773,7 @@ export function createGrid(
 
   return {
     setOptions(next) {
-      Object.assign(config, next);
+      Object.assign(config, mergeDefinedOptions(config, next));
       start();
     },
     resize() {
@@ -848,7 +856,7 @@ onBeforeUnmount(() => {
 
 watch(
   () => ({ ...props }),
-  (next) => instance?.setOptions(next),
+  (next) => instance?.setOptions(resolveGridOptions(next)),
   { deep: true },
 );
 </script>

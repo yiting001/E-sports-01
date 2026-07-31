@@ -1,4 +1,6 @@
 <script lang="ts">
+import { mergeDefinedOptions } from "./canvas-options";
+
 export interface BlazeOptions {
   /** Height of the blaze zone as a fraction of the screen (0 to 1). */
   height?: number;
@@ -58,6 +60,12 @@ const DEFAULTS: Required<BlazeOptions> = {
   sparkColor: [1, 0.4, 0.05],
   smokeColor: [1, 0.43, 0.1],
 };
+
+export function resolveBlazeOptions(
+  options: BlazeOptions = {},
+): Required<BlazeOptions> {
+  return mergeDefinedOptions(DEFAULTS, options);
+}
 
 type PaintableCanvas = HTMLCanvasElement & {
   onpaint?: (() => void) | null;
@@ -351,7 +359,7 @@ export function createBlaze(
   elements: BlazeElements,
   options: BlazeOptions = {},
 ): BlazeInstance | null {
-  const config = { ...DEFAULTS, ...options };
+  const config = resolveBlazeOptions(options);
   const { source, content, output } = elements;
 
   const gl = output.getContext("webgl2", {
@@ -645,7 +653,7 @@ export function createBlaze(
 
   return {
     setOptions(next) {
-      Object.assign(config, next);
+      Object.assign(config, mergeDefinedOptions(config, next));
       start();
     },
     resize() {
@@ -725,7 +733,7 @@ onBeforeUnmount(() => {
 
 watch(
   () => ({ ...props }),
-  (next) => instance?.setOptions(next),
+  (next) => instance?.setOptions(resolveBlazeOptions(next)),
   { deep: true },
 );
 </script>

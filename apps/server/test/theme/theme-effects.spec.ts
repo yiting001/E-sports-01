@@ -22,8 +22,16 @@ function createSetting(effects: string): ThemeSettingEntity {
 
 void test('sanitizeThemeEffects 过滤非法值并去重', () => {
   assert.deepEqual(
-    sanitizeThemeEffects(['clouds', 'hack', 'clouds', 'laser', 42, null]),
-    [ThemeEffect.Clouds, ThemeEffect.Laser],
+    sanitizeThemeEffects([
+      'clouds',
+      'hack',
+      'clouds',
+      'laser',
+      'frost',
+      42,
+      null,
+    ]),
+    [ThemeEffect.Clouds, ThemeEffect.Laser, ThemeEffect.Frost],
   );
   assert.deepEqual(sanitizeThemeEffects('not-array'), []);
 });
