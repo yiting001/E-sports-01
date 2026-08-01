@@ -11,19 +11,21 @@ function createUseCase(values: Record<string, boolean>): GetPortalConfigUseCase 
   return new GetPortalConfigUseCase(config);
 }
 
-test('门户配置缺失时默认展示排行榜并关闭 vConsole', async () => {
+test('门户配置缺失时默认展示排行榜、关闭 vConsole 并开启语音播报', async () => {
   assert.deepEqual(await createUseCase({}).execute(), {
     showRank: true,
     vConsoleEnabled: false,
+    voiceNotifyEnabled: true,
   });
 });
 
-test('门户配置按后台布尔值下发 vConsole 开关', async () => {
+test('门户配置按后台布尔值下发 vConsole 与语音播报开关', async () => {
   assert.deepEqual(
     await createUseCase({
       [CONFIG_KEYS.portal.showRank]: false,
       [CONFIG_KEYS.portal.vConsoleEnabled]: true,
+      [CONFIG_KEYS.notify.voiceEnabled]: false,
     }).execute(),
-    { showRank: false, vConsoleEnabled: true },
+    { showRank: false, vConsoleEnabled: true, voiceNotifyEnabled: false },
   );
 });

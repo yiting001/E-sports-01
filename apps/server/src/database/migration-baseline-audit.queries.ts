@@ -140,6 +140,13 @@ export const STRUCTURAL_ARTIFACT_QUERY = `
           AND to_regclass(
             format('%I.%I', current_schema(), 'IDX_theme_effect_setting_tenant')
           ) IS NOT NULL
+        ),
+      (1785900000000::bigint, 'AddNotifyWechatBinding1785900000000',
+        'notify wechat binding table and tenant index',
+        to_regclass(format('%I.%I', current_schema(), 'notify_wechat_binding')) IS NOT NULL
+          AND to_regclass(
+            format('%I.%I', current_schema(), 'IDX_notify_wechat_binding_tenant')
+          ) IS NOT NULL
         )
   )
   SELECT

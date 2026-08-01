@@ -10,6 +10,7 @@ import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository
 import { toAdminOrderView } from '../order.mapper';
 import { assertOrderCanDispatch } from '../order-booster-selection';
 import { OrderGroupService } from '../order-group.service';
+import { OrderNotifyService } from '../order-notify.service';
 import { ServiceAgentScope } from '../service-agent-scope.service';
 
 /** 用例：客服把「待客服处理」订单下发到接单大厅（→ 待接单；客服仅限自己负责的订单） */
@@ -20,6 +21,7 @@ export class DispatchOrderUseCase {
     private readonly orders: OrderRepository,
     private readonly scope: ServiceAgentScope,
     private readonly orderGroup: OrderGroupService,
+    private readonly orderNotify: OrderNotifyService,
   ) {}
 
   async execute(operatorId: string, id: string): Promise<AdminOrderView> {
@@ -41,6 +43,7 @@ export class DispatchOrderUseCase {
       throw new ConflictException('订单状态已变化，请刷新后重试');
     }
     await this.orderGroup.syncTitle(saved);
+    await this.orderNotify.notifyHallOrder(saved);
     return toAdminOrderView(saved);
   }
 }

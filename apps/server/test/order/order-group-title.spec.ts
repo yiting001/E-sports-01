@@ -31,6 +31,15 @@ import type { OrderRepository } from '../../src/modules/order/domain/order-repos
 import { OrderEntity } from '../../src/modules/order/domain/order.entity';
 import type { WalletService } from '../../src/modules/wallet/application/wallet.service';
 import type { WalletLedger } from '../../src/modules/wallet/domain/ledger.interface';
+import type { OrderNotifyService } from '../../src/modules/order/application/order-notify.service';
+
+/** 订单微信通知桩：单测不关心推送，只需满足依赖签名 */
+function orderNotifyStub(): OrderNotifyService {
+  return {
+    notifyHallOrder: async () => undefined,
+    notifyPendingOrder: async () => undefined,
+  } as unknown as OrderNotifyService;
+}
 
 test('订单群标题映射履约与退款阶段，并限制为 128 个字符', () => {
   assert.equal(
@@ -109,7 +118,7 @@ test('下发订单保存待接单状态后同步群标题', async () => {
       synchronizedStatus = saved.status;
     },
   } as unknown as OrderGroupService;
-  const useCase = new DispatchOrderUseCase(orders, scope, groups);
+  const useCase = new DispatchOrderUseCase(orders, scope, groups, orderNotifyStub());
 
   const result = await useCase.execute('agent-1', order.id);
 

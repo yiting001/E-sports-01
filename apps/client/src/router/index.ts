@@ -162,6 +162,12 @@ export const router = createRouter({
       meta: { title: '实名认证', requiresAuth: true },
     },
     {
+      path: '/profile/notify',
+      name: 'notify-settings',
+      component: () => import('@/views/profile/NotifySettingsView.vue'),
+      meta: { title: '通知设置', requiresAuth: true },
+    },
+    {
       path: '/profile/booster',
       name: 'booster-apply',
       component: () => import('@/views/profile/BoosterApplyView.vue'),

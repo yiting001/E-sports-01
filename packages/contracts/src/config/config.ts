@@ -33,6 +33,8 @@ export enum ConfigGroup {
   Invite = 'invite',
   /** 订单（自动派单等策略） */
   Order = 'order',
+  /** 通知（微信小程序/公众号推送与语音播报开关） */
+  Notify = 'notify',
 }
 
 /** 配置项对外结构（敏感项的值在传输前会被脱敏） */
@@ -60,6 +62,8 @@ export interface PortalConfigView {
   showRank: boolean;
   /** 是否在 C 端加载 vConsole 调试面板 */
   vConsoleEnabled: boolean;
+  /** 是否启用浏览器语音播报（新订单、新消息，C 端与管理端共用开关） */
+  voiceNotifyEnabled: boolean;
 }
 
 /** 用户协议（公开，登录前即可读取） */
@@ -239,5 +243,31 @@ export const CONFIG_KEYS = {
   member: {
     /** 会员等级档位（JSON 数组：等级/名称/累计消费门槛/折扣万分比） */
     levels: 'member.levels',
+  },
+  notify: {
+    /** C 端/管理端是否启用浏览器语音播报（新订单、新消息） */
+    voiceEnabled: 'notify.voice.enabled',
+    /** 是否启用微信通知（小程序订阅消息/公众号模板消息总开关） */
+    wechatEnabled: 'notify.wechat.enabled',
+    /** 微信小程序 AppID */
+    miniAppId: 'notify.wechat.mini.appId',
+    /** 微信小程序 AppSecret */
+    miniAppSecret: 'notify.wechat.mini.appSecret',
+    /** 小程序「新订单」订阅消息模板 ID（打手侧接单大厅新单） */
+    miniOrderTemplateId: 'notify.wechat.mini.orderTemplateId',
+    /** 小程序订阅消息点击跳转页面路径 */
+    miniOrderPage: 'notify.wechat.mini.orderPage',
+    /** 小程序模板字段映射（JSON：{"character_string1":"orderNo",...}，值取订单通知逻辑字段名） */
+    miniOrderFields: 'notify.wechat.mini.orderFields',
+    /** 微信公众号（订阅号/服务号）AppID */
+    officialAppId: 'notify.wechat.official.appId',
+    /** 微信公众号 AppSecret */
+    officialAppSecret: 'notify.wechat.official.appSecret',
+    /** 公众号「新订单」模板消息模板 ID */
+    officialOrderTemplateId: 'notify.wechat.official.orderTemplateId',
+    /** 公众号模板消息点击跳转链接 */
+    officialOrderUrl: 'notify.wechat.official.orderUrl',
+    /** 公众号模板字段映射（JSON：{"keyword1":"orderNo",...}，值取订单通知逻辑字段名） */
+    officialOrderFields: 'notify.wechat.official.orderFields',
   },
 } as const;

@@ -200,7 +200,8 @@ function toStructuralCheck(
     migrationName === 'AddNoticePopup1785500000000' ||
     migrationName === 'AddConversationMemberTag1785600000000' ||
     migrationName === 'AddWithdrawalIdCard1785700000000' ||
-    migrationName === 'AddThemeEffectSetting1785800000000';
+    migrationName === 'AddThemeEffectSetting1785800000000' ||
+    migrationName === 'AddNotifyWechatBinding1785900000000';
   const recorded = history.some(
     (record) => record.name === migrationName && record.timestamp === migrationTimestamp,
   );

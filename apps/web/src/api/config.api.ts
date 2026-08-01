@@ -3,6 +3,7 @@ import type {
   ConfigGroup,
   ConfigItemView,
   ConfigValueType,
+  PortalConfigView,
 } from '@app/contracts';
 import type { AxiosRequestConfig } from 'axios';
 import { http, type RequestOptions } from './http';
@@ -35,5 +36,10 @@ export const configApi = {
       tenantEntryProbe: true,
     };
     return http.get('/config/branding', options);
+  },
+  /** 读取门户开关配置（语音播报开关等，公开接口） */
+  portal(): Promise<PortalConfigView> {
+    const options: AxiosRequestConfig & RequestOptions = { silent: true };
+    return http.get('/config/portal', options);
   },
 };

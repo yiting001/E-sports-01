@@ -24,6 +24,7 @@ export * from './booster/booster-level';
 export * from './booster/penalty';
 export * from './member/member';
 export * from './notice/notice';
+export * from './notify/notify';
 export * from './order/order';
 export * from './review/review';
 export * from './dashboard/dashboard';

@@ -12,6 +12,8 @@ export const usePortalStore = defineStore('portal', () => {
   const showRank = ref(true);
   /** 是否加载 vConsole（后台 portal.vConsoleEnabled 控制，默认关闭） */
   const vConsoleEnabled = ref(false);
+  /** 是否启用语音播报（后台 notify.voice.enabled 控制，默认开启） */
+  const voiceNotifyEnabled = ref(true);
   /** 配置是否已加载完成（页面守卫需等加载后再判断显隐） */
   const loaded = ref(false);
   let loadRevision = 0;
@@ -21,6 +23,7 @@ export const usePortalStore = defineStore('portal', () => {
     const revision = ++loadRevision;
     showRank.value = true;
     vConsoleEnabled.value = false;
+    voiceNotifyEnabled.value = true;
     loaded.value = false;
     try {
       const data = await configApi.portal();
@@ -29,6 +32,7 @@ export const usePortalStore = defineStore('portal', () => {
       }
       showRank.value = data.showRank;
       vConsoleEnabled.value = data.vConsoleEnabled === true;
+      voiceNotifyEnabled.value = data.voiceNotifyEnabled !== false;
     } catch {
       // 公开配置接口不可用时保留默认展示，不打扰用户
     } finally {
@@ -38,5 +42,5 @@ export const usePortalStore = defineStore('portal', () => {
     }
   }
 
-  return { showRank, vConsoleEnabled, loaded, load };
+  return { showRank, vConsoleEnabled, voiceNotifyEnabled, loaded, load };
 });

@@ -22,6 +22,15 @@ import type { OrderRepository } from '../../src/modules/order/domain/order-repos
 import { OrderEntity } from '../../src/modules/order/domain/order.entity';
 import type { PaymentResolver } from '../../src/modules/wallet/application/payment.resolver';
 import type { TenantContextService } from '../../src/shared/tenant/tenant-context.service';
+import type { OrderNotifyService } from '../../src/modules/order/application/order-notify.service';
+
+/** 订单微信通知桩：单测不关心推送，只需满足依赖签名 */
+function orderNotifyStub(): OrderNotifyService {
+  return {
+    notifyHallOrder: async () => undefined,
+    notifyPendingOrder: async () => undefined,
+  } as unknown as OrderNotifyService;
+}
 
 test('订单群使用订单 ID 创建一次，并在延迟补建时包含已接单打手', async () => {
   const order = Object.assign(new OrderEntity(), {
@@ -292,6 +301,7 @@ test('支付已落账但首次建群失败时，主动查单会补建且不回�
     settlement,
     orders,
     orderGroup,
+    orderNotifyStub(),
     tenant,
     config,
   );

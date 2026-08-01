@@ -8,6 +8,7 @@ import BalanceCards from '@/components/profile/BalanceCards.vue';
 import BoosterLevelCard from '@/components/profile/BoosterLevelCard.vue';
 import MemberLevelCard from '@/components/profile/MemberLevelCard.vue';
 import FeatureGrid from '@/components/profile/FeatureGrid.vue';
+import NotifyEntryCard from '@/components/profile/NotifyEntryCard.vue';
 import OrderEntries from '@/components/profile/OrderEntries.vue';
 import ProfileHeader from '@/components/profile/ProfileHeader.vue';
 import { APP_VERSION_TEXT } from '@/config/profile.mock';
@@ -25,6 +26,7 @@ void member.refresh();
     <ProfileHeader />
     <OrderEntries v-if="!role.isBoosterMode" />
     <BoosterLevelCard v-if="role.isBoosterMode" />
+    <NotifyEntryCard v-if="role.isBoosterMode" />
     <MemberLevelCard v-if="!role.isBoosterMode" />
     <BalanceCards />
     <FeatureGrid v-if="!role.isBoosterMode" />
@@ -68,6 +70,7 @@ void member.refresh();
   .profile > :deep(.header),
   .profile > :deep(.member-card),
   .profile > :deep(.booster-card),
+  .profile > :deep(.notify-entry),
   .profile > :deep(.cards) {
     grid-column: 1;
   }
