@@ -13,6 +13,7 @@ import {
   type ProductPublicView,
 } from "@app/contracts";
 import AppIcon from "@/components/common/AppIcon.vue";
+import { productCardSummary } from "./product-card.utils";
 
 const props = defineProps<{ product: ProductPublicView }>();
 
@@ -20,10 +21,7 @@ const router = useRouter();
 
 /** 富文本详情去标签后的纯文本摘要（卡片两行预览用） */
 const summary = computed(() =>
-  props.product.description
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
+  productCardSummary(props.product.description)
 );
 </script>
 
@@ -111,7 +109,9 @@ const summary = computed(() =>
 
 .desc {
   margin-top: 6px;
+  height: 36px;
   font-size: 12px;
+  line-height: 18px;
   color: var(--c-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;

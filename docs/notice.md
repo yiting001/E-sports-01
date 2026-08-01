@@ -7,6 +7,8 @@
 - 关联活动的横幅可点击进入 `/activities/:id`；未登录用户由既有路由守卫登录后回跳。
 - 通知公告继续支持标题、富文本详情、启停和排序，公开端只读取启用记录。
 - 通知可标记为【弹窗公告】：C 端首次进入时弹窗展示本租户最新一条，关闭后本机不再重复弹出；弹窗支持点击「查看详情」进入公告详情页（`/notices/:id`，复用公开详情接口），进入前同样记已读关闭弹窗。
+- 弹窗面板复用 Canvas UI `Flame Wrap` 火焰边框特效；WebGL2 不可用时保留普通弹窗，HTML-in-canvas 不可用时使用真实 DOM + SVG 边缘热浪 + 透明火焰层，系统要求减少动态时只保留静态形变。
+- 商品卡片的富文本摘要固定保留两行高度，描述为空或有内容时价格、销量的纵向位置一致。
 
 非目标：不做弹窗阅读回传/服务端已读记录（已读只存本机），不做定时上下线和多条弹窗队列。
 
@@ -45,6 +47,10 @@ apps/server/src/modules/notice/
 apps/web/src/components/notice/BannerPanel.vue # 上传、排序、活动关联、间隔设置
 apps/client/src/components/home/HomeBanner.vue # 轮播、拖动、暂停、失败图剔除、跳转
 apps/client/src/components/notice/NoticePopupDialog.vue # 首次进入弹窗、消毒渲染、本机已读
+apps/client/src/components/canvasui/FlameWrap.vue # 公告局部火焰边框，含 WebGL2 与普通 DOM 降级
+apps/client/src/components/canvasui/flame-wrap-options.ts # Flame Wrap 参数和 undefined 安全默认值
+apps/client/src/components/canvasui/flame-wrap.ts # Canvas UI WebGL 生命周期、尺寸和可见性管理
+apps/client/src/components/home/product-card.utils.ts # 商品卡片富文本摘要
 apps/client/src/tenant/tenant-context.ts       # C 端统一租户入口（?tenantCode= → sessionStorage）
 ```
 
@@ -149,11 +155,14 @@ sequenceDiagram
 - 弹窗接口只下发展示字段（id/标题/正文/时间），复用公开租户守卫与仓储行级过滤，不会因免登录而泄露其他租户公告；
   接口失败时 C 端静默降级（不弹窗、不弹错误提示），不影响首页主流程。
 - 已读状态只存本机，换浏览器/清缓存会重新弹出；如需按账号只弹一次，需另做服务端已读记录，不在本次范围。
+- Flame Wrap 只作用于公告弹窗局部，不读取或修改公告正文；WebGL2 不可用时不挂载特效，HTML-in-canvas 不可用时由真实 DOM 承载内容、SVG 位移滤镜让边缘内容随热浪变化、透明 canvas 绘制火焰，特效不会成为公告功能的硬依赖。
 
 ## 验证范围
 
 - 弹窗公告用例单测（`apps/server/test/notice/get-popup-notice.spec.ts`）覆盖结果映射与无公告返回
   `null`；租户编码解析、未知/停用拒绝和仓储过滤复用既有租户守卫与隔离测试。
 - 配置解析测试覆盖空值、历史 URL、合法 JSON、非法图片/活动 ID、数量及间隔收敛。
+- C 端 `Flame Wrap` 参数测试覆盖 `undefined` 不覆盖颜色/数值默认值和显式零值；商品摘要测试覆盖富文本标签、空白和空描述。
+- 商品卡片视觉回归覆盖有描述/无描述时价格与销量基线一致；公告弹窗视觉回归覆盖火焰 canvas、普通面板降级、关闭和查看详情。
 - 页面回归覆盖单图不轮播、多图自动轮播、暂停/恢复、指示点、横向拖动、纵向滚动不误触、活动登录回跳、失败图降级和桌面/移动尺寸。
 - 最终 lint、typecheck、test 和构建结果以本次交付汇报为准。
