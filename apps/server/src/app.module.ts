@@ -15,6 +15,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
 import { BoosterModule } from './modules/booster/booster.module';
 import { MemberModule } from './modules/member/member.module';
 import { NoticeModule } from './modules/notice/notice.module';
+import { NotifyModule } from './modules/notify/notify.module';
 import { ThemeModule } from './modules/theme/theme.module';
 import { OrderModule } from './modules/order/order.module';
 import { ReviewModule } from './modules/review/review.module';
@@ -46,6 +47,7 @@ import { InviteModule } from './modules/invite/invite.module';
     BoosterModule,
     MemberModule,
     NoticeModule,
+    NotifyModule,
     ThemeModule,
     OrderModule,
     ReviewModule,

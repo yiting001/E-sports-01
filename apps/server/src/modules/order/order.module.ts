@@ -8,6 +8,7 @@ import { BoosterModule } from '../booster/booster.module';
 import { MemberModule } from '../member/member.module';
 import { CouponModule } from '../coupon/coupon.module';
 import { ImModule } from '../im/im.module';
+import { NotifyModule } from '../notify/notify.module';
 
 import { OrderEntity } from './domain/order.entity';
 import { OrderRefundAttemptEntity } from './domain/order-refund-attempt.entity';
@@ -41,6 +42,7 @@ import { GetBoosterOrderUseCase } from './application/use-cases/get-booster-orde
 import { CompleteBoosterOrderUseCase } from './application/use-cases/complete-booster-order.usecase';
 import { BoosterAccess } from './application/booster-access.service';
 import { OrderGroupService } from './application/order-group.service';
+import { OrderNotifyService } from './application/order-notify.service';
 import { ServiceAgentScope } from './application/service-agent-scope.service';
 import { AssignOrderBoosterUseCase } from './application/use-cases/assign-order-booster.usecase';
 import { ListBoosterCandidatesUseCase } from './application/use-cases/list-booster-candidates.usecase';
@@ -88,6 +90,7 @@ import { OrderAdminRefundApproveController } from './interfaces/controllers/orde
     MemberModule,
     CouponModule,
     ImModule,
+    NotifyModule,
     TypeOrmModule.forFeature([OrderEntity, OrderRefundEntity, OrderRefundAttemptEntity]),
   ],
   controllers: [
@@ -151,6 +154,7 @@ import { OrderAdminRefundApproveController } from './interfaces/controllers/orde
     RejectOrderRefundUseCase,
     BoosterAccess,
     OrderGroupService,
+    OrderNotifyService,
     ServiceAgentScope,
   ],
   exports: [ORDER_REPOSITORY, ORDER_FEEDBACK_PENALTY_TRANSACTION],

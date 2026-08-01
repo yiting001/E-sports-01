@@ -32,4 +32,5 @@ export const CONFIG_GROUP_META: Record<ConfigGroup, { label: string }> = {
   [ConfigGroup.Member]: { label: '会员' },
   [ConfigGroup.Invite]: { label: '邀请' },
   [ConfigGroup.Order]: { label: '订单' },
+  [ConfigGroup.Notify]: { label: '通知' },
 };

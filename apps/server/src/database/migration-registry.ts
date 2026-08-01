@@ -13,6 +13,7 @@ import { AddNoticePopup1785500000000 } from './migrations/1785500000000-add-noti
 import { AddConversationMemberTag1785600000000 } from './migrations/1785600000000-add-conversation-member-tag';
 import { AddWithdrawalIdCard1785700000000 } from './migrations/1785700000000-add-withdrawal-idcard';
 import { AddThemeEffectSetting1785800000000 } from './migrations/1785800000000-add-theme-effect-setting';
+import { AddNotifyWechatBinding1785900000000 } from './migrations/1785900000000-add-notify-wechat-binding';
 
 export type ServerMigrationConstructor = new () => MigrationInterface;
 
@@ -41,6 +42,7 @@ export const SERVER_MIGRATIONS: ServerMigrationConstructor[] = [
   AddConversationMemberTag1785600000000,
   AddWithdrawalIdCard1785700000000,
   AddThemeEffectSetting1785800000000,
+  AddNotifyWechatBinding1785900000000,
 ];
 
 export const SERVER_MIGRATION_DEFINITIONS: ServerMigrationDefinition[] =

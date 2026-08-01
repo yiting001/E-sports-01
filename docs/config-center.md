@@ -176,6 +176,12 @@ sequenceDiagram
 | `sms.tencent.sdkAppId` / `signName` / `templateId` / `region` | Sms | — | 腾讯云应用/签名/模板/地域 | |
 | `sms.volcano.accessKeyId` / `secretAccessKey` | Sms | （空） | 火山引擎凭证 | ✓ |
 | `sms.volcano.smsAccount` / `signName` / `templateId` / `region` | Sms | — | 火山引擎账号/签名/模板/地域 | |
+| `notify.voice.enabled` | Notify | `true` | C 端/管理端浏览器语音播报开关 | |
+| `notify.wechat.enabled` | Notify | `false` | 微信通知总开关（小程序订阅消息/公众号模板消息） | |
+| `notify.wechat.mini.appId` / `appSecret` | Notify | （空） | 微信小程序凭证（Secret 为密钥） | ✓ |
+| `notify.wechat.mini.orderTemplateId` / `orderPage` / `orderFields` | Notify | — | 小程序订单模板 ID / 跳转页 / 字段映射 JSON | |
+| `notify.wechat.official.appId` / `appSecret` | Notify | （空） | 微信公众号凭证（Secret 为密钥） | ✓ |
+| `notify.wechat.official.orderTemplateId` / `orderUrl` / `orderFields` | Notify | — | 公众号订单模板 ID / 跳转链接 / 字段映射 JSON | |
 
 > 标记为密钥（`secret: true`）的配置项，列表查询时值会被脱敏为 `******`，不会明文返回前端。短信详见 [sms.md](./sms.md)。
 

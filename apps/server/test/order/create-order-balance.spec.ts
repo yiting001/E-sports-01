@@ -25,6 +25,15 @@ import { OrderEntity } from '../../src/modules/order/domain/order.entity';
 import { CreateOrderDto } from '../../src/modules/order/interfaces/dto/create-order.dto';
 import type { PaymentResolver } from '../../src/modules/wallet/application/payment.resolver';
 import type { TenantContextService } from '../../src/shared/tenant/tenant-context.service';
+import type { OrderNotifyService } from '../../src/modules/order/application/order-notify.service';
+
+/** 订单微信通知桩：单测不关心推送，只需满足依赖签名 */
+function orderNotifyStub(): OrderNotifyService {
+  return {
+    notifyHallOrder: async () => undefined,
+    notifyPendingOrder: async () => undefined,
+  } as unknown as OrderNotifyService;
+}
 
 interface FailureFixture {
   useCase: CreateOrderUseCase;
@@ -290,6 +299,7 @@ test('支付事务提交后的建群失败不会冒泡为支付失败', async (t
     settlement,
     { save: async (saved: OrderEntity) => saved } as unknown as OrderRepository,
     orderGroup as unknown as OrderGroupService,
+    orderNotifyStub(),
     tenant as unknown as TenantContextService,
     { getBoolean: async () => false } as unknown as ConfigService,
   );

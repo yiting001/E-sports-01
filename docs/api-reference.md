@@ -323,6 +323,17 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | PUT | `/api/notice/:id` | `notice:save` | 编辑通知 |
 | DELETE | `/api/notice/:id` | `notice:remove` | 删除通知 |
 
+## 消息通知（微信绑定）
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/notify/wechat/mine` | 登录 | 本人微信绑定概览 `{ enabled, bindings: [{ channel, openidMasked, boundAt }] }` |
+| POST | `/api/notify/wechat/bind` | 登录 | `{ channel: mini\|official, code }`；服务端凭授权 code 换 openid，重复绑定覆盖 |
+| POST | `/api/notify/wechat/unbind` | 登录 | `{ channel }`；幂等解除绑定 |
+| GET | `/api/notify/wechat/authorize-url` | 登录 | `?redirectUri=`；生成公众号 snsapi_base 网页授权地址 |
+
+订单微信推送与语音播报的配置项、流程与边界见 [notify.md](./notify.md)。
+
 ## 服务订单与下单支付
 
 | 方法 | 路径 | 权限 | 说明 |

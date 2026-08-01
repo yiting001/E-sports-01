@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { PERMS } from "@app/contracts";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { NOTIFY_VOICE_TEXTS, PERMS } from "@app/contracts";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   ArrowDown,
@@ -21,6 +21,8 @@ import { useAuthStore } from "@/stores/auth.store";
 import { useMenuStore } from "@/stores/menu.store";
 import { MENU_BADGE_CODES, useMenuBadgeStore } from "@/stores/menu-badge.store";
 import { useBrandingStore } from "@/stores/branding.store";
+import { configApi } from "@/api/config.api";
+import { voiceNotifier } from "@/utils/voice-notifier";
 import "./AppLayout.css";
 
 const router = useRouter();
@@ -42,6 +44,40 @@ const roleText = computed(() =>
 );
 const avatarUrl = computed(() => auth.profile?.avatar || "");
 let sessionExpiryHandled = false;
+
+/** 语音播报开关（配置中心 notify.voice.enabled 下发，加载失败保持默认开启） */
+const voiceNotifyEnabled = ref(true);
+
+void configApi
+  .portal()
+  .then((portal) => {
+    voiceNotifyEnabled.value = portal.voiceNotifyEnabled !== false;
+  })
+  .catch(() => {
+    // 公开配置接口不可用时保持默认开启，不打扰用户
+  });
+
+/** 订单待办数增长 → 播报新订单（下发/指派/审核处理后数量下降不播报） */
+const stopOrderVoiceWatch = watch(
+  () => menuBadges.counts[MENU_BADGE_CODES.order],
+  (next, prev) => {
+    if (voiceNotifyEnabled.value && next > prev) {
+      voiceNotifier.speak("admin-order", NOTIFY_VOICE_TEXTS.newPendingOrder);
+    }
+  }
+);
+
+/** IM 与客服工作台未读合计增长 → 播报新消息 */
+const stopMessageVoiceWatch = watch(
+  () =>
+    menuBadges.counts[MENU_BADGE_CODES.im] +
+    menuBadges.counts[MENU_BADGE_CODES.service],
+  (next, prev) => {
+    if (voiceNotifyEnabled.value && next > prev) {
+      voiceNotifier.speak("admin-message", NOTIFY_VOICE_TEXTS.newChatMessage);
+    }
+  }
+);
 
 function clearAuthenticatedSession(): void {
   im.disconnect();
@@ -137,6 +173,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   removeAfterEach();
+  stopOrderVoiceWatch();
+  stopMessageVoiceWatch();
   menuBadges.stopPolling();
   menuBadges.reset();
   im.disconnect();

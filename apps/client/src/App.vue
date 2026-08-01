@@ -2,8 +2,10 @@
 /**
  * 根组件：承载路由出口与全局轻提示；
  * 启动即加载平台品牌（软件名称/图标，配置中心与管理端共用），同步浏览器标题与 favicon。
- * 导航角标（消息未读数/大厅待接单数）启动轮询并在路由切换后刷新。
+ * 导航角标（消息未读数/大厅待接单数）启动轮询并在路由切换后刷新；
+ * 角标数量增长时按配置开关触发语音播报（新订单/新消息）。
  */
+import { NOTIFY_VOICE_TEXTS } from '@app/contracts';
 import { onBeforeUnmount, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import AppToast from '@/components/common/AppToast.vue';
@@ -13,9 +15,11 @@ import { useBrandingStore } from '@/stores/branding.store';
 import { useConversationEventsStore } from '@/stores/conversation-events.store';
 import { useHallBadgeStore } from '@/stores/hall-badge.store';
 import { usePortalStore } from '@/stores/portal.store';
+import { useRoleStore } from '@/stores/role.store';
 import { useUnreadStore } from '@/stores/unread.store';
 import { TenantEntryStatus, tenantContext } from '@/tenant/tenant-context';
 import { vConsoleManager } from '@/utils/vconsole';
+import { voiceNotifier } from '@/utils/voice-notifier';
 
 const router = useRouter();
 const invalidTenantEntry = tenantContext.entryError;
@@ -23,9 +27,11 @@ const tenantEntryStatus = tenantContext.entryStatus;
 const auth = useAuthStore();
 const branding = useBrandingStore();
 const portal = usePortalStore();
+const role = useRoleStore();
 const unread = useUnreadStore();
 const conversationEvents = useConversationEventsStore();
-const badges = [unread, useHallBadgeStore()];
+const hallBadge = useHallBadgeStore();
+const badges = [unread, hallBadge];
 const presence = createPresenceSocket({
   onConversationChanged: (conversation) => {
     conversationEvents.publish(conversation);
@@ -33,6 +39,26 @@ const presence = createPresenceSocket({
   },
   onUnreadChanged: () => void unread.refresh(),
 });
+
+/** 未读总数增长 → 播报新消息（配置开关关闭时不播报） */
+const stopUnreadVoiceWatch = watch(
+  () => unread.total,
+  (next, prev) => {
+    if (portal.voiceNotifyEnabled && auth.isAuthenticated && next > prev) {
+      voiceNotifier.speak('chat-message', NOTIFY_VOICE_TEXTS.newChatMessage);
+    }
+  },
+);
+
+/** 打手身份下大厅待接单数增长 → 播报新订单 */
+const stopHallVoiceWatch = watch(
+  () => hallBadge.total,
+  (next, prev) => {
+    if (portal.voiceNotifyEnabled && role.isBoosterMode && next > prev) {
+      voiceNotifier.speak('hall-order', NOTIFY_VOICE_TEXTS.newHallOrder);
+    }
+  },
+);
 
 /** 租户切换后重新读取站点配置；store 内部会丢弃上一租户的晚到响应。 */
 const stopTenantConfigWatch = watch(
@@ -119,6 +145,8 @@ onBeforeUnmount(() => {
   stopTenantConfigWatch();
   stopTenantStatusWatch();
   stopVConsoleWatch();
+  stopUnreadVoiceWatch();
+  stopHallVoiceWatch();
   vConsoleManager.destroy();
   presence.dispose();
   badges.forEach((badge) => badge.stopPolling());

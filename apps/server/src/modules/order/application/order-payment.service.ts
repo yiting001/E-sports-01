@@ -14,6 +14,7 @@ import {
 } from '../domain/order-payment-settlement.interface';
 import { ORDER_REPOSITORY, OrderRepository } from '../domain/order-repository.interface';
 import { OrderGroupService } from './order-group.service';
+import { OrderNotifyService } from './order-notify.service';
 
 /**
  * 订单支付落账服务（回调与主动查单共用的唯一落账口）。
@@ -32,6 +33,7 @@ export class OrderPaymentSettleService {
     @Inject(ORDER_REPOSITORY)
     private readonly orders: OrderRepository,
     private readonly orderGroup: OrderGroupService,
+    private readonly orderNotify: OrderNotifyService,
     private readonly tenant: TenantContextService,
     private readonly config: ConfigService,
   ) {}
@@ -86,7 +88,10 @@ export class OrderPaymentSettleService {
     const dispatched = await this.autoDispatchSafely(paidOrder);
     if (dispatched) {
       await this.orderGroup.syncTitle(dispatched);
+      await this.orderNotify.notifyHallOrder(dispatched);
+      return;
     }
+    await this.orderNotify.notifyPendingOrder(paidOrder);
   }
 
   /**
