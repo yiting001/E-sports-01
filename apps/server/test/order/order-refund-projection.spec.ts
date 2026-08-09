@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  BOOSTER_LEVEL_DEFAULTS,
   OrderBoosterSelectionMode,
   OrderPaymentMethod,
   OrderRefundStatus,
@@ -12,6 +13,7 @@ import {
   toHallOrderView,
   toOwnerOrderView,
 } from '../../src/modules/order/application/order.mapper';
+import type { BoosterProgressService } from '../../src/modules/booster/application/booster-progress.service';
 import type { BoosterAccess } from '../../src/modules/order/application/booster-access.service';
 import { GetHallOrderUseCase } from '../../src/modules/order/application/use-cases/get-hall-order.usecase';
 import { OrderRefundEntity } from '../../src/modules/order/domain/order-refund.entity';
@@ -42,7 +44,10 @@ test('驳回后恢复待接单的订单在大厅和打手投影中隐藏全部�
   const access = {
     assert: async () => undefined,
   } as unknown as BoosterAccess;
-  const hallUseCase = new GetHallOrderUseCase(repository, access);
+  const progress = {
+    currentTier: async () => BOOSTER_LEVEL_DEFAULTS[0],
+  } as unknown as BoosterProgressService;
+  const hallUseCase = new GetHallOrderUseCase(repository, access, progress);
 
   const hallView = await hallUseCase.execute('booster-1', order.id);
   const boosterView = toBoosterOrderView(order);
@@ -54,7 +59,11 @@ test('驳回后恢复待接单的订单在大厅和打手投影中隐藏全部�
   assert.equal(boosterView.refund, null);
   assert.equal(boosterView.canRequestRefund, false);
   assert.equal(boosterView.accountInfo, order.accountInfo);
-  assert.deepEqual(toHallOrderView(order), hallView);
+  assert.equal(hallView.commissionRateBp, BOOSTER_LEVEL_DEFAULTS[0].commissionRateBp);
+  assert.deepEqual(
+    toHallOrderView(order, BOOSTER_LEVEL_DEFAULTS[0].commissionRateBp),
+    hallView,
+  );
 });
 
 function makeRejectedDispatchingOrder(): OrderEntity {

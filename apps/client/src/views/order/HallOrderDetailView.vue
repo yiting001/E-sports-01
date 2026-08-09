@@ -184,8 +184,15 @@ onMounted(() => {
         v-else-if="order"
         class="content"
       >
+        <!-- 商品快照 + 状态；点击进商品详情查看服务内容 -->
         <section class="card block">
-          <div class="head">
+          <div
+            class="head head--link"
+            role="link"
+            tabindex="0"
+            @click="router.push({ name: 'product-detail', params: { id: order.productId } })"
+            @keydown.enter="router.push({ name: 'product-detail', params: { id: order.productId } })"
+          >
             <span
               class="thumb"
               :class="{ 'thumb--image': order.productCover }"
@@ -208,8 +215,16 @@ onMounted(() => {
               <p class="sub">
                 数量 ×{{ order.quantity }}
               </p>
+              <p class="sub sub--hint">
+                点击查看商品详情，了解本单服务内容
+              </p>
             </div>
             <span class="status">{{ ORDER_STATUS_TEXT[order.status] }}</span>
+            <AppIcon
+              class="head-arrow"
+              name="chevron"
+              :size="16"
+            />
           </div>
         </section>
 
@@ -238,9 +253,9 @@ onMounted(() => {
               v-if="estimatedCommission"
               class="row"
             >
-              <dt>预估佣金</dt>
+              <dt>预估到手</dt>
               <dd class="commission">
-                到手 ¥{{ estimatedCommission }}
+                ¥{{ estimatedCommission }}
               </dd>
             </div>
             <div class="row">
@@ -350,6 +365,20 @@ onMounted(() => {
   border: 1px solid var(--c-accent);
   border-radius: var(--radius-sm);
   font-weight: 700;
+}
+
+.head--link {
+  cursor: pointer;
+}
+
+.head-arrow {
+  flex-shrink: 0;
+  transform: rotate(180deg);
+  color: var(--c-text-muted);
+}
+
+.sub--hint {
+  color: var(--c-accent);
 }
 
 .region-text {

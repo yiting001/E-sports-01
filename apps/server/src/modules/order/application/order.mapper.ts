@@ -99,14 +99,25 @@ export function toBoosterOrderView(entity: OrderEntity): OrderView {
   };
 }
 
-/** 订单实体 → 接单大厅视图：隐藏履约账号和订单本人的退款信息。 */
-export function toHallOrderView(entity: OrderEntity): OrderView {
-  return {
+/**
+ * 订单实体 → 接单大厅视图：隐藏履约账号和订单本人的退款信息。
+ * 待接订单尚未结算（费率快照为 0）时，用当前打手等级费率作为预估口径下发，
+ * 供 C 端展示预估到手金额；实际佣金仍以完成结算时的费率为准。
+ */
+export function toHallOrderView(
+  entity: OrderEntity,
+  estimatedCommissionRateBp = 0,
+): OrderView {
+  const view = {
     ...toBoosterOrderView(entity),
     accountInfo: '',
     gameAccountId: '',
     gameTextId: '',
   };
+  if (view.commissionRateBp <= 0 && estimatedCommissionRateBp > 0) {
+    view.commissionRateBp = estimatedCommissionRateBp;
+  }
+  return view;
 }
 
 /** 订单实体 → 管理端视图（补充归属用户/客服快照/渠道交易号） */
