@@ -199,6 +199,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     secret: true,
   },
   {
+    key: CONFIG_KEYS.upload.ossPublicBaseUrl,
+    value: '',
+    type: ConfigValueType.String,
+    group: ConfigGroup.Upload,
+    remark: 'OSS 自定义访问域名（CDN/加速域名，如 https://oss.example.com；留空用 OSS 默认地址）',
+  },
+  {
     key: CONFIG_KEYS.im.historyLimit,
     value: '50',
     type: ConfigValueType.Number,
