@@ -15,28 +15,102 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
 <template>
   <div class="product-platform-prices">
     <div class="platform-price">
-      <span class="platform-label">手机端</span>
-      <span class="price">¥{{ fenToYuan(product.priceFen) }}</span>
+      <span class="corner corner-tl" />
+      <span class="corner corner-br" />
       <span
-        v-if="discountLabel(product.priceFen, product.originPriceFen)"
-        class="discount"
-      >{{ discountLabel(product.priceFen, product.originPriceFen) }}</span>
-      <span
-        v-if="product.originPriceFen > product.priceFen"
-        class="origin"
-      >¥{{ fenToYuan(product.originPriceFen) }}</span>
+        class="platform-icon"
+        aria-hidden="true"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        >
+          <rect
+            x="7"
+            y="3"
+            width="10"
+            height="18"
+            rx="2"
+          />
+          <line
+            x1="10.5"
+            y1="18"
+            x2="13.5"
+            y2="18"
+          />
+        </svg>
+      </span>
+      <span class="platform-meta">
+        <span class="platform-label">手机端</span>
+        <span class="platform-sub">MOBILE</span>
+      </span>
+      <span class="price-row">
+        <span class="price">
+          ¥<b>{{ fenToYuan(product.priceFen) }}</b>
+        </span>
+        <span
+          v-if="discountLabel(product.priceFen, product.originPriceFen)"
+          class="discount"
+        >{{ discountLabel(product.priceFen, product.originPriceFen) }}</span>
+        <span
+          v-if="product.originPriceFen > product.priceFen"
+          class="origin"
+        >¥{{ fenToYuan(product.originPriceFen) }}</span>
+      </span>
     </div>
     <div class="platform-price">
-      <span class="platform-label">电脑端</span>
-      <span class="price">¥{{ fenToYuan(product.pcPriceFen) }}</span>
+      <span class="corner corner-tl" />
+      <span class="corner corner-br" />
       <span
-        v-if="discountLabel(product.pcPriceFen, product.pcOriginPriceFen)"
-        class="discount"
-      >{{ discountLabel(product.pcPriceFen, product.pcOriginPriceFen) }}</span>
-      <span
-        v-if="product.pcOriginPriceFen > product.pcPriceFen"
-        class="origin"
-      >¥{{ fenToYuan(product.pcOriginPriceFen) }}</span>
+        class="platform-icon"
+        aria-hidden="true"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        >
+          <rect
+            x="3"
+            y="4"
+            width="18"
+            height="12"
+            rx="1.5"
+          />
+          <line
+            x1="9"
+            y1="20"
+            x2="15"
+            y2="20"
+          />
+          <line
+            x1="12"
+            y1="16"
+            x2="12"
+            y2="20"
+          />
+        </svg>
+      </span>
+      <span class="platform-meta">
+        <span class="platform-label">电脑端</span>
+        <span class="platform-sub">PC</span>
+      </span>
+      <span class="price-row">
+        <span class="price">
+          ¥<b>{{ fenToYuan(product.pcPriceFen) }}</b>
+        </span>
+        <span
+          v-if="discountLabel(product.pcPriceFen, product.pcOriginPriceFen)"
+          class="discount"
+        >{{ discountLabel(product.pcPriceFen, product.pcOriginPriceFen) }}</span>
+        <span
+          v-if="product.pcOriginPriceFen > product.pcPriceFen"
+          class="origin"
+        >¥{{ fenToYuan(product.pcOriginPriceFen) }}</span>
+      </span>
     </div>
   </div>
 </template>
@@ -46,46 +120,122 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   margin-top: 12px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding: 10px;
-  background: linear-gradient(90deg, var(--c-accent-dim), transparent 78%);
-  border-left: 2px solid var(--c-accent);
-  border-radius: var(--radius-sm);
+  gap: 10px;
 }
 
 .platform-price {
+  position: relative;
+  overflow: hidden;
   min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 6px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--c-accent) 38%, var(--c-border));
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 176, 32, 0.1), transparent 42%),
+    linear-gradient(160deg, #1c2230, #10141d 70%);
+  box-shadow: inset 0 1px 0 rgba(255, 224, 160, 0.08);
+}
+
+.corner {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+}
+
+.corner-tl {
+  top: 0;
+  left: 0;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--c-accent) 55%, transparent) 0,
+    transparent 46%
+  );
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.corner-br {
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--c-accent) 45%, transparent) 0,
+    transparent 46%
+  );
+  clip-path: polygon(100% 100%, 100% 0, 0 100%);
+}
+
+.platform-icon {
+  grid-row: 1 / span 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 48px;
+  color: var(--c-accent);
+  background: linear-gradient(160deg, #232a3a, #141a26);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 45%, transparent);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}
+
+.platform-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.platform-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.platform-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.platform-sub {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--c-text-muted);
+}
+
+.price-row {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 7px;
-  padding: 9px 10px;
-  border: 1px solid color-mix(in srgb, var(--c-accent) 24%, var(--c-border));
-  border-radius: var(--radius-sm);
-  background: var(--c-surface-2);
-}
-
-.platform-label {
-  width: 100%;
-  font-size: 11px;
-  color: var(--c-text-secondary);
+  min-width: 0;
 }
 
 .price {
   font-family: var(--font-num);
-  font-size: 22px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--c-accent);
   text-shadow: 0 0 18px rgba(255, 176, 32, 0.35);
 }
 
+.price b {
+  font-size: 22px;
+  font-weight: 800;
+}
+
 .discount {
   flex-shrink: 0;
-  padding: 2px 7px;
+  padding: 2px 8px;
   font-size: 11px;
   font-weight: 800;
   color: var(--c-bg);
-  background: var(--c-accent);
+  background: linear-gradient(120deg, #ffd47a, var(--c-accent));
   clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
 }
 
