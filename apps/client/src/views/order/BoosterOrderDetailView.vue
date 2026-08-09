@@ -2,7 +2,7 @@
 /**
  * 打手订单详情页（全屏，仅打手）：查看本人接下订单的商品快照、
  * 金额、用户备注与备注附件（图片/视频）、账号信息（接单后可见）；
- * 服务中订单可直接标记完成。
+ * 服务中订单可直接标记完成；点击商品块跳转商品详情查看服务内容。
  */
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -81,9 +81,15 @@ onMounted(async () => {
         v-if="order"
         class="content"
       >
-        <!-- 商品快照 + 状态 -->
+        <!-- 商品快照 + 状态；点击进商品详情 -->
         <section class="card block">
-          <div class="head">
+          <div
+            class="head head--link"
+            role="link"
+            tabindex="0"
+            @click="router.push({ name: 'product-detail', params: { id: order.productId } })"
+            @keydown.enter="router.push({ name: 'product-detail', params: { id: order.productId } })"
+          >
             <span
               class="thumb"
               :class="{ 'thumb--image': order.productCover }"
@@ -104,6 +110,11 @@ onMounted(async () => {
               </p>
             </div>
             <span class="status">{{ ORDER_STATUS_TEXT[order.status] }}</span>
+            <AppIcon
+              class="head-arrow"
+              name="chevron"
+              :size="16"
+            />
           </div>
         </section>
 
@@ -182,6 +193,16 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.head--link {
+  cursor: pointer;
+}
+
+.head-arrow {
+  flex-shrink: 0;
+  transform: rotate(180deg);
+  color: var(--c-text-muted);
+}
+
 .media {
   margin-top: 12px;
 }
