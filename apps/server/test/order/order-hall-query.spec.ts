@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { BoosterServiceRegion } from '@app/contracts';
+import { BOOSTER_LEVEL_DEFAULTS, type BoosterServiceRegion } from '@app/contracts';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import type { Repository, SelectQueryBuilder } from 'typeorm';
+import type { BoosterProgressService } from '../../src/modules/booster/application/booster-progress.service';
 import type { BoosterAccess } from '../../src/modules/order/application/booster-access.service';
 import { ListHallOrdersUseCase } from '../../src/modules/order/application/use-cases/list-hall-orders.usecase';
 import { OrderEntity } from '../../src/modules/order/domain/order.entity';
@@ -49,7 +50,10 @@ test('大厅用例在打手门禁后把筛选条件透传给仓储', async () =>
       assertedUserId = userId;
     },
   } as unknown as BoosterAccess;
-  const useCase = new ListHallOrdersUseCase(orders, access);
+  const progress = {
+    currentTier: async () => BOOSTER_LEVEL_DEFAULTS[0],
+  } as unknown as BoosterProgressService;
+  const useCase = new ListHallOrdersUseCase(orders, access, progress);
   const filter: HallOrderFilter = {
     keyword: 'ORDER-2026',
     serviceRegion: 'delta-pc',

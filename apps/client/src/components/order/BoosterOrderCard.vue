@@ -73,7 +73,7 @@ const commissionText = computed(() => {
     const estCommissionFen = Math.round(
       (props.order.amountFen * props.order.commissionRateBp) / 10000
     );
-    return `预估 ¥${fenToYuan(estCommissionFen)}`;
+    return `预估到手 ¥${fenToYuan(estCommissionFen)}`;
   }
 
   return '';

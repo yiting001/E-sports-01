@@ -25,4 +25,14 @@ export class BoosterProgressService {
     const previousCompletedOrders = await this.repo.recordCompletedOrder(userId);
     return resolveBoosterLevel(tiers, previousCompletedOrders ?? 0);
   }
+
+  /**
+   * 按累计完成单数解析打手当前等级档位（只读，不登记完成单）；
+   * 供接单大厅按当前费率预估到手金额，无入驻记录时返回最低档。
+   */
+  async currentTier(userId: string): Promise<BoosterLevelTier> {
+    const tiers = await this.policy.getLevelTiers();
+    const record = await this.repo.findByUserId(userId);
+    return resolveBoosterLevel(tiers, record?.completedOrders ?? 0);
+  }
 }

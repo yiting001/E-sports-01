@@ -4,6 +4,7 @@ import {
   ORDER_REPOSITORY,
   OrderRepository,
 } from '../../domain/order-repository.interface';
+import { BoosterProgressService } from '../../../booster/application/booster-progress.service';
 import { BoosterAccess } from '../booster-access.service';
 import { toHallOrderView } from '../order.mapper';
 
@@ -14,6 +15,7 @@ export class GetHallOrderUseCase {
     @Inject(ORDER_REPOSITORY)
     private readonly orders: OrderRepository,
     private readonly boosterAccess: BoosterAccess,
+    private readonly boosterProgress: BoosterProgressService,
   ) {}
 
   async execute(userId: string, id: string): Promise<OrderView> {
@@ -22,6 +24,7 @@ export class GetHallOrderUseCase {
     if (!order || order.status !== OrderStatus.Dispatching) {
       throw new NotFoundException('订单不存在或已被接走');
     }
-    return toHallOrderView(order);
+    const tier = await this.boosterProgress.currentTier(userId);
+    return toHallOrderView(order, tier.commissionRateBp);
   }
 }

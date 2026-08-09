@@ -5,6 +5,7 @@ import {
   ORDER_REPOSITORY,
   OrderRepository,
 } from '../../domain/order-repository.interface';
+import { BoosterProgressService } from '../../../booster/application/booster-progress.service';
 import { BoosterAccess } from '../booster-access.service';
 import { toHallOrderView } from '../order.mapper';
 
@@ -15,6 +16,7 @@ export class ListHallOrdersUseCase {
     @Inject(ORDER_REPOSITORY)
     private readonly orders: OrderRepository,
     private readonly boosterAccess: BoosterAccess,
+    private readonly boosterProgress: BoosterProgressService,
   ) {}
 
   async execute(
@@ -25,7 +27,15 @@ export class ListHallOrdersUseCase {
     filter: HallOrderFilter = {},
   ): Promise<PaginatedResult<OrderView>> {
     await this.boosterAccess.assert(userId);
-    const [rows, total] = await this.orders.paginateDispatching(skip, pageSize, filter);
-    return { list: rows.map(toHallOrderView), total, page, pageSize };
+    const [[rows, total], tier] = await Promise.all([
+      this.orders.paginateDispatching(skip, pageSize, filter),
+      this.boosterProgress.currentTier(userId),
+    ]);
+    return {
+      list: rows.map((row) => toHallOrderView(row, tier.commissionRateBp)),
+      total,
+      page,
+      pageSize,
+    };
   }
 }
