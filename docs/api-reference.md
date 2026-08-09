@@ -49,9 +49,10 @@
 
 | 方法 | 路径 | 权限码 |
 | --- | --- | --- |
-| GET | `/api/rbac/users` | `rbac:user:list` |
+| GET | `/api/rbac/users` | `rbac:user:list`；支持 `?keyword&status&roleId` |
 | POST | `/api/rbac/users` | `rbac:user:create` |
 | PATCH | `/api/rbac/users/:id` | `rbac:user:update` |
+| POST | `/api/rbac/users/:id/password/reset` | `rbac:user:update`；body `{ password }`，6-128 位 |
 | DELETE | `/api/rbac/users/:id` | `rbac:user:remove` |
 | POST | `/api/rbac/users/:id/roles` | `rbac:user:assignRoles` |
 

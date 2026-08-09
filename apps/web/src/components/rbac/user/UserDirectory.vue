@@ -1,18 +1,33 @@
 <script setup lang="ts">
-import type { UserView } from '@app/contracts';
+import type { RoleView, UserView } from '@app/contracts';
 import { PERMS, UserStatusEnum } from '@app/contracts';
-import { Clock, Delete, EditPen, Phone, Plus, Refresh } from '@element-plus/icons-vue';
+import {
+  Clock,
+  Delete,
+  EditPen,
+  Key,
+  Phone,
+  Plus,
+  Refresh,
+  RefreshLeft,
+  Search,
+} from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
+import type { UserFiltersForm } from './user-ui.types';
 
-defineProps<{
+const props = defineProps<{
   list: UserView[];
   total: number;
   page: number;
   pageSize: number;
   loading: boolean;
   isSuper: boolean;
+  canFilterByRole: boolean;
+  filters: UserFiltersForm;
+  roles: RoleView[];
+  statusOptions: Array<{ label: string; value: UserStatusEnum }>;
   statusLabel: (status: UserStatusEnum) => string;
   formatDate: (value: string) => string;
 }>();
@@ -21,10 +36,35 @@ const emit = defineEmits<{
   refresh: [];
   create: [];
   edit: [row: UserView];
+  resetPassword: [row: UserView];
   remove: [row: UserView];
+  search: [];
+  resetFilters: [];
+  'update:filters': [value: UserFiltersForm];
   'update:page': [value: number];
   'update:pageSize': [value: number];
 }>();
+
+function updateFilter<K extends keyof UserFiltersForm>(
+  key: K,
+  value: UserFiltersForm[K],
+): void {
+  emit('update:filters', { ...props.filters, [key]: value });
+}
+
+function updateKeywordFilter(value: unknown): void {
+  updateFilter('keyword', typeof value === 'string' ? value : String(value ?? ''));
+}
+
+function updateStatusFilter(value: unknown): void {
+  const status =
+    value === UserStatusEnum.Enabled || value === UserStatusEnum.Disabled ? value : '';
+  updateFilter('status', status);
+}
+
+function updateRoleFilter(value: unknown): void {
+  updateFilter('roleId', typeof value === 'string' ? value : '');
+}
 </script>
 
 <template>
@@ -51,10 +91,70 @@ const emit = defineEmits<{
       </div>
     </template>
 
+    <div class="user-filter-bar">
+      <el-input
+        :model-value="filters.keyword"
+        class="user-filter-bar__keyword"
+        clearable
+        :prefix-icon="Search"
+        placeholder="搜索 ID / 用户名 / 昵称 / 手机号"
+        @update:model-value="updateKeywordFilter"
+        @clear="emit('search')"
+        @keyup.enter="emit('search')"
+      />
+      <el-select
+        :model-value="filters.status"
+        class="user-filter-bar__select"
+        clearable
+        placeholder="状态"
+        @update:model-value="updateStatusFilter"
+        @clear="updateStatusFilter"
+      >
+        <el-option
+          v-for="s in statusOptions"
+          :key="s.value"
+          :label="s.label"
+          :value="s.value"
+        />
+      </el-select>
+      <el-select
+        v-if="canFilterByRole"
+        :model-value="filters.roleId"
+        class="user-filter-bar__select"
+        clearable
+        filterable
+        placeholder="角色"
+        @update:model-value="updateRoleFilter"
+        @clear="updateRoleFilter"
+      >
+        <el-option
+          v-for="role in roles"
+          :key="role.id"
+          :label="role.name"
+          :value="role.id"
+        />
+      </el-select>
+      <div class="user-filter-bar__actions">
+        <el-button
+          type="primary"
+          :icon="Search"
+          @click="emit('search')"
+        >
+          搜索
+        </el-button>
+        <el-button
+          :icon="RefreshLeft"
+          @click="emit('resetFilters')"
+        >
+          重置
+        </el-button>
+      </div>
+    </div>
+
     <app-data-table
       :data="list"
       :loading="loading"
-      :min-width="900"
+      :min-width="1040"
       table-class="user-table"
     >
       <el-table-column
@@ -139,7 +239,7 @@ const emit = defineEmits<{
       </el-table-column>
       <el-table-column
         label="操作"
-        width="150"
+        width="230"
       >
         <template #default="{ row }">
           <div class="user-actions">
@@ -151,6 +251,15 @@ const emit = defineEmits<{
               @click="emit('edit', row)"
             >
               编辑
+            </el-button>
+            <el-button
+              v-permission="PERMS.user.update"
+              type="warning"
+              link
+              :icon="Key"
+              @click="emit('resetPassword', row)"
+            >
+              重置密码
             </el-button>
             <el-button
               v-permission="PERMS.user.remove"

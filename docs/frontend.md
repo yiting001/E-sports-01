@@ -382,8 +382,8 @@ flowchart LR
 
 管理端按 `?tenantCode=`、自身 `sessionStorage`、`default` 的顺序建立上下文，HTTP 统一
 注入 `X-Tenant-Code`。登录页在发请求前切换租户；profile 租户不一致会清除会话。
-租户目录的“访问站点”根据 `VITE_CLIENT_BASE_URL` 打开 C 端租户链接。开发模式默认
-`http://127.0.0.1:5174`；生产空配置、无效 URL 或非 HTTP(S) 协议会提示错误并禁止跳转，
-不会误打开管理端。切换租户时会清空管理端内存档案、菜单、IM 连接和待办轮询，品牌进入
+租户目录的“访问站点”根据 `VITE_CLIENT_BASE_URL` 打开 C 端租户链接。显式配置优先；本地
+开发未配置时按管理端端口 +1 推断 C 端入口，同域 `/admin/` 部署未配置时回退到当前域名根路径。
+无效 URL 或非 HTTP(S) 协议会提示错误并禁止跳转，不会误打开管理端。切换租户时会清空管理端内存档案、菜单、IM 连接和待办轮询，品牌进入
 `validating / ready / rejected` 三态重新加载，旧租户刷新令牌的晚到响应不能污染新会话。完整后端边界见
 [multi-tenant.md](./multi-tenant.md)。

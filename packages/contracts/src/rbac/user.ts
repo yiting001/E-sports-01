@@ -49,3 +49,10 @@ export interface UserView {
   tenantCode: string;
   createdAt: string;
 }
+
+/** 用户列表筛选条件 */
+export interface UserListQuery {
+  keyword?: string;
+  status?: UserStatusEnum;
+  roleId?: string;
+}

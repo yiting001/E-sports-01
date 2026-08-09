@@ -1,4 +1,15 @@
 @media (max-width: 640px) {
+  .user-filter-bar,
+  .user-filter-bar__actions {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .user-filter-bar__keyword,
+  .user-filter-bar__select {
+    width: 100%;
+  }
+
   .user-form__grid {
     grid-template-columns: 1fr;
   }

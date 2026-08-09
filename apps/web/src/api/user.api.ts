@@ -1,4 +1,4 @@
-import type { PaginatedResult, UserView } from '@app/contracts';
+import type { PaginatedResult, UserListQuery, UserView } from '@app/contracts';
 import { PAGINATION_DEFAULTS } from '@app/contracts';
 import { http } from './http';
 
@@ -17,10 +17,19 @@ export interface UpdateUserBody {
   status?: string;
 }
 
+/** 重置用户密码入参 */
+export interface ResetUserPasswordBody {
+  password: string;
+}
+
 /** 用户管理接口 */
 export const userApi = {
-  list(page: number, pageSize: number): Promise<PaginatedResult<UserView>> {
-    return http.get('/rbac/users', { params: { page, pageSize } });
+  list(
+    page: number,
+    pageSize: number,
+    query: UserListQuery = {},
+  ): Promise<PaginatedResult<UserView>> {
+    return http.get('/rbac/users', { params: { page, pageSize, ...query } });
   },
   /** 拉取全部用户（按最大页大小逐页累加），供成员选择器等需要全量列表的场景使用 */
   async listAll(): Promise<UserView[]> {
@@ -42,6 +51,9 @@ export const userApi = {
   },
   update(id: string, body: UpdateUserBody): Promise<UserView> {
     return http.patch(`/rbac/users/${id}`, body);
+  },
+  resetPassword(id: string, body: ResetUserPasswordBody): Promise<UserView> {
+    return http.post(`/rbac/users/${id}/password/reset`, body);
   },
   remove(id: string): Promise<void> {
     return http.delete(`/rbac/users/${id}`);

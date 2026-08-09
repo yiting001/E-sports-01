@@ -73,7 +73,7 @@ export class UserDirectory {
     take: number,
     keyword?: string,
   ): Promise<[UserProfileItem[], number]> {
-    const [rows, total] = await this.users.paginate(skip, take, keyword);
+    const [rows, total] = await this.users.paginate(skip, take, { keyword });
     const list = rows.map((u) => ({
       id: u.id,
       username: u.username,

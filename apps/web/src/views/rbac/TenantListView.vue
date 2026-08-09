@@ -162,7 +162,7 @@ function visitTenant(row: TenantView): void {
   const target = buildTenantSiteUrl(
     ENV.clientBaseUrl,
     row.code,
-    window.location.origin
+    window.location.href
   );
   if (!target) {
     ElMessage.error("C 端站点地址未配置，请联系系统管理员");

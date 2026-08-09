@@ -24,7 +24,7 @@ const branding = useBrandingStore();
 
       <section class="hero-copy">
         <p>Enterprise Operations</p>
-        <h1>统一运营入口</h1>
+        <h1>暮雨集团统一运营入口</h1>
         <span>聚合赛事、权限、消息与内容管理能力，适配电竞业务和通用运营场景。</span>
       </section>
 

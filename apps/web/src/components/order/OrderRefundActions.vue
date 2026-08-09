@@ -16,6 +16,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   advance: [order: AdminOrderView];
   reject: [order: AdminOrderView];
+  /** 强制退款（管理员对已完成订单直接退款） */
+  adminRefund: [order: AdminOrderView];
 }>();
 
 const primary = computed(() =>
@@ -34,35 +36,56 @@ const primaryIcon = computed(() => {
       return Check;
   }
 });
+
+/** 是否显示强制退款按钮：已完成订单且无退款记录时 */
+const showAdminRefund = computed(() => {
+  const order = props.order;
+  return (
+    order.status === "completed" &&
+    !order.refund &&
+    props.order.refund?.status !== "pending_review"
+  );
+});
 </script>
 
 <template>
-  <span
-    v-if="order.refund && primary"
-    class="refund-actions"
-  >
+  <span class="refund-actions">
+    <template v-if="order.refund && primary">
+      <el-button
+        v-permission="PERMS.order.refundReview"
+        link
+        type="success"
+        :icon="primaryIcon"
+        :loading="submittingAction === 'advance'"
+        :disabled="Boolean(submittingAction)"
+        @click="emit('advance', order)"
+      >
+        {{ primary.label }}
+      </el-button>
+      <el-button
+        v-if="order.refund.status === OrderRefundStatus.PendingReview"
+        v-permission="PERMS.order.refundReview"
+        link
+        type="danger"
+        :icon="Close"
+        :loading="submittingAction === 'reject'"
+        :disabled="Boolean(submittingAction)"
+        @click="emit('reject', order)"
+      >
+        驳回
+      </el-button>
+    </template>
     <el-button
+      v-if="showAdminRefund"
       v-permission="PERMS.order.refundReview"
       link
-      type="success"
-      :icon="primaryIcon"
-      :loading="submittingAction === 'advance'"
+      type="warning"
+      :icon="RefreshRight"
+      :loading="(submittingAction as string) === 'adminRefund'"
       :disabled="Boolean(submittingAction)"
-      @click="emit('advance', order)"
+      @click="emit('adminRefund', order)"
     >
-      {{ primary.label }}
-    </el-button>
-    <el-button
-      v-if="order.refund.status === OrderRefundStatus.PendingReview"
-      v-permission="PERMS.order.refundReview"
-      link
-      type="danger"
-      :icon="Close"
-      :loading="submittingAction === 'reject'"
-      :disabled="Boolean(submittingAction)"
-      @click="emit('reject', order)"
-    >
-      驳回
+      强制退款
     </el-button>
   </span>
 </template>

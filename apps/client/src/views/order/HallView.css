@@ -5,12 +5,12 @@
 }
 
 .head {
-  min-height: 58px;
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 14px 16px;
 }
 
 .heading {
@@ -21,7 +21,7 @@
 }
 
 .title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   font-style: italic;
   letter-spacing: 0;

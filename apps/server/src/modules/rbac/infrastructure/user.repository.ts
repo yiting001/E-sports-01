@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, In, Not, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import type { FindOptionsWhere } from 'typeorm';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
 import { withTenant } from '../../../shared/tenant/tenant-scope.util';
 import { User } from '../domain/user.entity';
 import { UserStatus } from '../domain/user.entity';
+import type { UserListFilters } from '../domain/user-repository.interface';
 import { UserRepository } from '../domain/user-repository.interface';
 
 /** 用户仓储 TypeORM 实现。读操作按租户上下文自动过滤；写操作 tenantId 由订阅器回填 */
@@ -85,17 +86,32 @@ export class TypeormUserRepository implements UserRepository {
     return (await this.repo.countBy(where)) > 0;
   }
 
-  paginate(skip: number, take: number, keyword?: string): Promise<[User[], number]> {
-    const keywordClauses: FindOptionsWhere<User>[] = keyword
-      ? [{ username: ILike(`%${keyword}%`) }, { nickname: ILike(`%${keyword}%`) }]
-      : [{}];
-    return this.repo.findAndCount({
-      where: withTenant<User>(this.tenant, keywordClauses),
-      relations: { roles: true },
-      order: { createdAt: 'DESC' },
-      skip,
-      take,
-    });
+  paginate(skip: number, take: number, filters: UserListFilters = {}): Promise<[User[], number]> {
+    const qb = this.repo
+      .createQueryBuilder('u')
+      .leftJoinAndSelect('u.roles', 'role')
+      .orderBy('u.createdAt', 'DESC')
+      .skip(skip)
+      .take(take);
+    const tenantId = this.tenant.scopeId();
+    if (tenantId) {
+      qb.andWhere('u.tenantId = :tenantId', { tenantId });
+    }
+    if (filters.keyword) {
+      qb.andWhere(
+        '(CAST(u.id AS text) ILIKE :kw OR u.username ILIKE :kw OR u.nickname ILIKE :kw OR u.phone ILIKE :kw)',
+        { kw: `%${filters.keyword}%` },
+      );
+    }
+    if (filters.status) {
+      qb.andWhere('u.status = :status', { status: filters.status });
+    }
+    if (filters.roleId) {
+      qb.innerJoin('u.roles', 'filterRole', 'filterRole.id = :roleId', {
+        roleId: filters.roleId,
+      });
+    }
+    return qb.getManyAndCount();
   }
 
   async paginateByRole(

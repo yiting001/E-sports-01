@@ -1,11 +1,15 @@
 <script setup lang="ts">
-/** 接单大厅订单详情：接单前仅展示公开履约信息，账号资料继续由服务端投影隐藏。 */
+/**
+ * 接单大厅订单详情：接单前仅展示公开履约信息，账号资料继续由服务端投影隐藏。
+ * 详情页优化：增大卡片尺寸，展示订单金额与预估佣金。
+ */
 import {
   BOOSTER_SERVICE_REGIONS,
   ORDER_STATUS_TEXT,
+  fenToYuan,
   type OrderView,
 } from "@app/contracts";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { boosterApi } from "@/api/booster.api";
 import { orderApi } from "@/api/order.api";
@@ -38,6 +42,21 @@ function serviceRegionText(value: OrderView["serviceRegion"]): string {
     "待确认"
   );
 }
+
+/** 预估佣金（根据 commissionRateBp 计算） */
+const estimatedCommission = computed(() => {
+  if (!order.value) return null;
+  if (order.value.commissionFen > 0) {
+    return fenToYuan(order.value.commissionFen);
+  }
+  if (order.value.commissionRateBp > 0) {
+    const estFen = Math.round(
+      (order.value.amountFen * order.value.commissionRateBp) / 10000
+    );
+    return fenToYuan(estFen);
+  }
+  return null;
+});
 
 async function loadOrder(): Promise<void> {
   loading.value = true;
@@ -215,6 +234,15 @@ onMounted(() => {
                 ¥{{ order.amountYuan }}
               </dd>
             </div>
+            <div
+              v-if="estimatedCommission"
+              class="row"
+            >
+              <dt>预估佣金</dt>
+              <dd class="commission">
+                到手 ¥{{ estimatedCommission }}
+              </dd>
+            </div>
             <div class="row">
               <dt>下发时间</dt>
               <dd>{{ formatTime(order.dispatchedAt) }}</dd>
@@ -327,6 +355,11 @@ onMounted(() => {
 .region-text {
   color: var(--c-neon);
   font-weight: 700;
+}
+
+.commission {
+  color: var(--c-neon);
+  font-weight: 800;
 }
 
 .row--remark {

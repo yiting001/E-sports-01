@@ -8,3 +8,17 @@ export interface EditUserForm {
   status: UserStatusEnum;
   roleIds: string[];
 }
+
+export interface UserFiltersForm {
+  keyword: string;
+  status: UserStatusEnum | '';
+  roleId: string;
+}
+
+export interface ResetUserPasswordForm {
+  id: string;
+  username: string;
+  nickname: string;
+  password: string;
+  confirmPassword: string;
+}

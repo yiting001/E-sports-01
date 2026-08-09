@@ -46,6 +46,7 @@ import { UpdateProfileUseCase } from './application/use-cases/update-profile.use
 import { ListUsersUseCase } from './application/use-cases/list-users.usecase';
 import { CreateUserUseCase } from './application/use-cases/create-user.usecase';
 import { UpdateUserUseCase } from './application/use-cases/update-user.usecase';
+import { ResetUserPasswordUseCase } from './application/use-cases/reset-user-password.usecase';
 import { RemoveUserUseCase } from './application/use-cases/remove-user.usecase';
 import { AssignUserRolesUseCase } from './application/use-cases/assign-user-roles.usecase';
 import { ListRolesUseCase } from './application/use-cases/list-roles.usecase';
@@ -77,6 +78,7 @@ import { AuthUpdateProfileController } from './interfaces/controllers/auth.updat
 import { UserListController } from './interfaces/controllers/user.list.controller';
 import { UserCreateController } from './interfaces/controllers/user.create.controller';
 import { UserUpdateController } from './interfaces/controllers/user.update.controller';
+import { UserResetPasswordController } from './interfaces/controllers/user.reset-password.controller';
 import { UserRemoveController } from './interfaces/controllers/user.remove.controller';
 import { UserAssignRolesController } from './interfaces/controllers/user.assign-roles.controller';
 import { RoleListController } from './interfaces/controllers/role.list.controller';
@@ -121,6 +123,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     UserListController,
     UserCreateController,
     UserUpdateController,
+    UserResetPasswordController,
     UserRemoveController,
     UserAssignRolesController,
     RoleListController,
@@ -171,6 +174,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     ListUsersUseCase,
     CreateUserUseCase,
     UpdateUserUseCase,
+    ResetUserPasswordUseCase,
     RemoveUserUseCase,
     AssignUserRolesUseCase,
     ListRolesUseCase,

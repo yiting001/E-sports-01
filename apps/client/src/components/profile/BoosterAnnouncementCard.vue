@@ -1,8 +1,16 @@
 <script setup lang="ts">
+/**
+ * 入驻公告卡片：展示可自定义的入驻公告图片。
+ * 图片由后台配置下发（BoosterMineView.onboardingNoticeImage）；
+ * 支持自定义公告标题文案（默认"入驻公告说明"）。
+ */
 import { ref, watch } from 'vue';
 
 const props = defineProps<{
+  /** 后台配置的可自定义公告图片 URL */
   image: string;
+  /** 可自定义的公告标题，默认"入驻公告说明" */
+  title?: string;
 }>();
 
 const imageFailed = ref(false);
@@ -18,18 +26,10 @@ watch(
 <template>
   <section class="announcement card">
     <h2 class="title">
-      入驻公告说明
+      {{ title || '入驻公告说明' }}
     </h2>
     <div class="copy">
-      <p>
-        搜索 <strong>怪兽三角洲俱乐部</strong> 微信公众号
-      </p>
-      <p>点击审核入驻进入审核群审核</p>
-      <p>如果过期或者不会请联系客服</p>
-      <p>客服会帮你解决</p>
-      <p class="emphasis">
-        截屏扫码关注服务号！
-      </p>
+      <slot />
     </div>
     <img
       v-if="image && !imageFailed"

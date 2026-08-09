@@ -8,7 +8,7 @@ JWT **双令牌**（access + refresh）鉴权，超级管理员走 bypass 拥有
 实现的功能：
 
 - **认证**：注册、登录（发放双令牌）、刷新令牌、获取当前用户 profile。
-- **用户管理**：列表/创建/更新/删除、给用户分配角色。
+- **用户管理**：列表/搜索筛选/创建/更新/删除、重置用户密码、给用户分配角色。
 - **角色管理**：列表/创建/更新/删除、给角色分配权限；内置角色禁止通用删除。
 - **权限管理**：列表/创建/更新/删除（权限带类型：api/menu/button）。
 - **鉴权基础设施**：JWT、租户访问与权限三段守卫；`@TenantPublic` 建立免登录租户上下文，
@@ -31,7 +31,7 @@ modules/rbac/
 │   ├── permission-resolver.service.ts   实时解析用户、角色、权限和租户安全上下文
 │   ├── token.service.ts                 签发/校验 access & refresh 令牌
 │   ├── {user,role,permission}.mapper.ts 实体 ↔ DTO
-│   └── use-cases/                       20 个用例，一个动作一个文件
+│   └── use-cases/                       21 个用例，一个动作一个文件
 ├── infrastructure/
 │   ├── {user,role,permission}.repository.ts  TypeORM 仓储
 │   ├── password.service.ts              bcrypt 加解密
@@ -39,7 +39,7 @@ modules/rbac/
 └── interfaces/
     ├── auth/                            guards / strategy / decorators
     ├── dto/                             各操作入参 DTO（class-validator 校验）
-    └── controllers/                     18 个控制器，一个路由一个文件
+    └── controllers/                     19 个控制器，一个路由一个文件
 ```
 
 ## 实体关系
@@ -139,7 +139,7 @@ flowchart LR
 
 - **实时权限解析**：`PermissionResolver` 聚合“用户→同租户角色→权限码”，同时返回用户启用状态、真实租户和默认租户超管判定；角色权限关系变化无需等待缓存失效。
 - **端口-适配器**：用例只依赖仓储接口，TypeORM 实现可替换。
-- **用例粒度**：20 个动作各自独立文件，符合"一个函数只做一件事"。
+- **用例粒度**：21 个动作各自独立文件，符合"一个函数只做一件事"。
 - **密码安全**：`password.service` 用 bcrypt，明文密码不落库、不出现在响应。
 - **租户开通事务**：`TenantProvisioningTransaction` 端口保证租户、四类内置角色和初始管理员账号同事务创建；初始管理员密码必填且强度由 contracts 常量统一校验。
 
@@ -158,10 +158,12 @@ flowchart LR
 - 用户总数、本页启用、绑定手机、已分配角色四类概览。
 - 用户目录保持表格视图，窄屏通过目录容器横向滚动，平台超管额外显示所属租户。
 - 目录表格复用 `AppDataTable`，统一 Element Plus 表格的横向滚动与最小宽度策略。
+- 列表支持关键词、状态和角色筛选；关键词匹配用户 ID、用户名、昵称和手机号，角色筛选仅在当前用户拥有 `rbac:role:list` 时加载角色目录并展示。
 - 分页使用 Element Plus `sizes`，支持选择每页 10/20/50/100 条并回到第一页重新查询。
 - 新建用户弹窗维护用户名、密码、昵称、手机号。
 - 编辑用户弹窗维护昵称、手机号、启停状态和多角色绑定（一个账号可同时拥有多个角色，如用户 + 打手，上限见 contracts `USER_ROLES_MAX`）。
-- 按钮权限继续沿用 `v-permission`，接口调用仍复用 `userApi` 与 `roleApi`。
+- 重置密码使用独立抽屉和 `POST /api/rbac/users/:id/password/reset`，后端复用 bcrypt 哈希和权限缓存失效能力，不回显旧密码。
+- 按钮权限继续沿用 `v-permission`，重置密码复用 `rbac:user:update`，接口调用仍复用 `userApi` 与 `roleApi`。
 
 ```mermaid
 flowchart TD
@@ -169,7 +171,8 @@ flowchart TD
   Page --> Directory["UserDirectory 用户目录"]
   Page --> CreateDialog["CreateUserDialog 新建弹窗"]
   Page --> EditDialog["EditUserDialog 编辑弹窗"]
-  Directory --> UserApi["userApi.list/create/update/remove/assignRoles"]
+  Page --> ResetDialog["ResetUserPasswordDialog 重置密码弹窗"]
+  Directory --> UserApi["userApi.list/create/update/resetPassword/remove/assignRoles"]
   EditDialog --> RoleApi["roleApi.list"]
 ```
 

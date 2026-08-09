@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PaginatedResult, UserView } from '@app/contracts';
+import type { UserListFilters } from '../../domain/user-repository.interface';
 import {
   USER_REPOSITORY,
   UserRepository,
@@ -19,9 +20,9 @@ export class ListUsersUseCase {
     page: number,
     pageSize: number,
     skip: number,
-    keyword?: string,
+    filters?: UserListFilters,
   ): Promise<PaginatedResult<UserView>> {
-    const [rows, total] = await this.userRepo.paginate(skip, pageSize, keyword);
+    const [rows, total] = await this.userRepo.paginate(skip, pageSize, filters);
     const codeMap = await this.tenants.codeMap(rows.map((u) => u.tenantId));
     return {
       list: rows.map((u) => toUserView(u, codeMap.get(u.tenantId) ?? '')),

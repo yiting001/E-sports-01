@@ -94,6 +94,32 @@
   flex-wrap: wrap;
 }
 
+.user-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.user-filter-bar__keyword {
+  width: min(360px, 100%);
+}
+
+.user-filter-bar__select {
+  width: 180px;
+}
+
+.user-filter-bar__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.user-filter-bar__actions .el-button + .el-button {
+  margin-left: 0;
+}
+
 .user-dialog__intro {
   margin-bottom: 16px;
   padding: 12px;

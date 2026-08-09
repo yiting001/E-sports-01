@@ -129,7 +129,9 @@ onMounted(() => {
           <BoosterAnnouncementCard
             v-if="showForm"
             :image="mine.onboardingNoticeImage"
-          />
+          >
+            <slot name="announcement-content" />
+          </BoosterAnnouncementCard>
 
           <section
             v-if="status === BoosterStatus.Pending"

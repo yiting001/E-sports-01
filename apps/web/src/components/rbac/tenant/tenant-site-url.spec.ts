@@ -27,10 +27,37 @@ describe("租户 C 端站点地址", () => {
     ).toBeNull();
     expect(
       buildTenantSiteUrl(
+        "not a url",
+        "tenant-one",
+        "https://admin.example.com/rbac/tenants"
+      )
+    ).toBeNull();
+    expect(
+      buildTenantSiteUrl(
         "javascript:alert(1)",
         "tenant-one",
         "https://admin.example.com"
       )
     ).toBeNull();
+  });
+
+  it("同域 /admin/ 部署未显式配置时回退到 C 端根路径", () => {
+    expect(
+      buildTenantSiteUrl(
+        undefined,
+        "tenant-one",
+        "https://esports.example.com/admin/rbac/tenants"
+      )
+    ).toBe("https://esports.example.com/?tenantCode=tenant-one");
+  });
+
+  it("本地开发未显式配置时按管理端端口推断 C 端入口", () => {
+    expect(
+      buildTenantSiteUrl(
+        undefined,
+        "tenant-two",
+        "http://127.0.0.1:5180/rbac/tenants"
+      )
+    ).toBe("http://127.0.0.1:5181/?tenantCode=tenant-two");
   });
 });
