@@ -15,8 +15,6 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
 <template>
   <div class="product-platform-prices">
     <div class="platform-price">
-      <span class="corner corner-tl" />
-      <span class="corner corner-br" />
       <span
         class="platform-icon"
         aria-hidden="true"
@@ -44,7 +42,6 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
       </span>
       <span class="platform-meta">
         <span class="platform-label">手机端</span>
-        <span class="platform-sub">MOBILE</span>
       </span>
       <span class="price-row">
         <span class="price">
@@ -61,8 +58,6 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
       </span>
     </div>
     <div class="platform-price">
-      <span class="corner corner-tl" />
-      <span class="corner corner-br" />
       <span
         class="platform-icon"
         aria-hidden="true"
@@ -96,7 +91,6 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
       </span>
       <span class="platform-meta">
         <span class="platform-label">电脑端</span>
-        <span class="platform-sub">PC</span>
       </span>
       <span class="price-row">
         <span class="price">
@@ -133,42 +127,13 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   align-items: center;
   column-gap: 12px;
   row-gap: 5px;
-  padding: 13px 12px;
-  border: 1px solid color-mix(in srgb, var(--c-accent) 38%, var(--c-border));
-  border-radius: 8px;
+  padding: 14px 13px;
+  border: 1px solid color-mix(in srgb, var(--c-accent) 30%, var(--c-border));
+  border-radius: 16px;
   background:
-    linear-gradient(135deg, rgba(255, 176, 32, 0.1), transparent 42%),
+    radial-gradient(120% 90% at 20% 0%, rgba(255, 176, 32, 0.12), transparent 55%),
     linear-gradient(160deg, #1c2230, #10141d 70%);
   box-shadow: inset 0 1px 0 rgba(255, 224, 160, 0.08);
-}
-
-.corner {
-  position: absolute;
-  width: 44px;
-  height: 44px;
-  pointer-events: none;
-}
-
-.corner-tl {
-  top: 0;
-  left: 0;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--c-accent) 55%, transparent) 0,
-    transparent 46%
-  );
-  clip-path: polygon(0 0, 100% 0, 0 100%);
-}
-
-.corner-br {
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    -45deg,
-    color-mix(in srgb, var(--c-accent) 45%, transparent) 0,
-    transparent 46%
-  );
-  clip-path: polygon(100% 100%, 100% 0, 0 100%);
 }
 
 .platform-icon {
@@ -177,12 +142,13 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   color: var(--c-accent);
-  background: linear-gradient(160deg, #232a3a, #141a26);
+  background: radial-gradient(120% 120% at 30% 25%, #2a3244, #141a26 75%);
   border: 1px solid color-mix(in srgb, var(--c-accent) 45%, transparent);
-  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 2px rgba(255, 224, 160, 0.12);
 }
 
 .platform-icon svg {
@@ -205,13 +171,6 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   letter-spacing: 1px;
   white-space: nowrap;
   color: var(--c-text);
-}
-
-.platform-sub {
-  font-size: 10px;
-  letter-spacing: 2px;
-  white-space: nowrap;
-  color: var(--c-text-muted);
 }
 
 .price-row {
@@ -246,7 +205,7 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   font-weight: 800;
   color: var(--c-bg);
   background: linear-gradient(120deg, #ffd47a, var(--c-accent));
-  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+  border-radius: 6px;
 }
 
 .origin {
@@ -269,7 +228,7 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   }
 
   .platform-icon {
-    width: 34px;
+    width: 38px;
     height: 38px;
   }
 
