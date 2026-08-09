@@ -109,6 +109,8 @@ export const CONFIG_KEYS = {
     ossBucket: 'upload.oss.bucket',
     ossAccessKeyId: 'upload.oss.accessKeyId',
     ossAccessKeySecret: 'upload.oss.accessKeySecret',
+    /** OSS 自定义访问域名（CDN/加速域名，如 https://oss.example.com；留空用 OSS 默认地址） */
+    ossPublicBaseUrl: 'upload.oss.publicBaseUrl',
   },
   sms: {
     /** 当前生效的短信服务商：aliyun / tencent / volcano / log */

@@ -26,6 +26,13 @@ export class OssStorageDriver implements StoragePort {
     const result = await client.put(input.key, input.buffer, {
       mime: input.mimeType,
     });
+    const publicBaseUrl = await this.config.getString(
+      CONFIG_KEYS.upload.ossPublicBaseUrl,
+      '',
+    );
+    if (publicBaseUrl) {
+      return `${publicBaseUrl.replace(/\/+$/, '')}/${input.key.replace(/^\/+/, '')}`;
+    }
     return result.url;
   }
 

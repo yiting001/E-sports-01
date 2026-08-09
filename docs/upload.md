@@ -13,6 +13,7 @@
 - **删除**：删除存储对象的同时清理数据库记录（返回 204）。
 - **驱动切换**：读配置中心 `upload.driver` 即可在 local / oss 间切换，无需改代码或重启。
 - **凭证安全**：OSS endpoint/bucket/ak/sk 全部存配置中心，密钥项脱敏返回。
+- **自定义访问域名**：`upload.ossPublicBaseUrl` 配置后（如 CDN/加速域名 `https://oss.example.com`），新上传文件返回 `域名/文件key` 形式的访问地址；留空时使用 OSS SDK 返回的默认 bucket 地址。已上传文件的历史 URL 不会自动改写。
 - **前端文件库**：`UploadView` 提供文件统计、上传入口、分页目录、访问链接和删除操作；表格复用 `AppDataTable`，窄屏通过统一横向滚动避免字段遮挡。
 - **打手语音复用**：语音由 booster 模块专用接口先做 5 MB、MIME 与文件头双重校验，再复用 `UploadFileUseCase` 和当前存储驱动，不把音频安全规则塞入通用上传模块。
 

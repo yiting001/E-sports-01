@@ -165,6 +165,7 @@ sequenceDiagram
 | `upload.ossBucket` | Upload | （空） | OSS Bucket | |
 | `upload.ossAccessKeyId` | Upload | （空） | OSS AccessKeyId | ✓ |
 | `upload.ossAccessKeySecret` | Upload | （空） | OSS AccessKeySecret | ✓ |
+| `upload.ossPublicBaseUrl` | Upload | （空） | OSS 自定义访问域名（CDN/加速域名，如 https://oss.example.com；留空用 OSS 默认地址） | |
 | `im.historyLimit` | Im | `50` | 拉取历史消息默认条数 | |
 | `sms.provider` | Sms | `log` | 短信服务商 aliyun/tencent/volcano/log | |
 | `sms.development.fixedCode` | Sms | `000000` | 仅 development 生效的 4～8 位固定验证码；清空关闭 | |
