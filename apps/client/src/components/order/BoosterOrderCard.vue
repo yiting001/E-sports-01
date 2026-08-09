@@ -58,26 +58,29 @@ function serviceRegionText(value: OrderView["serviceRegion"]): string {
   return label?.replace(/^三角洲\s*-\s*/, "") ?? value;
 }
 
-/** 佣金展示文本：有佣金时显示（已完成/服务中），无佣金时显示预估 */
-const commissionText = computed(() => {
+/** 佣金金额（元）：已结算取实际佣金，否则按费率预估；无法计算时为空 */
+const commissionYuan = computed(() => {
   const showCommission = props.showCommission ?? true;
   if (!showCommission) return '';
 
-  // 实际佣金（有值时）
   if (props.order.commissionFen > 0) {
-    return `到手 ¥${fenToYuan(props.order.commissionFen)}`;
+    return fenToYuan(props.order.commissionFen);
   }
 
-  // 预估佣金（commissionRateBp > 0 时显示）
   if (props.order.commissionRateBp > 0) {
     const estCommissionFen = Math.round(
       (props.order.amountFen * props.order.commissionRateBp) / 10000
     );
-    return `预估到手 ¥${fenToYuan(estCommissionFen)}`;
+    return fenToYuan(estCommissionFen);
   }
 
   return '';
 });
+
+/** 佣金栏标题：已结算显示「到手佣金」，未结算显示「可得佣金」 */
+const commissionLabel = computed(() =>
+  props.order.commissionFen > 0 ? '到手佣金' : '可得佣金'
+);
 </script>
 
 <script lang="ts">
@@ -92,16 +95,6 @@ export default {
     class="order card"
     @click="emit('open', order)"
   >
-    <div class="head">
-      <span class="no">订单号 {{ order.orderNo }}</span>
-      <span
-        class="tag"
-        :class="statusClass(order.status)"
-      >
-        {{ ORDER_STATUS_TEXT[order.status] }}
-      </span>
-    </div>
-
     <div class="body">
       <div
         class="thumb"
@@ -127,45 +120,82 @@ export default {
         >
           {{ order.productTitle }}
         </p>
-        <p class="service-meta">
-          <span class="region">{{
-            serviceRegionText(order.serviceRegion)
-          }}</span>
-          <span>数量 ×{{ order.quantity }}</span>
-        </p>
         <p class="sub">
           下发 {{ formatTime(order.dispatchedAt || order.createdAt) }}
         </p>
-        <p class="sub">
-          <span>游戏ID：{{ order.gameAccountId || '接单后可查看' }}</span>
-        </p>
-        <p
-          v-if="order.remark"
-          class="remark"
-        >
-          备注：{{ order.remark }}
-        </p>
-        <p
-          v-if="order.accountInfo"
-          class="remark"
-        >
-          账号：{{ order.accountInfo }}
-        </p>
       </div>
 
-      <div class="amount-wrap">
-        <span class="amount">¥{{ order.amountYuan }}</span>
+      <span
+        class="tag"
+        :class="statusClass(order.status)"
+      >
+        {{ ORDER_STATUS_TEXT[order.status] }}
+      </span>
+    </div>
+
+    <div class="no-row">
+      <span class="no">单号 {{ order.orderNo }}</span>
+    </div>
+
+    <div class="pay-banner">
+      <div class="pay-cell">
+        <span class="pay-label">订单金额</span>
+        <span class="pay-amount">¥{{ order.amountYuan }}</span>
+      </div>
+      <div class="pay-divider" />
+      <div class="pay-cell pay-cell--right">
+        <span class="pay-label">{{ commissionLabel }}</span>
         <span
-          v-if="commissionText"
-          class="commission"
-        >{{ commissionText }}</span>
+          v-if="commissionYuan"
+          class="pay-commission"
+        >+¥{{ commissionYuan }}</span>
+        <span
+          v-else
+          class="pay-commission pay-commission--muted"
+        >接单后结算</span>
       </div>
     </div>
+
+    <dl class="info">
+      <div class="info-row">
+        <dt>数量/大区</dt>
+        <dd>{{ order.quantity }}件 · {{ serviceRegionText(order.serviceRegion) }}</dd>
+      </div>
+      <div class="info-row">
+        <dt>游戏ID</dt>
+        <dd :class="order.gameAccountId ? 'info-plain' : 'info-muted'">
+          {{ order.gameAccountId || '接单后显示' }}
+        </dd>
+      </div>
+      <div
+        v-if="order.accountInfo"
+        class="info-row"
+      >
+        <dt>账号</dt>
+        <dd class="info-plain">
+          {{ order.accountInfo }}
+        </dd>
+      </div>
+      <div
+        v-if="order.remark"
+        class="info-row info-row--remark"
+      >
+        <dt>备注</dt>
+        <dd class="info-plain">
+          {{ order.remark }}
+        </dd>
+      </div>
+    </dl>
 
     <div
       v-if="actionLabel"
       class="actions"
     >
+      <span
+        v-if="commissionYuan"
+        class="income"
+      >¥{{ commissionYuan }} 入账</span>
+      <span v-else />
       <button
         class="action"
         :disabled="actionDisabled"
@@ -182,16 +212,16 @@ export default {
   padding: 12px 14px;
 }
 
-.head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+.no-row {
+  margin-top: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--c-border);
+  border-bottom: 1px solid var(--c-border);
 }
 
 .no {
   font-family: var(--font-num);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--c-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -220,7 +250,6 @@ export default {
 }
 
 .body {
-  margin-top: 10px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -258,63 +287,122 @@ export default {
   color: var(--c-text-muted);
 }
 
-.service-meta {
-  margin-top: 6px;
+.pay-banner {
+  margin-top: 10px;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--c-text-secondary);
-  font-size: 12px;
+  align-items: stretch;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--c-accent) 18%, var(--c-cover-bg)),
+    color-mix(in srgb, var(--c-neon) 14%, var(--c-cover-bg))
+  );
+  border: 1px solid var(--c-border);
 }
 
-.region {
-  min-height: 20px;
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 7px;
-  color: var(--c-neon);
-  border: 1px solid color-mix(in srgb, var(--c-neon) 40%, var(--c-border));
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--c-neon) 8%, transparent);
+.pay-cell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pay-cell--right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.pay-divider {
+  width: 1px;
+  margin: 0 12px;
+  background: var(--c-border);
+}
+
+.pay-label {
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+.pay-amount {
+  font-family: var(--font-num);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--c-text);
+}
+
+.pay-commission {
+  font-family: var(--font-num);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--c-accent);
+}
+
+.pay-commission--muted {
+  font-size: 13px;
   font-weight: 700;
+  color: var(--c-text-muted);
 }
 
-.remark {
-  margin-top: 6px;
+.info {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   font-size: 12px;
-  color: var(--c-text-secondary);
+}
+
+.info-row dt {
+  flex-shrink: 0;
+  color: var(--c-text-muted);
+}
+
+.info-row dd {
+  min-width: 0;
+  text-align: right;
+  color: var(--c-text);
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.amount {
-  flex-shrink: 0;
-  font-family: var(--font-num);
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--c-accent);
+.info-row--remark dd {
+  white-space: normal;
+  word-break: break-word;
 }
 
-.amount-wrap {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+.info-row dd.info-muted {
+  color: var(--c-text-muted);
+  font-style: italic;
+  font-weight: 400;
 }
 
-.commission {
-  font-family: var(--font-num);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--c-neon);
+.info-row dd.info-plain {
+  color: var(--c-text);
 }
 
 .actions {
   margin-top: 12px;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.income {
+  font-family: var(--font-num);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--c-accent);
 }
 
 .action {
