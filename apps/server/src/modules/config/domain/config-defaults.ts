@@ -113,6 +113,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: 'C 端打手入驻公告图片（在配置中心「打手」分组维护）',
   },
   {
+    key: CONFIG_KEYS.booster.onboardingNoticeText,
+    value: '',
+    type: ConfigValueType.String,
+    group: ConfigGroup.Booster,
+    remark: 'C 端打手入驻公告文本（换行分行展示，与主页公告独立）',
+  },
+  {
     key: CONFIG_KEYS.auth.accessTokenTtl,
     value: '3600',
     type: ConfigValueType.Number,

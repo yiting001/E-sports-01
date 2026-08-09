@@ -73,6 +73,8 @@ function updateForm(patch: Partial<ConfigFormModel>): void {
         />
         <el-input
           v-else
+          type="textarea"
+          :autosize="{ minRows: 1, maxRows: 6 }"
           :model-value="form.value"
           :placeholder="isEdit && form.secret ? '敏感项原值不回显，留空将清空' : ''"
           @update:model-value="(value: string) => updateForm({ value })"

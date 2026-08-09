@@ -239,6 +239,8 @@ export const CONFIG_KEYS = {
     requireRealname: 'booster.requireRealname',
     /** C 端打手入驻页顶部公告图片 */
     onboardingNoticeImage: 'booster.onboardingNoticeImage',
+    /** C 端打手入驻页公告文本（换行分行展示，与主页公告独立） */
+    onboardingNoticeText: 'booster.onboardingNoticeText',
   },
   member: {
     /** 会员等级档位（JSON 数组：等级/名称/累计消费门槛/折扣万分比） */

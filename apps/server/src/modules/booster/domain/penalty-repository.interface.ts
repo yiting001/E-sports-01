@@ -18,4 +18,6 @@ export interface BoosterPenaltyRepository {
   ): Promise<[BoosterPenaltyEntity[], number]>;
   create(data: Partial<BoosterPenaltyEntity>): BoosterPenaltyEntity;
   save(entity: BoosterPenaltyEntity): Promise<BoosterPenaltyEntity>;
+  /** 求某打手历史罚款金额合计（分，含余额与押金扣除） */
+  sumByBoosterUserId(boosterUserId: string): Promise<number>;
 }

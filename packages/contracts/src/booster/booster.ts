@@ -225,4 +225,24 @@ export interface BoosterMineView {
   depositPolicy: BoosterDepositPolicy;
   /** 配置中心维护的入驻公告图片；未配置为空串 */
   onboardingNoticeImage: string;
+  /** 配置中心维护的入驻公告文本（换行分行展示）；未配置为空串 */
+  onboardingNoticeText: string;
+}
+
+/** 打手「我的资金」只读聚合视图（金额均为分，展示由前端 fenToYuan 换算） */
+export interface BoosterFundsView {
+  /** 保证金（已缴押金） */
+  depositFen: number;
+  /** 钱包可用余额 */
+  balanceFen: number;
+  /** 冻结金额（待审核/转账中的提现合计） */
+  frozenFen: number;
+  /** 累计结算（历史提成入账合计） */
+  totalCommissionFen: number;
+  /** 本月结算（自然月提成入账合计） */
+  monthCommissionFen: number;
+  /** 上月结算（上一自然月提成入账合计） */
+  lastMonthCommissionFen: number;
+  /** 已交罚款（罚款记录合计，含余额与押金扣除） */
+  penaltyPaidFen: number;
 }

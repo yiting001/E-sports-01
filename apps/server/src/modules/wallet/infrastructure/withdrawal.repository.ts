@@ -3,7 +3,7 @@ import { WithdrawalStatus } from '@app/contracts';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
-import { withTenant } from '../../../shared/tenant/tenant-scope.util';
+import { applyTenant, withTenant } from '../../../shared/tenant/tenant-scope.util';
 import { WithdrawalOrderEntity } from '../domain/withdrawal-order.entity';
 import { WithdrawalOrderRepository } from '../domain/withdrawal-repository.interface';
 
@@ -65,5 +65,19 @@ export class TypeormWithdrawalRepository implements WithdrawalOrderRepository {
       where: withTenant<WithdrawalOrderEntity>(this.tenant, { status }),
       order: { createdAt: 'ASC' },
     });
+  }
+
+  async sumFrozenByWallet(walletId: string): Promise<number> {
+    const qb = this.repo
+      .createQueryBuilder('wd')
+      .select('COALESCE(SUM(wd.amountFen), 0)', 'total')
+      .where('wd.walletId = :walletId', { walletId })
+      .andWhere('wd.status IN (:...statuses)', {
+        statuses: [WithdrawalStatus.Pending, WithdrawalStatus.Processing],
+      });
+    const row = await applyTenant(this.tenant, qb, 'wd').getRawOne<{
+      total: string;
+    }>();
+    return Number(row?.total ?? 0);
   }
 }

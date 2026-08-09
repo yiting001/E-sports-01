@@ -1,14 +1,16 @@
 <script setup lang="ts">
 /**
- * 入驻公告卡片：展示可自定义的入驻公告图片。
- * 图片由后台配置下发（BoosterMineView.onboardingNoticeImage）；
- * 支持自定义公告标题文案（默认"入驻公告说明"）。
+ * 入驻公告卡片：展示可自定义的入驻公告文本与图片。
+ * 文本与图片均由后台配置下发（BoosterMineView.onboardingNoticeText / onboardingNoticeImage），
+ * 与主页公告独立；支持自定义公告标题文案（默认"入驻公告说明"）。
  */
 import { ref, watch } from 'vue';
 
 const props = defineProps<{
   /** 后台配置的可自定义公告图片 URL */
   image: string;
+  /** 后台配置的可自定义公告文本（换行分行展示） */
+  text?: string;
   /** 可自定义的公告标题，默认"入驻公告说明" */
   title?: string;
 }>();
@@ -28,6 +30,12 @@ watch(
     <h2 class="title">
       {{ title || '入驻公告说明' }}
     </h2>
+    <p
+      v-if="text"
+      class="copy copy--custom"
+    >
+      {{ text }}
+    </p>
     <div class="copy">
       <slot />
     </div>
@@ -65,6 +73,10 @@ watch(
   font-size: 13px;
   line-height: 1.65;
   color: var(--c-text-secondary);
+}
+
+.copy--custom {
+  white-space: pre-line;
 }
 
 .copy strong,

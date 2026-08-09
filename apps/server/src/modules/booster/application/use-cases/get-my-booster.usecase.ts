@@ -31,6 +31,7 @@ export class GetMyBoosterUseCase {
       realnameApproved,
       depositPolicy,
       onboardingNoticeImage,
+      onboardingNoticeText,
     ] =
       await Promise.all([
         this.repo.findByUserId(userId),
@@ -38,6 +39,7 @@ export class GetMyBoosterUseCase {
         this.realname.isApproved(userId),
         this.policy.getDepositPolicy(),
         this.policy.getOnboardingNoticeImage(),
+        this.policy.getOnboardingNoticeText(),
       ]);
     if (!record) {
       return {
@@ -47,6 +49,7 @@ export class GetMyBoosterUseCase {
         realnameApproved,
         depositPolicy,
         onboardingNoticeImage,
+        onboardingNoticeText,
       };
     }
     const [profiles, tiers] = await Promise.all([
@@ -60,6 +63,7 @@ export class GetMyBoosterUseCase {
       realnameApproved,
       depositPolicy,
       onboardingNoticeImage,
+      onboardingNoticeText,
     };
   }
 }

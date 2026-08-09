@@ -19,6 +19,7 @@
 - **富文本配置（richtext）**：值为 HTML 字符串（读取等同 string），配置中心编辑时启用富文本编辑器（AiEditor，图片/视频走 `POST /upload` 返回 URL），渲染前经 DOMPurify 净化防 XSS。如 `im.service.welcome`。
 - **图片配置（image）**：值为图片上传后的可访问 URL（读取等同 string），配置中心编辑时用图片上传控件（走 `POST /upload` 返回 URL）并预览。如软件图标 `system.appLogo`。
 - **打手入驻公告图**：`booster.onboardingNoticeImage` 在「打手」分组维护，默认空串；C 端不直接读取配置列表，而是由打手模块通过 `GET /booster/mine` 下发给登录用户。
+- **打手入驻公告文本**：`booster.onboardingNoticeText` 同在「打手」分组，`string` 类型、默认空串；与主页公告独立，换行分行展示，同样经 `GET /booster/mine` 下发。
 - **品牌信息**：`system.appName`（软件名称）与 `system.appLogo`（软件图标）可在配置中心修改，并经公开接口 `GET /config/branding` 在登录前下发给前端，用于浏览器标题、favicon、登录页与侧边栏 logo。
 - **C 端调试开关**：`portal.vConsoleEnabled` 默认关闭且保持平台全局；只有平台超管可在「运营」分组启停，C 端刷新后按需加载或销毁 vConsole。
 - **用户协议**：`auth.userAgreement`（富文本）在配置中心「认证」组编辑，经公开接口 `GET /config/agreement` 登录前下发；C 端登录/注册页需勾选同意后才可提交，弹层查看全文。
@@ -153,6 +154,7 @@ sequenceDiagram
 | `portal.homeBanner` | Portal | `{ "items": [], "intervalSeconds": 3 }` | C 端首页横幅列表、活动关联与 1～3 秒轮播间隔（json） | |
 | `portal.vConsoleEnabled` | Portal | `false` | C 端是否加载 vConsole 调试面板，刷新后生效（boolean） | |
 | `booster.onboardingNoticeImage` | Booster | （空） | C 端打手入驻页公告图片（image） | |
+| `booster.onboardingNoticeText` | Booster | （空） | C 端打手入驻公告文本（换行分行展示，与主页公告独立） | |
 | `auth.accessTokenTtl` | Auth | `3600` | 访问令牌有效期（秒） | |
 | `auth.refreshTokenTtl` | Auth | `604800` | 刷新令牌有效期（秒） | |
 | `upload.driver` | Upload | `local` | 存储驱动 local/oss | |
