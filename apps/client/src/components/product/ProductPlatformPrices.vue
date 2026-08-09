@@ -131,9 +131,9 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: auto auto;
   align-items: center;
-  column-gap: 10px;
-  row-gap: 6px;
-  padding: 12px;
+  column-gap: 8px;
+  row-gap: 4px;
+  padding: 10px;
   border: 1px solid color-mix(in srgb, var(--c-accent) 38%, var(--c-border));
   border-radius: 8px;
   background:
@@ -174,10 +174,11 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
 .platform-icon {
   grid-row: 1 / span 2;
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 48px;
+  width: 36px;
+  height: 40px;
   color: var(--c-accent);
   background: linear-gradient(160deg, #232a3a, #141a26);
   border: 1px solid color-mix(in srgb, var(--c-accent) 45%, transparent);
@@ -185,26 +186,30 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
 }
 
 .platform-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
 }
 
 .platform-meta {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .platform-label {
-  font-size: 14px;
+  flex-shrink: 0;
+  font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
   color: var(--c-text);
 }
 
 .platform-sub {
   font-size: 10px;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
+  white-space: nowrap;
   color: var(--c-text-muted);
 }
 
@@ -212,27 +217,30 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 7px;
+  gap: 2px 6px;
   min-width: 0;
 }
 
 .price {
-  font-family: var(--font-num);
-  font-size: 14px;
-  font-weight: 800;
+  white-space: nowrap;
+  font-family: var(--font-price);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: var(--c-accent);
-  text-shadow: 0 0 18px rgba(255, 176, 32, 0.35);
+  text-shadow: 0 0 16px rgba(255, 176, 32, 0.3);
 }
 
 .price b {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
 .discount {
   flex-shrink: 0;
-  padding: 2px 8px;
-  font-size: 11px;
+  padding: 2px 7px;
+  font-size: 10px;
   font-weight: 800;
   color: var(--c-bg);
   background: linear-gradient(120deg, #ffd47a, var(--c-accent));
@@ -240,9 +248,21 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
 }
 
 .origin {
-  font-family: var(--font-num);
+  white-space: nowrap;
+  font-family: var(--font-price);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: var(--c-text-muted);
   text-decoration: line-through;
+}
+
+.platform-price {
+  --font-price: 'PingFang SC', 'HarmonyOS Sans SC', 'Helvetica Neue', 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+
+@media (max-width: 359px) {
+  .platform-icon {
+    display: none;
+  }
 }
 </style>
