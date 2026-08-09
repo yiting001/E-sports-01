@@ -105,6 +105,10 @@ export const PERMS = {
     penaltyList: 'finance:penalty:list',
     /** 对打手创建罚款 */
     penaltyCreate: 'finance:penalty:create',
+    /** 税务配置查看（提现阶梯税费） */
+    taxView: 'finance:tax:list',
+    /** 税务配置保存（提现阶梯税费） */
+    taxSave: 'finance:tax:save',
   },
   dashboard: {
     /** 仪表盘-订单运营统计 */

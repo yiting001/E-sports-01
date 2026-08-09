@@ -165,6 +165,8 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | GET | `/api/wallet/admin/wallets` | `wallet:admin:list` | 分页查看所有用户钱包（按用户聚合，`?page&pageSize&keyword`，未开通按零值）→ `WalletAdminView[]` |
 | GET | `/api/wallet/admin/wallets/:userId/transactions` | `wallet:admin:transaction` | 分页查看指定用户收支明细（用户未开通钱包返回空页） |
 | POST | `/api/wallet/admin/wallets/:userId/adjust` | `wallet:admin:adjust` | 人工调整余额 `{ direction, amountFen, remark }`（direction: in 增/out 扣；钱包不存在则懒创建）→ `WalletAdminView` |
+| GET | `/api/wallet/admin/tax-config` | `finance:tax:list` | 读取税务配置（提现阶梯税费档位 + 回退单一费率）→ `WithdrawTaxConfigView` |
+| PUT | `/api/wallet/admin/tax-config` | `finance:tax:save`（仅平台超管） | 保存阶梯税费档位 `{ tiers: [{ minFen, rateBp }] }`（写入配置中心 `wallet.withdrawTaxTiers`，空数组清空回退单一费率）→ `WithdrawTaxConfigView` |
 
 ```jsonc
 // POST /api/wallet/recharge  请求

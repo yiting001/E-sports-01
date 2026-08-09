@@ -4,10 +4,12 @@ import type {
   PaginationQuery,
   PenaltyView,
   RejectWithdrawalBody,
+  SaveWithdrawTaxConfigBody,
   WithdrawalAdminView,
   WithdrawalResultView,
   WithdrawalStatus,
   WithdrawalTaxExportView,
+  WithdrawTaxConfigView,
 } from '@app/contracts';
 import { http } from './http';
 
@@ -40,6 +42,14 @@ export const financeApi = {
   /** 一键导出报税表单（已到账提现单 CSV） */
   exportTaxReport(): Promise<WithdrawalTaxExportView> {
     return http.get('/wallet/admin/withdrawals/tax-export');
+  },
+  /** 读取税务配置（提现阶梯税费档位 + 回退单一费率） */
+  getTaxConfig(): Promise<WithdrawTaxConfigView> {
+    return http.get('/wallet/admin/tax-config');
+  },
+  /** 保存税务配置（阶梯税费档位，空数组表示清空回退单一费率） */
+  saveTaxConfig(body: SaveWithdrawTaxConfigBody): Promise<WithdrawTaxConfigView> {
+    return http.put('/wallet/admin/tax-config', body);
   },
   /** 分页查询罚款记录 */
   listPenalties(query: PenaltyListQuery): Promise<PaginatedResult<PenaltyView>> {

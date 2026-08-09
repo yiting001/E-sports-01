@@ -55,6 +55,8 @@ import { ListWithdrawalsUseCase } from './application/use-cases/list-withdrawals
 import { ApproveWithdrawalUseCase } from './application/use-cases/approve-withdrawal.usecase';
 import { RejectWithdrawalUseCase } from './application/use-cases/reject-withdrawal.usecase';
 import { ExportWithdrawalTaxUseCase } from './application/use-cases/export-withdrawal-tax.usecase';
+import { GetWithdrawTaxConfigUseCase } from './application/use-cases/get-withdraw-tax-config.usecase';
+import { SaveWithdrawTaxConfigUseCase } from './application/use-cases/save-withdraw-tax-config.usecase';
 
 import { WalletMineController } from './interfaces/controllers/wallet.mine.controller';
 import { WalletStatsController } from './interfaces/controllers/wallet.stats.controller';
@@ -71,6 +73,8 @@ import { WithdrawalAdminListController } from './interfaces/controllers/withdraw
 import { WithdrawalAdminApproveController } from './interfaces/controllers/withdrawal.admin.approve.controller';
 import { WithdrawalAdminRejectController } from './interfaces/controllers/withdrawal.admin.reject.controller';
 import { WithdrawalAdminExportController } from './interfaces/controllers/withdrawal.admin.export.controller';
+import { TaxConfigAdminGetController } from './interfaces/controllers/tax-config.admin.get.controller';
+import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-config.admin.save.controller';
 
 /**
  * 钱包模块。
@@ -106,6 +110,8 @@ import { WithdrawalAdminExportController } from './interfaces/controllers/withdr
     WithdrawalAdminApproveController,
     WithdrawalAdminRejectController,
     WithdrawalAdminExportController,
+    TaxConfigAdminGetController,
+    TaxConfigAdminSaveController,
   ],
   providers: [
     { provide: WALLET_REPOSITORY, useClass: TypeormWalletRepository },
@@ -168,6 +174,8 @@ import { WithdrawalAdminExportController } from './interfaces/controllers/withdr
     ApproveWithdrawalUseCase,
     RejectWithdrawalUseCase,
     ExportWithdrawalTaxUseCase,
+    GetWithdrawTaxConfigUseCase,
+    SaveWithdrawTaxConfigUseCase,
   ],
   // 导出支付/退款渠道解析器，供订单复用同一套支付宝/微信配置与驱动
   exports: [

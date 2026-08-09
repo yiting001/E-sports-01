@@ -339,6 +339,22 @@ export interface WithdrawTaxTier {
   rateBp: number;
 }
 
+/** 阶梯税费档位数量上限（管理端可视化配置约束） */
+export const WITHDRAW_TAX_TIERS_MAX = 20;
+
+/** 税务配置视图（管理端「税务管理」页展示） */
+export interface WithdrawTaxConfigView {
+  /** 阶梯税费档位（按 minFen 升序） */
+  tiers: WithdrawTaxTier[];
+  /** 回退单一费率（万分比，无档位命中时生效） */
+  fallbackRateBp: number;
+}
+
+/** 保存税务配置入参（管理端） */
+export interface SaveWithdrawTaxConfigBody {
+  tiers: WithdrawTaxTier[];
+}
+
 /** 身份证号格式（18 位，末位可为 X） */
 export const ID_CARD_NO_PATTERN = /^\d{17}[\dXx]$/;
 
