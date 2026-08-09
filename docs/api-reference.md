@@ -203,7 +203,8 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| GET | `/api/booster/mine` | 登录 | 本人概览 `{ status, record, requireRealname, realnameApproved, depositPolicy, onboardingNoticeImage }` |
+| GET | `/api/booster/mine` | 登录 | 本人概览 `{ status, record, requireRealname, realnameApproved, depositPolicy, onboardingNoticeImage, onboardingNoticeText }` |
+| GET | `/api/booster/funds/mine` | 登录 | 打手「我的资金」只读聚合（押金/余额/冻结/累计与月度结算/已交罚款，金额均为分） |
 | PUT | `/api/booster/mine/availability` | 登录且本人已审核通过 | `{ acceptingOrders: boolean }`；幂等切换上线/下线并返回 `BoosterView` |
 | POST | `/api/booster` | 登录 | 首次提交或驳回重提完整资料；待审核 / 已通过时重复提交返回 409 |
 | GET | `/api/booster/directory` | 登录 | C 端脱敏挑人目录；`?page&pageSize&keyword&gender&serviceRegion` |
@@ -247,7 +248,8 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
   "requireRealname": true,
   "realnameApproved": true,
   "depositPolicy": { "minFen": 10000, "maxFen": 100000 },
-  "onboardingNoticeImage": "/static/2026/07/notice.png"
+  "onboardingNoticeImage": "/static/2026/07/notice.png",
+  "onboardingNoticeText": "入驻须完成实名\n缴纳押金后方可接单"
 }
 ```
 

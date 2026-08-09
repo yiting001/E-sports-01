@@ -8,6 +8,8 @@ C 端登录用户在个人中心提交完整打手入驻资料，管理员在管
 
 - **完整申请 / 驳回重提**：姓名、性别、接单区服、自我介绍、联系方式类型与内容为必填；其他材料图片、邀请码选填。驳回后保留原资料供修改并覆盖重提。
 - **公告图片配置**：平台配置 `booster.onboardingNoticeImage` 为 `image` 类型；管理端在「配置中心 → 打手」上传或清空，C 端不写死图片地址。
+- **公告文本配置**：平台配置 `booster.onboardingNoticeText` 为 `string` 类型（换行分行展示），与主页公告完全独立；随 `GET /booster/mine` 与公告图一并下发，C 端入驻页公告卡片展示，未配置时不展示。
+- **打手「我的资金」**：`GET /booster/funds/mine`（仅登录）只读聚合本人保证金（已缴押金）、钱包可用余额、冻结金额（待审核/转账中提现合计）、累计/本月/上月结算（提成入账流水求和）与已交罚款（罚款记录合计）；未入驻或未开通钱包按零值返回，C 端「我的」页打手身份下展示资金面板。
 - **审核与资料维护**：待审核记录可通过或驳回；管理端可编辑全部新版资料字段，编辑不改变审核状态。
 - **挑人目录与主页**：登录用户可按 ID/昵称、性别和区服筛选审核通过且账号启用的打手；目录和主页只返回脱敏公开投影，支持分页、加载失败重试和打手主页跳转。
 - **自主上下线与语音试听**：审核通过的打手通过 `PUT /booster/mine/availability` 持久化接单状态，历史数据默认下线；C 端目录停留期间约每 15 秒刷新。已审核打手或管理员可上传/清空试听语音，C 端头像下方可播放 MP3、M4A、WAV、WebM。
@@ -295,7 +297,8 @@ pnpm --filter @app/server migration:revert
 
 | 方法   | 路径                              | 权限                         | 说明                                                                                               |
 | ------ | --------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
-| GET    | `/api/booster/mine`               | 登录                         | 返回 `{ status, record, requireRealname, realnameApproved, depositPolicy, onboardingNoticeImage }` |
+| GET    | `/api/booster/mine`               | 登录                         | 返回 `{ status, record, requireRealname, realnameApproved, depositPolicy, onboardingNoticeImage, onboardingNoticeText }` |
+| GET    | `/api/booster/funds/mine`         | 登录                         | 打手「我的资金」只读聚合 `BoosterFundsView`（押金/余额/冻结/累计与月度结算/已交罚款，金额均为分） |
 | PUT    | `/api/booster/mine/availability`  | 登录且本人已审核通过         | `{ acceptingOrders: boolean }`，幂等切换上线/下线并返回 `BoosterView`                              |
 | POST   | `/api/booster`                    | 登录                         | 首次提交或驳回重提完整资料                                                                         |
 | GET    | `/api/booster/directory`          | 登录                         | 脱敏目录；支持 `page`、`pageSize`、`keyword`、`gender`、`serviceRegion`                            |

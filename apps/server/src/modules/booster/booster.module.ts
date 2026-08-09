@@ -30,6 +30,7 @@ import { BoosterRealnameGuard } from './application/booster-realname.service';
 import { BoosterSelectionService } from './application/booster-selection.service';
 import { BoosterCandidateService } from './application/booster-candidate.service';
 import { GetMyBoosterUseCase } from './application/use-cases/get-my-booster.usecase';
+import { GetMyBoosterFundsUseCase } from './application/use-cases/get-my-booster-funds.usecase';
 import { SubmitBoosterUseCase } from './application/use-cases/submit-booster.usecase';
 import { ListBoosterUseCase } from './application/use-cases/list-booster.usecase';
 import { ReviewBoosterUseCase } from './application/use-cases/review-booster.usecase';
@@ -48,6 +49,7 @@ import { UpdateMyBoosterVoiceUseCase } from './application/use-cases/update-my-b
 import { UpdateMyBoosterAvailabilityUseCase } from './application/use-cases/update-my-booster-availability.usecase';
 
 import { BoosterMineController } from './interfaces/controllers/booster.mine.controller';
+import { BoosterFundsMineController } from './interfaces/controllers/booster.funds.mine.controller';
 import { BoosterSubmitController } from './interfaces/controllers/booster.submit.controller';
 import { BoosterListController } from './interfaces/controllers/booster.list.controller';
 import { BoosterReviewController } from './interfaces/controllers/booster.review.controller';
@@ -87,6 +89,7 @@ import { BoosterMineAvailabilityController } from './interfaces/controllers/boos
   ],
   controllers: [
     BoosterMineController,
+    BoosterFundsMineController,
     BoosterMineAvailabilityController,
     BoosterDirectoryListController,
     BoosterDirectoryDetailController,
@@ -132,6 +135,7 @@ import { BoosterMineAvailabilityController } from './interfaces/controllers/boos
     BoosterSelectionService,
     BoosterCandidateService,
     GetMyBoosterUseCase,
+    GetMyBoosterFundsUseCase,
     SubmitBoosterUseCase,
     ListBoosterUseCase,
     ReviewBoosterUseCase,

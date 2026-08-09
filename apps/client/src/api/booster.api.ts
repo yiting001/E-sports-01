@@ -1,4 +1,5 @@
 import type {
+  BoosterFundsView,
   BoosterMineView,
   BoosterView,
   SubmitBoosterPayload,
@@ -11,6 +12,10 @@ export const boosterApi = {
   /** 当前用户入驻概览（状态 + 申请记录） */
   mine(): Promise<BoosterMineView> {
     return http.get('/booster/mine');
+  },
+  /** 当前打手「我的资金」聚合（押金/余额/冻结/结算/罚款） */
+  fundsMine(): Promise<BoosterFundsView> {
+    return http.get('/booster/funds/mine');
   },
   /** 提交/重提入驻申请 */
   apply(payload: SubmitBoosterPayload): Promise<BoosterView> {

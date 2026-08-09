@@ -39,6 +39,7 @@ import { PaymentResolver } from './application/payment.resolver';
 import { PayoutResolver } from './application/payout.resolver';
 import { RefundResolver } from './application/refund.resolver';
 import { WalletService } from './application/wallet.service';
+import { WalletFinanceReadService } from './application/wallet-finance-read.service';
 import { GetMyWalletUseCase } from './application/use-cases/get-my-wallet.usecase';
 import { GetWalletStatsUseCase } from './application/use-cases/get-wallet-stats.usecase';
 import { ListTransactionsUseCase } from './application/use-cases/list-transactions.usecase';
@@ -151,6 +152,7 @@ import { WithdrawalAdminExportController } from './interfaces/controllers/withdr
     PayoutResolver,
     RefundResolver,
     WalletService,
+    WalletFinanceReadService,
     GetMyWalletUseCase,
     GetWalletStatsUseCase,
     ListTransactionsUseCase,
@@ -172,6 +174,7 @@ import { WithdrawalAdminExportController } from './interfaces/controllers/withdr
     PaymentResolver,
     RefundResolver,
     WalletService,
+    WalletFinanceReadService,
     WALLET_LEDGER,
     WALLET_TRANSACTION_PARTICIPANT,
   ],

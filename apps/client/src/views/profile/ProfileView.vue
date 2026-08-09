@@ -5,6 +5,7 @@
  * 打手身份下只保留头部、等级/押金卡与余额/客服卡；购物身份展示会员等级卡。
  */
 import BalanceCards from '@/components/profile/BalanceCards.vue';
+import BoosterFundsCard from '@/components/profile/BoosterFundsCard.vue';
 import BoosterLevelCard from '@/components/profile/BoosterLevelCard.vue';
 import MemberLevelCard from '@/components/profile/MemberLevelCard.vue';
 import FeatureGrid from '@/components/profile/FeatureGrid.vue';
@@ -26,6 +27,7 @@ void member.refresh();
     <ProfileHeader />
     <OrderEntries v-if="!role.isBoosterMode" />
     <BoosterLevelCard v-if="role.isBoosterMode" />
+    <BoosterFundsCard v-if="role.isBoosterMode" />
     <NotifyEntryCard v-if="role.isBoosterMode" />
     <MemberLevelCard v-if="!role.isBoosterMode" />
     <BalanceCards />
@@ -70,6 +72,7 @@ void member.refresh();
   .profile > :deep(.header),
   .profile > :deep(.member-card),
   .profile > :deep(.booster-card),
+  .profile > :deep(.funds),
   .profile > :deep(.notify-entry),
   .profile > :deep(.cards) {
     grid-column: 1;

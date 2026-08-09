@@ -129,6 +129,7 @@ onMounted(() => {
           <BoosterAnnouncementCard
             v-if="showForm"
             :image="mine.onboardingNoticeImage"
+            :text="mine.onboardingNoticeText"
           >
             <slot name="announcement-content" />
           </BoosterAnnouncementCard>

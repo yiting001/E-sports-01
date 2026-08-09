@@ -28,4 +28,7 @@ export interface WithdrawalOrderRepository {
 
   /** 按状态查询全量提现订单（报税导出用，按创建时间升序） */
   listByStatus(status: WithdrawalStatus): Promise<WithdrawalOrderEntity[]>;
+
+  /** 求某钱包冻结中（待审核/转账中）提现金额合计（分） */
+  sumFrozenByWallet(walletId: string): Promise<number>;
 }
