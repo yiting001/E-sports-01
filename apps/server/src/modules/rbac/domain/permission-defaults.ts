@@ -48,6 +48,8 @@ const PERMISSION_NAMES: Record<string, string> = {
   [PERMS.finance.withdrawalReview]: '财务-提现审核',
   [PERMS.finance.penaltyList]: '财务-罚款记录查看',
   [PERMS.finance.penaltyCreate]: '财务-打手罚款',
+  [PERMS.finance.taxView]: '财务-税务配置查看',
+  [PERMS.finance.taxSave]: '财务-税务配置保存',
   [PERMS.realname.list]: '实名-审核列表',
   [PERMS.realname.review]: '实名-审核',
   [PERMS.realname.policyView]: '实名-策略查看',

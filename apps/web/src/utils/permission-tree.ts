@@ -45,6 +45,7 @@ const BASE_NAMESPACE_LABELS: Record<string, string> = {
   finance: '财务管理',
   'finance:withdrawal': '提现管理',
   'finance:penalty': '罚款管理',
+  'finance:tax': '税务管理',
   penalty: '罚款管理',
   dashboard: '工作台',
   im: '即时通讯',

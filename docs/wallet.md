@@ -46,6 +46,9 @@
 | `finance:penalty:menu`      | 罚款管理          | 菜单      | 侧边栏「财务 → 罚款管理」动态路由 `/finance/penalties`                                                                            |
 | `finance:penalty:list`      | 财务-罚款记录列表 | 接口      | `GET /finance/penalties`                                                                                                          |
 | `finance:penalty:create`    | 财务-创建罚款     | 接口/按钮 | `POST /finance/penalties`；与 `feedback:handle` 共同保护投诉直接扣款                                                              |
+| `finance:tax:menu`          | 税务管理          | 菜单      | 侧边栏「财务 → 税务管理」动态路由 `/finance/tax`                                                                                    |
+| `finance:tax:list`          | 财务-税务配置查看 | 接口      | `GET /wallet/admin/tax-config`                                                                                                    |
+| `finance:tax:save`          | 财务-税务配置保存 | 接口/按钮 | `PUT /wallet/admin/tax-config`（仅平台超管；前端「保存配置」按钮 `v-permission`）                                                    |
 
 > 充值异步回调 `POST /wallet/recharge/callback/:provider` 为 `@Public()` 渠道回调端点，不受权限控制（靠验签保障）。
 >
@@ -255,7 +258,7 @@ sequenceDiagram
 | `wallet.minRechargeFen`           | 最小充值金额（分）                                         |      |
 | `wallet.minWithdrawFen`           | 最小提现金额（分）                                         |      |
 | `wallet.withdrawFeeRateBp`        | 提现手续费率（万分比，100 = 1%，0 免费；阶梯未命中时回退） |      |
-| `wallet.withdrawTaxTiers`         | 阶梯税费配置（JSON 数组，按提现金额选档；空数组用单一费率） |      |
+| `wallet.withdrawTaxTiers`         | 阶梯税费配置（JSON 数组，按提现金额选档；空数组用单一费率；推荐用管理端「财务 → 税务管理」可视化配置） |      |
 | `wallet.notifyBaseUrl`            | 回调公网基础地址（拼接异步通知 URL）                       |      |
 | `wallet.alipay.appId`             | 支付宝应用 AppId                                           |      |
 | `wallet.alipay.privateKey`        | 支付宝应用私钥（PEM）                                      | ✓    |
@@ -293,6 +296,7 @@ flowchart LR
 
 - `views/wallet/WalletView.vue`：余额卡片、统计卡片、明细表格分页；充值弹窗（金额+渠道，下单后用 `qrcode` 渲染二维码，支付完成点「我已支付」刷新）；提现弹窗（金额+支付宝账号+姓名，提交后进入待审核）。
 - `views/finance/WithdrawalAdminView.vue`（菜单 `finance:withdrawal:menu`，财务分组）：提现工单分页（状态筛选），表格保留扫描所需的关键列，右侧详情抽屉展示完整金额、收款、渠道与失败信息；待审核工单可「通过」（二次确认后立即转账）/「驳回」（填写理由，退回余额）；`api/finance.api.ts` 封装列表/审核接口。
+- `views/finance/TaxConfigAdminView.vue`（菜单 `finance:tax:menu`，财务分组）：提现阶梯税费可视化配置，表格按「起始金额（元）→ 税费率（%）」增删改档位，展示适用区间与税费示例，头部提示回退单一费率；保存需二次确认（`GET/PUT /wallet/admin/tax-config`，写入配置中心 `wallet.withdrawTaxTiers`，保存后立即对新提现申请生效）。
 
 ## C 端（apps/client）
 

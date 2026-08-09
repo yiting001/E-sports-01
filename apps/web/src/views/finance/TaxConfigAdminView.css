@@ -1,0 +1,16 @@
+.tax-config-hint {
+  margin-bottom: 16px;
+}
+
+.tax-config-table {
+  width: 100%;
+}
+
+.tax-config-muted {
+  color: var(--app-text-color-secondary);
+  font-size: 12px;
+}
+
+.tax-config-add {
+  margin-top: 12px;
+}

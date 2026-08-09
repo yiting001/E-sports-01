@@ -144,6 +144,14 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     group: 'finance',
   },
   {
+    code: 'finance:tax:menu',
+    title: '税务管理',
+    path: 'finance/tax',
+    icon: 'Coin',
+    sort: 3,
+    group: 'finance',
+  },
+  {
     code: 'rbac:tenant:menu',
     title: '租户管理',
     path: 'rbac/tenants',
