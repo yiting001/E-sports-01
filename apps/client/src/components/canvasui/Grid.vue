@@ -862,7 +862,7 @@ watch(
 </script>
 
 <template>
-  <div style="position: relative">
+  <div style="position: relative; height: 100dvh">
     <canvas
       ref="sourceEl"
       layoutsubtree="true"
