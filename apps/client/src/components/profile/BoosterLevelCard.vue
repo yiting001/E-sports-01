@@ -1,14 +1,13 @@
 <script setup lang="ts">
 /**
  * 我的页 · 打手等级/押金卡（仅打手身份展示）。
- * 展示当前等级、完成单数、提成比例与押金缴纳进度；
+ * 展示当前等级、完成单数与押金缴纳进度；
  * 押金在配置的最低/最高交付额区间内自选金额缴纳（达最低额方可接单）；
  * 后台开启实名要求且未通过时展示实名认证入口（未实名不可接单）。
  */
 import { computed, onMounted, ref } from 'vue';
 import {
   BoosterStatus,
-  FEE_RATE_BASE,
   fenToYuan,
   yuanToFen,
   type BoosterMineView,
@@ -35,9 +34,6 @@ const paidFen = computed(() => record.value?.depositFen ?? 0);
 const gateMet = computed(() => paidFen.value >= minFen.value);
 /** 仍可继续缴纳（未达最高交付额） */
 const canPayMore = computed(() => paidFen.value < maxFen.value);
-const commissionPercent = computed(() =>
-  (((record.value?.commissionRateBp ?? 0) / FEE_RATE_BASE) * 100).toFixed(1),
-);
 
 async function load(): Promise<void> {
   mine.value = await boosterApi.mine();
@@ -79,7 +75,6 @@ onMounted(() => {
   >
     <div class="head">
       <span class="level">Lv.{{ record.level }} {{ record.levelName }}</span>
-      <span class="rate">提成 {{ commissionPercent }}%</span>
     </div>
     <div class="meta">
       <span>累计完成 {{ record.completedOrders }} 单</span>
@@ -134,11 +129,6 @@ onMounted(() => {
   font-weight: 800;
   font-style: italic;
   color: var(--c-accent);
-}
-
-.rate {
-  font-size: 13px;
-  color: var(--c-text-secondary);
 }
 
 .meta {
