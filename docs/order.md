@@ -8,7 +8,7 @@
 ## 实现的功能
 
 - C 端商品详情页：方形主图完整展示商品封面并支持原图预览，封面主副标语位于图片下方的独立介绍区，同时展示手机端/电脑端价格与四项服务保障；富文本经净化后渲染且兼容历史本机媒体地址。进入结算页后复用既有区服控件选择手机端或电脑端，金额、会员折扣、优惠券和支付金额随所选端同步重算
-- 备注附件：下单备注支持上传图片/视频（`RemarkMediaUploader`，复用 `/upload/self` 自助上传，最多 `ORDER_LIMITS.remarkMediaMax` 个），订单固化 `remarkMedia` jsonb 快照，详情页/大厅详情/管理端抽屉以缩略图展示（`RemarkMediaGallery`）
+- 备注附件：下单备注支持上传图片/视频（`RemarkMediaUploader`，复用 `/upload/self` 自助上传，最多 `ORDER_LIMITS.remarkMediaMax` 个），订单固化 `remarkMedia` jsonb 快照，详情页/打手订单详情/管理端抽屉以缩略图展示（`RemarkMediaGallery`）；接单大厅列表/详情接单前不下发备注与备注媒体
 - 账号信息：下单可选填 `accountInfo`（游戏账号等敏感信息）；仅本人、接单后的打手与管理端可见，接单大厅列表/详情经 `toHallOrderView` 置空不下发
 - 结构化游戏资料：数字游戏 ID（1 ～ 32 位数字，必填）、文字游戏 ID（选填，最多 64）、本单区服（`delta-mobile` / `delta-pc`）和其他账号信息分字段收集；历史订单字段为空串兼容，不把大厅可见数据与接单后敏感数据混用
 - 打手选择：结算页可选「自动安排」或「指定打手」；指定时从 C 端脱敏目录选择，服务端复核打手支持区服、本人排除、实名和押金门禁，并固化 `requestedBoosterId` / `requestedBoosterName` 快照
@@ -146,7 +146,7 @@ flowchart LR
   Admin[管理员/负责该商品的客服] -->|权限范围内可见| Sensitive
 ```
 
-接单大厅在 `toHallOrderView` 中清空 `accountInfo`、`gameAccountId`、`gameTextId`；区服和打手安排方式仍可用于接单判断。订单详情中的实际打手名称和锁定打手名称均为快照，名称按钮只在存在对应用户 ID 时跳转打手主页。
+接单大厅在 `toHallOrderView` 中清空 `accountInfo`、`gameAccountId`、`gameTextId`、`remark`、`remarkMedia`（备注及其媒体接单后才对打手可见）；区服和打手安排方式仍可用于接单判断。订单详情中的实际打手名称和锁定打手名称均为快照，名称按钮只在存在对应用户 ID 时跳转打手主页。
 
 ## 结构导图
 

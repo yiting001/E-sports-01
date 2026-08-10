@@ -16,7 +16,6 @@ import { boosterApi } from "@/api/booster.api";
 import { commerceApi } from "@/api/commerce.api";
 import { orderApi } from "@/api/order.api";
 import AppIcon from "@/components/common/AppIcon.vue";
-import RemarkMediaGallery from "@/components/order/RemarkMediaGallery.vue";
 import { useToast } from "@/composables/use-toast";
 import { isHallOrderUnavailableError } from "@/utils/hall-order";
 import "./OrderDetailView.css";
@@ -300,14 +299,11 @@ onMounted(() => {
             </div>
             <div class="row row--remark">
               <dt>用户备注</dt>
-              <dd>{{ order.remark || "无" }}</dd>
+              <dd class="sub--hint">
+                接单后可查看
+              </dd>
             </div>
           </dl>
-          <RemarkMediaGallery
-            v-if="order.remarkMedia.length"
-            class="media"
-            :items="order.remarkMedia"
-          />
         </section>
 
         <div

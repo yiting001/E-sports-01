@@ -100,7 +100,8 @@ export function toBoosterOrderView(entity: OrderEntity): OrderView {
 }
 
 /**
- * 订单实体 → 接单大厅视图：隐藏履约账号和订单本人的退款信息。
+ * 订单实体 → 接单大厅视图：隐藏履约账号、用户备注（含备注媒体）和订单本人的退款信息，
+ * 接单后经打手视图才可见。
  * 待接订单尚未结算（费率快照为 0）时，用当前打手等级费率作为预估口径下发，
  * 供 C 端展示预估到手金额；实际佣金仍以完成结算时的费率为准。
  */
@@ -113,6 +114,8 @@ export function toHallOrderView(
     accountInfo: '',
     gameAccountId: '',
     gameTextId: '',
+    remark: '',
+    remarkMedia: [],
   };
   if (view.commissionRateBp <= 0 && estimatedCommissionRateBp > 0) {
     view.commissionRateBp = estimatedCommissionRateBp;
