@@ -29,6 +29,7 @@ const loadError = ref(false);
 const unavailable = ref(false);
 const accepting = ref(false);
 const acceptingOrders = ref(false);
+const boosterRateBp = ref(0);
 const availabilityLoading = ref(true);
 const availabilityError = ref(false);
 
@@ -43,16 +44,18 @@ function serviceRegionText(value: OrderView["serviceRegion"]): string {
   );
 }
 
-/** 预估佣金（根据 commissionRateBp 计算） */
+/** 预估佣金：优先订单费率，未下发时回退打手自身等级费率 */
 const estimatedCommission = computed(() => {
   if (!order.value) return null;
   if (order.value.commissionFen > 0) {
     return fenToYuan(order.value.commissionFen);
   }
-  if (order.value.commissionRateBp > 0) {
-    const estFen = Math.round(
-      (order.value.amountFen * order.value.commissionRateBp) / 10000
-    );
+  const rateBp =
+    order.value.commissionRateBp > 0
+      ? order.value.commissionRateBp
+      : boosterRateBp.value;
+  if (rateBp > 0) {
+    const estFen = Math.round((order.value.amountFen * rateBp) / 10000);
     return fenToYuan(estFen);
   }
   return null;
@@ -88,6 +91,7 @@ async function loadAvailability(): Promise<void> {
       return;
     }
     acceptingOrders.value = mine.record.acceptingOrders;
+    boosterRateBp.value = mine.record.commissionRateBp;
   } catch {
     availabilityError.value = true;
   } finally {
@@ -184,15 +188,9 @@ onMounted(() => {
         v-else-if="order"
         class="content"
       >
-        <!-- 商品快照 + 状态；点击进商品详情查看服务内容 -->
+        <!-- 商品快照 + 状态 -->
         <section class="card block">
-          <div
-            class="head head--link"
-            role="link"
-            tabindex="0"
-            @click="router.push({ name: 'product-detail', params: { id: order.productId } })"
-            @keydown.enter="router.push({ name: 'product-detail', params: { id: order.productId } })"
-          >
+          <div class="head">
             <span
               class="thumb"
               :class="{ 'thumb--image': order.productCover }"
@@ -215,16 +213,8 @@ onMounted(() => {
               <p class="sub">
                 数量 ×{{ order.quantity }}
               </p>
-              <p class="sub sub--hint">
-                点击查看商品详情，了解本单服务内容
-              </p>
             </div>
             <span class="status">{{ ORDER_STATUS_TEXT[order.status] }}</span>
-            <AppIcon
-              class="head-arrow"
-              name="chevron"
-              :size="16"
-            />
           </div>
         </section>
 
@@ -365,16 +355,6 @@ onMounted(() => {
   border: 1px solid var(--c-accent);
   border-radius: var(--radius-sm);
   font-weight: 700;
-}
-
-.head--link {
-  cursor: pointer;
-}
-
-.head-arrow {
-  flex-shrink: 0;
-  transform: rotate(180deg);
-  color: var(--c-text-muted);
 }
 
 .sub--hint {
