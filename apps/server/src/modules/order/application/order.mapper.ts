@@ -57,6 +57,7 @@ export function toOwnerOrderView(entity: OrderEntity): OrderView {
     productId: entity.productId,
     productTitle: entity.productTitle,
     productCover: entity.productCover,
+    productCoverSub: '',
     quantity: entity.quantity,
     amountFen: entity.amountFen,
     amountYuan: fenToYuan(entity.amountFen),
@@ -100,22 +101,23 @@ export function toBoosterOrderView(entity: OrderEntity): OrderView {
 }
 
 /**
- * 订单实体 → 接单大厅视图：隐藏履约账号、用户备注（含备注媒体）和订单本人的退款信息，
- * 接单后经打手视图才可见。
+ * 订单实体 → 接单大厅视图：隐藏履约账号、备注媒体（接单后才可见）和订单本人的退款信息；
+ * 备注文字保留下发，供打手接单前判断订单要求。
  * 待接订单尚未结算（费率快照为 0）时，用当前打手等级费率作为预估口径下发，
  * 供 C 端展示预估到手金额；实际佣金仍以完成结算时的费率为准。
  */
 export function toHallOrderView(
   entity: OrderEntity,
   estimatedCommissionRateBp = 0,
+  productCoverSub = '',
 ): OrderView {
   const view = {
     ...toBoosterOrderView(entity),
     accountInfo: '',
     gameAccountId: '',
     gameTextId: '',
-    remark: '',
     remarkMedia: [],
+    productCoverSub,
   };
   if (view.commissionRateBp <= 0 && estimatedCommissionRateBp > 0) {
     view.commissionRateBp = estimatedCommissionRateBp;

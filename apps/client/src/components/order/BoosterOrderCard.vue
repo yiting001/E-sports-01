@@ -129,6 +129,13 @@ export default {
         >
           {{ order.productTitle }}
         </p>
+        <p
+          v-if="order.productCoverSub"
+          class="cover-sub"
+          :title="order.productCoverSub"
+        >
+          {{ order.productCoverSub }}
+        </p>
         <p class="sub">
           下发 {{ formatTime(order.dispatchedAt || order.createdAt) }}
         </p>
@@ -349,6 +356,18 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cover-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--c-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .sub {

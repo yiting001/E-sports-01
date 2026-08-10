@@ -215,6 +215,8 @@ export interface OrderView {
   productTitle: string;
   /** 商品封面快照 */
   productCover: string;
+  /** 商品封面副标语（接单大厅下发，取商品当前 coverSub；其余视图为空串） */
+  productCoverSub: string;
   quantity: number;
   amountFen: number;
   amountYuan: string;
