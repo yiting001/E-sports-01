@@ -140,6 +140,7 @@ function makeOrder(): AdminOrderView {
     productId: "product-1",
     productTitle: "陪玩服务",
     productCover: "",
+    productCoverSub: "",
     quantity: 1,
     amountFen: 500,
     amountYuan: "5.00",

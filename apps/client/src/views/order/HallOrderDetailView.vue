@@ -299,9 +299,7 @@ onMounted(() => {
             </div>
             <div class="row row--remark">
               <dt>用户备注</dt>
-              <dd class="sub--hint">
-                接单后可查看
-              </dd>
+              <dd>{{ order.remark || "无" }}</dd>
             </div>
           </dl>
         </section>

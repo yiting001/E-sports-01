@@ -6,6 +6,7 @@ import { validate } from 'class-validator';
 import type { Repository, SelectQueryBuilder } from 'typeorm';
 import type { BoosterProgressService } from '../../src/modules/booster/application/booster-progress.service';
 import type { BoosterAccess } from '../../src/modules/order/application/booster-access.service';
+import type { ProductRepository } from '../../src/modules/commerce/domain/product-repository.interface';
 import { ListHallOrdersUseCase } from '../../src/modules/order/application/use-cases/list-hall-orders.usecase';
 import { OrderEntity } from '../../src/modules/order/domain/order.entity';
 import type {
@@ -53,7 +54,10 @@ test('大厅用例在打手门禁后把筛选条件透传给仓储', async () =>
   const progress = {
     currentTier: async () => BOOSTER_LEVEL_DEFAULTS[0],
   } as unknown as BoosterProgressService;
-  const useCase = new ListHallOrdersUseCase(orders, access, progress);
+  const products = {
+    findById: async () => null,
+  } as unknown as ProductRepository;
+  const useCase = new ListHallOrdersUseCase(orders, products, access, progress);
   const filter: HallOrderFilter = {
     keyword: 'ORDER-2026',
     serviceRegion: 'delta-pc',
