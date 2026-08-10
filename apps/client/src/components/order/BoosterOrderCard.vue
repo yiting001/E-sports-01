@@ -20,17 +20,20 @@ import {
 import AppIcon from '@/components/common/AppIcon.vue';
 import RemarkMediaGallery from '@/components/order/RemarkMediaGallery.vue';
 
-const props = defineProps<{
-  order: OrderView;
-  /** 主操作按钮文案；为空则不渲染操作区 */
-  actionLabel?: string;
-  /** 主操作是否禁用；大厅下线时使用，服务端仍执行最终门禁。 */
-  actionDisabled?: boolean;
-  /** 是否显示佣金；默认 true */
-  showCommission?: boolean;
-  /** 订单未携带费率时的兼容预估费率（万分比，如打手自身等级费率） */
-  fallbackRateBp?: number;
-}>();
+const props = withDefaults(
+  defineProps<{
+    order: OrderView;
+    /** 主操作按钮文案；为空则不渲染操作区 */
+    actionLabel?: string;
+    /** 主操作是否禁用；大厅下线时使用，服务端仍执行最终门禁。 */
+    actionDisabled?: boolean;
+    /** 是否显示佣金；未传时默认显示（Boolean prop 缺省会被 Vue 转为 false，须用 withDefaults 声明） */
+    showCommission?: boolean;
+    /** 订单未携带费率时的兼容预估费率（万分比，如打手自身等级费率） */
+    fallbackRateBp?: number;
+  }>(),
+  { actionLabel: '', actionDisabled: false, showCommission: true, fallbackRateBp: 0 }
+);
 
 const emit = defineEmits<{
   action: [order: OrderView];
@@ -64,8 +67,7 @@ function serviceRegionText(value: OrderView["serviceRegion"]): string {
 
 /** 佣金金额（元）：已结算取实际佣金，否则按订单费率/兼容费率预估；无法计算时为空 */
 const commissionYuan = computed(() => {
-  const showCommission = props.showCommission ?? true;
-  if (!showCommission) return '';
+  if (!props.showCommission) return '';
 
   if (props.order.commissionFen > 0) {
     return fenToYuan(props.order.commissionFen);
