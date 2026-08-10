@@ -8,10 +8,12 @@ import {
   ORDER_STATUS_TEXT,
   fenToYuan,
   type OrderView,
+  type ProductPublicView,
 } from "@app/contracts";
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { boosterApi } from "@/api/booster.api";
+import { commerceApi } from "@/api/commerce.api";
 import { orderApi } from "@/api/order.api";
 import AppIcon from "@/components/common/AppIcon.vue";
 import RemarkMediaGallery from "@/components/order/RemarkMediaGallery.vue";
@@ -24,6 +26,7 @@ const router = useRouter();
 const toast = useToast();
 
 const order = ref<OrderView | null>(null);
+const product = ref<ProductPublicView | null>(null);
 const loading = ref(true);
 const loadError = ref(false);
 const unavailable = ref(false);
@@ -69,6 +72,7 @@ async function loadOrder(): Promise<void> {
     order.value = await orderApi.hallDetail(route.params.id as string, {
       silent: true,
     });
+    void loadProduct(order.value.productId);
   } catch (error: unknown) {
     order.value = null;
     if (isHallOrderUnavailableError(error)) {
@@ -78,6 +82,15 @@ async function loadOrder(): Promise<void> {
     }
   } finally {
     loading.value = false;
+  }
+}
+
+/** 加载商品公开信息（副标语/分类）；商品下架或删除时静默降级不影响订单展示 */
+async function loadProduct(productId: string): Promise<void> {
+  try {
+    product.value = await commerceApi.getProduct(productId);
+  } catch {
+    product.value = null;
   }
 }
 
@@ -216,6 +229,21 @@ onMounted(() => {
             </div>
             <span class="status">{{ ORDER_STATUS_TEXT[order.status] }}</span>
           </div>
+          <p
+            v-if="product?.coverSub"
+            class="product-desc"
+          >
+            {{ product.coverSub }}
+          </p>
+          <dl
+            v-if="product?.categoryName"
+            class="rows rows--product"
+          >
+            <div class="row">
+              <dt>商品分类</dt>
+              <dd>{{ product.categoryName }}</dd>
+            </div>
+          </dl>
         </section>
 
         <section class="card block">
@@ -359,6 +387,19 @@ onMounted(() => {
 
 .sub--hint {
   color: var(--c-accent);
+}
+
+.product-desc {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--c-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rows--product {
+  margin-top: 10px;
 }
 
 .region-text {
