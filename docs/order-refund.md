@@ -13,7 +13,7 @@
 - 支付宝调用 `alipay.trade.refund`，微信调用支付 v3 国内退款接口；稳定业务 `refundNo` 与渠道尝试号分离，处理中查询当前尝试，查询暂未找到时使用同一渠道号幂等重发，只有渠道明确失败后的重试才使用新渠道号。
 - 每次外部渠道尝试独立保留操作者、渠道号、渠道返回 ID、状态、失败摘要和起止时间；退款主记录的首次审核人和审核时间不可被重试覆盖。
 - 退款成功后订单进入 `refunded`，商品销量与会员累计消费同步冲正，订单群标题更新为“已退款”。
-- C 端展示申请、审核、渠道处理、失败和驳回结果；管理端订单列表和详情提供审核入口。
+- C 端：列表卡片的申请入口只使用服务端 `canRequestRefund`；申请弹层原因必填，提交期间禁用关闭和重复提交，API 失败保留输入；详情沿用既有加载失败/重试；申请、审核与到账时间按浏览器本地时区展示。
 
 明确非目标：
 
@@ -55,8 +55,8 @@ apps/server/src/modules/wallet/
     └── wechat-pay.request.ts                    微信请求签名与响应验签
 
 apps/client/src/components/order/
-├── OrderRefundRequestDialog.vue                 退款申请弹层
-└── OrderRefundPanel.vue                         退款状态与结果
+├── OrderRefundRequestDialog.vue                 退款申请弹层（订单列表入口）
+└── OrderRefundPanel.vue                         退款状态与结果（订单详情展示）
 
 apps/web/src/components/order/OrderRefundActions.vue
 apps/web/src/composables/use-order-refund-review.ts
@@ -66,7 +66,7 @@ apps/web/src/composables/use-order-refund-review.ts
 
 ```mermaid
 flowchart LR
-  Client["C 端订单详情"] --> Request["申请退款用例"]
+  Client["C 端订单列表"] --> Request["申请退款用例"]
   Admin["管理端订单管理"] --> Review["审核退款用例"]
   Request --> Rules["退款领域规则"]
   Review --> Rules
@@ -241,7 +241,7 @@ stateDiagram-v2
 
 ## 前端状态
 
-- C 端：详情沿用既有加载失败/重试；申请弹层原因必填，提交期间禁用关闭和重复提交，API 失败保留输入；申请、审核与到账时间按浏览器本地时区展示。
+- C 端：申请退款入口在「我的订单」列表卡片（低调的下划线文字按钮，仅 `canRequestRefund` 为真时显示），点击打开申请弹层，提交成功后刷新列表；订单详情不再提供申请按钮，仅在已有退款记录时展示审核/渠道进度。弹层原因必填，提交期间禁用关闭和重复提交，API 失败保留输入；申请、审核与到账时间按浏览器本地时区展示。
 - 管理端：无权限时不渲染详情中的退款操作行，按钮仍由 `v-permission` 二次保护；单订单从确认/输入弹窗开始持有独立提交锁，取消弹窗不提交请求也不产生未处理拒绝。
 - `pending_review` 显示同意/驳回，`processing` 显示查询，`failed` 显示重试，终态只展示结果。
 - 订单菜单角标：所有有列表权限者看到 `pending_service`；只有具备退款审核权限者额外统计 `refund_reviewing`。

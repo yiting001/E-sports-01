@@ -22,6 +22,7 @@ const emit = defineEmits<{
   open: [order: OrderView];
   cancel: [order: OrderView];
   review: [order: OrderView];
+  refund: [order: OrderView];
 }>();
 
 function formatTime(iso: string): string {
@@ -109,6 +110,17 @@ function formatTime(iso: string): string {
         @click.stop="emit('review', order)"
       >
         评价
+      </button>
+    </div>
+    <div
+      v-if="order.canRequestRefund"
+      class="actions actions--refund"
+    >
+      <button
+        class="refund"
+        @click.stop="emit('refund', order)"
+      >
+        {{ order.refund ? "重新申请退款" : "申请退款" }}
       </button>
     </div>
   </article>
@@ -257,6 +269,20 @@ function formatTime(iso: string): string {
   padding: 6px 4px;
   font-size: 12px;
   color: var(--c-text-muted);
+}
+
+.actions--refund {
+  margin-top: 6px;
+}
+
+.refund {
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--c-text-muted);
+  background: transparent;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 @media (min-width: 768px) {

@@ -2,13 +2,14 @@
 /**
  * 我的订单页（全屏）：顶部状态 tabs 切换（全部/待付款/…），分页列出本人订单
  * （商品快照/数量/金额/状态），点击订单进入详情，待付款订单可取消，
- * 已完成订单可评价（一单一评）；到底加载更多。
+ * 已完成订单可评价（一单一评），可退款订单提供低调的申请退款入口；到底加载更多。
  */
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ORDER_STATUS_TEXT, OrderStatus, type OrderView } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
 import OrderCard from '@/components/order/OrderCard.vue';
+import OrderRefundRequestDialog from '@/components/order/OrderRefundRequestDialog.vue';
 import OrderStatusTabs from '@/components/order/OrderStatusTabs.vue';
 import ReviewDialog from '@/components/review/ReviewDialog.vue';
 import { orderApi } from '@/api/order.api';
@@ -28,6 +29,8 @@ const loading = ref(false);
 const reviewedIds = ref<Set<string>>(new Set());
 /** 当前正在评价的订单；非空时展示评价弹层 */
 const reviewingOrder = ref<OrderView | null>(null);
+/** 当前正在申请退款的订单；非空时展示退款申请弹层 */
+const refundingOrder = ref<OrderView | null>(null);
 /** 当前选中的状态 tab；undefined 为全部 */
 const activeStatus = ref<OrderStatus | undefined>(undefined);
 
@@ -103,6 +106,12 @@ async function cancel(order: OrderView): Promise<void> {
   await load(true);
 }
 
+/** 退款申请提交成功：关闭弹层并刷新列表展示退款状态 */
+async function onRefundSubmitted(): Promise<void> {
+  refundingOrder.value = null;
+  await load(true);
+}
+
 /** 评价提交成功：标记已评价并关闭弹层 */
 function onReviewed(): void {
   if (reviewingOrder.value) {
@@ -159,6 +168,7 @@ onMounted(() => void load(true));
           @open="openDetail"
           @cancel="cancel"
           @review="reviewingOrder = $event"
+          @refund="refundingOrder = $event"
         />
 
         <div
@@ -181,6 +191,13 @@ onMounted(() => void load(true));
       :order="reviewingOrder"
       @submitted="onReviewed"
       @close="reviewingOrder = null"
+    />
+
+    <OrderRefundRequestDialog
+      v-if="refundingOrder"
+      :order="refundingOrder"
+      @submitted="onRefundSubmitted"
+      @close="refundingOrder = null"
     />
   </div>
 </template>
