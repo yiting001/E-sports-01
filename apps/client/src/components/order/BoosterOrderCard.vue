@@ -9,6 +9,7 @@
  * - 接单大厅（未接单状态）：显示订单金额 + 预估佣金
  * - 订单中心（已接单/已完成）：显示订单金额 + 实际佣金
  */
+import { computed } from 'vue';
 import {
   BOOSTER_SERVICE_REGIONS,
   ORDER_STATUS_TEXT,
@@ -26,6 +27,8 @@ const props = defineProps<{
   actionDisabled?: boolean;
   /** 是否显示佣金；默认 true */
   showCommission?: boolean;
+  /** 订单未携带费率时的兼容预估费率（万分比，如打手自身等级费率） */
+  fallbackRateBp?: number;
 }>();
 
 const emit = defineEmits<{
@@ -58,7 +61,7 @@ function serviceRegionText(value: OrderView["serviceRegion"]): string {
   return label?.replace(/^三角洲\s*-\s*/, "") ?? value;
 }
 
-/** 佣金金额（元）：已结算取实际佣金，否则按费率预估；无法计算时为空 */
+/** 佣金金额（元）：已结算取实际佣金，否则按订单费率/兼容费率预估；无法计算时为空 */
 const commissionYuan = computed(() => {
   const showCommission = props.showCommission ?? true;
   if (!showCommission) return '';
@@ -67,9 +70,13 @@ const commissionYuan = computed(() => {
     return fenToYuan(props.order.commissionFen);
   }
 
-  if (props.order.commissionRateBp > 0) {
+  const rateBp =
+    props.order.commissionRateBp > 0
+      ? props.order.commissionRateBp
+      : (props.fallbackRateBp ?? 0);
+  if (rateBp > 0) {
     const estCommissionFen = Math.round(
-      (props.order.amountFen * props.order.commissionRateBp) / 10000
+      (props.order.amountFen * rateBp) / 10000
     );
     return fenToYuan(estCommissionFen);
   }
@@ -84,7 +91,6 @@ const commissionLabel = computed(() =>
 </script>
 
 <script lang="ts">
-import { computed } from 'vue';
 export default {
   inheritAttrs: false,
 };
@@ -142,7 +148,12 @@ export default {
         <span class="pay-label">订单金额</span>
         <span class="pay-amount">¥{{ order.amountYuan }}</span>
       </div>
-      <div class="pay-divider" />
+      <span class="pay-bolt">
+        <AppIcon
+          name="bolt"
+          :size="16"
+        />
+      </span>
       <div class="pay-cell pay-cell--right">
         <span class="pay-label">{{ commissionLabel }}</span>
         <span
@@ -158,11 +169,35 @@ export default {
 
     <dl class="info">
       <div class="info-row">
-        <dt>数量/大区</dt>
+        <dt>
+          <span class="info-icon"><AppIcon
+            name="box"
+            :size="13"
+          /></span>
+          数量/大区
+        </dt>
         <dd>{{ order.quantity }}件 · {{ serviceRegionText(order.serviceRegion) }}</dd>
       </div>
       <div class="info-row">
-        <dt>游戏ID</dt>
+        <dt>
+          <span class="info-icon"><AppIcon
+            name="user"
+            :size="13"
+          /></span>
+          游戏昵称
+        </dt>
+        <dd :class="order.gameTextId ? 'info-plain' : 'info-muted'">
+          {{ order.gameTextId || '接单后显示' }}
+        </dd>
+      </div>
+      <div class="info-row">
+        <dt>
+          <span class="info-icon"><AppIcon
+            name="gamepad"
+            :size="13"
+          /></span>
+          游戏ID
+        </dt>
         <dd :class="order.gameAccountId ? 'info-plain' : 'info-muted'">
           {{ order.gameAccountId || '接单后显示' }}
         </dd>
@@ -171,7 +206,13 @@ export default {
         v-if="order.accountInfo"
         class="info-row"
       >
-        <dt>账号</dt>
+        <dt>
+          <span class="info-icon"><AppIcon
+            name="card"
+            :size="13"
+          /></span>
+          账号
+        </dt>
         <dd class="info-plain">
           {{ order.accountInfo }}
         </dd>
@@ -180,7 +221,13 @@ export default {
         v-if="order.remark"
         class="info-row info-row--remark"
       >
-        <dt>备注</dt>
+        <dt>
+          <span class="info-icon"><AppIcon
+            name="chat"
+            :size="13"
+          /></span>
+          备注
+        </dt>
         <dd class="info-plain">
           {{ order.remark }}
         </dd>
@@ -201,6 +248,10 @@ export default {
         :disabled="actionDisabled"
         @click.stop="emit('action', order)"
       >
+        <AppIcon
+          name="bolt"
+          :size="14"
+        />
         {{ actionLabel }}
       </button>
     </div>
@@ -290,15 +341,11 @@ export default {
 .pay-banner {
   margin-top: 10px;
   display: flex;
-  align-items: stretch;
-  padding: 12px 14px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(
-    100deg,
-    color-mix(in srgb, var(--c-accent) 18%, var(--c-cover-bg)),
-    color-mix(in srgb, var(--c-neon) 14%, var(--c-cover-bg))
-  );
-  border: 1px solid var(--c-border);
+  align-items: center;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: linear-gradient(100deg, #2c2a72, #4a2f8f 55%, #7a2c6f);
+  border: 1px solid color-mix(in srgb, #7a5cff 40%, transparent);
 }
 
 .pay-cell {
@@ -314,55 +361,80 @@ export default {
   text-align: right;
 }
 
-.pay-divider {
-  width: 1px;
-  margin: 0 12px;
-  background: var(--c-border);
+.pay-bolt {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 10px;
+  border-radius: 50%;
+  color: #ffd257;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .pay-label {
   font-size: 11px;
-  color: var(--c-text-muted);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .pay-amount {
   font-family: var(--font-num);
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 800;
-  color: var(--c-text);
+  color: #fff;
 }
 
 .pay-commission {
   font-family: var(--font-num);
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 800;
-  color: var(--c-accent);
+  color: #ffd257;
 }
 
 .pay-commission--muted {
   font-size: 13px;
   font-weight: 700;
-  color: var(--c-text-muted);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .info {
   margin-top: 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .info-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--c-cover-bg) 60%, transparent);
   font-size: 12px;
 }
 
 .info-row dt {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--c-text-muted);
+}
+
+.info-icon {
+  display: inline-flex;
+  color: var(--c-accent);
+}
+
+.info-row--remark {
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+}
+
+.info-row--remark dt {
+  align-self: flex-start;
 }
 
 .info-row dd {
@@ -378,6 +450,10 @@ export default {
 .info-row--remark dd {
   white-space: normal;
   word-break: break-word;
+}
+
+.info-row--remark dd.info-plain {
+  color: color-mix(in srgb, var(--c-accent) 80%, var(--c-text));
 }
 
 .info-row dd.info-muted {
@@ -406,19 +482,16 @@ export default {
 }
 
 .action {
-  padding: 7px 20px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--c-bg);
-  background: var(--c-accent);
-  clip-path: polygon(
-    8px 0,
-    100% 0,
-    100% calc(100% - 8px),
-    calc(100% - 8px) 100%,
-    0 100%,
-    0 8px
-  );
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 26px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  border-radius: 999px;
+  background: linear-gradient(100deg, #ff7a3c, #f5317f);
+  box-shadow: 0 4px 14px rgba(245, 49, 127, 0.35);
 }
 
 .action:disabled {

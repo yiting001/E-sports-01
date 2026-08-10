@@ -48,6 +48,7 @@ const keyword = ref("");
 const serviceRegion = ref<RegionFilter>("");
 const acceptingOrderId = ref("");
 const acceptingOrders = ref(false);
+const boosterRateBp = ref(0);
 const availabilityLoading = ref(true);
 const availabilityError = ref(false);
 const availabilityUpdating = ref(false);
@@ -188,6 +189,7 @@ async function loadAvailability(): Promise<void> {
       return;
     }
     acceptingOrders.value = mine.record.acceptingOrders;
+    boosterRateBp.value = mine.record.commissionRateBp;
   } catch {
     availabilityError.value = true;
   } finally {
@@ -431,6 +433,7 @@ onBeforeUnmount(() => {
             : '已下线'
       "
       :action-disabled="!acceptingOrders || Boolean(acceptingOrderId)"
+      :fallback-rate-bp="boosterRateBp"
       @action="accept"
       @open="openDetail"
     />
