@@ -39,11 +39,14 @@ const realnameBlocked = computed(
   () => (mine.value?.requireRealname ?? false) && !(mine.value?.realnameApproved ?? false),
 );
 const readonlyForm = computed(() => createBoosterApplicationForm(mine.value?.record));
+const allowedRegionValues = computed(
+  () => mine.value?.serviceRegionOptions.map((option) => option.value) ?? [],
+);
 const canSubmit = computed(
   () =>
     !realnameBlocked.value &&
     !materialUploading.value &&
-    toBoosterSubmitPayload(form.value) !== null,
+    toBoosterSubmitPayload(form.value, allowedRegionValues.value) !== null,
 );
 
 async function load(): Promise<void> {
@@ -62,7 +65,7 @@ async function load(): Promise<void> {
 }
 
 async function submit(): Promise<void> {
-  const payload = toBoosterSubmitPayload(form.value);
+  const payload = toBoosterSubmitPayload(form.value, allowedRegionValues.value);
   if (!payload || !canSubmit.value || submitting.value) {
     return;
   }
@@ -195,6 +198,7 @@ onMounted(() => {
           v-model="form"
           class="application-form"
           :disabled="submitting"
+          :region-options="mine.serviceRegionOptions"
           @uploading-change="materialUploading = $event"
         />
 
@@ -202,6 +206,7 @@ onMounted(() => {
           v-else-if="showReadonly && mine.record"
           class="application-form"
           :model-value="readonlyForm"
+          :region-options="mine.serviceRegionOptions"
           readonly
         />
       </template>

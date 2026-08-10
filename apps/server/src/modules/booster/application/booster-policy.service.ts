@@ -3,10 +3,14 @@ import {
   BOOSTER_DEFAULTS,
   BOOSTER_LEVEL_DEFAULTS,
   BOOSTER_LEVEL_LIMITS,
+  BOOSTER_SERVICE_REGION_LIMITS,
+  BOOSTER_SERVICE_REGIONS,
   BoosterDepositPolicy,
   BoosterLevelTier,
+  BoosterServiceRegionOption,
   CONFIG_KEYS,
   FEE_RATE_BASE,
+  sanitizeBoosterServiceRegionOptions,
 } from '@app/contracts';
 import { ConfigService } from '../../config/application/config.service';
 
@@ -95,6 +99,67 @@ export class BoosterPolicyService {
   /** C 端入驻公告文本（由管理端配置中心维护，与主页公告独立） */
   getOnboardingNoticeText(): Promise<string> {
     return this.config.getString(CONFIG_KEYS.booster.onboardingNoticeText, '');
+  }
+
+  /** 接单区服选项（管理端打手管理可视化配置；未配置或配置非法时回退默认两个区服） */
+  async getServiceRegionOptions(): Promise<BoosterServiceRegionOption[]> {
+    const raw = await this.config.getJson<BoosterServiceRegionOption[]>(
+      CONFIG_KEYS.booster.serviceRegionOptions,
+      [...BOOSTER_SERVICE_REGIONS],
+    );
+    return sanitizeBoosterServiceRegionOptions(raw);
+  }
+
+  /** 保存接单区服选项（管理端），校验后写入配置中心 */
+  async setServiceRegionOptions(
+    options: BoosterServiceRegionOption[],
+  ): Promise<BoosterServiceRegionOption[]> {
+    const sanitized = options.map((option) => ({
+      value: option.value.trim(),
+      label: option.label.trim(),
+    }));
+    this.validateRegionOptions(sanitized);
+    await this.config.setJson(
+      CONFIG_KEYS.booster.serviceRegionOptions,
+      sanitized,
+    );
+    return sanitized;
+  }
+
+  /** 区服选项合法性校验：数量、值字符集与长度、名称必填、值唯一 */
+  private validateRegionOptions(options: BoosterServiceRegionOption[]): void {
+    if (
+      options.length === 0 ||
+      options.length > BOOSTER_SERVICE_REGION_LIMITS.optionsMax
+    ) {
+      throw new BadRequestException(
+        `区服选项数量须在 1~${BOOSTER_SERVICE_REGION_LIMITS.optionsMax} 之间`,
+      );
+    }
+    const seen = new Set<string>();
+    for (const option of options) {
+      if (
+        !option.value ||
+        option.value.length > BOOSTER_SERVICE_REGION_LIMITS.valueMax ||
+        !BOOSTER_SERVICE_REGION_LIMITS.valuePattern.test(option.value)
+      ) {
+        throw new BadRequestException(
+          '区服值仅允许小写字母/数字/短横线且不能为空',
+        );
+      }
+      if (
+        !option.label ||
+        option.label.length > BOOSTER_SERVICE_REGION_LIMITS.labelMax
+      ) {
+        throw new BadRequestException(
+          `区服名称必填且不超过 ${BOOSTER_SERVICE_REGION_LIMITS.labelMax} 字`,
+        );
+      }
+      if (seen.has(option.value)) {
+        throw new BadRequestException(`区服值重复：${option.value}`);
+      }
+      seen.add(option.value);
+    }
   }
 
   /** 档位合法性校验：非空、数量上限、名称必填、费率与门槛范围 */

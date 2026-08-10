@@ -6,6 +6,7 @@ import {
   BoosterContactType,
   BoosterGender,
   type BoosterServiceRegion,
+  type BoosterServiceRegionOption,
 } from '@app/contracts';
 import BoosterMaterialUploader from './BoosterMaterialUploader.vue';
 import type { BoosterApplicationFormModel } from './booster-application-form';
@@ -15,8 +16,10 @@ const props = withDefaults(
     modelValue: BoosterApplicationFormModel;
     disabled?: boolean;
     readonly?: boolean;
+    /** 接单区服选项（后台可配）；未传时回退契约默认两个区服 */
+    regionOptions?: readonly BoosterServiceRegionOption[];
   }>(),
-  { disabled: false, readonly: false },
+  { disabled: false, readonly: false, regionOptions: () => BOOSTER_SERVICE_REGIONS },
 );
 
 const emit = defineEmits<{
@@ -89,7 +92,7 @@ const contactLabel = computed(
 );
 const regionLabels = computed(() =>
   props.modelValue.serviceRegions.map(
-    (value) => BOOSTER_SERVICE_REGIONS.find((item) => item.value === value)?.label ?? value,
+    (value) => props.regionOptions.find((item) => item.value === value)?.label ?? value,
   ),
 );
 
@@ -243,7 +246,7 @@ function selectContactType(value: BoosterContactType): void {
         <span class="field-hint">至少选择一项</span>
         <div class="segments segments--regions">
           <button
-            v-for="item in BOOSTER_SERVICE_REGIONS"
+            v-for="item in regionOptions"
             :key="item.value"
             type="button"
             class="segment"

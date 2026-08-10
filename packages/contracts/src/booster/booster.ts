@@ -56,17 +56,77 @@ export const BOOSTER_SERVICE_REGION = {
   Pc: "delta-pc",
 } as const;
 
-export type BoosterServiceRegion =
-  (typeof BOOSTER_SERVICE_REGION)[keyof typeof BOOSTER_SERVICE_REGION];
+export type BoosterServiceRegion = string;
 
-/** 当前开放的接单区服，标签和值由前后端共享，避免展示与校验漂移 */
-export const BOOSTER_SERVICE_REGIONS = [
+/** 接单区服选项（管理端打手管理可视化配置，存配置中心 booster.serviceRegionOptions） */
+export interface BoosterServiceRegionOption {
+  /** 区服语义值（小写字母/数字/短横线），入驻申请与校验使用 */
+  value: string;
+  /** 展示名称 */
+  label: string;
+}
+
+/** 区服选项配置约束 */
+export const BOOSTER_SERVICE_REGION_LIMITS = {
+  optionsMax: 20,
+  valueMax: 64,
+  labelMax: 32,
+  /** 区服值字符集：小写字母/数字/短横线 */
+  valuePattern: /^[a-z0-9][a-z0-9-]*$/,
+} as const;
+
+/** 默认开放的接单区服（未配置时回退），标签和值由前后端共享，避免展示与校验漂移 */
+export const BOOSTER_SERVICE_REGIONS: readonly BoosterServiceRegionOption[] = [
   { value: BOOSTER_SERVICE_REGION.Mobile, label: "三角洲 - 手机端" },
   { value: BOOSTER_SERVICE_REGION.Pc, label: "三角洲 - 电脑端" },
-] as const;
+];
 
 export const BOOSTER_SERVICE_REGION_VALUES: readonly BoosterServiceRegion[] =
   BOOSTER_SERVICE_REGIONS.map((item) => item.value);
+
+/**
+ * 清洗区服选项配置：去首尾空白、丢弃非法项、按值去重；
+ * 清洗后为空时回退默认两个区服，保证入驻表单始终有可选项。
+ */
+export function sanitizeBoosterServiceRegionOptions(
+  raw: unknown
+): BoosterServiceRegionOption[] {
+  if (!Array.isArray(raw)) {
+    return [...BOOSTER_SERVICE_REGIONS];
+  }
+  const seen = new Set<string>();
+  const options: BoosterServiceRegionOption[] = [];
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) {
+      continue;
+    }
+    const candidate = item as { value?: unknown; label?: unknown };
+    if (
+      typeof candidate.value !== "string" ||
+      typeof candidate.label !== "string"
+    ) {
+      continue;
+    }
+    const value = candidate.value.trim();
+    const label = candidate.label.trim();
+    if (
+      !value ||
+      !label ||
+      value.length > BOOSTER_SERVICE_REGION_LIMITS.valueMax ||
+      label.length > BOOSTER_SERVICE_REGION_LIMITS.labelMax ||
+      !BOOSTER_SERVICE_REGION_LIMITS.valuePattern.test(value) ||
+      seen.has(value)
+    ) {
+      continue;
+    }
+    seen.add(value);
+    options.push({ value, label });
+    if (options.length >= BOOSTER_SERVICE_REGION_LIMITS.optionsMax) {
+      break;
+    }
+  }
+  return options.length > 0 ? options : [...BOOSTER_SERVICE_REGIONS];
+}
 
 /** 对外打手显示名：优先昵称，缺失时使用不含登录用户名的稳定 ID 后缀。 */
 export function formatBoosterDisplayName(
@@ -227,6 +287,8 @@ export interface BoosterMineView {
   onboardingNoticeImage: string;
   /** 配置中心维护的入驻公告文本（换行分行展示）；未配置为空串 */
   onboardingNoticeText: string;
+  /** 当前开放的接单区服选项（管理端打手管理可配） */
+  serviceRegionOptions: BoosterServiceRegionOption[];
 }
 
 /** 打手「我的资金」只读聚合视图（金额均为分，展示由前端 fenToYuan 换算） */

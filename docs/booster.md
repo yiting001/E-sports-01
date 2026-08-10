@@ -7,6 +7,7 @@ C 端登录用户在个人中心提交完整打手入驻资料，管理员在管
 本次已实现：
 
 - **完整申请 / 驳回重提**：姓名、性别、接单区服、自我介绍、联系方式类型与内容为必填；其他材料图片、邀请码选填。驳回后保留原资料供修改并覆盖重提。
+- **接单区服可视化配置**：区服选项（值 + 名称）存配置 `booster.serviceRegionOptions`，由管理端「打手管理 → 区服配置」抽屉增删改（平台超管 + `booster:region:set`，不在配置中心页面维护）；未配置时回退默认 `delta-mobile`/`delta-pc`。C 端入驻表单选项随 `GET /booster/mine` 下发，提交与管理端编辑均按当前配置校验；删除选项不影响历史申请已保存的区服。
 - **公告图片配置**：平台配置 `booster.onboardingNoticeImage` 为 `image` 类型；管理端在「配置中心 → 打手」上传或清空，C 端不写死图片地址。
 - **公告文本配置**：平台配置 `booster.onboardingNoticeText` 为 `string` 类型（换行分行展示），与主页公告完全独立；随 `GET /booster/mine` 与公告图一并下发，C 端入驻页公告卡片展示，未配置时不展示。
 - **打手「我的资金」**：`GET /booster/funds/mine`（仅登录）只读聚合本人保证金（已缴押金）、钱包可用余额、冻结金额（待审核/转账中提现合计）、累计/本月/上月结算（提成入账流水求和）与已交罚款（罚款记录合计）；未入驻或未开通钱包按零值返回，C 端「我的」页打手身份下展示资金面板。
@@ -196,7 +197,7 @@ flowchart TB
 | `tenantId` + `userId`                                  | varchar(36) + varchar(36)      | 联合唯一                                     | 租户内每位用户一条申请                                     |
 | `applicantName`                                        | `applicant_name` varchar(64)   | 1 ～ 64                                      | 申请人姓名                                                 |
 | `gender`                                               | varchar(16)                    | `male` / `female`                            | 性别                                                       |
-| `serviceRegions`                                       | `service_regions` jsonb        | 1 ～ 2 项、去重                              | `delta-mobile`（三角洲手机端）、`delta-pc`（三角洲电脑端） |
+| `serviceRegions`                                       | `service_regions` jsonb        | ≥ 1 项、去重、须属于当前配置的区服选项        | 默认 `delta-mobile`（三角洲手机端）、`delta-pc`（三角洲电脑端），管理端可配 |
 | `intro`                                                | varchar(500)                   | 3 ～ 500                                     | 自我介绍、经验和可服务时间                                 |
 | `contactType`                                          | `contact_type` varchar(16)     | `phone` / `wechat` / `qq`                    | 联系方式类型                                               |
 | `contactValue`                                         | `contact_value` varchar(128)   | 1 ～ 128                                     | 手机号、微信号或 QQ 号；当前只校验长度                     |
@@ -210,7 +211,7 @@ flowchart TB
 | `acceptingOrders`                                      | `accepting_orders` boolean     | 默认 `false`                                 | 打手本人维护；下线时不可选择、指派或接单                   |
 | `legacyGameNickname` / `legacyGameName` / `legacyRank` | 旧三列                         | 仅兼容                                       | 不进入 `BoosterView`                                       |
 
-数据库 Check Constraint 限制 `gender`、`contact_type` 的枚举或历史空值，并确保 `service_regions` 是只包含开放区服且最多两项的 JSON 数组；至少选择一项和区服去重由接口 DTO 继续校验。
+数据库 Check Constraint 限制 `gender`、`contact_type` 的枚举或历史空值，并确保 `service_regions` 是 JSON 数组（migration `1786000000000` 起不再固定枚举两个区服值）；至少选择一项、去重由接口 DTO 校验，区服值是否开放由应用层按 `booster.serviceRegionOptions` 配置校验。
 
 ```mermaid
 erDiagram
@@ -297,7 +298,7 @@ pnpm --filter @app/server migration:revert
 
 | 方法   | 路径                              | 权限                         | 说明                                                                                               |
 | ------ | --------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
-| GET    | `/api/booster/mine`               | 登录                         | 返回 `{ status, record, requireRealname, realnameApproved, depositPolicy, onboardingNoticeImage, onboardingNoticeText }` |
+| GET    | `/api/booster/mine`               | 登录                         | 返回 `{ status, record, requireRealname, realnameApproved, depositPolicy, onboardingNoticeImage, onboardingNoticeText, serviceRegionOptions }` |
 | GET    | `/api/booster/funds/mine`         | 登录                         | 打手「我的资金」只读聚合 `BoosterFundsView`（押金/余额/冻结/累计与月度结算/已交罚款，金额均为分） |
 | PUT    | `/api/booster/mine/availability`  | 登录且本人已审核通过         | `{ acceptingOrders: boolean }`，幂等切换上线/下线并返回 `BoosterView`                              |
 | POST   | `/api/booster`                    | 登录                         | 首次提交或驳回重提完整资料                                                                         |
@@ -312,6 +313,8 @@ pnpm --filter @app/server migration:revert
 | DELETE | `/api/booster/:id/voice`          | `booster:update`             | 管理端清空语音 URL                                                                                 |
 | GET    | `/api/booster/levels`             | 登录                         | 获取等级档位                                                                                       |
 | PUT    | `/api/booster/levels`             | 平台超管 + `booster:level:set`          | 保存全局 `{ tiers }`                                                                    |
+| GET    | `/api/booster/regions`            | 登录                         | 获取接单区服选项 `[{ value, label }]`（未配置回退默认两个区服）                                 |
+| PUT    | `/api/booster/regions`            | 平台超管 + `booster:region:set`          | 保存全局 `{ options: [{ value, label }] }`，1～20 项、值唯一且仅小写字母/数字/短横线 |
 | GET    | `/api/booster/deposit/policy`     | 登录                         | 获取最低 / 最高押金                                                                                |
 | PUT    | `/api/booster/deposit/policy`     | 平台超管 + `booster:deposit:policy:set` | 保存全局 `{ minFen, maxFen }`                                                             |
 | POST   | `/api/booster/deposit/pay`        | 登录                         | 已入驻用户从钱包缴纳 `{ amountFen }`                                                               |

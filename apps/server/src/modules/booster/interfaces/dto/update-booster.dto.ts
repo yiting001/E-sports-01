@@ -4,7 +4,6 @@ import {
   ArrayUnique,
   IsArray,
   IsEnum,
-  IsIn,
   IsString,
   Length,
   Matches,
@@ -14,7 +13,7 @@ import {
 import { Transform } from 'class-transformer';
 import {
   BOOSTER_LIMITS,
-  BOOSTER_SERVICE_REGION_VALUES,
+  BOOSTER_SERVICE_REGION_LIMITS,
   BoosterContactType,
   BoosterGender,
   BoosterServiceRegion,
@@ -37,9 +36,10 @@ export class UpdateBoosterDto implements UpdateBoosterPayload {
   @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(BOOSTER_LIMITS.serviceRegionsMax)
+  @ArrayMaxSize(BOOSTER_SERVICE_REGION_LIMITS.optionsMax)
   @ArrayUnique()
-  @IsIn(BOOSTER_SERVICE_REGION_VALUES, { each: true })
+  @IsString({ each: true })
+  @Length(1, BOOSTER_SERVICE_REGION_LIMITS.valueMax, { each: true })
   serviceRegions?: BoosterServiceRegion[];
 
   @ValidateIf((_object, value: unknown) => value !== undefined)

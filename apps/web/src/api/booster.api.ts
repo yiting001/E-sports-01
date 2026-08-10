@@ -1,6 +1,7 @@
 import type {
   BoosterDepositPolicy,
   BoosterLevelTier,
+  BoosterServiceRegionOption,
   BoosterStatus,
   BoosterView,
   PaginatedResult,
@@ -63,5 +64,15 @@ export const boosterApi = {
   /** 退还押金（booster:deposit:refund，全额退回打手钱包余额） */
   refundDeposit(id: string): Promise<BoosterView> {
     return http.post(`/booster/${id}/deposit/refund`);
+  },
+  /** 查询接单区服选项 */
+  getRegions(): Promise<BoosterServiceRegionOption[]> {
+    return http.get("/booster/regions");
+  },
+  /** 保存接单区服选项（booster:region:set） */
+  setRegions(
+    options: BoosterServiceRegionOption[]
+  ): Promise<BoosterServiceRegionOption[]> {
+    return http.put("/booster/regions", { options });
   },
 };

@@ -1,4 +1,10 @@
-import { ConflictException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { BoosterStatus, BoosterView, SubmitBoosterPayload } from '@app/contracts';
 import { UserDirectory } from '../../../rbac/application/user-directory.service';
 import { RealnameChecker } from '../../../realname/application/realname-checker.service';
@@ -28,6 +34,15 @@ export class SubmitBoosterUseCase {
       if (!approved) {
         throw new ForbiddenException('请先完成实名认证后再提交入驻申请');
       }
+    }
+    const allowedRegions = new Set(
+      (await this.policy.getServiceRegionOptions()).map((option) => option.value),
+    );
+    const invalidRegion = payload.serviceRegions.find(
+      (region) => !allowedRegions.has(region),
+    );
+    if (invalidRegion !== undefined) {
+      throw new BadRequestException(`接单区服不在当前开放范围内：${invalidRegion}`);
     }
     const existing = await this.repo.findByUserId(userId);
     if (existing?.status === BoosterStatus.Approved) {
