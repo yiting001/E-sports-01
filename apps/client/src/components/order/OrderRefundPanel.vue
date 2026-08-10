@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** 订单详情中的退款申请入口与审核/渠道进度。 */
+/** 订单详情中的退款审核/渠道进度；申请入口在订单列表。 */
 import { computed } from "vue";
 import {
   ORDER_PAYMENT_METHOD_TEXT,
@@ -13,8 +13,6 @@ const props = defineProps<{
   formatTime: (value: string) => string;
 }>();
 
-const emit = defineEmits<{ request: [] }>();
-
 const refundTone = computed(() =>
   props.order.refund
     ? orderRefundStatusTone(props.order.refund.status)
@@ -24,7 +22,7 @@ const refundTone = computed(() =>
 
 <template>
   <section
-    v-if="order.refund || order.canRequestRefund"
+    v-if="order.refund"
     class="card refund-panel"
   >
     <header class="refund-head">
@@ -37,10 +35,7 @@ const refundTone = computed(() =>
       </span>
     </header>
 
-    <dl
-      v-if="order.refund"
-      class="refund-rows"
-    >
+    <dl class="refund-rows">
       <div>
         <dt>退款金额</dt>
         <dd>¥{{ order.refund.amountYuan }}</dd>
@@ -80,22 +75,6 @@ const refundTone = computed(() =>
         <dd>{{ formatTime(order.refund.refundedAt) }}</dd>
       </div>
     </dl>
-
-    <p
-      v-else
-      class="refund-available"
-    >
-      当前订单可申请全额原路退款。
-    </p>
-
-    <button
-      v-if="order.canRequestRefund"
-      type="button"
-      class="refund-request"
-      @click="emit('request')"
-    >
-      {{ order.refund ? "重新申请退款" : "申请退款" }}
-    </button>
   </section>
 </template>
 
@@ -174,22 +153,5 @@ const refundTone = computed(() =>
 
 .refund-row--danger dd {
   color: var(--c-danger, #ff5a5a);
-}
-
-.refund-available {
-  margin-top: 10px;
-  font-size: 12px;
-  color: var(--c-text-secondary);
-}
-
-.refund-request {
-  width: 100%;
-  min-height: 38px;
-  margin-top: 12px;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--c-bg);
-  border-radius: var(--radius-sm);
-  background: var(--c-accent);
 }
 </style>
