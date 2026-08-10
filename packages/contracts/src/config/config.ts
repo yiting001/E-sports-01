@@ -243,6 +243,8 @@ export const CONFIG_KEYS = {
     onboardingNoticeImage: 'booster.onboardingNoticeImage',
     /** C 端打手入驻页公告文本（换行分行展示，与主页公告独立） */
     onboardingNoticeText: 'booster.onboardingNoticeText',
+    /** 接单区服选项（JSON 数组：value/label），由管理端打手管理页可视化维护 */
+    serviceRegionOptions: 'booster.serviceRegionOptions',
   },
   member: {
     /** 会员等级档位（JSON 数组：等级/名称/累计消费门槛/折扣万分比） */

@@ -1,5 +1,6 @@
 import {
   BOOSTER_LIMITS,
+  BOOSTER_SERVICE_REGION_LIMITS,
   BOOSTER_SERVICE_REGION_VALUES,
   type BoosterContactType,
   type BoosterGender,
@@ -33,7 +34,8 @@ export function createBoosterApplicationForm(
 
 /** 校验并构造提交载荷，避免用类型断言绕过未选择的单选项。 */
 export function toBoosterSubmitPayload(
-  model: BoosterApplicationFormModel
+  model: BoosterApplicationFormModel,
+  allowedRegionValues: readonly string[] = BOOSTER_SERVICE_REGION_VALUES
 ): SubmitBoosterPayload | null {
   const applicantName = model.applicantName.trim();
   const intro = model.intro.trim();
@@ -43,7 +45,7 @@ export function toBoosterSubmitPayload(
   const regionsAreUnique =
     new Set(model.serviceRegions).size === model.serviceRegions.length;
   const regionsAreSupported = model.serviceRegions.every((value) =>
-    BOOSTER_SERVICE_REGION_VALUES.includes(value)
+    allowedRegionValues.includes(value)
   );
 
   if (
@@ -51,7 +53,7 @@ export function toBoosterSubmitPayload(
     applicantName.length > BOOSTER_LIMITS.applicantNameMax ||
     !model.gender ||
     model.serviceRegions.length === 0 ||
-    model.serviceRegions.length > BOOSTER_LIMITS.serviceRegionsMax ||
+    model.serviceRegions.length > BOOSTER_SERVICE_REGION_LIMITS.optionsMax ||
     !regionsAreUnique ||
     !regionsAreSupported ||
     intro.length < BOOSTER_LIMITS.introMin ||

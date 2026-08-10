@@ -1,4 +1,9 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { BoosterView, UpdateBoosterPayload } from '@app/contracts';
 import { UserDirectory } from '../../../rbac/application/user-directory.service';
 import { BOOSTER_REPOSITORY, BoosterRepository } from '../../domain/booster-repository.interface';
@@ -29,6 +34,19 @@ export class UpdateBoosterUseCase {
       record.gender = payload.gender;
     }
     if (payload.serviceRegions !== undefined) {
+      const allowedRegions = new Set(
+        (await this.policy.getServiceRegionOptions()).map(
+          (option) => option.value,
+        ),
+      );
+      const invalidRegion = payload.serviceRegions.find(
+        (region) => !allowedRegions.has(region),
+      );
+      if (invalidRegion !== undefined) {
+        throw new BadRequestException(
+          `接单区服不在当前开放范围内：${invalidRegion}`,
+        );
+      }
       record.serviceRegions = [...payload.serviceRegions];
       record.legacyGameName = toLegacyGameName(record.serviceRegions);
     }

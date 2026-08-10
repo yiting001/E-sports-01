@@ -3,8 +3,8 @@
  * 打手管理页（菜单 booster:menu）。
  * 分页展示入驻申请（可按状态过滤），支持审核通过（自动授予 booster 角色）/
  * 驳回（填写理由），以及对申请资料、联系方式和材料图片的编辑维护；
- * 另支持等级档位配置（booster:level:set）、押金交付配置（booster:deposit:policy:set）
- * 与押金退还（booster:deposit:refund）。
+ * 另支持等级档位配置（booster:level:set）、押金交付配置（booster:deposit:policy:set）、
+ * 接单区服配置（booster:region:set）与押金退还（booster:deposit:refund）。
  */
 import { onMounted, ref } from "vue";
 import {
@@ -20,6 +20,7 @@ import {
   Close,
   Coin,
   EditPen,
+  LocationInformation,
   Refresh,
   RefreshLeft,
   Search,
@@ -35,6 +36,7 @@ import { boosterApi } from "@/api/booster.api";
 import { MENU_BADGE_CODES, useMenuBadgeStore } from "@/stores/menu-badge.store";
 import BoosterLevelDialog from "./BoosterLevelDialog.vue";
 import BoosterDepositPolicyDialog from "./BoosterDepositPolicyDialog.vue";
+import BoosterRegionDialog from "./BoosterRegionDialog.vue";
 import BoosterProfileEditDrawer from "./BoosterProfileEditDrawer.vue";
 import {
   contactTypeLabel,
@@ -151,6 +153,7 @@ async function reject(row: BoosterView): Promise<void> {
 
 const levelDialogVisible = ref(false);
 const depositPolicyVisible = ref(false);
+const regionDialogVisible = ref(false);
 
 async function refundDeposit(row: BoosterView): Promise<void> {
   await ElMessageBox.confirm(
@@ -205,6 +208,13 @@ onMounted(() => {
             @click="depositPolicyVisible = true"
           >
             押金配置
+          </el-button>
+          <el-button
+            v-permission="PERMS.booster.regionSet"
+            :icon="LocationInformation"
+            @click="regionDialogVisible = true"
+          >
+            区服配置
           </el-button>
           <el-button
             :icon="Refresh"
@@ -451,6 +461,7 @@ onMounted(() => {
 
     <booster-level-dialog v-model="levelDialogVisible" />
     <booster-deposit-policy-dialog v-model="depositPolicyVisible" />
+    <booster-region-dialog v-model="regionDialogVisible" />
     <penalty-create-drawer
       v-model="penaltyVisible"
       :booster-user-id="penaltyTarget?.userId"

@@ -98,6 +98,7 @@ stateDiagram-v2
 | 1785600000000 | `AddConversationMemberTag1785600000000` | `sys_conversation_member.tag` 新增为 `varchar(16) NOT NULL DEFAULT ''`，历史成员回填空标签 | 删除列并永久丢失已有身份标签 |
 | 1785700000000 | `AddWithdrawalIdCard1785700000000`      | `wallet_withdrawal_order.idCardNo` 新增为可空 `varchar(18)`，历史提现单保持 `NULL`         | 删除列并永久丢失身份证号     |
 | 1785800000000 | `AddThemeEffectSetting1785800000000`    | 新建 `theme_effect_setting` 与租户索引，历史租户默认无特效配置                             | 删除表并永久丢失主题配置     |
+| 1786000000000 | `RelaxBoosterServiceRegionsCheck1786000000000` | `booster_application.service_regions` 的 Check 放宽为仅校验 JSON 数组，区服值改由应用层按 `booster.serviceRegionOptions` 配置校验 | 恢复固定两区服 Check；若已保存新增区服值的申请，回滚会因约束冲突失败，需先清理数据 |
 
 三项结构均进入单文件 bundle 的静态清单和 baseline audit。history 尚未记录时，目标字段或表缺失
 表示可由 pending migration 正常创建；结构已存在但 history 未记录则审计失败，必须人工确认来源，

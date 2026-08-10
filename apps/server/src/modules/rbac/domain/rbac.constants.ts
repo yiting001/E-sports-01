@@ -50,6 +50,7 @@ export const PLATFORM_ONLY_PERMISSION_CODES = [
   PERMS.member.levelSet,
   PERMS.booster.levelSet,
   PERMS.booster.depositPolicySet,
+  PERMS.booster.regionSet,
   PERMS.realname.policy,
   PERMS.invite.configSet,
 ] as const;

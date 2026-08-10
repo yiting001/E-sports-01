@@ -7,6 +7,7 @@ import {
   BoosterContactType,
   BoosterGender,
   type BoosterServiceRegion,
+  type BoosterServiceRegionOption,
   type BoosterView,
   type UpdateBoosterPayload,
 } from "@app/contracts";
@@ -47,6 +48,17 @@ const emit = defineEmits<{
 const saving = ref(false);
 const voiceUploading = ref(false);
 const form = reactive<EditForm>(emptyForm());
+const regionOptions = ref<BoosterServiceRegionOption[]>([
+  ...BOOSTER_SERVICE_REGIONS,
+]);
+
+async function loadRegionOptions(): Promise<void> {
+  try {
+    regionOptions.value = await boosterApi.getRegions();
+  } catch {
+    regionOptions.value = [...BOOSTER_SERVICE_REGIONS];
+  }
+}
 
 watch(
   [() => props.modelValue, () => props.booster],
@@ -54,6 +66,7 @@ watch(
     if (!visible || !booster) {
       return;
     }
+    void loadRegionOptions();
     Object.assign(form, {
       applicantName: booster.applicantName,
       gender: booster.gender,
@@ -141,13 +154,8 @@ function validate(): boolean {
     ElMessage.warning("请选择性别");
     return false;
   }
-  if (
-    form.serviceRegions.length === 0 ||
-    form.serviceRegions.length > BOOSTER_LIMITS.serviceRegionsMax
-  ) {
-    ElMessage.warning(
-      `接单区服须选择 1~${BOOSTER_LIMITS.serviceRegionsMax} 项`
-    );
+  if (form.serviceRegions.length === 0) {
+    ElMessage.warning("接单区服至少选择 1 项");
     return false;
   }
   const introLength = form.intro.trim().length;
@@ -236,12 +244,9 @@ async function save(): Promise<void> {
         label="接单区服"
         required
       >
-        <el-checkbox-group
-          v-model="form.serviceRegions"
-          :max="BOOSTER_LIMITS.serviceRegionsMax"
-        >
+        <el-checkbox-group v-model="form.serviceRegions">
           <el-checkbox
-            v-for="region in BOOSTER_SERVICE_REGIONS"
+            v-for="region in regionOptions"
             :key="region.value"
             :value="region.value"
           >

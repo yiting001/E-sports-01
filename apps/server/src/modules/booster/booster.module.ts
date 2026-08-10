@@ -37,6 +37,8 @@ import { ReviewBoosterUseCase } from './application/use-cases/review-booster.use
 import { UpdateBoosterUseCase } from './application/use-cases/update-booster.usecase';
 import { GetBoosterLevelsUseCase } from './application/use-cases/get-booster-levels.usecase';
 import { SetBoosterLevelsUseCase } from './application/use-cases/set-booster-levels.usecase';
+import { GetBoosterRegionsUseCase } from './application/use-cases/get-booster-regions.usecase';
+import { SetBoosterRegionsUseCase } from './application/use-cases/set-booster-regions.usecase';
 import { PayDepositUseCase } from './application/use-cases/pay-deposit.usecase';
 import { GetDepositPolicyUseCase } from './application/use-cases/get-deposit-policy.usecase';
 import { SetDepositPolicyUseCase } from './application/use-cases/set-deposit-policy.usecase';
@@ -56,6 +58,8 @@ import { BoosterReviewController } from './interfaces/controllers/booster.review
 import { BoosterUpdateController } from './interfaces/controllers/booster.update.controller';
 import { BoosterLevelsGetController } from './interfaces/controllers/booster.levels.get.controller';
 import { BoosterLevelsSetController } from './interfaces/controllers/booster.levels.set.controller';
+import { BoosterRegionsGetController } from './interfaces/controllers/booster.regions.get.controller';
+import { BoosterRegionsSetController } from './interfaces/controllers/booster.regions.set.controller';
 import { BoosterDepositPayController } from './interfaces/controllers/booster.deposit.pay.controller';
 import { BoosterDepositPolicyGetController } from './interfaces/controllers/booster.deposit.policy.get.controller';
 import { BoosterDepositPolicySetController } from './interfaces/controllers/booster.deposit.policy.set.controller';
@@ -99,6 +103,8 @@ import { BoosterMineAvailabilityController } from './interfaces/controllers/boos
     BoosterVoiceRemoveController,
     BoosterLevelsGetController,
     BoosterLevelsSetController,
+    BoosterRegionsGetController,
+    BoosterRegionsSetController,
     BoosterDepositPayController,
     BoosterDepositPolicyGetController,
     BoosterDepositPolicySetController,
@@ -142,6 +148,8 @@ import { BoosterMineAvailabilityController } from './interfaces/controllers/boos
     UpdateBoosterUseCase,
     GetBoosterLevelsUseCase,
     SetBoosterLevelsUseCase,
+    GetBoosterRegionsUseCase,
+    SetBoosterRegionsUseCase,
     PayDepositUseCase,
     GetDepositPolicyUseCase,
     SetDepositPolicyUseCase,

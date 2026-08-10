@@ -205,7 +205,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| GET | `/api/booster/mine` | 登录 | 本人概览 `{ status, record, requireRealname, realnameApproved, depositPolicy, onboardingNoticeImage, onboardingNoticeText }` |
+| GET | `/api/booster/mine` | 登录 | 本人概览 `{ status, record, requireRealname, realnameApproved, depositPolicy, onboardingNoticeImage, onboardingNoticeText, serviceRegionOptions }` |
 | GET | `/api/booster/funds/mine` | 登录 | 打手「我的资金」只读聚合（押金/余额/冻结/累计与月度结算/已交罚款，金额均为分） |
 | PUT | `/api/booster/mine/availability` | 登录且本人已审核通过 | `{ acceptingOrders: boolean }`；幂等切换上线/下线并返回 `BoosterView` |
 | POST | `/api/booster` | 登录 | 首次提交或驳回重提完整资料；待审核 / 已通过时重复提交返回 409 |
@@ -220,6 +220,8 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | DELETE | `/api/booster/:id/voice` | `booster:update` | 管理端清空指定打手试听语音 |
 | GET | `/api/booster/levels` | 登录 | 等级档位列表 |
 | PUT | `/api/booster/levels` | 平台超管 + `booster:level:set` | 保存全局等级档位 `{ tiers }` |
+| GET | `/api/booster/regions` | 登录 | 接单区服选项 `[{ value, label }]` |
+| PUT | `/api/booster/regions` | 平台超管 + `booster:region:set` | 保存全局区服选项 `{ options }` |
 | GET | `/api/booster/deposit/policy` | 登录 | 押金策略 `{ minFen, maxFen }` |
 | PUT | `/api/booster/deposit/policy` | 平台超管 + `booster:deposit:policy:set` | 保存全局押金策略 `{ minFen, maxFen }` |
 | POST | `/api/booster/deposit/pay` | 登录 | 已入驻打手从钱包缴纳 `{ amountFen }` |

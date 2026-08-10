@@ -23,9 +23,7 @@ import { bigintTransformer } from '../../../shared/database/numeric.transformer'
 @Check('CHK_booster_application_contact_type', `"contact_type" IN ('', 'phone', 'wechat', 'qq')`)
 @Check(
   'CHK_booster_application_service_regions_array',
-  `jsonb_typeof("service_regions") = 'array'
-    AND jsonb_array_length("service_regions") <= 2
-    AND "service_regions" <@ '["delta-mobile", "delta-pc"]'::jsonb`,
+  `jsonb_typeof("service_regions") = 'array'`,
 )
 export class BoosterApplicationEntity extends TenantScopedEntity {
   /** 归属用户 */

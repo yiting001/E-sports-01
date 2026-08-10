@@ -32,6 +32,7 @@ export class GetMyBoosterUseCase {
       depositPolicy,
       onboardingNoticeImage,
       onboardingNoticeText,
+      serviceRegionOptions,
     ] =
       await Promise.all([
         this.repo.findByUserId(userId),
@@ -40,6 +41,7 @@ export class GetMyBoosterUseCase {
         this.policy.getDepositPolicy(),
         this.policy.getOnboardingNoticeImage(),
         this.policy.getOnboardingNoticeText(),
+        this.policy.getServiceRegionOptions(),
       ]);
     if (!record) {
       return {
@@ -50,6 +52,7 @@ export class GetMyBoosterUseCase {
         depositPolicy,
         onboardingNoticeImage,
         onboardingNoticeText,
+        serviceRegionOptions,
       };
     }
     const [profiles, tiers] = await Promise.all([
@@ -64,6 +67,7 @@ export class GetMyBoosterUseCase {
       depositPolicy,
       onboardingNoticeImage,
       onboardingNoticeText,
+      serviceRegionOptions,
     };
   }
 }
