@@ -18,6 +18,7 @@ import {
   type OrderView,
 } from '@app/contracts';
 import AppIcon from '@/components/common/AppIcon.vue';
+import RemarkMediaGallery from '@/components/order/RemarkMediaGallery.vue';
 
 const props = defineProps<{
   order: OrderView;
@@ -230,6 +231,22 @@ export default {
         </dt>
         <dd class="info-plain">
           {{ order.remark }}
+        </dd>
+      </div>
+      <div
+        v-if="order.remarkMedia.length"
+        class="info-row info-row--remark info-row--media"
+        @click.stop
+      >
+        <dt>
+          <span class="info-icon"><AppIcon
+            name="card"
+            :size="13"
+          /></span>
+          备注图片
+        </dt>
+        <dd class="info-plain">
+          <RemarkMediaGallery :items="order.remarkMedia" />
         </dd>
       </div>
     </dl>
@@ -454,6 +471,18 @@ export default {
 
 .info-row--remark dd.info-plain {
   color: color-mix(in srgb, var(--c-accent) 80%, var(--c-text));
+}
+
+.info-row--media {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.info-row--media dd {
+  width: 100%;
+  text-align: left;
+  white-space: normal;
 }
 
 .info-row dd.info-muted {
