@@ -2,10 +2,9 @@
 /**
  * 商品卡片：封面图片（无图时回退宝石徽标占位）+ 标题/卖点/价格/销量。
  * 金额从「分」转「元」展示，复用 contracts 工具，禁止前端自算浮点。
- * 详情为富文本 HTML，卡片预览仅取纯文本摘要，避免渲染标签。
+ * 卖点文案取封面副标语 coverSub，不再从富文本详情提取摘要。
  * 点击进入商品详情页下单。
  */
-import { computed } from "vue";
 import { useRouter } from "vue-router";
 import {
   fenToYuan,
@@ -13,16 +12,10 @@ import {
   type ProductPublicView,
 } from "@app/contracts";
 import AppIcon from "@/components/common/AppIcon.vue";
-import { productCardSummary } from "./product-card.utils";
 
-const props = defineProps<{ product: ProductPublicView }>();
+defineProps<{ product: ProductPublicView }>();
 
 const router = useRouter();
-
-/** 富文本详情去标签后的纯文本摘要（卡片两行预览用） */
-const summary = computed(() =>
-  productCardSummary(props.product.description)
-);
 </script>
 
 <template>
@@ -49,7 +42,7 @@ const summary = computed(() =>
         {{ product.title }}
       </h3>
       <p class="desc">
-        {{ summary }}
+        {{ product.coverSub }}
       </p>
       <div class="meta">
         <span class="price">¥{{ fenToYuan(lowestProductPriceFen(product)) }} 起</span>
