@@ -29,7 +29,10 @@ export class UpsertConfigUseCase {
     if (!tenantOverridable && !this.tenant.isSuper) {
       throw new ForbiddenException('租户管理员不能修改平台全局配置');
     }
-    await this.configService.setRaw(dto.key, dto.value, {
+    const existing = await this.repository.findByKey(dto.key);
+    // 敏感项编辑时不回显原值，提交留空表示保持原值不变，避免误清空密钥
+    const value = existing?.secret && dto.value === '' ? existing.value : dto.value;
+    await this.configService.setRaw(dto.key, value, {
       type: dto.type,
       group: dto.group,
       remark: dto.remark ?? '',
