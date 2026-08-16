@@ -7,7 +7,6 @@ import { configApi } from '@/api/config.api';
 import ConfigDirectory from '@/components/config/ConfigDirectory.vue';
 import ConfigFormDialog from '@/components/config/ConfigFormDialog.vue';
 import ConfigStats from '@/components/config/ConfigStats.vue';
-import WechatPayCertUpload from '@/components/config/WechatPayCertUpload.vue';
 import { buildConfigSaveForm } from '@/components/config/config-access';
 import {
   CONFIG_GROUP_META,
@@ -157,6 +156,11 @@ async function remove(row: ConfigItemView): Promise<void> {
   await load();
 }
 
+async function onCertUploaded(): Promise<void> {
+  dialogVisible.value = false;
+  await load();
+}
+
 onMounted(load);
 </script>
 
@@ -184,10 +188,6 @@ onMounted(load);
       @edit="openEdit"
       @remove="remove"
     />
-    <wechat-pay-cert-upload
-      v-if="isSuper && activeGroup === ConfigGroup.Wallet"
-      @uploaded="load"
-    />
     <config-form-dialog
       v-model="dialogVisible"
       :form="form"
@@ -195,8 +195,10 @@ onMounted(load);
       :value-types="valueTypes"
       :groups="groups"
       :metadata-editable="isSuper"
+      :cert-uploadable="isSuper"
       @update:form="updateForm"
       @submit="save"
+      @uploaded="onCertUploaded"
     />
   </section>
 </template>
