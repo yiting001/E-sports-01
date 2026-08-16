@@ -16,7 +16,8 @@
 - JSAPI 订单退款与 Native 共用微信商户退款驱动（同一商户号原路退回）。
 - 管理端配置页在编辑证书类配置项（商户私钥/序列号、平台公钥/序列号）时内联提供证书上传，支持 PEM 与 P12（可带密码），解析出的私钥/公钥与证书序列号写入对应敏感配置项，私钥不回传前端、不写日志。上传成功后抽屉保持打开并展示解析结果（序列号与写入的配置项），按用途提示应上传的文件（商户：apiclient_key.pem / apiclient_cert.p12；平台：平台证书或公钥 pub_key.pem，公钥模式序列号需手工填 PUB_KEY_ID_…）。
 - 敏感配置项编辑时不回显原值，提交留空表示**保持原值不变**（不会清空），避免误清空商户私钥等密钥导致支付 503。商户私钥与平台公钥两项即使敏感标记被误关，留空保存同样不清空，且证书上传/保存会强制恢复其敏感标记。
-- `GET /api/config/portal` 公开返回 `wechatOfficialLoginEnabled`、`wechatJsapiPayEnabled` 两个开关，C 端据此渲染入口。
+- `GET /api/config/portal` 公开返回 `smsLoginEnabled`、`wechatOfficialLoginEnabled`、`wechatJsapiPayEnabled` 三个开关，C 端据此渲染入口。
+- 短信登录与微信登录各自独立开关，可同时开启共存也可二选一：`auth.smsLoginEnabled`（默认开）控制手机号验证码登录/注册（关闭后发码与登录注册接口均 403，C 端隐藏短信表单）；`auth.wechatOfficialLoginEnabled` 控制微信一键登录及首登自动注册。仅开微信时非微信浏览器提示去微信内打开；两者都关时登录页提示登录注册暂未开放（请勿同时关闭）。
 
 ### 非目标
 
@@ -182,7 +183,8 @@ erDiagram
 
 | 键 | 默认 | 说明 |
 | --- | --- | --- |
-| `auth.wechatOfficialLoginEnabled` | false | 公众号网页授权登录开关（复用 `notify.wechat.official.*` 公众号凭证） |
+| `auth.wechatOfficialLoginEnabled` | false | 公众号网页授权登录开关（复用 `notify.wechat.official.*` 公众号凭证），同时控制微信首登自动注册 |
+| `auth.smsLoginEnabled` | true | 手机号验证码登录/注册开关；关闭后发码与短信登录注册接口均 403，C 端隐藏短信表单；可与微信登录共存或二选一 |
 | `wallet.wechat.jsapiEnabled` | false | 公众号 JSAPI 支付开关；关闭时微信内也回退 Native 扫码 |
 
 证书上传写入既有敏感配置项：商户用途 → `wallet.wechat.privateKey` + `wallet.wechat.serialNo`；平台用途 → `wallet.wechat.platformPublicKey` + `wallet.wechat.platformSerialNo`。注意 `wallet.wechat.appId` 必须是与商户号绑定的公众号 AppId。

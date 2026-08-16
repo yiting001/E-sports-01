@@ -64,6 +64,8 @@ export interface PortalConfigView {
   vConsoleEnabled: boolean;
   /** 是否启用浏览器语音播报（新订单、新消息，C 端与管理端共用开关） */
   voiceNotifyEnabled: boolean;
+  /** 是否开启手机号验证码登录/注册（关闭后登录页隐藏短信表单，仅保留已开启的其他登录方式） */
+  smsLoginEnabled: boolean;
   /** 是否开启微信公众号网页授权登录（微信内浏览器登录页展示一键登录入口） */
   wechatOfficialLoginEnabled: boolean;
   /** 是否开启微信公众号 JSAPI 支付（微信内浏览器直接拉起收银台） */
@@ -122,6 +124,8 @@ export const CONFIG_KEYS = {
     userAgreement: 'auth.userAgreement',
     /** 微信公众号网页授权登录开关（复用 notify.wechat.official.* 公众号凭证） */
     wechatOfficialLoginEnabled: 'auth.wechatOfficialLoginEnabled',
+    /** 手机号验证码登录/注册开关（关闭后发码与短信登录注册均拒绝，可与微信登录共存或二选一） */
+    smsLoginEnabled: 'auth.smsLoginEnabled',
   },
   upload: {
     driver: 'upload.driver',
