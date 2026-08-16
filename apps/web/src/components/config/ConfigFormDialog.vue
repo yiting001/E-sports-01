@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { ConfigValueType } from '@app/contracts';
+import { CONFIG_KEYS, ConfigValueType, WechatPayCertUsage } from '@app/contracts';
 import { CircleCheckFilled, Lock } from '@element-plus/icons-vue';
 import { computed, defineAsyncComponent } from 'vue';
+import WechatPayCertUpload from './WechatPayCertUpload.vue';
 import type { ConfigFormModel } from './config-ui';
 import { CONFIG_GROUP_META, CONFIG_TYPE_META } from './config-ui';
+
+/** 支持直接上传 PEM/P12 解析入库的微信支付证书类配置项 */
+const CERT_USAGE_BY_KEY: Record<string, WechatPayCertUsage> = {
+  [CONFIG_KEYS.wallet.wechatPrivateKey]: WechatPayCertUsage.Merchant,
+  [CONFIG_KEYS.wallet.wechatSerialNo]: WechatPayCertUsage.Merchant,
+  [CONFIG_KEYS.wallet.wechatPlatformPublicKey]: WechatPayCertUsage.Platform,
+  [CONFIG_KEYS.wallet.wechatPlatformSerialNo]: WechatPayCertUsage.Platform,
+};
 
 const RichTextEditor = defineAsyncComponent(
   () => import('@/components/common/RichTextEditor.vue'),
@@ -19,13 +28,19 @@ const props = defineProps<{
   valueTypes: ConfigValueType[];
   groups: ConfigFormModel['group'][];
   metadataEditable: boolean;
+  certUploadable?: boolean;
 }>();
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   'update:form': [value: ConfigFormModel];
   submit: [];
+  uploaded: [];
 }>();
+
+const certUsage = computed<WechatPayCertUsage | undefined>(() =>
+  props.isEdit && props.certUploadable ? CERT_USAGE_BY_KEY[props.form.key] : undefined,
+);
 
 const drawerSize = computed(() =>
   props.form.type === ConfigValueType.RichText ? '760px' : '520px',
@@ -78,6 +93,15 @@ function updateForm(patch: Partial<ConfigFormModel>): void {
           :model-value="form.value"
           :placeholder="isEdit && form.secret ? '敏感项原值不回显，留空将清空' : ''"
           @update:model-value="(value: string) => updateForm({ value })"
+        />
+      </el-form-item>
+      <el-form-item
+        v-if="certUsage"
+        label="证书上传"
+      >
+        <wechat-pay-cert-upload
+          :usage="certUsage"
+          @uploaded="emit('uploaded')"
         />
       </el-form-item>
       <el-form-item

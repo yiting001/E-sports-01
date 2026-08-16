@@ -14,7 +14,7 @@
 - 短信/密码老用户在微信内通过登录态绑定接口补绑 openid，绑定后即可使用 JSAPI 支付。
 - 订单创建支持 `wechat_jsapi` 支付方式：服务端 JSAPI 下单取 `prepay_id`，用商户私钥 RSA 签名返回拉起参数；C 端经 `WeixinJSBridge` 调起收银台；回调验签/解密、主动查单与 Native 复用同一套微信 v3 公共函数。
 - JSAPI 订单退款与 Native 共用微信商户退款驱动（同一商户号原路退回）。
-- 管理端配置页新增微信支付证书上传（商户证书含私钥 / 平台证书或公钥），支持 PEM 与 P12（可带密码），解析出的私钥/公钥与证书序列号写入对应敏感配置项，私钥不回传前端、不写日志。
+- 管理端配置页在编辑证书类配置项（商户私钥/序列号、平台公钥/序列号）时内联提供证书上传，支持 PEM 与 P12（可带密码），解析出的私钥/公钥与证书序列号写入对应敏感配置项，私钥不回传前端、不写日志。
 - `GET /api/config/portal` 公开返回 `wechatOfficialLoginEnabled`、`wechatJsapiPayEnabled` 两个开关，C 端据此渲染入口。
 
 ### 非目标
@@ -61,7 +61,7 @@ apps/client/src/
 ├── views/order/CheckoutView.vue      JSAPI 支付前绑定引导 + 回跳续付
 └── components/order/PayDialog.vue    JSAPI 拉起 + 查单轮询兜底
 
-apps/web/src/components/config/WechatPayCertUpload.vue 管理端证书上传控件
+apps/web/src/components/config/WechatPayCertUpload.vue 管理端证书上传控件（内联在证书类配置项的编辑抽屉中）
 ```
 
 ## 三、模块结构图
