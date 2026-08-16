@@ -14,12 +14,15 @@ import { RemoveConfigUseCase } from './application/use-cases/remove-config.useca
 import { GetBrandingUseCase } from './application/use-cases/get-branding.usecase';
 import { GetAgreementUseCase } from './application/use-cases/get-agreement.usecase';
 import { GetPortalConfigUseCase } from './application/use-cases/get-portal-config.usecase';
+import { UploadWechatPayCertUseCase } from './application/use-cases/upload-wechat-pay-cert.usecase';
+import { WechatPayCertParser } from './infrastructure/wechat-pay-cert.parser';
 import { ListConfigsController } from './interfaces/list-configs.controller';
 import { GetBrandingController } from './interfaces/get-branding.controller';
 import { GetAgreementController } from './interfaces/get-agreement.controller';
 import { GetPortalConfigController } from './interfaces/get-portal-config.controller';
 import { UpsertConfigController } from './interfaces/upsert-config.controller';
 import { RemoveConfigController } from './interfaces/remove-config.controller';
+import { UploadWechatPayCertController } from './interfaces/upload-wechat-pay-cert.controller';
 
 /**
  * 配置中心模块。
@@ -35,6 +38,7 @@ import { RemoveConfigController } from './interfaces/remove-config.controller';
     ListConfigsController,
     UpsertConfigController,
     RemoveConfigController,
+    UploadWechatPayCertController,
   ],
   providers: [
     { provide: CONFIG_REPOSITORY, useClass: TypeormConfigRepository },
@@ -50,6 +54,8 @@ import { RemoveConfigController } from './interfaces/remove-config.controller';
     GetBrandingUseCase,
     GetAgreementUseCase,
     GetPortalConfigUseCase,
+    UploadWechatPayCertUseCase,
+    WechatPayCertParser,
   ],
   // 额外导出 UpsertConfigUseCase：供业务模块（如邀请奖励配置）写入配置中心
   exports: [ConfigService, UpsertConfigUseCase],

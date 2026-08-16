@@ -14,6 +14,10 @@ export const usePortalStore = defineStore('portal', () => {
   const vConsoleEnabled = ref(false);
   /** 是否启用语音播报（后台 notify.voice.enabled 控制，默认开启） */
   const voiceNotifyEnabled = ref(true);
+  /** 是否开启微信公众号网页授权登录（微信内登录页展示一键登录） */
+  const wechatOfficialLoginEnabled = ref(false);
+  /** 是否开启微信公众号 JSAPI 支付（微信内直接拉起收银台） */
+  const wechatJsapiPayEnabled = ref(false);
   /** 配置是否已加载完成（页面守卫需等加载后再判断显隐） */
   const loaded = ref(false);
   let loadRevision = 0;
@@ -24,6 +28,8 @@ export const usePortalStore = defineStore('portal', () => {
     showRank.value = true;
     vConsoleEnabled.value = false;
     voiceNotifyEnabled.value = true;
+    wechatOfficialLoginEnabled.value = false;
+    wechatJsapiPayEnabled.value = false;
     loaded.value = false;
     try {
       const data = await configApi.portal();
@@ -33,6 +39,8 @@ export const usePortalStore = defineStore('portal', () => {
       showRank.value = data.showRank;
       vConsoleEnabled.value = data.vConsoleEnabled === true;
       voiceNotifyEnabled.value = data.voiceNotifyEnabled !== false;
+      wechatOfficialLoginEnabled.value = data.wechatOfficialLoginEnabled === true;
+      wechatJsapiPayEnabled.value = data.wechatJsapiPayEnabled === true;
     } catch {
       // 公开配置接口不可用时保留默认展示，不打扰用户
     } finally {
@@ -42,5 +50,13 @@ export const usePortalStore = defineStore('portal', () => {
     }
   }
 
-  return { showRank, vConsoleEnabled, voiceNotifyEnabled, loaded, load };
+  return {
+    showRank,
+    vConsoleEnabled,
+    voiceNotifyEnabled,
+    wechatOfficialLoginEnabled,
+    wechatJsapiPayEnabled,
+    loaded,
+    load,
+  };
 });

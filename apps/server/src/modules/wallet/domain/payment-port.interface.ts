@@ -1,4 +1,4 @@
-import { PaymentProvider } from '@app/contracts';
+import { PaymentProvider, WechatJsapiPayParams } from '@app/contracts';
 
 /** 充值下单入参 */
 export interface RechargeCreateInput {
@@ -9,12 +9,16 @@ export interface RechargeCreateInput {
   subject: string;
   /** 异步通知回调地址 */
   notifyUrl: string;
+  /** 付款人 openid（仅微信公众号 JSAPI 渠道必传，其余渠道忽略） */
+  payerOpenid?: string;
 }
 
-/** 充值下单结果（扫码支付：二维码内容） */
+/** 充值下单结果（扫码渠道：二维码内容；JSAPI 渠道：拉起支付参数） */
 export interface RechargeCreateResult {
-  /** 二维码内容（支付宝 qr_code / 微信 code_url），前端据此渲染二维码 */
+  /** 二维码内容（支付宝 qr_code / 微信 code_url），前端据此渲染二维码；JSAPI 渠道为空串 */
   qrCode: string;
+  /** 微信公众号 JSAPI 拉起支付参数；扫码渠道不返回 */
+  jsapiParams?: WechatJsapiPayParams;
 }
 
 /** 支付渠道异步回调请求（不同渠道所需材料不同，统一封装） */

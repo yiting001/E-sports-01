@@ -7,9 +7,20 @@ export function toPaymentProvider(method: OrderPaymentMethod): PaymentProvider |
       return PaymentProvider.Alipay;
     case OrderPaymentMethod.Wechat:
       return PaymentProvider.Wechat;
+    case OrderPaymentMethod.WechatJsapi:
+      return PaymentProvider.WechatJsapi;
     case OrderPaymentMethod.Balance:
       return null;
   }
+}
+
+/**
+ * 订单支付方式转换为退款渠道。
+ * JSAPI 与 Native 共用微信商户号，退款统一走微信商户退款驱动。
+ */
+export function toRefundProvider(method: OrderPaymentMethod): PaymentProvider | null {
+  const provider = toPaymentProvider(method);
+  return provider === PaymentProvider.WechatJsapi ? PaymentProvider.Wechat : provider;
 }
 
 /** 渠道回调转换为订单支付方式。 */
@@ -19,5 +30,7 @@ export function toOrderPaymentMethod(provider: PaymentProvider): OrderPaymentMet
       return OrderPaymentMethod.Alipay;
     case PaymentProvider.Wechat:
       return OrderPaymentMethod.Wechat;
+    case PaymentProvider.WechatJsapi:
+      return OrderPaymentMethod.WechatJsapi;
   }
 }

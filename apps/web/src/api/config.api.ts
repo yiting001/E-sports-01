@@ -4,6 +4,8 @@ import type {
   ConfigItemView,
   ConfigValueType,
   PortalConfigView,
+  WechatPayCertUploadResult,
+  WechatPayCertUsage,
 } from '@app/contracts';
 import type { AxiosRequestConfig } from 'axios';
 import { http, type RequestOptions } from './http';
@@ -28,6 +30,20 @@ export const configApi = {
   },
   remove(key: string): Promise<void> {
     return http.delete(`/config/${encodeURIComponent(key)}`);
+  },
+  /** 上传微信支付证书文件（PEM/P12），服务端解析后写入敏感配置，不回传证书正文 */
+  uploadWechatPayCert(
+    file: File,
+    usage: WechatPayCertUsage,
+    password?: string,
+  ): Promise<WechatPayCertUploadResult> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('usage', usage);
+    if (password) {
+      form.append('password', password);
+    }
+    return http.post('/config/wechat-pay-cert', form);
   },
   /** 读取平台品牌信息（公开，登录前即可调用） */
   branding(): Promise<BrandingView> {

@@ -28,6 +28,24 @@ export interface UpdateProfilePayload {
   phone?: string;
 }
 
+/** 微信公众号网页授权登录入参（code 为公众号 OAuth 回跳携带的授权码） */
+export interface WechatLoginPayload {
+  code: string;
+  /** 登录到的租户编码（选填）：空表示默认租户；首登自动注册 member 账号 */
+  tenantCode?: string;
+}
+
+/** 登录态绑定微信 openid 入参（短信/密码用户在微信内使用 JSAPI 支付前绑定） */
+export interface WechatBindPayload {
+  code: string;
+}
+
+/** 当前用户的微信登录身份绑定状态 */
+export interface WechatIdentityStatusView {
+  /** 是否已绑定公众号 openid（openid 本身不回传） */
+  bound: boolean;
+}
+
 /** 登录/刷新返回的令牌对 */
 export interface TokenPair {
   accessToken: string;

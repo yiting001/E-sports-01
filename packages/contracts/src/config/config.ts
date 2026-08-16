@@ -64,6 +64,27 @@ export interface PortalConfigView {
   vConsoleEnabled: boolean;
   /** 是否启用浏览器语音播报（新订单、新消息，C 端与管理端共用开关） */
   voiceNotifyEnabled: boolean;
+  /** 是否开启微信公众号网页授权登录（微信内浏览器登录页展示一键登录入口） */
+  wechatOfficialLoginEnabled: boolean;
+  /** 是否开启微信公众号 JSAPI 支付（微信内浏览器直接拉起收银台） */
+  wechatJsapiPayEnabled: boolean;
+}
+
+/** 微信支付证书文件的用途：商户证书（含私钥）或平台证书/公钥（回调验签） */
+export enum WechatPayCertUsage {
+  /** 商户 API 证书：私钥 + 商户证书序列号（apiclient_key.pem / apiclient_cert.p12） */
+  Merchant = 'merchant',
+  /** 平台证书或平台公钥：回调验签公钥 + 序列号 */
+  Platform = 'platform',
+}
+
+/** 微信支付证书文件上传解析结果（不回传私钥/公钥正文） */
+export interface WechatPayCertUploadResult {
+  usage: WechatPayCertUsage;
+  /** 本次写入配置中心的配置键列表 */
+  updatedKeys: string[];
+  /** 从证书解析出的序列号；纯私钥/公钥文件无法解析时为空串 */
+  serialNo: string;
 }
 
 /** 用户协议（公开，登录前即可读取） */
@@ -99,6 +120,8 @@ export const CONFIG_KEYS = {
     refreshTokenTtl: 'auth.refreshTokenTtl',
     /** 用户协议正文（富文本 HTML，登录/注册页需同意后才可提交） */
     userAgreement: 'auth.userAgreement',
+    /** 微信公众号网页授权登录开关（复用 notify.wechat.official.* 公众号凭证） */
+    wechatOfficialLoginEnabled: 'auth.wechatOfficialLoginEnabled',
   },
   upload: {
     driver: 'upload.driver',
@@ -229,6 +252,8 @@ export const CONFIG_KEYS = {
     wechatPlatformPublicKey: 'wallet.wechat.platformPublicKey',
     /** 微信支付平台证书序列号，用于回调验签匹配 */
     wechatPlatformSerialNo: 'wallet.wechat.platformSerialNo',
+    /** 微信公众号 JSAPI 支付开关（微信内浏览器拉起收银台，关闭时微信内也回退扫码） */
+    wechatJsapiEnabled: 'wallet.wechat.jsapiEnabled',
   },
   booster: {
     /** 打手等级档位（JSON 数组：等级/名称/完成单数门槛/提成万分比） */

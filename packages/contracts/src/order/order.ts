@@ -11,6 +11,8 @@ import type { PaginationQuery } from "../common/pagination";
 export enum OrderPaymentMethod {
   Alipay = "alipay",
   Wechat = "wechat",
+  /** 微信公众号 JSAPI 支付（微信内浏览器直接拉起收银台，不出二维码） */
+  WechatJsapi = "wechat_jsapi",
   Balance = "balance",
 }
 
@@ -18,6 +20,7 @@ export enum OrderPaymentMethod {
 export const ORDER_PAYMENT_METHOD_TEXT: Record<OrderPaymentMethod, string> = {
   [OrderPaymentMethod.Alipay]: "支付宝",
   [OrderPaymentMethod.Wechat]: "微信",
+  [OrderPaymentMethod.WechatJsapi]: "微信",
   [OrderPaymentMethod.Balance]: "钱包余额",
 };
 
@@ -150,13 +153,26 @@ export interface CreateOrderPayload {
   userCouponId?: string;
 }
 
-/** 创建订单结果（扫码支付：二维码内容；0 元单直接支付成功无需扫码） */
+/** 微信公众号 JSAPI 拉起支付所需参数（WeixinJSBridge.getBrandWCPayRequest 入参） */
+export interface WechatJsapiPayParams {
+  appId: string;
+  timeStamp: string;
+  nonceStr: string;
+  /** 形如 prepay_id=xxx */
+  package: string;
+  signType: "RSA";
+  paySign: string;
+}
+
+/** 创建订单结果（扫码支付：二维码内容；JSAPI 支付：拉起参数；0 元单直接支付成功无需扫码） */
 export interface CreateOrderResult {
   orderId: string;
   orderNo: string;
   provider: OrderPaymentMethod;
-  /** 二维码内容（支付宝 qr_code / 微信 code_url）；余额支付或 0 元单为空串 */
+  /** 二维码内容（支付宝 qr_code / 微信 code_url）；JSAPI/余额支付或 0 元单为空串 */
   qrCode: string;
+  /** 微信公众号 JSAPI 拉起支付参数；非 JSAPI 支付为 null */
+  jsapiParams: WechatJsapiPayParams | null;
   /** 是否已支付完成（余额支付或优惠抵扣到 0 元时为 true） */
   paid: boolean;
   amountFen: number;

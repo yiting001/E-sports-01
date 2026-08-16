@@ -16,6 +16,9 @@ import { ROLE_REPOSITORY } from './domain/role-repository.interface';
 import { PERMISSION_REPOSITORY } from './domain/permission-repository.interface';
 import { TENANT_REPOSITORY } from './domain/tenant-repository.interface';
 import { TENANT_PROVISIONING_TRANSACTION } from './domain/tenant-provisioning-transaction.interface';
+import { WechatIdentityEntity } from './domain/wechat-identity.entity';
+import { WECHAT_IDENTITY_REPOSITORY } from './domain/wechat-identity-repository.interface';
+import { WECHAT_OAUTH_PORT } from './domain/wechat-oauth-port.interface';
 
 import { TypeormUserRepository } from './infrastructure/user.repository';
 import { TypeormRoleRepository } from './infrastructure/role.repository';
@@ -24,6 +27,8 @@ import { TypeormTenantRepository } from './infrastructure/tenant.repository';
 import { TypeormTenantProvisioningTransaction } from './infrastructure/tenant-provisioning.transaction';
 import { PasswordService } from './infrastructure/password.service';
 import { RbacSeeder } from './infrastructure/rbac.seeder';
+import { TypeormWechatIdentityRepository } from './infrastructure/wechat-identity.repository';
+import { WechatOauthDriver } from './infrastructure/wechat-oauth.driver';
 
 import { TokenService } from './application/token.service';
 import { PermissionResolver } from './application/permission-resolver.service';
@@ -60,6 +65,10 @@ import { GetMyMenusUseCase } from './application/use-cases/get-my-menus.usecase'
 import { CreatePermissionUseCase } from './application/use-cases/create-permission.usecase';
 import { UpdatePermissionUseCase } from './application/use-cases/update-permission.usecase';
 import { RemovePermissionUseCase } from './application/use-cases/remove-permission.usecase';
+import { WechatLoginUseCase } from './application/use-cases/wechat-login.usecase';
+import { GetWechatLoginUrlUseCase } from './application/use-cases/get-wechat-login-url.usecase';
+import { BindWechatIdentityUseCase } from './application/use-cases/bind-wechat-identity.usecase';
+import { WechatIdentityService } from './application/wechat-identity.service';
 
 import { JwtStrategy } from './interfaces/auth/jwt.strategy';
 import { JwtAuthGuard } from './interfaces/auth/jwt-auth.guard';
@@ -75,6 +84,9 @@ import { AuthRegisterController } from './interfaces/controllers/auth.register.c
 import { AuthRefreshController } from './interfaces/controllers/auth.refresh.controller';
 import { AuthProfileController } from './interfaces/controllers/auth.profile.controller';
 import { AuthUpdateProfileController } from './interfaces/controllers/auth.update-profile.controller';
+import { AuthWechatAuthorizeUrlController } from './interfaces/controllers/auth.wechat-authorize-url.controller';
+import { AuthWechatLoginController } from './interfaces/controllers/auth.wechat-login.controller';
+import { AuthWechatBindController } from './interfaces/controllers/auth.wechat-bind.controller';
 import { UserListController } from './interfaces/controllers/user.list.controller';
 import { UserCreateController } from './interfaces/controllers/user.create.controller';
 import { UserUpdateController } from './interfaces/controllers/user.update.controller';
@@ -108,7 +120,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     SmsModule,
     PassportModule,
     JwtModule.register({}),
-    TypeOrmModule.forFeature([User, Role, Permission, TenantEntity]),
+    TypeOrmModule.forFeature([User, Role, Permission, TenantEntity, WechatIdentityEntity]),
   ],
   controllers: [
     AuthLoginController,
@@ -120,6 +132,9 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     AuthRefreshController,
     AuthProfileController,
     AuthUpdateProfileController,
+    AuthWechatAuthorizeUrlController,
+    AuthWechatLoginController,
+    AuthWechatBindController,
     UserListController,
     UserCreateController,
     UserUpdateController,
@@ -147,6 +162,8 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     { provide: ROLE_REPOSITORY, useClass: TypeormRoleRepository },
     { provide: PERMISSION_REPOSITORY, useClass: TypeormPermissionRepository },
     { provide: TENANT_REPOSITORY, useClass: TypeormTenantRepository },
+    { provide: WECHAT_IDENTITY_REPOSITORY, useClass: TypeormWechatIdentityRepository },
+    { provide: WECHAT_OAUTH_PORT, useClass: WechatOauthDriver },
     {
       provide: TENANT_PROVISIONING_TRANSACTION,
       useClass: TypeormTenantProvisioningTransaction,
@@ -187,12 +204,23 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     CreatePermissionUseCase,
     UpdatePermissionUseCase,
     RemovePermissionUseCase,
+    WechatLoginUseCase,
+    GetWechatLoginUrlUseCase,
+    BindWechatIdentityUseCase,
+    WechatIdentityService,
     GetMyMenusUseCase,
     ListTenantsUseCase,
     CreateTenantUseCase,
     UpdateTenantUseCase,
     RemoveTenantUseCase,
   ],
-  exports: [TokenService, PermissionResolver, TenantResolver, UserDirectory, RoleGranter],
+  exports: [
+    TokenService,
+    PermissionResolver,
+    TenantResolver,
+    UserDirectory,
+    RoleGranter,
+    WechatIdentityService,
+  ],
 })
 export class RbacModule {}
