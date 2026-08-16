@@ -10,12 +10,17 @@ import AppIcon from '@/components/common/AppIcon.vue';
 import { authApi } from '@/api/auth.api';
 import { uploadApi } from '@/api/upload.api';
 import { useToast } from '@/composables/use-toast';
+import { useWechatOauth } from '@/composables/use-wechat-oauth';
 import { useAuthStore } from '@/stores/auth.store';
+import { usePortalStore } from '@/stores/portal.store';
+import { isWechatBrowser } from '@/utils/wechat-env';
 import './ProfileEditView.responsive.css';
 
 const router = useRouter();
 const toast = useToast();
 const auth = useAuthStore();
+const portal = usePortalStore();
+const wechatOauth = useWechatOauth();
 
 const nickname = ref('');
 const phone = ref('');
@@ -24,6 +29,11 @@ const uploading = ref(false);
 const saving = ref(false);
 /** 是否展示退出登录确认弹层 */
 const confirmingLogout = ref(false);
+/** 微信绑定状态：null 表示查询中 */
+const wechatBound = ref<boolean | null>(null);
+const binding = ref(false);
+/** 后台开启公众号登录时才展示微信绑定行 */
+const wechatRowVisible = computed(() => portal.wechatOfficialLoginEnabled);
 
 const fileInput = ref<HTMLInputElement | null>(null);
 
@@ -55,7 +65,61 @@ onMounted(async () => {
     await auth.loadProfile();
   }
   fill();
+  if (!portal.loaded) {
+    await portal.load();
+  }
+  if (wechatRowVisible.value) {
+    await consumeWechatBindCode();
+    await loadWechatIdentity();
+  }
 });
+
+/** 查询当前账号微信绑定状态 */
+async function loadWechatIdentity(): Promise<void> {
+  if (wechatBound.value !== null) {
+    return;
+  }
+  try {
+    wechatBound.value = (await authApi.wechatIdentity()).bound;
+  } catch {
+    wechatBound.value = false;
+  }
+}
+
+/** 消费微信授权回跳的 code：绑定 openid 后即可微信一键登录/JSAPI 支付 */
+async function consumeWechatBindCode(): Promise<void> {
+  const code = wechatOauth.readOauthCode();
+  if (!code) {
+    return;
+  }
+  wechatOauth.clearOauthCode();
+  binding.value = true;
+  try {
+    wechatBound.value = (await authApi.wechatBind({ code })).bound;
+    if (wechatBound.value) {
+      toast.show('微信绑定成功，下次可直接微信登录');
+    }
+  } finally {
+    binding.value = false;
+  }
+}
+
+/** 发起绑定：微信内跳授权页回跳绑定；非微信环境提示到微信内操作 */
+async function bindWechat(): Promise<void> {
+  if (binding.value) {
+    return;
+  }
+  if (!isWechatBrowser()) {
+    toast.show('请在微信内打开本页面完成绑定');
+    return;
+  }
+  binding.value = true;
+  try {
+    await wechatOauth.startAuthorize();
+  } finally {
+    binding.value = false;
+  }
+}
 
 /** 选择图片后自助上传并预览为新头像 */
 async function onFileChange(event: Event): Promise<void> {
@@ -163,6 +227,24 @@ function logout(): void {
             maxlength="11"
             placeholder="绑定手机号（留空解绑）"
           >
+        </div>
+        <div
+          v-if="wechatRowVisible"
+          class="row"
+        >
+          <span class="label">微信</span>
+          <span
+            v-if="wechatBound"
+            class="wechat-bound"
+          >已绑定</span>
+          <button
+            v-else
+            class="wechat-bind"
+            :disabled="binding || wechatBound === null"
+            @click="bindWechat"
+          >
+            {{ binding ? '绑定中…' : wechatBound === null ? '查询中…' : '绑定微信' }}
+          </button>
         </div>
       </section>
 
@@ -336,6 +418,25 @@ function logout(): void {
 
 .file {
   display: none;
+}
+
+.wechat-bound {
+  font-size: 14px;
+  color: var(--c-accent);
+  font-weight: 700;
+}
+
+.wechat-bind {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-bg);
+  background: var(--c-accent);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+}
+
+.wechat-bind:disabled {
+  opacity: 0.5;
 }
 
 .save {
