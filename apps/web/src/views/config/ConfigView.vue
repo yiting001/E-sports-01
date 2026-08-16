@@ -156,8 +156,8 @@ async function remove(row: ConfigItemView): Promise<void> {
   await load();
 }
 
+/** 证书上传成功：后台刷新列表，抽屉保持打开供用户确认解析结果 */
 async function onCertUploaded(): Promise<void> {
-  dialogVisible.value = false;
   await load();
 }
 

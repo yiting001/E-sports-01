@@ -91,7 +91,7 @@ function updateForm(patch: Partial<ConfigFormModel>): void {
           type="textarea"
           :autosize="{ minRows: 1, maxRows: 6 }"
           :model-value="form.value"
-          :placeholder="isEdit && form.secret ? '敏感项原值不回显，留空将清空' : ''"
+          :placeholder="isEdit && form.secret ? '敏感项原值不回显，留空保持原值不变' : ''"
           @update:model-value="(value: string) => updateForm({ value })"
         />
       </el-form-item>
