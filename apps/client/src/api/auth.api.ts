@@ -4,6 +4,7 @@ import type {
   SendSmsCodePayload,
   SendSmsCodeResult,
   SmsLoginPayload,
+  SmsLoginResult,
   SmsRegisterPayload,
   TokenPair,
   UpdateProfilePayload,
@@ -30,12 +31,12 @@ export const authApi = {
   agreement(): Promise<AgreementView> {
     return http.get('/config/agreement');
   },
-  /** 发送「登录」短信验证码（要求手机号已注册） */
+  /** 发送登录短信验证码（登录注册合一，未注册手机号也可发码） */
   sendLoginCode(payload: SendSmsCodePayload): Promise<SendSmsCodeResult> {
     return http.post('/auth/sms/code', withCurrentTenant(payload));
   },
-  /** 短信验证码登录 */
-  smsLogin(payload: SmsLoginPayload): Promise<TokenPair> {
+  /** 短信验证码登录（登录注册合一，首登自动注册并回传 registered 标记） */
+  smsLogin(payload: SmsLoginPayload): Promise<SmsLoginResult> {
     return http.post('/auth/sms/login', withCurrentTenant(payload));
   },
   /** 发送「注册」短信验证码（要求手机号未注册） */

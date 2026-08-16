@@ -51,6 +51,7 @@ test('短信登录开关关闭时短信登录被拒绝', async () => {
     untouched('smsCode'),
     untouched('token'),
     untouched('tenants'),
+    untouched('registrar'),
   );
   await assert.rejects(
     useCase.execute({ phone: '13800000000', code: '123456' }),
@@ -61,10 +62,9 @@ test('短信登录开关关闭时短信登录被拒绝', async () => {
 test('短信登录开关关闭时短信注册被拒绝', async () => {
   const useCase = new SmsRegisterUseCase(
     untouched('userRepo'),
-    untouched('roleRepo'),
     disabledConfig,
     untouched('smsCode'),
-    untouched('password'),
+    untouched('registrar'),
     untouched('token'),
     untouched('tenants'),
   );

@@ -159,14 +159,14 @@ stateDiagram-v2
 
 ## API 与权限
 
-HTTP 契约未变化：
+HTTP 契约：
 
 | API                                | 请求                                      | 结果           | 规则                         |
 | ---------------------------------- | ----------------------------------------- | -------------- | ---------------------------- |
-| `POST /api/auth/sms/code`          | `{ phone, tenantCode? }`                  | `{ cooldown }` | 仅已绑定且启用账号可发登录码 |
-| `POST /api/auth/sms/login`         | `{ phone, code, tenantCode? }`            | `TokenPair`    | 登录码匹配并一次性消费       |
-| `POST /api/auth/sms/register-code` | `{ phone, tenantCode? }`                  | `{ cooldown }` | 仅未注册手机号可发注册码     |
-| `POST /api/auth/sms/register`      | `{ phone, code, nickname?, tenantCode? }` | `TokenPair`    | 注册码匹配后创建普通用户     |
+| `POST /api/auth/sms/code`          | `{ phone, tenantCode? }`                  | `{ cooldown }` | 登录注册合一：未注册手机号也可发码，已禁用账号拒绝 |
+| `POST /api/auth/sms/login`         | `{ phone, code, tenantCode? }`            | `SmsLoginResult` | 登录码匹配并一次性消费；首登自动注册 member 并回传 `registered` 标记 |
+| `POST /api/auth/sms/register-code` | `{ phone, tenantCode? }`                  | `{ cooldown }` | 仅未注册手机号可发注册码（保留兼容旧客户端） |
+| `POST /api/auth/sms/register`      | `{ phone, code, nickname?, tenantCode? }` | `TokenPair`    | 注册码匹配后创建普通用户（保留兼容旧客户端，C 端已改用登录注册合一） |
 
 认证端点保持公开，但受手机号状态、租户、Redis 冷却与验证码约束。固定码配置通过现有配置中心维护，查看与修改继续使用 `config:list`、`config:save` 权限。
 

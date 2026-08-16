@@ -1,3 +1,5 @@
+import type { TokenPair } from '../rbac/auth';
+
 /**
  * 短信服务商标识，与配置中心 sms.provider 取值一一对应。
  * log 为内置「日志/模拟」provider：不发送或输出验证码，仅配合开发固定码联调。
@@ -38,6 +40,12 @@ export interface SmsRegisterPayload {
   nickname?: string;
   /** 注册到的租户编码（选填）：空表示注册到默认租户 */
   tenantCode?: string;
+}
+
+/** 短信验证码登录返回：登录注册合一，首登自动注册时 registered 为 true */
+export interface SmsLoginResult extends TokenPair {
+  /** 本次登录是否为首登自动注册的新账号 */
+  registered: boolean;
 }
 
 /** 发送验证码后的返回：仅回传必要的限流信息，绝不回传验证码本身 */
