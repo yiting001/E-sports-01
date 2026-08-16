@@ -58,10 +58,12 @@ export const useAuthStore = defineStore('auth', () => {
     authed.value = true;
   }
 
-  /** 短信验证码登录，成功后拉取资料 */
-  async function smsLogin(payload: SmsLoginPayload): Promise<void> {
-    acceptTokens(await authApi.smsLogin(payload));
+  /** 短信验证码登录（登录注册合一），成功后拉取资料；返回是否首登自动注册 */
+  async function smsLogin(payload: SmsLoginPayload): Promise<{ registered: boolean }> {
+    const result = await authApi.smsLogin(payload);
+    acceptTokens(result);
     await loadProfile();
+    return { registered: result.registered };
   }
 
   /** 短信验证码注册，成功即自动登录并拉取资料 */

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /**
- * 登录/注册页（C 端 · 战术电竞风全屏页）。
+ * 登录页（C 端 · 战术电竞风全屏页，登录注册合一）。
  * 登录方式由后台开关组合：手机号验证码（auth.smsLoginEnabled）与微信公众号一键登录
- * （auth.wechatOfficialLoginEnabled，仅微信内展示）可共存或二选一。
- * 短信方式：分段页签切换「登录 / 注册」，共用手机号+验证码表单，
- * 注册额外可填昵称与好友邀请码（填码注册成功自动绑定邀请关系）；注册成功即自动登录。登录态由 auth.store 维护，
- * 成功后按 redirect 回跳或进入首页。校验反馈统一走全局 toast。
- * 登录/注册均需勾选同意《用户协议》（后台富文本配置，弹层查看全文）。
+ * （auth.wechatOfficialLoginEnabled，仅微信内展示）可共存或二选一；
+ * 两者均可用时以「一键登录 / 手机号登录」分段页签并列展示。
+ * 手机号方式首次登录即自动注册普通会员，可选填好友邀请码（首登成功自动绑定邀请关系）。
+ * 登录态由 auth.store 维护，成功后按 redirect 回跳或进入首页。校验反馈统一走全局 toast。
+ * 登录前需勾选同意《用户协议》（后台富文本配置，弹层查看全文）。
  */
 import { CHINA_MOBILE_PATTERN, INVITE_LIMITS } from '@app/contracts';
 import { computed, onMounted, reactive, ref } from 'vue';
@@ -24,8 +24,8 @@ import { usePortalStore } from '@/stores/portal.store';
 import { resolveHttpErrorMessage } from '@/utils/http-error';
 import { isWechatBrowser } from '@/utils/wechat-env';
 
-/** 分段页签：0=登录，1=注册 */
-const TABS = ['登录', '注册'] as const;
+/** 分段页签（微信与短信均可用时）：0=一键登录，1=手机号登录 */
+const TABS = ['一键登录', '手机号登录'] as const;
 /** 发送验证码后本地兜底冷却秒数（后端未返回 cooldown 时使用） */
 const FALLBACK_COOLDOWN = 60;
 
@@ -38,10 +38,9 @@ const router = useRouter();
 const wechatOauth = useWechatOauth();
 
 const activeTab = ref(0);
-const isRegister = computed(() => activeTab.value === 1);
 
-/** 表单模型：登录/注册共用，nickname/inviteCode 仅注册用 */
-const form = reactive({ phone: '', code: '', nickname: '', inviteCode: '' });
+/** 表单模型：inviteCode 为选填，仅首登自动注册时生效 */
+const form = reactive({ phone: '', code: '', inviteCode: '' });
 
 /** 是否已勾选同意用户协议（登录/注册提交前置条件） */
 const agreed = ref(false);
@@ -66,17 +65,25 @@ const wechatOnlyOutside = computed(
 const noLoginAvailable = computed(
   () => portal.loaded && !portal.smsLoginEnabled && !portal.wechatOfficialLoginEnabled,
 );
+/** 两种登录方式均可用：展示「一键登录 / 手机号登录」页签 */
+const tabsVisible = computed(() => smsLoginVisible.value && wechatLoginVisible.value);
+/** 当前展示微信一键登录面板 */
+const wechatPanelActive = computed(
+  () => wechatLoginVisible.value && (!tabsVisible.value || activeTab.value === 0),
+);
+/** 当前展示手机号验证码面板 */
+const smsPanelActive = computed(
+  () => smsLoginVisible.value && (!tabsVisible.value || activeTab.value === 1),
+);
 /** 品牌区副标题：按已开启的登录方式描述 */
 const subtitle = computed(() => {
-  if (noLoginAvailable.value) return '登录注册暂未开放';
-  if (!portal.smsLoginEnabled) return '微信授权 · 快捷登录注册';
-  return '手机号验证码 · 快捷登录注册';
+  if (noLoginAvailable.value) return '登录暂未开放';
+  return '登录后享受完整服务 · 首次登录即注册';
 });
 /** 验证码重发倒计时（秒），>0 时禁用发送按钮 */
 const countdown = ref(0);
 let timer: ReturnType<typeof setInterval> | null = null;
 
-const submitText = computed(() => (isRegister.value ? '注册并登录' : '登录'));
 const sendText = computed(() => (countdown.value > 0 ? `${countdown.value}s` : '发送验证码'));
 
 /** 校验手机号格式，非法时提示并返回 false */
@@ -101,15 +108,14 @@ function startCountdown(seconds: number): void {
   }, 1000);
 }
 
-/** 发送验证码：按当前页签走登录/注册两条不同接口 */
+/** 发送登录验证码（登录注册合一，未注册手机号也可发码） */
 async function onSend(): Promise<void> {
   if (sending.value || countdown.value > 0 || !ensureValidPhone()) {
     return;
   }
   sending.value = true;
   try {
-    const send = isRegister.value ? authApi.sendRegisterCode : authApi.sendLoginCode;
-    const { cooldown } = await send({ phone: form.phone });
+    const { cooldown } = await authApi.sendLoginCode({ phone: form.phone });
     startCountdown(cooldown > 0 ? cooldown : FALLBACK_COOLDOWN);
     toast.show('验证码已发送');
   } catch (error) {
@@ -119,7 +125,7 @@ async function onSend(): Promise<void> {
   }
 }
 
-/** 提交：登录或注册，成功后回跳 */
+/** 提交登录（登录注册合一）：首登自动注册并绑定邀请码，成功后回跳 */
 async function onSubmit(): Promise<void> {
   if (submitting.value || !ensureValidPhone()) {
     return;
@@ -134,16 +140,14 @@ async function onSubmit(): Promise<void> {
   }
   submitting.value = true;
   try {
-    if (isRegister.value) {
-      await auth.smsRegister({ phone: form.phone, code: form.code, nickname: form.nickname || undefined });
+    const { registered } = await auth.smsLogin({ phone: form.phone, code: form.code });
+    if (registered) {
       await bindInviteCode();
-    } else {
-      await auth.smsLogin({ phone: form.phone, code: form.code });
     }
-    toast.show(isRegister.value ? '注册成功' : '登录成功');
+    toast.show(registered ? '注册成功' : '登录成功');
     redirectAfterLogin();
   } catch (error) {
-    toast.show(resolveHttpErrorMessage(error, isRegister.value ? '注册失败' : '登录失败'));
+    toast.show(resolveHttpErrorMessage(error, '登录失败'));
   } finally {
     submitting.value = false;
   }
@@ -196,7 +200,7 @@ onMounted(() => {
   void consumeWechatOauthCode();
 });
 
-/** 注册成功后绑定好友邀请码：绑定失败不阻断注册流程，仅提示 */
+/** 首登自动注册后绑定好友邀请码：绑定失败不阻断登录流程，仅提示 */
 async function bindInviteCode(): Promise<void> {
   const code = form.inviteCode.trim().toUpperCase();
   if (!code) {
@@ -235,7 +239,7 @@ async function bindInviteCode(): Promise<void> {
 
     <div class="panel card">
       <SegmentTabs
-        v-if="smsLoginVisible"
+        v-if="tabsVisible"
         v-model="activeTab"
         :tabs="[...TABS]"
       />
@@ -245,7 +249,7 @@ async function bindInviteCode(): Promise<void> {
         @submit.prevent="onSubmit"
       >
         <label
-          v-if="smsLoginVisible"
+          v-if="smsPanelActive"
           class="field"
         >
           <AppIcon
@@ -264,7 +268,7 @@ async function bindInviteCode(): Promise<void> {
         </label>
 
         <label
-          v-if="smsLoginVisible"
+          v-if="smsPanelActive"
           class="field"
         >
           <AppIcon
@@ -291,24 +295,7 @@ async function bindInviteCode(): Promise<void> {
         </label>
 
         <label
-          v-if="smsLoginVisible && isRegister"
-          class="field"
-        >
-          <AppIcon
-            name="user"
-            :size="18"
-            class="field-icon"
-          />
-          <input
-            v-model.trim="form.nickname"
-            type="text"
-            maxlength="20"
-            placeholder="昵称（选填，默认用手机号）"
-          >
-        </label>
-
-        <label
-          v-if="smsLoginVisible && isRegister"
+          v-if="smsPanelActive"
           class="field"
         >
           <AppIcon
@@ -320,12 +307,12 @@ async function bindInviteCode(): Promise<void> {
             v-model.trim="form.inviteCode"
             type="text"
             :maxlength="INVITE_LIMITS.codeLength"
-            placeholder="好友邀请码（选填，填码可得奖励）"
+            placeholder="好友邀请码（选填，首次登录填码可得奖励）"
           >
         </label>
 
         <label
-          v-if="smsLoginVisible || wechatLoginVisible"
+          v-if="smsPanelActive || wechatPanelActive"
           class="agree-row"
         >
           <input
@@ -343,16 +330,16 @@ async function bindInviteCode(): Promise<void> {
         </label>
 
         <button
-          v-if="smsLoginVisible"
+          v-if="smsPanelActive"
           type="submit"
           class="submit"
           :disabled="submitting"
         >
-          {{ submitting ? '处理中…' : submitText }}
+          {{ submitting ? '处理中…' : '登录' }}
         </button>
 
         <button
-          v-if="wechatLoginVisible"
+          v-if="wechatPanelActive"
           type="button"
           class="wechat-login"
           :disabled="wechatLogging"
@@ -363,13 +350,13 @@ async function bindInviteCode(): Promise<void> {
       </form>
 
       <p
-        v-if="smsLoginVisible"
+        v-if="smsPanelActive"
         class="hint"
       >
-        {{ isRegister ? '注册即成为普通会员（member）' : '未注册的手机号请切换到「注册」页' }}
+        未注册的手机号首次登录将自动注册为普通会员（member）
       </p>
       <p
-        v-else-if="wechatLoginVisible"
+        v-else-if="wechatPanelActive"
         class="hint"
       >
         首次微信登录将自动注册为普通会员（member）
@@ -546,12 +533,12 @@ async function bindInviteCode(): Promise<void> {
 }
 
 .wechat-login {
-  height: 44px;
-  font-size: 14px;
+  height: 48px;
+  font-size: 16px;
   font-weight: 700;
-  color: #2aae67;
-  background: transparent;
-  border: 1px solid #2aae67;
+  color: #fff;
+  background: #2aae67;
+  border: none;
   clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
 }
 

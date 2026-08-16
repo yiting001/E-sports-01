@@ -32,6 +32,7 @@ import { WechatOauthDriver } from './infrastructure/wechat-oauth.driver';
 
 import { TokenService } from './application/token.service';
 import { PermissionResolver } from './application/permission-resolver.service';
+import { PhoneMemberRegistrar } from './application/phone-member-registrar.service';
 import { TenantResolver } from './application/tenant-resolver.service';
 import { UserDirectory } from './application/user-directory.service';
 import { RoleGranter } from './application/role-granter.service';
@@ -171,6 +172,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     PasswordService,
     TokenService,
     PermissionResolver,
+    PhoneMemberRegistrar,
     TenantResolver,
     UserDirectory,
     RoleGranter,

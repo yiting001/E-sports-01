@@ -18,8 +18,8 @@
 | POST | `/api/auth/register` | 公开 | 当前租户注册 `{ username, password, nickname?, phone?, tenantCode? }` |
 | POST | `/api/auth/login` | 公开 | 当前租户登录 `{ account, password, tenantCode? }`，返回双令牌 |
 | POST | `/api/auth/refresh` | 公开 | 当前站点租户与 refresh token 租户一致时换发新双令牌 |
-| POST | `/api/auth/sms/code` | 公开 | 当前租户发送登录验证码 `{ phone, tenantCode? }` → `{ cooldown }`（`auth.smsLoginEnabled` 关闭时 403） |
-| POST | `/api/auth/sms/login` | 公开 | 当前租户短信登录 `{ phone, code, tenantCode? }`，返回双令牌（`auth.smsLoginEnabled` 关闭时 403） |
+| POST | `/api/auth/sms/code` | 公开 | 当前租户发送登录验证码 `{ phone, tenantCode? }` → `{ cooldown }`；登录注册合一，未注册手机号也可发码，已禁用账号拒绝（`auth.smsLoginEnabled` 关闭时 403） |
+| POST | `/api/auth/sms/login` | 公开 | 当前租户短信登录 `{ phone, code, tenantCode? }`，登录注册合一：首登自动注册 member 账号，返回双令牌与 `registered` 首登标记（`auth.smsLoginEnabled` 关闭时 403） |
 | GET | `/api/auth/wechat/authorize-url` | 公开 | `?redirectUri=` 生成公众号网页授权地址（开关关闭 403，回跳地址仅限 HTTP(S)） |
 | POST | `/api/auth/wechat/login` | 公开 | `{ code, tenantCode? }` 公众号授权码登录，首登自动注册 member，返回双令牌 |
 | POST | `/api/auth/wechat/bind` | 登录 | `{ code }` 登录态补绑公众号 openid（JSAPI 支付前置），冲突 409 |
