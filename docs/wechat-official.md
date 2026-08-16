@@ -59,6 +59,7 @@ apps/client/src/
 ├── utils/wechat-jsapi.ts             WeixinJSBridge 拉起收银台（成功/取消/失败）
 ├── views/auth/LoginView.vue          微信内一键登录入口
 ├── views/order/CheckoutView.vue      JSAPI 支付前绑定引导 + 回跳续付
+├── views/profile/ProfileEditView.vue 个人信息页微信绑定入口（老账号绑定后可微信一键登录）
 └── components/order/PayDialog.vue    JSAPI 拉起 + 查单轮询兜底
 
 apps/web/src/components/config/WechatPayCertUpload.vue 管理端证书上传控件（内联在证书类配置项的编辑抽屉中）
