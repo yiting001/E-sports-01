@@ -7,7 +7,7 @@
  * 登录/注册均需勾选同意《用户协议》（后台富文本配置，弹层查看全文）。
  */
 import { CHINA_MOBILE_PATTERN, INVITE_LIMITS } from '@app/contracts';
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { authApi } from '@/api/auth.api';
 import { inviteApi } from '@/api/invite.api';
@@ -15,9 +15,12 @@ import AgreementDialog from '@/components/auth/AgreementDialog.vue';
 import AppIcon from '@/components/common/AppIcon.vue';
 import SegmentTabs from '@/components/common/SegmentTabs.vue';
 import { useToast } from '@/composables/use-toast';
+import { useWechatOauth } from '@/composables/use-wechat-oauth';
 import { useAuthStore } from '@/stores/auth.store';
 import { useBrandingStore } from '@/stores/branding.store';
+import { usePortalStore } from '@/stores/portal.store';
 import { resolveHttpErrorMessage } from '@/utils/http-error';
+import { isWechatBrowser } from '@/utils/wechat-env';
 
 /** 分段页签：0=登录，1=注册 */
 const TABS = ['登录', '注册'] as const;
@@ -26,9 +29,11 @@ const FALLBACK_COOLDOWN = 60;
 
 const auth = useAuthStore();
 const branding = useBrandingStore();
+const portal = usePortalStore();
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
+const wechatOauth = useWechatOauth();
 
 const activeTab = ref(0);
 const isRegister = computed(() => activeTab.value === 1);
@@ -43,6 +48,12 @@ const agreementOpen = ref(false);
 
 const submitting = ref(false);
 const sending = ref(false);
+/** 微信一键登录进行中（跳转授权或回跳换登录态） */
+const wechatLogging = ref(false);
+/** 微信内且后台开启公众号登录时展示一键登录入口 */
+const wechatLoginVisible = computed(
+  () => isWechatBrowser() && portal.wechatOfficialLoginEnabled,
+);
 /** 验证码重发倒计时（秒），>0 时禁用发送按钮 */
 const countdown = ref(0);
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -112,14 +123,60 @@ async function onSubmit(): Promise<void> {
       await auth.smsLogin({ phone: form.phone, code: form.code });
     }
     toast.show(isRegister.value ? '注册成功' : '登录成功');
-    const redirect = route.query.redirect;
-    router.replace(typeof redirect === 'string' ? redirect : { name: 'home' });
+    redirectAfterLogin();
   } catch (error) {
     toast.show(resolveHttpErrorMessage(error, isRegister.value ? '注册失败' : '登录失败'));
   } finally {
     submitting.value = false;
   }
 }
+
+/** 登录成功后按 redirect 回跳或进入首页 */
+function redirectAfterLogin(): void {
+  const redirect = route.query.redirect;
+  void router.replace(typeof redirect === 'string' ? redirect : { name: 'home' });
+}
+
+/** 微信一键登录：跳转公众号网页授权（需先同意用户协议） */
+async function onWechatLogin(): Promise<void> {
+  if (wechatLogging.value) {
+    return;
+  }
+  if (!agreed.value) {
+    toast.show('请先阅读并同意《用户协议》');
+    return;
+  }
+  wechatLogging.value = true;
+  try {
+    await wechatOauth.startAuthorize();
+  } catch (error) {
+    wechatLogging.value = false;
+    toast.show(resolveHttpErrorMessage(error, '微信登录发起失败'));
+  }
+}
+
+/** 处理微信授权回跳：用 code 换登录态，失败时保留页面可重试 */
+async function consumeWechatOauthCode(): Promise<void> {
+  const code = wechatOauth.readOauthCode();
+  if (!code) {
+    return;
+  }
+  wechatOauth.clearOauthCode();
+  wechatLogging.value = true;
+  try {
+    await auth.wechatLogin({ code });
+    toast.show('登录成功');
+    redirectAfterLogin();
+  } catch (error) {
+    toast.show(resolveHttpErrorMessage(error, '微信登录失败，请重试'));
+  } finally {
+    wechatLogging.value = false;
+  }
+}
+
+onMounted(() => {
+  void consumeWechatOauthCode();
+});
 
 /** 注册成功后绑定好友邀请码：绑定失败不阻断注册流程，仅提示 */
 async function bindInviteCode(): Promise<void> {
@@ -263,6 +320,16 @@ async function bindInviteCode(): Promise<void> {
           :disabled="submitting"
         >
           {{ submitting ? '处理中…' : submitText }}
+        </button>
+
+        <button
+          v-if="wechatLoginVisible"
+          type="button"
+          class="wechat-login"
+          :disabled="wechatLogging"
+          @click="onWechatLogin"
+        >
+          {{ wechatLogging ? '微信登录中…' : '微信一键登录' }}
         </button>
       </form>
 
@@ -424,6 +491,21 @@ async function bindInviteCode(): Promise<void> {
 }
 
 .submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wechat-login {
+  height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2aae67;
+  background: transparent;
+  border: 1px solid #2aae67;
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+}
+
+.wechat-login:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
