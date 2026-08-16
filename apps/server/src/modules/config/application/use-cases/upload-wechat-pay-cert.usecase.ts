@@ -37,7 +37,9 @@ export class UploadWechatPayCertUseCase {
       if (!material.privateKeyPem) {
         throw new BadRequestException('商户证书文件中未找到私钥（请上传 apiclient_key.pem 或 apiclient_cert.p12）');
       }
-      await this.config.setRaw(CONFIG_KEYS.wallet.wechatPrivateKey, material.privateKeyPem);
+      await this.config.setRaw(CONFIG_KEYS.wallet.wechatPrivateKey, material.privateKeyPem, {
+        secret: true,
+      });
       updatedKeys.push(CONFIG_KEYS.wallet.wechatPrivateKey);
       if (material.serialNo) {
         await this.config.setRaw(CONFIG_KEYS.wallet.wechatSerialNo, material.serialNo);
@@ -50,6 +52,7 @@ export class UploadWechatPayCertUseCase {
       await this.config.setRaw(
         CONFIG_KEYS.wallet.wechatPlatformPublicKey,
         material.publicKeyPem,
+        { secret: true },
       );
       updatedKeys.push(CONFIG_KEYS.wallet.wechatPlatformPublicKey);
       if (material.serialNo) {

@@ -4,13 +4,19 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { ConfigItemView } from '@app/contracts';
+import { CONFIG_KEYS, ConfigItemView } from '@app/contracts';
 import { TenantContextService } from '../../../../shared/tenant/tenant-context.service';
 import { CONFIG_REPOSITORY, ConfigRepository } from '../../domain/config-repository.interface';
 import { isTenantOverridableConfigKey } from '../../domain/tenant-config-keys';
 import { UpsertConfigDto } from '../../interfaces/dto/upsert-config.dto';
 import { ConfigService } from '../config.service';
 import { toConfigView } from '../config.mapper';
+
+/** 证书上传维护的密钥类配置：即使敏感标记被误关，编辑留空也不清空 */
+const CERT_MANAGED_KEYS: ReadonlySet<string> = new Set([
+  CONFIG_KEYS.wallet.wechatPrivateKey,
+  CONFIG_KEYS.wallet.wechatPlatformPublicKey,
+]);
 
 /** 用例：新增或更新配置项，并使缓存失效 */
 @Injectable()
@@ -30,13 +36,17 @@ export class UpsertConfigUseCase {
       throw new ForbiddenException('租户管理员不能修改平台全局配置');
     }
     const existing = await this.repository.findByKey(dto.key);
-    // 敏感项编辑时不回显原值，提交留空表示保持原值不变，避免误清空密钥
-    const value = existing?.secret && dto.value === '' ? existing.value : dto.value;
+    // 敏感项与证书类密钥编辑时不回显原值，提交留空表示保持原值不变，避免误清空密钥
+    const certManaged = CERT_MANAGED_KEYS.has(dto.key);
+    const keepOriginal =
+      existing !== null && dto.value === '' && (existing.secret || certManaged);
+    const value = keepOriginal && existing ? existing.value : dto.value;
     await this.configService.setRaw(dto.key, value, {
       type: dto.type,
       group: dto.group,
       remark: dto.remark ?? '',
-      secret: dto.secret ?? false,
+      // 证书类密钥始终保持敏感，防止误关后明文回显
+      secret: certManaged ? true : (dto.secret ?? false),
     });
     const saved = await this.repository.findByKey(dto.key);
     if (!saved) {

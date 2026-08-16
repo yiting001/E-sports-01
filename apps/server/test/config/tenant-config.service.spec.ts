@@ -351,6 +351,27 @@ test('租户缓存仅记录无覆盖标记，全局回退更新后立即可见',
   assert.equal(after, '新全局品牌');
 });
 
+test('证书类密钥即使敏感标记被误关留空保存也不清空并恢复敏感标记', async () => {
+  const { globalRepository, service, tenant } = createService({
+    [CONFIG_KEYS.wallet.wechatPrivateKey]: '-----BEGIN PRIVATE KEY-----abc',
+  });
+  const useCase = new UpsertConfigUseCase(globalRepository, service, tenant);
+
+  await tenant.run({ tenantId: DEFAULT_TENANT_ID, isSuper: true }, () =>
+    useCase.execute({
+      key: CONFIG_KEYS.wallet.wechatPrivateKey,
+      value: '',
+      type: ConfigValueType.String,
+      group: ConfigGroup.Wallet,
+      secret: false,
+    }),
+  );
+
+  const saved = await globalRepository.findByKey(CONFIG_KEYS.wallet.wechatPrivateKey);
+  assert.equal(saved?.value, '-----BEGIN PRIVATE KEY-----abc');
+  assert.equal(saved?.secret, true);
+});
+
 test('租户管理员配置列表只返回可覆盖白名单', async () => {
   const { globalRepository, service, tenant } = createService({
     [CONFIG_KEYS.system.appName]: '品牌',
