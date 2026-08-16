@@ -1,7 +1,9 @@
 <script setup lang="ts">
 /**
  * 登录/注册页（C 端 · 战术电竞风全屏页）。
- * 仅支持手机号验证码方式：分段页签切换「登录 / 注册」，共用手机号+验证码表单，
+ * 登录方式由后台开关组合：手机号验证码（auth.smsLoginEnabled）与微信公众号一键登录
+ * （auth.wechatOfficialLoginEnabled，仅微信内展示）可共存或二选一。
+ * 短信方式：分段页签切换「登录 / 注册」，共用手机号+验证码表单，
  * 注册额外可填昵称与好友邀请码（填码注册成功自动绑定邀请关系）；注册成功即自动登录。登录态由 auth.store 维护，
  * 成功后按 redirect 回跳或进入首页。校验反馈统一走全局 toast。
  * 登录/注册均需勾选同意《用户协议》（后台富文本配置，弹层查看全文）。
@@ -50,10 +52,26 @@ const submitting = ref(false);
 const sending = ref(false);
 /** 微信一键登录进行中（跳转授权或回跳换登录态） */
 const wechatLogging = ref(false);
+/** 后台开启短信登录注册时展示手机号验证码表单 */
+const smsLoginVisible = computed(() => portal.smsLoginEnabled);
 /** 微信内且后台开启公众号登录时展示一键登录入口 */
 const wechatLoginVisible = computed(
   () => isWechatBrowser() && portal.wechatOfficialLoginEnabled,
 );
+/** 仅开微信登录但当前不在微信内：提示去微信打开 */
+const wechatOnlyOutside = computed(
+  () => !portal.smsLoginEnabled && portal.wechatOfficialLoginEnabled && !isWechatBrowser(),
+);
+/** 两种登录方式均关闭：提示暂未开放 */
+const noLoginAvailable = computed(
+  () => portal.loaded && !portal.smsLoginEnabled && !portal.wechatOfficialLoginEnabled,
+);
+/** 品牌区副标题：按已开启的登录方式描述 */
+const subtitle = computed(() => {
+  if (noLoginAvailable.value) return '登录注册暂未开放';
+  if (!portal.smsLoginEnabled) return '微信授权 · 快捷登录注册';
+  return '手机号验证码 · 快捷登录注册';
+});
 /** 验证码重发倒计时（秒），>0 时禁用发送按钮 */
 const countdown = ref(0);
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -210,13 +228,14 @@ async function bindInviteCode(): Promise<void> {
           {{ branding.appName }}
         </h1>
         <p class="subtitle">
-          手机号验证码 · 快捷登录注册
+          {{ subtitle }}
         </p>
       </div>
     </div>
 
     <div class="panel card">
       <SegmentTabs
+        v-if="smsLoginVisible"
         v-model="activeTab"
         :tabs="[...TABS]"
       />
@@ -225,7 +244,10 @@ async function bindInviteCode(): Promise<void> {
         class="form"
         @submit.prevent="onSubmit"
       >
-        <label class="field">
+        <label
+          v-if="smsLoginVisible"
+          class="field"
+        >
           <AppIcon
             name="phone"
             :size="18"
@@ -241,7 +263,10 @@ async function bindInviteCode(): Promise<void> {
           >
         </label>
 
-        <label class="field">
+        <label
+          v-if="smsLoginVisible"
+          class="field"
+        >
           <AppIcon
             name="shieldCheck"
             :size="18"
@@ -266,7 +291,7 @@ async function bindInviteCode(): Promise<void> {
         </label>
 
         <label
-          v-if="isRegister"
+          v-if="smsLoginVisible && isRegister"
           class="field"
         >
           <AppIcon
@@ -283,7 +308,7 @@ async function bindInviteCode(): Promise<void> {
         </label>
 
         <label
-          v-if="isRegister"
+          v-if="smsLoginVisible && isRegister"
           class="field"
         >
           <AppIcon
@@ -299,7 +324,10 @@ async function bindInviteCode(): Promise<void> {
           >
         </label>
 
-        <label class="agree-row">
+        <label
+          v-if="smsLoginVisible || wechatLoginVisible"
+          class="agree-row"
+        >
           <input
             v-model="agreed"
             type="checkbox"
@@ -315,6 +343,7 @@ async function bindInviteCode(): Promise<void> {
         </label>
 
         <button
+          v-if="smsLoginVisible"
           type="submit"
           class="submit"
           :disabled="submitting"
@@ -333,8 +362,29 @@ async function bindInviteCode(): Promise<void> {
         </button>
       </form>
 
-      <p class="hint">
+      <p
+        v-if="smsLoginVisible"
+        class="hint"
+      >
         {{ isRegister ? '注册即成为普通会员（member）' : '未注册的手机号请切换到「注册」页' }}
+      </p>
+      <p
+        v-else-if="wechatLoginVisible"
+        class="hint"
+      >
+        首次微信登录将自动注册为普通会员（member）
+      </p>
+      <p
+        v-else-if="wechatOnlyOutside"
+        class="hint"
+      >
+        当前仅开放微信登录，请在微信内打开本页面使用微信一键登录
+      </p>
+      <p
+        v-else-if="noLoginAvailable"
+        class="hint"
+      >
+        登录注册暂未开放，请联系管理员
       </p>
     </div>
 

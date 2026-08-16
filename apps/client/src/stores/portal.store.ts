@@ -14,6 +14,8 @@ export const usePortalStore = defineStore('portal', () => {
   const vConsoleEnabled = ref(false);
   /** 是否启用语音播报（后台 notify.voice.enabled 控制，默认开启） */
   const voiceNotifyEnabled = ref(true);
+  /** 是否开启手机号验证码登录/注册（后台 auth.smsLoginEnabled 控制，默认开启） */
+  const smsLoginEnabled = ref(true);
   /** 是否开启微信公众号网页授权登录（微信内登录页展示一键登录） */
   const wechatOfficialLoginEnabled = ref(false);
   /** 是否开启微信公众号 JSAPI 支付（微信内直接拉起收银台） */
@@ -28,6 +30,7 @@ export const usePortalStore = defineStore('portal', () => {
     showRank.value = true;
     vConsoleEnabled.value = false;
     voiceNotifyEnabled.value = true;
+    smsLoginEnabled.value = true;
     wechatOfficialLoginEnabled.value = false;
     wechatJsapiPayEnabled.value = false;
     loaded.value = false;
@@ -39,6 +42,7 @@ export const usePortalStore = defineStore('portal', () => {
       showRank.value = data.showRank;
       vConsoleEnabled.value = data.vConsoleEnabled === true;
       voiceNotifyEnabled.value = data.voiceNotifyEnabled !== false;
+      smsLoginEnabled.value = data.smsLoginEnabled !== false;
       wechatOfficialLoginEnabled.value = data.wechatOfficialLoginEnabled === true;
       wechatJsapiPayEnabled.value = data.wechatJsapiPayEnabled === true;
     } catch {
@@ -54,6 +58,7 @@ export const usePortalStore = defineStore('portal', () => {
     showRank,
     vConsoleEnabled,
     voiceNotifyEnabled,
+    smsLoginEnabled,
     wechatOfficialLoginEnabled,
     wechatJsapiPayEnabled,
     loaded,

@@ -1,12 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import {
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { SmsRegisterPayload, TokenPair } from '@app/contracts';
+import { CONFIG_KEYS, SmsRegisterPayload, TokenPair } from '@app/contracts';
+import { ConfigService } from '../../../config/application/config.service';
 import { SmsCodeService } from '../../../sms/application/sms-code.service';
 import { SmsCodePurpose } from '../../../sms/domain/sms-code-scope';
 import { MEMBER_ROLE } from '../../domain/rbac.constants';
@@ -17,7 +19,7 @@ import { TenantResolver } from '../tenant-resolver.service';
 import { TokenService } from '../token.service';
 
 /**
- * 用例：短信验证码注册。
+ * 用例：短信验证码注册（配置中心开关控制）。
  * 校验并消费验证码后，以手机号创建启用账号、默认分配 member（普通用户）角色，并直接签发令牌。
  * 短信注册的账号无口令：写入不可逆随机口令哈希，使其无法通过账号密码登录，只能短信登录。
  */
@@ -26,6 +28,7 @@ export class SmsRegisterUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(ROLE_REPOSITORY) private readonly roleRepo: RoleRepository,
+    private readonly config: ConfigService,
     private readonly smsCode: SmsCodeService,
     private readonly password: PasswordService,
     private readonly token: TokenService,
@@ -33,6 +36,9 @@ export class SmsRegisterUseCase {
   ) {}
 
   async execute(payload: SmsRegisterPayload): Promise<TokenPair> {
+    if (!(await this.config.getBoolean(CONFIG_KEYS.auth.smsLoginEnabled, true))) {
+      throw new ForbiddenException('手机号验证码注册未开启');
+    }
     const tenantId = await this.tenants.resolveForWrite(payload.tenantCode);
     const valid = await this.smsCode.verify(payload.phone, payload.code, {
       purpose: SmsCodePurpose.Register,

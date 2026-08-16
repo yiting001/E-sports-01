@@ -37,6 +37,7 @@ describe('C 端门户配置租户切换', () => {
       showRank: false,
       vConsoleEnabled: true,
       voiceNotifyEnabled: false,
+      smsLoginEnabled: false,
       wechatOfficialLoginEnabled: true,
       wechatJsapiPayEnabled: true,
     });
@@ -45,6 +46,7 @@ describe('C 端门户配置租户切换', () => {
       showRank: true,
       vConsoleEnabled: false,
       voiceNotifyEnabled: true,
+      smsLoginEnabled: true,
       wechatOfficialLoginEnabled: false,
       wechatJsapiPayEnabled: false,
     });
@@ -53,6 +55,7 @@ describe('C 端门户配置租户切换', () => {
     expect(store.showRank).toBe(false);
     expect(store.vConsoleEnabled).toBe(true);
     expect(store.voiceNotifyEnabled).toBe(false);
+    expect(store.smsLoginEnabled).toBe(false);
     expect(store.wechatOfficialLoginEnabled).toBe(true);
     expect(store.wechatJsapiPayEnabled).toBe(true);
     expect(store.loaded).toBe(true);

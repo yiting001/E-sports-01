@@ -18,6 +18,7 @@ export class GetPortalConfigUseCase {
       showRank,
       vConsoleEnabled,
       voiceNotifyEnabled,
+      smsLoginEnabled,
       wechatOfficialLoginEnabled,
       wechatJsapiPayEnabled,
     ] = await Promise.all([
@@ -30,6 +31,7 @@ export class GetPortalConfigUseCase {
         CONFIG_KEYS.notify.voiceEnabled,
         DEFAULT_VOICE_NOTIFY_ENABLED,
       ),
+      this.config.getBoolean(CONFIG_KEYS.auth.smsLoginEnabled, true),
       this.config.getBoolean(CONFIG_KEYS.auth.wechatOfficialLoginEnabled, false),
       this.config.getBoolean(CONFIG_KEYS.wallet.wechatJsapiEnabled, false),
     ]);
@@ -37,6 +39,7 @@ export class GetPortalConfigUseCase {
       showRank,
       vConsoleEnabled,
       voiceNotifyEnabled,
+      smsLoginEnabled,
       wechatOfficialLoginEnabled,
       wechatJsapiPayEnabled,
     };

@@ -1,5 +1,6 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { SmsLoginPayload, TokenPair } from '@app/contracts';
+import { ForbiddenException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CONFIG_KEYS, SmsLoginPayload, TokenPair } from '@app/contracts';
+import { ConfigService } from '../../../config/application/config.service';
 import { SmsCodeService } from '../../../sms/application/sms-code.service';
 import { SmsCodePurpose } from '../../../sms/domain/sms-code-scope';
 import { USER_REPOSITORY, UserRepository } from '../../domain/user-repository.interface';
@@ -8,19 +9,23 @@ import { TenantResolver } from '../tenant-resolver.service';
 import { TokenService } from '../token.service';
 
 /**
- * 用例：短信验证码登录。
+ * 用例：短信验证码登录（配置中心开关控制）。
  * 先解析启用账号及其租户作用域，再校验并消费验证码并签发令牌；账号不存在不自动注册。
  */
 @Injectable()
 export class SmsLoginUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
+    private readonly config: ConfigService,
     private readonly smsCode: SmsCodeService,
     private readonly token: TokenService,
     private readonly tenants: TenantResolver,
   ) {}
 
   async execute(payload: SmsLoginPayload): Promise<TokenPair> {
+    if (!(await this.config.getBoolean(CONFIG_KEYS.auth.smsLoginEnabled, true))) {
+      throw new ForbiddenException('手机号验证码登录未开启');
+    }
     const tenantId = await this.tenants.resolveOptionalId(payload.tenantCode);
     const user = await this.userRepo.findByPhone(payload.phone, tenantId);
     if (!user || user.status !== UserStatus.Enabled) {

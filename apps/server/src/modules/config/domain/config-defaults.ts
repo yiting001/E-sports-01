@@ -148,6 +148,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: '微信公众号网页授权登录开关：开启后微信内浏览器登录页展示一键登录（需先配置 notify.wechat.official.* 公众号凭证）',
   },
   {
+    key: CONFIG_KEYS.auth.smsLoginEnabled,
+    value: 'true',
+    type: ConfigValueType.Boolean,
+    group: ConfigGroup.Auth,
+    remark: '手机号验证码登录/注册开关：关闭后 C 端隐藏短信登录注册入口且接口拒绝；可与微信登录同时开启或二选一（请勿两者同时关闭）',
+  },
+  {
     key: CONFIG_KEYS.upload.driver,
     value: StorageDriver.Local,
     type: ConfigValueType.String,

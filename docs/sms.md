@@ -174,6 +174,7 @@ HTTP 契约未变化：
 
 | key                         | 默认值   | 说明                                                          |
 | --------------------------- | -------- | ------------------------------------------------------------- |
+| `auth.smsLoginEnabled` | `true` | 手机号验证码登录/注册总开关；关闭后发码与短信登录注册接口均 403，可与微信登录共存或二选一 |
 | `sms.development.fixedCode` | `000000` | 仅精确的 `NODE_ENV=development` 生效；4 至 8 位数字；清空关闭 |
 | `sms.provider`              | `log`    | `aliyun` / `tencent` / `volcano` / `log`；生产禁止 `log`      |
 | `sms.code.length`           | `6`      | 随机验证码位数                                                |
