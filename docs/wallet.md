@@ -69,6 +69,7 @@
 - 充值端口 `PaymentPort`、原路退款端口 `RefundPort`、提现端口 `PayoutPort` 为抽象；具体渠道为可插拔策略，由解析器按请求渠道挑选。
 - 新增渠道 = 实现端口 + 注册进 `PAYMENT_PORTS` / `REFUND_PORTS` / `PAYOUT_PORTS`，上层用例零改动。
 - 提现端口含 `available` 标记，预留渠道（微信）在**扣款前**即被拦截，避免无谓的冻结/回滚。
+- 微信支付含 Native 扫码与公众号 JSAPI 两个驱动（回调验签/查单复用 `wechat-pay.trade` 公共函数），JSAPI 驱动与开关、证书上传见 [wechat-official.md](./wechat-official.md)。
 
 ## 目录结构（DDD 四层）
 

@@ -20,6 +20,10 @@
 | POST | `/api/auth/refresh` | 公开 | 当前站点租户与 refresh token 租户一致时换发新双令牌 |
 | POST | `/api/auth/sms/code` | 公开 | 当前租户发送登录验证码 `{ phone, tenantCode? }` → `{ cooldown }` |
 | POST | `/api/auth/sms/login` | 公开 | 当前租户短信登录 `{ phone, code, tenantCode? }`，返回双令牌 |
+| GET | `/api/auth/wechat/authorize-url` | 公开 | `?redirectUri=` 生成公众号网页授权地址（开关关闭 403，回跳地址仅限 HTTP(S)） |
+| POST | `/api/auth/wechat/login` | 公开 | `{ code, tenantCode? }` 公众号授权码登录，首登自动注册 member，返回双令牌 |
+| POST | `/api/auth/wechat/bind` | 登录 | `{ code }` 登录态补绑公众号 openid（JSAPI 支付前置），冲突 409 |
+| GET | `/api/auth/wechat/identity` | 登录 | 当前账号微信绑定状态 `{ bound }` |
 | GET | `/api/auth/profile` | 登录 | 当前用户 `{ id, username, nickname, avatar, phone, roles[], permissions[], isSuper }` |
 | PUT | `/api/auth/profile` | 登录 | 自助更新本人资料 `{ nickname?, avatar?, phone? }`（手机号唯一校验，传空串解绑），返回更新后的 `UserView` |
 
@@ -87,7 +91,8 @@
 | 方法 | 路径 | 权限码 | 说明 |
 | --- | --- | --- | --- |
 | GET | `/api/config/branding` | 公开 | 品牌信息 `{ appName, appLogo }`，登录前可读 |
-| GET | `/api/config/portal` | 公开 | 门户开关 `{ showRank, vConsoleEnabled }`，vConsole 缺失或异常时默认关闭 |
+| GET | `/api/config/portal` | 公开 | 门户开关 `{ showRank, vConsoleEnabled, voiceNotifyEnabled, wechatOfficialLoginEnabled, wechatJsapiPayEnabled }`，缺失或异常时默认关闭 |
+| POST | `/api/config/wechat-pay-cert` | `config:save`（仅超管） | multipart 上传微信支付证书（PEM/P12，`usage=merchant\|platform`，`password?`），解析写入敏感配置项，返回 `{ usage, updatedKeys, serialNo }` |
 | GET | `/api/config` | `config:list` | 列表（密钥项值脱敏 `******`） |
 | POST | `/api/config` | `config:save` | 新增/更新（upsert）；默认租户非超管返回 403 |
 | DELETE | `/api/config/:key` | `config:remove` | 删除并失效缓存；默认租户非超管返回 403 |

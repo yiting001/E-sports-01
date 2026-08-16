@@ -36,13 +36,19 @@ async function doUpload(options: UploadRequestOptions): Promise<void> {
 </script>
 
 <template>
-  <el-card class="wechat-pay-cert" shadow="never">
+  <el-card
+    class="wechat-pay-cert"
+    shadow="never"
+  >
     <template #header>
       <span>微信支付证书上传（PEM / P12）</span>
     </template>
     <el-form label-width="84px">
       <el-form-item label="证书用途">
-        <el-select v-model="usage" style="width: 100%">
+        <el-select
+          v-model="usage"
+          style="width: 100%"
+        >
           <el-option
             v-for="option in USAGE_OPTIONS"
             :key="option.value"
@@ -66,7 +72,11 @@ async function doUpload(options: UploadRequestOptions): Promise<void> {
           accept=".pem,.p12,.pfx,.key,.crt,.cert"
           :disabled="uploading"
         >
-          <el-button type="primary" :loading="uploading" :icon="UploadFilled">
+          <el-button
+            type="primary"
+            :loading="uploading"
+            :icon="UploadFilled"
+          >
             选择文件并上传
           </el-button>
         </el-upload>

@@ -26,6 +26,14 @@ import { CreateOrderDto } from '../../src/modules/order/interfaces/dto/create-or
 import type { PaymentResolver } from '../../src/modules/wallet/application/payment.resolver';
 import type { TenantContextService } from '../../src/shared/tenant/tenant-context.service';
 import type { OrderNotifyService } from '../../src/modules/order/application/order-notify.service';
+import type { WechatIdentityService } from '../../src/modules/rbac/application/wechat-identity.service';
+
+/** 微信身份桩：余额支付用例不涉及 JSAPI，按未绑定返回空串 */
+function wechatIdentityStub(): WechatIdentityService {
+  return {
+    findOpenid: async () => '',
+  } as unknown as WechatIdentityService;
+}
 
 /** 订单微信通知桩：单测不关心推送，只需满足依赖签名 */
 function orderNotifyStub(): OrderNotifyService {
@@ -140,6 +148,7 @@ function createFailureFixture(balanceFailure: Error, channelFailure: Error): Fai
       couponRedeem,
       settle,
       boosterSelection,
+      wechatIdentityStub(),
     ),
     currentOrder: () => storedOrder,
     restoredOrderIds,
