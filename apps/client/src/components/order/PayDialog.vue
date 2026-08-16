@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * 扫码支付弹层：按下单结果渲染支付二维码（支付宝/微信），
- * 轮询主动查单接口（后端调渠道官方查单，回调未达也能确认支付），
+ * 支付弹层：扫码支付渲染二维码（支付宝/微信 Native）；
+ * 公众号 JSAPI 支付则直接调 WeixinJSBridge 拉起收银台，不出二维码。
+ * 均轮询主动查单接口（后端调渠道官方查单，回调未达也能确认支付），
  * 支付成功后通知父组件；关闭即停止轮询。
  */
 import { onBeforeUnmount, onMounted, ref } from 'vue';
@@ -13,6 +14,7 @@ import {
   type OrderView,
 } from '@app/contracts';
 import { orderApi } from '@/api/order.api';
+import { invokeWechatJsapiPay } from '@/utils/wechat-jsapi';
 
 const props = defineProps<{ order: CreateOrderResult }>();
 const emit = defineEmits<{ paid: []; close: [] }>();
@@ -28,6 +30,10 @@ let pollInFlight = false;
 let disposed = false;
 
 const providerText = ORDER_PAYMENT_METHOD_TEXT[props.order.provider];
+/** 是否为公众号 JSAPI 支付（直接拉起收银台，不出二维码） */
+const isJsapi = props.order.jsapiParams !== null;
+/** JSAPI 拉起中（防重复点击） */
+const invoking = ref(false);
 
 const PAID_ORDER_STATUSES: ReadonlySet<OrderStatus> = new Set<OrderStatus>([
   OrderStatus.PendingService,
@@ -76,12 +82,40 @@ function stopPolling(): void {
   }
 }
 
-onMounted(async () => {
+/** 拉起微信收银台；取消/失败后可重新拉起，成功以查单结果为准 */
+async function invokeJsapi(): Promise<void> {
+  if (invoking.value || !props.order.jsapiParams) {
+    return;
+  }
+  invoking.value = true;
+  queryMessage.value = '';
   try {
-    qrImage.value = await QRCode.toDataURL(props.order.qrCode, { width: 220 });
-  } catch {
-    if (!disposed) {
-      qrError.value = '支付二维码生成失败，请关闭后重试';
+    const outcome = await invokeWechatJsapiPay(props.order.jsapiParams);
+    if (disposed) {
+      return;
+    }
+    if (outcome === 'ok') {
+      void poll();
+    } else if (outcome === 'cancel') {
+      queryMessage.value = '已取消支付，可重新拉起';
+    } else {
+      queryMessage.value = '拉起微信支付失败，请重试';
+    }
+  } finally {
+    invoking.value = false;
+  }
+}
+
+onMounted(async () => {
+  if (isJsapi) {
+    void invokeJsapi();
+  } else {
+    try {
+      qrImage.value = await QRCode.toDataURL(props.order.qrCode, { width: 220 });
+    } catch {
+      if (!disposed) {
+        qrError.value = '支付二维码生成失败，请关闭后重试';
+      }
     }
   }
   if (disposed) {
@@ -104,20 +138,35 @@ onBeforeUnmount(() => {
   >
     <div class="dialog card">
       <h3 class="title">
-        {{ providerText }}扫码支付
+        {{ providerText }}{{ isJsapi ? '支付' : '扫码支付' }}
       </h3>
       <p class="amount">
         ¥{{ order.amountYuan }}
       </p>
-      <img
-        v-if="qrImage"
-        :src="qrImage"
-        class="qr"
-        alt="支付二维码"
-      >
-      <p class="tip">
-        请使用{{ providerText }}扫一扫完成支付，支付成功后自动跳转
-      </p>
+      <template v-if="isJsapi">
+        <button
+          type="button"
+          class="jsapi-pay"
+          :disabled="invoking"
+          @click="invokeJsapi"
+        >
+          {{ invoking ? '拉起支付中…' : '拉起微信支付' }}
+        </button>
+        <p class="tip">
+          在微信收银台完成支付，支付成功后自动跳转
+        </p>
+      </template>
+      <template v-else>
+        <img
+          v-if="qrImage"
+          :src="qrImage"
+          class="qr"
+          alt="支付二维码"
+        >
+        <p class="tip">
+          请使用{{ providerText }}扫一扫完成支付，支付成功后自动跳转
+        </p>
+      </template>
       <p
         v-if="qrError || queryMessage"
         class="feedback"
@@ -185,6 +234,21 @@ onBeforeUnmount(() => {
   font-size: 12px;
   color: #ff8a8a;
   text-align: center;
+}
+
+.jsapi-pay {
+  min-width: 180px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  background: #2aae67;
+  border-radius: var(--radius-sm);
+}
+
+.jsapi-pay:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .close {

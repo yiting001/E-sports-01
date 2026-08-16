@@ -33,14 +33,28 @@ describe('C 端门户配置租户切换', () => {
 
     const firstLoad = store.load();
     const secondLoad = store.load();
-    second.resolve({ showRank: false, vConsoleEnabled: true, voiceNotifyEnabled: false });
+    second.resolve({
+      showRank: false,
+      vConsoleEnabled: true,
+      voiceNotifyEnabled: false,
+      wechatOfficialLoginEnabled: true,
+      wechatJsapiPayEnabled: true,
+    });
     await secondLoad;
-    first.resolve({ showRank: true, vConsoleEnabled: false, voiceNotifyEnabled: true });
+    first.resolve({
+      showRank: true,
+      vConsoleEnabled: false,
+      voiceNotifyEnabled: true,
+      wechatOfficialLoginEnabled: false,
+      wechatJsapiPayEnabled: false,
+    });
     await firstLoad;
 
     expect(store.showRank).toBe(false);
     expect(store.vConsoleEnabled).toBe(true);
     expect(store.voiceNotifyEnabled).toBe(false);
+    expect(store.wechatOfficialLoginEnabled).toBe(true);
+    expect(store.wechatJsapiPayEnabled).toBe(true);
     expect(store.loaded).toBe(true);
   });
 });

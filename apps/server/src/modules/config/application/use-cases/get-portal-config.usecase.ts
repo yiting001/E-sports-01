@@ -14,7 +14,13 @@ export class GetPortalConfigUseCase {
   constructor(private readonly config: ConfigService) {}
 
   async execute(): Promise<PortalConfigView> {
-    const [showRank, vConsoleEnabled, voiceNotifyEnabled] = await Promise.all([
+    const [
+      showRank,
+      vConsoleEnabled,
+      voiceNotifyEnabled,
+      wechatOfficialLoginEnabled,
+      wechatJsapiPayEnabled,
+    ] = await Promise.all([
       this.config.getBoolean(CONFIG_KEYS.portal.showRank, DEFAULT_SHOW_RANK),
       this.config.getBoolean(
         CONFIG_KEYS.portal.vConsoleEnabled,
@@ -24,7 +30,15 @@ export class GetPortalConfigUseCase {
         CONFIG_KEYS.notify.voiceEnabled,
         DEFAULT_VOICE_NOTIFY_ENABLED,
       ),
+      this.config.getBoolean(CONFIG_KEYS.auth.wechatOfficialLoginEnabled, false),
+      this.config.getBoolean(CONFIG_KEYS.wallet.wechatJsapiEnabled, false),
     ]);
-    return { showRank, vConsoleEnabled, voiceNotifyEnabled };
+    return {
+      showRank,
+      vConsoleEnabled,
+      voiceNotifyEnabled,
+      wechatOfficialLoginEnabled,
+      wechatJsapiPayEnabled,
+    };
   }
 }

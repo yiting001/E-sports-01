@@ -30,6 +30,7 @@ import { AlipayClientFactory } from './infrastructure/drivers/alipay-client.fact
 import { AlipayPaymentDriver } from './infrastructure/drivers/alipay-payment.driver';
 import { WechatPayConfigFactory } from './infrastructure/drivers/wechat-pay.config';
 import { WechatPaymentDriver } from './infrastructure/drivers/wechat-payment.driver';
+import { WechatJsapiPaymentDriver } from './infrastructure/drivers/wechat-jsapi-payment.driver';
 import { AlipayPayoutDriver } from './infrastructure/drivers/alipay-payout.driver';
 import { WechatPayoutDriver } from './infrastructure/drivers/wechat-payout.driver';
 import { AlipayRefundDriver } from './infrastructure/drivers/alipay-refund.driver';
@@ -134,14 +135,19 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     AlipayPaymentDriver,
     WechatPayConfigFactory,
     WechatPaymentDriver,
+    WechatJsapiPaymentDriver,
     AlipayPayoutDriver,
     WechatPayoutDriver,
     AlipayRefundDriver,
     WechatRefundDriver,
     {
       provide: PAYMENT_PORTS,
-      useFactory: (alipay: AlipayPaymentDriver, wechat: WechatPaymentDriver) => [alipay, wechat],
-      inject: [AlipayPaymentDriver, WechatPaymentDriver],
+      useFactory: (
+        alipay: AlipayPaymentDriver,
+        wechat: WechatPaymentDriver,
+        wechatJsapi: WechatJsapiPaymentDriver,
+      ) => [alipay, wechat, wechatJsapi],
+      inject: [AlipayPaymentDriver, WechatPaymentDriver, WechatJsapiPaymentDriver],
     },
     {
       provide: PAYOUT_PORTS,

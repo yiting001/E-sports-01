@@ -4,8 +4,10 @@ import {
   CreateOrderPayload,
   CreateOrderResult,
   OrderBoosterSelectionMode,
+  OrderPaymentMethod,
   OrderStatus,
   ProductStatus,
+  WechatJsapiPayParams,
   calcDiscountedFen,
   fenToYuan,
   resolveProductPrice,
@@ -21,6 +23,7 @@ import {
   SelectedBoosterSnapshot,
 } from '../../../booster/application/booster-selection.service';
 import { MemberLevelService } from '../../../member/application/member-level.service';
+import { WechatIdentityService } from '../../../rbac/application/wechat-identity.service';
 import { PaymentResolver } from '../../../wallet/application/payment.resolver';
 import { buildOrderNo } from '../../../wallet/application/order-no.util';
 import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository.interface';
@@ -50,6 +53,7 @@ export class CreateOrderUseCase {
     private readonly couponRedeem: CouponRedeemService,
     private readonly settle: OrderPaymentSettleService,
     private readonly boosterSelection: BoosterSelectionService,
+    private readonly wechatIdentity: WechatIdentityService,
   ) {}
 
   async execute(userId: string, payload: CreateOrderPayload): Promise<CreateOrderResult> {
@@ -83,6 +87,7 @@ export class CreateOrderUseCase {
 
     const channelProvider = toPaymentProvider(payload.provider);
     const port = channelProvider ? this.paymentResolver.resolve(channelProvider) : null;
+    const payerOpenid = await this.resolveJsapiPayer(userId, payload.provider);
     const orderNo = buildOrderNo('O');
 
     const saved = await this.orders.save(
@@ -140,6 +145,7 @@ export class CreateOrderUseCase {
         orderNo,
         provider: payload.provider,
         qrCode: '',
+        jsapiParams: null,
         paid: true,
         amountFen,
         amountYuan: fenToYuan(amountFen),
@@ -162,6 +168,7 @@ export class CreateOrderUseCase {
         orderNo,
         provider: payload.provider,
         qrCode: '',
+        jsapiParams: null,
         paid: true,
         amountFen,
         amountYuan: fenToYuan(amountFen),
@@ -172,6 +179,7 @@ export class CreateOrderUseCase {
     }
 
     let qrCode: string;
+    let jsapiParams: WechatJsapiPayParams | null = null;
     try {
       const notifyBaseUrl = await this.config.getString(CONFIG_KEYS.wallet.notifyBaseUrl, '');
       const result = await port.createRecharge({
@@ -179,8 +187,10 @@ export class CreateOrderUseCase {
         amountFen,
         subject: product.title,
         notifyUrl: notifyBaseUrl ? `${notifyBaseUrl}/order/pay/callback/${payload.provider}` : '',
+        payerOpenid,
       });
       qrCode = result.qrCode;
+      jsapiParams = result.jsapiParams ?? null;
     } catch (error) {
       await this.compensateFailedCreation(saved.id);
       throw error;
@@ -191,6 +201,7 @@ export class CreateOrderUseCase {
       orderNo,
       provider: payload.provider,
       qrCode,
+      jsapiParams,
       paid: false,
       amountFen,
       amountYuan: fenToYuan(amountFen),
@@ -198,6 +209,28 @@ export class CreateOrderUseCase {
       discountBp: memberTier.discountBp,
       couponDeductionFen,
     };
+  }
+
+  /**
+   * JSAPI 支付前置校验：开关开启且当前用户已绑定公众号 openid。
+   * 其余支付方式返回 undefined，不影响原有流程。
+   */
+  private async resolveJsapiPayer(
+    userId: string,
+    method: OrderPaymentMethod,
+  ): Promise<string | undefined> {
+    if (method !== OrderPaymentMethod.WechatJsapi) {
+      return undefined;
+    }
+    const enabled = await this.config.getBoolean(CONFIG_KEYS.wallet.wechatJsapiEnabled, false);
+    if (!enabled) {
+      throw new BadRequestException('微信公众号支付未开启');
+    }
+    const openid = await this.wechatIdentity.findOpenid(userId);
+    if (!openid) {
+      throw new BadRequestException('请先在微信内完成微信登录或绑定后再支付');
+    }
+    return openid;
   }
 
   private async resolveRequestedBooster(

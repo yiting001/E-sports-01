@@ -24,11 +24,13 @@ import AppIcon from "@/components/common/AppIcon.vue";
 import CheckoutPaymentMethods from "@/components/order/CheckoutPaymentMethods.vue";
 import CheckoutServiceForm from "@/components/order/CheckoutServiceForm.vue";
 import PayDialog from "@/components/order/PayDialog.vue";
+import { authApi } from "@/api/auth.api";
 import { commerceApi } from "@/api/commerce.api";
 import { couponApi } from "@/api/coupon.api";
 import { memberApi } from "@/api/member.api";
 import { orderApi } from "@/api/order.api";
 import { useToast } from "@/composables/use-toast";
+import { useWechatOauth } from "@/composables/use-wechat-oauth";
 import { useCheckoutDraftStore } from "@/stores/checkout-draft.store";
 import {
   resolveCompatibleServiceRegion,
@@ -42,6 +44,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const checkout = useCheckoutDraftStore();
+const wechatOauth = useWechatOauth();
 const productId = String(route.params.productId);
 const savedDraft = checkout.getDraft(productId);
 
@@ -66,6 +69,8 @@ const serviceRegion = ref<BoosterServiceRegion>(
 const submitting = ref(false);
 const payOrder = ref<CreateOrderResult | null>(null);
 const completed = ref(false);
+/** 当前用户微信 openid 绑定状态；null 表示尚未查询 */
+const wechatBound = ref<boolean | null>(null);
 
 const coupons = ref<UserCouponView[]>([]);
 const selectedCouponId = ref(savedDraft?.selectedCouponId ?? "");
@@ -191,8 +196,56 @@ function validateOrder(): boolean {
   return true;
 }
 
+/**
+ * JSAPI 支付前确保已绑定 openid：未绑定时保存草稿并跳微信授权，
+ * 回跳后由 onMounted 的 code 消费逻辑完成绑定。返回是否可继续下单。
+ */
+async function ensureWechatBound(): Promise<boolean> {
+  if (provider.value !== OrderPaymentMethod.WechatJsapi) {
+    return true;
+  }
+  if (wechatBound.value === null) {
+    try {
+      wechatBound.value = (await authApi.wechatIdentity()).bound;
+    } catch {
+      return true;
+    }
+  }
+  if (wechatBound.value) {
+    return true;
+  }
+  toast.show("首次微信支付需先授权，正在跳转微信授权页");
+  saveCurrentDraft();
+  try {
+    await wechatOauth.startAuthorize();
+  } catch {
+    toast.show("微信授权发起失败，请重试或改用其他支付方式");
+  }
+  return false;
+}
+
+/** 消费微信授权回跳的 code：绑定 openid 后可直接继续 JSAPI 支付 */
+async function consumeWechatBindCode(): Promise<void> {
+  const code = wechatOauth.readOauthCode();
+  if (!code) {
+    return;
+  }
+  wechatOauth.clearOauthCode();
+  try {
+    wechatBound.value = (await authApi.wechatBind({ code })).bound;
+    if (wechatBound.value) {
+      toast.show("微信授权成功，可继续提交订单");
+    }
+  } catch {
+    // 绑定失败已由全局错误提示，下单时会再次引导授权
+  }
+}
+
 async function submit(): Promise<void> {
   if (!product.value || submitting.value || !validateOrder()) {
+    return;
+  }
+  if (!(await ensureWechatBound())) {
     return;
   }
   submitting.value = true;
@@ -292,6 +345,7 @@ watch(serviceRegion, (region) => {
 
 onMounted(() => {
   void loadCheckout();
+  void consumeWechatBindCode();
 });
 
 onBeforeUnmount(() => {

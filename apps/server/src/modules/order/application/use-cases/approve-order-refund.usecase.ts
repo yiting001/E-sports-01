@@ -18,7 +18,7 @@ import {
 import { canApproveOrderRefund } from '../../domain/order-refund.rules';
 import { OrderGroupService } from '../order-group.service';
 import { toAdminOrderView } from '../order.mapper';
-import { toPaymentProvider } from '../order-payment-method';
+import { toRefundProvider } from '../order-payment-method';
 import { ServiceAgentScope } from '../service-agent-scope.service';
 
 /** 审核通过并执行原路退款；处理中查询当前尝试，明确失败后使用新渠道号重试。 */
@@ -48,7 +48,7 @@ export class ApproveOrderRefundUseCase {
       order.refund.paymentMethod !== OrderPaymentMethod.Balance &&
       order.refund.amountFen > 0
     ) {
-      const provider = toPaymentProvider(order.refund.paymentMethod);
+      const provider = toRefundProvider(order.refund.paymentMethod);
       if (!provider) {
         throw new BadRequestException('退款支付方式不受支持');
       }
@@ -107,7 +107,7 @@ export class ApproveOrderRefundUseCase {
     begun: Exclude<BeginOrderRefundResult, { outcome: 'not_found' | 'invalid_status' }>,
     port: RefundPort | null,
   ): Promise<AdminOrderView> {
-    const paymentProvider = toPaymentProvider(begun.refund.paymentMethod);
+    const paymentProvider = toRefundProvider(begun.refund.paymentMethod);
     if (!paymentProvider || !port || port.provider !== paymentProvider) {
       throw new BadRequestException('退款支付方式不受支持');
     }

@@ -3,6 +3,7 @@ import type {
   SmsLoginPayload,
   SmsRegisterPayload,
   TokenPair,
+  WechatLoginPayload,
 } from '@app/contracts';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
@@ -69,6 +70,12 @@ export const useAuthStore = defineStore('auth', () => {
     await loadProfile();
   }
 
+  /** 微信公众号网页授权登录（首登自动注册），成功后拉取资料 */
+  async function wechatLogin(payload: WechatLoginPayload): Promise<void> {
+    acceptTokens(await authApi.wechatLogin(payload));
+    await loadProfile();
+  }
+
   /** 加载当前用户资料；令牌失效时清空登录态 */
   async function loadProfile(): Promise<void> {
     try {
@@ -98,6 +105,7 @@ export const useAuthStore = defineStore('auth', () => {
     loaded,
     smsLogin,
     smsRegister,
+    wechatLogin,
     loadProfile,
     logout,
   };

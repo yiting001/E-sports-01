@@ -141,6 +141,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: '用户协议正文（富文本，C 端登录/注册页需勾选同意后才可提交）',
   },
   {
+    key: CONFIG_KEYS.auth.wechatOfficialLoginEnabled,
+    value: 'false',
+    type: ConfigValueType.Boolean,
+    group: ConfigGroup.Auth,
+    remark: '微信公众号网页授权登录开关：开启后微信内浏览器登录页展示一键登录（需先配置 notify.wechat.official.* 公众号凭证）',
+  },
+  {
     key: CONFIG_KEYS.upload.driver,
     value: StorageDriver.Local,
     type: ConfigValueType.String,
@@ -503,6 +510,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     type: ConfigValueType.String,
     group: ConfigGroup.Wallet,
     remark: '微信支付平台证书序列号（回调验签匹配）',
+  },
+  {
+    key: CONFIG_KEYS.wallet.wechatJsapiEnabled,
+    value: 'false',
+    type: ConfigValueType.Boolean,
+    group: ConfigGroup.Wallet,
+    remark: '微信公众号 JSAPI 支付开关：开启后微信内浏览器直接拉起收银台（需微信登录绑定 openid），关闭时微信内也回退 Native 扫码',
   },
   {
     key: REALNAME_REQUIRED_ROLES_KEY,

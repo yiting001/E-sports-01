@@ -13,7 +13,7 @@
 - 结构化游戏资料：数字游戏 ID（1 ～ 32 位数字，必填）、文字游戏 ID（选填，最多 64）、本单区服（`delta-mobile` / `delta-pc`）和其他账号信息分字段收集；历史订单字段为空串兼容，不把大厅可见数据与接单后敏感数据混用
 - 打手选择：结算页可选「自动安排」或「指定打手」；指定时从 C 端脱敏目录选择，服务端复核打手支持区服、本人排除、实名和押金门禁，并固化 `requestedBoosterId` / `requestedBoosterName` 快照
 - 指定打手履约约束：指定订单支付成功后仍处于「待客服处理」，不能下发公共接单大厅；客服只能确认老板锁定的打手，不能改派他人，实际 `boosterId` / `boosterName` 仅在确认接单时写入
-- 下单支付：订单使用独立 `OrderPaymentMethod`（`alipay` / `wechat` / `balance`）。支付宝、微信复用钱包收款驱动并返回二维码；余额支付在创建订单请求内完成扣款并直接进入详情，不生成二维码
+- 下单支付：订单使用独立 `OrderPaymentMethod`（`alipay` / `wechat` / `wechat_jsapi` / `balance`）。支付宝、微信复用钱包收款驱动并返回二维码；微信内浏览器且开关开启时使用 `wechat_jsapi` 直接拉起公众号收银台（返回 `jsapiParams`，不出二维码，退款与 Native 共用微信商户驱动，详见 [wechat-official.md](./wechat-official.md)）；余额支付在创建订单请求内完成扣款并直接进入详情，不生成二维码
 - 全额退款审核：已付款且未开工的 `pending_service` / `dispatching` 订单可由本人申请，申请后冻结履约；后台按独立权限审核，余额退钱包、支付宝/微信原路退回，成功后冲正销量与会员累计消费。完整状态机、数据模型和失败恢复见 [order-refund.md](./order-refund.md)
 - 结算页钱包状态：独立调用 `GET /wallet/mine` 展示可用余额；加载失败可重试，冻结或余额不足时禁用余额方式，金额/优惠券变化造成不足时自动退出；可复用充值弹层原地充值并刷新余额
 - 会员折扣：下单时按用户当前会员等级折扣（member 模块 `MemberLevelService`）计应付，订单固化 `originalAmountFen`/`discountBp` 快照

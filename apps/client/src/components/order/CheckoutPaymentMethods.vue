@@ -10,7 +10,9 @@ import {
 import RechargeDialog from '@/components/wallet/RechargeDialog.vue';
 import { walletApi } from '@/api/wallet.api';
 import { useToast } from '@/composables/use-toast';
+import { usePortalStore } from '@/stores/portal.store';
 import { isWalletBalanceUnavailable } from '@/utils/checkout-state';
+import { isWechatBrowser } from '@/utils/wechat-env';
 
 const props = defineProps<{
   /** 当前订单应付金额（分），用于实时判断余额是否足够 */
@@ -19,12 +21,23 @@ const props = defineProps<{
 
 const paymentMethod = defineModel<OrderPaymentMethod>({ required: true });
 const toast = useToast();
+const portal = usePortalStore();
 
-const METHODS = [
-  OrderPaymentMethod.Alipay,
-  OrderPaymentMethod.Wechat,
-  OrderPaymentMethod.Balance,
-] as const;
+/** 微信内且后台开启 JSAPI 时，微信支付直接拉起收银台；否则仍走 Native 扫码 */
+const wechatMethod = computed(() =>
+  isWechatBrowser() && portal.wechatJsapiPayEnabled
+    ? OrderPaymentMethod.WechatJsapi
+    : OrderPaymentMethod.Wechat,
+);
+
+const methods = computed(
+  () =>
+    [
+      OrderPaymentMethod.Alipay,
+      wechatMethod.value,
+      OrderPaymentMethod.Balance,
+    ] as const,
+);
 
 const wallet = ref<WalletView | null>(null);
 const walletLoading = ref(false);
@@ -109,6 +122,21 @@ async function handleRechargePaid(): Promise<void> {
   }
 }
 
+/** 环境与开关对齐：草稿/持久化的微信方式与当前可用的微信方式不一致时自动纠正 */
+watch(
+  [() => paymentMethod.value, wechatMethod],
+  ([method, wechat]) => {
+    if (
+      (method === OrderPaymentMethod.Wechat ||
+        method === OrderPaymentMethod.WechatJsapi) &&
+      method !== wechat
+    ) {
+      paymentMethod.value = wechat;
+    }
+  },
+  { immediate: true },
+);
+
 watch(
   [() => paymentMethod.value, balanceInvalid, walletReady],
   ([method, invalid, ready]) => {
@@ -139,7 +167,7 @@ onMounted(() => void loadWallet());
 
     <div class="payment-options">
       <button
-        v-for="method in METHODS"
+        v-for="method in methods"
         :key="method"
         type="button"
         class="payment-option"

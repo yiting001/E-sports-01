@@ -8,12 +8,15 @@
 export enum PaymentProvider {
   Alipay = 'alipay',
   Wechat = 'wechat',
+  /** 微信公众号 JSAPI（微信内浏览器拉起收银台，与 Native 扫码共用商户凭证） */
+  WechatJsapi = 'wechat_jsapi',
 }
 
 /** 支付渠道展示文案 */
 export const PAYMENT_PROVIDER_TEXT: Record<PaymentProvider, string> = {
   [PaymentProvider.Alipay]: '支付宝',
   [PaymentProvider.Wechat]: '微信',
+  [PaymentProvider.WechatJsapi]: '微信公众号',
 };
 
 /** 提现（付款）渠道；微信为预留位，调用即提示未开通 */
