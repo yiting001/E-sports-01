@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import type { RoleView } from '@app/contracts';
+import type { RoleView, TenantView } from '@app/contracts';
 import { PAGINATION_DEFAULTS } from '@app/contracts';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { roleApi } from '@/api/role.api';
+import { tenantApi } from '@/api/tenant.api';
 import RolePermissionDialog from '@/components/rbac/RolePermissionDialog.vue';
 import RoleDirectory from '@/components/rbac/role/RoleDirectory.vue';
 import RoleFormDialog from '@/components/rbac/role/RoleFormDialog.vue';
 import RoleStats from '@/components/rbac/role/RoleStats.vue';
 import type { RoleForm } from '@/components/rbac/role/role-ui.types';
+import { useAuthStore } from '@/stores/auth.store';
 import './RoleListView.css';
 import './RoleListView.responsive.css';
 
@@ -20,11 +22,21 @@ const loading = ref(false);
 
 const dialogVisible = ref(false);
 const editingId = ref<string | null>(null);
-const form = reactive<RoleForm>({ code: '', name: '', remark: '' });
+const form = reactive<RoleForm>({ code: '', name: '', remark: '', tenantId: '' });
 const isEdit = computed(() => editingId.value !== null);
 
 const permVisible = ref(false);
 const permRole = ref<RoleView | null>(null);
+
+const auth = useAuthStore();
+const isSuper = computed(() => auth.profile?.isSuper === true);
+const tenants = ref<TenantView[]>([]);
+
+async function ensureTenants(): Promise<void> {
+  if (isSuper.value && tenants.value.length === 0) {
+    tenants.value = (await tenantApi.list(1, PAGINATION_DEFAULTS.maxPageSize)).list;
+  }
+}
 
 const builtinCount = computed(() => list.value.filter((item) => item.isSuper).length);
 const configurableCount = computed(() => Math.max(total.value - builtinCount.value, 0));
@@ -72,7 +84,9 @@ function openCreate(): void {
   form.code = '';
   form.name = '';
   form.remark = '';
+  form.tenantId = '';
   dialogVisible.value = true;
+  void ensureTenants();
 }
 
 function openEdit(row: RoleView): void {
@@ -80,6 +94,7 @@ function openEdit(row: RoleView): void {
   form.code = row.code;
   form.name = row.name;
   form.remark = row.remark;
+  form.tenantId = row.tenantId;
   dialogVisible.value = true;
 }
 
@@ -92,10 +107,19 @@ async function submit(): Promise<void> {
     ElMessage.warning('编码与名称必填');
     return;
   }
+  if (!editingId.value && isSuper.value && !form.tenantId) {
+    ElMessage.warning('请选择所属租户');
+    return;
+  }
   if (editingId.value) {
     await roleApi.update(editingId.value, { name: form.name, remark: form.remark });
   } else {
-    await roleApi.create({ ...form });
+    await roleApi.create({
+      code: form.code,
+      name: form.name,
+      remark: form.remark,
+      tenantId: form.tenantId || undefined,
+    });
   }
   ElMessage.success(isEdit.value ? '保存成功' : '创建成功');
   dialogVisible.value = false;
@@ -144,6 +168,8 @@ onMounted(load);
       v-model="dialogVisible"
       :form="form"
       :is-edit="isEdit"
+      :show-tenant="isSuper"
+      :tenant-options="tenants"
       @update:form="updateForm"
       @submit="submit"
     />

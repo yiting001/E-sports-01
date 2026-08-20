@@ -8,13 +8,10 @@ import {
 import { CreateTenantUseCase } from '../../src/modules/rbac/application/use-cases/create-tenant.usecase';
 import { Role } from '../../src/modules/rbac/domain/role.entity';
 import { TenantEntity } from '../../src/modules/rbac/domain/tenant.entity';
-import { User } from '../../src/modules/rbac/domain/user.entity';
-import type { PasswordService } from '../../src/modules/rbac/infrastructure/password.service';
 
-test('初始管理员创建失败时原子回滚租户和基础角色', async () => {
+test('内置角色创建失败时原子回滚租户', async () => {
   const tenants: TenantEntity[] = [];
   const roles: Role[] = [];
-  const users: User[] = [];
   const repositories: TenantProvisioningRepositories = {
     tenants: {
       existsByCode: async (code) => tenants.some((tenant) => tenant.code === code),
@@ -27,16 +24,8 @@ test('初始管理员创建失败时原子回滚租户和基础角色', async ()
     },
     roles: {
       create: (data) => Object.assign(new Role(), data),
-      save: async (role) => {
-        role.id = `role-${roles.length + 1}`;
-        roles.push(role);
-        return role;
-      },
-    },
-    users: {
-      create: (data) => Object.assign(new User(), data),
       save: async () => {
-        throw new Error('模拟管理员写入失败');
+        throw new Error('模拟角色写入失败');
       },
     },
     permissions: {
@@ -48,34 +37,27 @@ test('初始管理员创建失败时原子回滚租户和基础角色', async ()
       const snapshot = {
         tenants: tenants.length,
         roles: roles.length,
-        users: users.length,
       };
       try {
         return await work(repositories);
       } catch (error) {
         tenants.splice(snapshot.tenants);
         roles.splice(snapshot.roles);
-        users.splice(snapshot.users);
         throw error;
       }
     },
   };
-  const password: Pick<PasswordService, 'hash'> = {
-    hash: async () => 'password-hash',
-  };
-  const useCase = new CreateTenantUseCase(transaction, password);
+  const useCase = new CreateTenantUseCase(transaction);
 
   await assert.rejects(
     useCase.execute({
       code: 'tenant-a',
       name: '租户 A',
-      adminPassword: 'Tenant-A#2026',
     }),
-    /模拟管理员写入失败/,
+    /模拟角色写入失败/,
   );
   assert.deepEqual(tenants, []);
   assert.deepEqual(roles, []);
-  assert.deepEqual(users, []);
   assert.equal(await repositories.tenants.existsByCode('tenant-a'), false);
 });
 
@@ -85,16 +67,12 @@ test('并发创建相同租户编码时把数据库唯一冲突转换为业务�
       throw Object.assign(new Error('duplicate key'), { code: '23505' });
     },
   };
-  const password: Pick<PasswordService, 'hash'> = {
-    hash: async () => 'password-hash',
-  };
-  const useCase = new CreateTenantUseCase(transaction, password);
+  const useCase = new CreateTenantUseCase(transaction);
 
   await assert.rejects(
     useCase.execute({
       code: 'tenant-a',
       name: '租户 A',
-      adminPassword: 'Tenant-A#2026',
     }),
     (error: unknown) => error instanceof ConflictException,
   );

@@ -3,4 +3,6 @@ export interface RoleForm {
   code: string;
   name: string;
   remark: string;
+  /** 所属租户主键；仅平台超管新建时可选择 */
+  tenantId: string;
 }

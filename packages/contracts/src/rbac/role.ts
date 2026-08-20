@@ -7,6 +7,8 @@ export interface RoleView {
   code: string;
   name: string;
   remark: string;
+  /** 所属租户主键（平台超管跨租户列表时区分归属） */
+  tenantId: string;
   /** 关联的权限 id 集合 */
   permissionIds: string[];
   /** 是否内置超级管理员：为真时拥有全部权限，无需也无法单独分配 */

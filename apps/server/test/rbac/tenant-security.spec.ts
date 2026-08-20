@@ -93,13 +93,20 @@ test('非默认租户即使存在 admin 角色也不能获得平台超管旁路'
 });
 
 test('普通角色创建入口拒绝保留的 admin 编码', async () => {
-  const roleRepo: Pick<RoleRepository, 'existsByCode' | 'create' | 'save'> = {
+  const roleRepo: Pick<
+    RoleRepository,
+    'existsByCode' | 'findByCodeForTenant' | 'create' | 'save'
+  > = {
     existsByCode: async () => false,
+    findByCodeForTenant: async () => null,
     create: (data: Partial<Role>) =>
       Object.assign(makeRole('created-role', 'tenant-a', data.code ?? 'role'), data),
     save: async (role: Role) => role,
   };
-  const useCase = new CreateRoleUseCase(roleRepo);
+  const tenantRepo: Pick<TenantRepository, 'findById'> = {
+    findById: async () => null,
+  };
+  const useCase = new CreateRoleUseCase(roleRepo, tenantRepo, new TenantContextService());
 
   await assert.rejects(
     useCase.execute({ code: SUPER_ADMIN_ROLE, name: '伪超管' }),

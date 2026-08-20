@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { RoleView, UserListQuery, UserView } from '@app/contracts';
+import type { RoleView, TenantView, UserListQuery, UserView } from '@app/contracts';
 import { PAGINATION_DEFAULTS, PERMS, UserStatusEnum } from '@app/contracts';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { userApi, type CreateUserBody } from '@/api/user.api';
 import { roleApi } from '@/api/role.api';
+import { tenantApi } from '@/api/tenant.api';
 import CreateUserDialog from '@/components/rbac/user/CreateUserDialog.vue';
 import EditUserDialog from '@/components/rbac/user/EditUserDialog.vue';
 import ResetUserPasswordDialog from '@/components/rbac/user/ResetUserPasswordDialog.vue';
@@ -33,7 +34,10 @@ const createForm = reactive<CreateUserBody>({
   password: '',
   nickname: '',
   phone: '',
+  tenantId: '',
 });
+
+const tenants = ref<TenantView[]>([]);
 
 const roles = ref<RoleView[]>([]);
 const filters = reactive<UserFiltersForm>({
@@ -157,12 +161,20 @@ async function loadFilterRoles(): Promise<void> {
   }
 }
 
+async function ensureTenants(): Promise<void> {
+  if (isSuper.value && tenants.value.length === 0) {
+    tenants.value = (await tenantApi.list(1, PAGINATION_DEFAULTS.maxPageSize)).list;
+  }
+}
+
 function openCreate(): void {
   createForm.username = '';
   createForm.password = '';
   createForm.nickname = '';
   createForm.phone = '';
+  createForm.tenantId = '';
   createVisible.value = true;
+  void ensureTenants();
 }
 
 function updateCreateForm(value: CreateUserBody): void {
@@ -174,7 +186,15 @@ async function create(): Promise<void> {
     ElMessage.warning('用户名与密码必填');
     return;
   }
-  await userApi.create({ ...createForm, phone: createForm.phone || undefined });
+  if (isSuper.value && !createForm.tenantId) {
+    ElMessage.warning('请选择所属租户');
+    return;
+  }
+  await userApi.create({
+    ...createForm,
+    phone: createForm.phone || undefined,
+    tenantId: createForm.tenantId || undefined,
+  });
   ElMessage.success('创建成功');
   createVisible.value = false;
   await load();
@@ -295,6 +315,8 @@ onMounted(() => {
     <create-user-dialog
       v-model="createVisible"
       :form="createForm"
+      :show-tenant="isSuper"
+      :tenant-options="tenants"
       @update:form="updateCreateForm"
       @submit="create"
     />
