@@ -41,7 +41,7 @@
 | 方法 | 路径 | 权限码 |
 | --- | --- | --- |
 | GET | `/api/rbac/tenants` | `rbac:tenant:list` |
-| POST | `/api/rbac/tenants` | `rbac:tenant:create`；需传独立强密码 `adminPassword` |
+| POST | `/api/rbac/tenants` | `rbac:tenant:create`；仅创建租户与内置角色，不再同步创建管理员账号 |
 | PATCH | `/api/rbac/tenants/:id` | `rbac:tenant:update` |
 | DELETE | `/api/rbac/tenants/:id` | `rbac:tenant:remove`；当前统一返回 400，禁止物理删除 |
 
@@ -54,7 +54,7 @@
 | 方法 | 路径 | 权限码 |
 | --- | --- | --- |
 | GET | `/api/rbac/users` | `rbac:user:list`；支持 `?keyword&status&roleId` |
-| POST | `/api/rbac/users` | `rbac:user:create` |
+| POST | `/api/rbac/users` | `rbac:user:create`；可选 `tenantId`，仅平台超管可指定其他租户 |
 | PATCH | `/api/rbac/users/:id` | `rbac:user:update` |
 | POST | `/api/rbac/users/:id/password/reset` | `rbac:user:update`；body `{ password }`，6-128 位 |
 | DELETE | `/api/rbac/users/:id` | `rbac:user:remove` |
@@ -66,7 +66,7 @@
 | --- | --- | --- |
 | GET | `/api/rbac/roles` | `rbac:role:list` |
 | GET | `/api/rbac/roles/grantable-permissions` | `rbac:role:assignPermissions`；按当前操作者过滤可授予权限 |
-| POST | `/api/rbac/roles` | `rbac:role:create` |
+| POST | `/api/rbac/roles` | `rbac:role:create`；可选 `tenantId`，仅平台超管可指定其他租户 |
 | PATCH | `/api/rbac/roles/:id` | `rbac:role:update` |
 | DELETE | `/api/rbac/roles/:id` | `rbac:role:remove`；内置角色返回 409 |
 | POST | `/api/rbac/roles/:id/permissions` | `rbac:role:assignPermissions` |

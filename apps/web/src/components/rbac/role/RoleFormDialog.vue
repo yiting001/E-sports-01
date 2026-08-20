@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { CircleCheckFilled, Lock } from '@element-plus/icons-vue';
+import type { TenantView } from '@app/contracts';
 import type { RoleForm } from './role-ui.types';
 
 const props = defineProps<{
   modelValue: boolean;
   form: RoleForm;
   isEdit: boolean;
+  showTenant: boolean;
+  tenantOptions: TenantView[];
 }>();
 
 const emit = defineEmits<{
@@ -38,6 +41,25 @@ function updateField<K extends keyof RoleForm>(key: K, value: RoleForm[K]): void
       label-position="top"
       class="role-form"
     >
+      <el-form-item
+        v-if="showTenant && !isEdit"
+        label="所属租户"
+      >
+        <el-select
+          :model-value="form.tenantId"
+          placeholder="请选择所属租户"
+          filterable
+          class="role-form__tenant"
+          @update:model-value="(value: string) => updateField('tenantId', value)"
+        >
+          <el-option
+            v-for="tenant in tenantOptions"
+            :key="tenant.id"
+            :label="`${tenant.name}（${tenant.code}）`"
+            :value="tenant.id"
+          />
+        </el-select>
+      </el-form-item>
       <div class="role-form__grid">
         <el-form-item label="角色编码">
           <el-input
