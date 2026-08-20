@@ -18,10 +18,11 @@ export const orderApi = {
     orderNo?: string,
     options: RequestOptions = {}
   ): Promise<PaginatedResult<AdminOrderView>> {
-    return http.get("/order/admin", {
+    const config: RequestOptions = {
       params: { page, pageSize, status, orderNo: orderNo || undefined },
       ...options,
-    });
+    };
+    return http.get("/order/admin", config);
   },
   /** 查询单笔订单详情 */
   detail(id: string): Promise<AdminOrderView> {

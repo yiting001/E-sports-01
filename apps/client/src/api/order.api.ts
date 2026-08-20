@@ -51,10 +51,11 @@ export const orderApi = {
     query: HallOrderFilter = {},
     options: RequestOptions = {}
   ): Promise<PaginatedResult<OrderView>> {
-    return http.get("/order/hall", {
+    const config: RequestOptions = {
       ...options,
       params: { page, pageSize, ...query },
-    });
+    };
+    return http.get("/order/hall", config);
   },
   /** 接单大厅：查看待接单订单详情（仅打手；账号信息接单前不可见） */
   hallDetail(id: string, options: RequestOptions = {}): Promise<OrderView> {

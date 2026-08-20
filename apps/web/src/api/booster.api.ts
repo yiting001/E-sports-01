@@ -20,10 +20,11 @@ export const boosterApi = {
     keyword?: string,
     options: RequestOptions = {}
   ): Promise<PaginatedResult<BoosterView>> {
-    return http.get("/booster", {
+    const config: RequestOptions = {
       params: { page, pageSize, status, keyword },
       ...options,
-    });
+    };
+    return http.get("/booster", config);
   },
   /** 审核（通过即授予 booster 角色 / 驳回） */
   review(id: string, payload: ReviewBoosterPayload): Promise<BoosterView> {

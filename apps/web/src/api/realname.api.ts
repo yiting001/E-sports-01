@@ -27,10 +27,11 @@ export const realnameApi = {
     status?: RealnameStatus,
     options: RequestOptions = {}
   ): Promise<PaginatedResult<RealnameView>> {
-    return http.get("/realname", {
+    const config: RequestOptions = {
       params: { page, pageSize, status },
       ...options,
-    });
+    };
+    return http.get("/realname", config);
   },
   /** 审核（通过/驳回） */
   review(id: string, payload: ReviewRealnamePayload): Promise<RealnameView> {
