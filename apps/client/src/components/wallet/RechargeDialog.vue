@@ -2,6 +2,7 @@
 /**
  * 充值弹层：输入金额（元）+ 选择支付宝/微信 → 发起充值拿二维码 →
  * 轮询主动查单接口（后端调渠道官方查单，回调未达也能确认入账），
+ * 页面恢复可见时立即补查（微信等内置浏览器后台会冻结定时器），
  * 查到已支付即通知父组件。
  */
 import { computed, onBeforeUnmount, ref } from 'vue';
@@ -16,6 +17,10 @@ import {
 } from '@app/contracts';
 import { walletApi } from '@/api/wallet.api';
 import { useToast } from '@/composables/use-toast';
+import {
+  createPayStatusPoller,
+  type PayStatusPoller,
+} from '@/utils/pay-status-poller';
 
 /** 支付方式选项（渠道 → 展示文案） */
 const PROVIDERS = [
@@ -35,28 +40,32 @@ const provider = ref<PaymentProvider>(WALLET_DEFAULTS.paymentProvider);
 const submitting = ref(false);
 const result = ref<CreateRechargeResult | null>(null);
 const qrImage = ref('');
-let timer: number | null = null;
+let poller: PayStatusPoller | null = null;
+let pollInFlight = false;
 
 const providerText = computed(
   () => PROVIDERS.find((p) => p.value === provider.value)?.label ?? '',
 );
 
 function stopPolling(): void {
-  if (timer !== null) {
-    window.clearInterval(timer);
-    timer = null;
-  }
+  poller?.dispose();
+  poller = null;
 }
 
 /** 轮询主动查单：查到已支付即入账完成 */
 async function poll(): Promise<void> {
-  if (!result.value) {
+  if (!result.value || pollInFlight) {
     return;
   }
-  const { status } = await walletApi.rechargeStatus(result.value.outTradeNo);
-  if (status === RechargeStatus.Paid) {
-    stopPolling();
-    emit('paid');
+  pollInFlight = true;
+  try {
+    const { status } = await walletApi.rechargeStatus(result.value.outTradeNo);
+    if (status === RechargeStatus.Paid) {
+      stopPolling();
+      emit('paid');
+    }
+  } finally {
+    pollInFlight = false;
   }
 }
 
@@ -73,7 +82,7 @@ async function submit(): Promise<void> {
       provider: provider.value,
     });
     qrImage.value = await QRCode.toDataURL(result.value.qrCode, { width: 220 });
-    timer = window.setInterval(() => void poll(), POLL_INTERVAL_MS);
+    poller = createPayStatusPoller(() => void poll(), POLL_INTERVAL_MS);
   } finally {
     submitting.value = false;
   }

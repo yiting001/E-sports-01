@@ -3,6 +3,7 @@
  * 支付弹层：扫码支付渲染二维码（支付宝/微信 Native）；
  * 公众号 JSAPI 支付则直接调 WeixinJSBridge 拉起收银台，不出二维码。
  * 均轮询主动查单接口（后端调渠道官方查单，回调未达也能确认支付），
+ * 页面恢复可见时立即补查（微信等内置浏览器后台会冻结定时器），
  * 支付成功后通知父组件；关闭即停止轮询。
  */
 import { onBeforeUnmount, onMounted, ref } from 'vue';
@@ -14,6 +15,10 @@ import {
   type OrderView,
 } from '@app/contracts';
 import { orderApi } from '@/api/order.api';
+import {
+  createPayStatusPoller,
+  type PayStatusPoller,
+} from '@/utils/pay-status-poller';
 import { invokeWechatJsapiPay } from '@/utils/wechat-jsapi';
 
 const props = defineProps<{ order: CreateOrderResult }>();
@@ -25,7 +30,7 @@ const POLL_INTERVAL_MS = 3000;
 const qrImage = ref('');
 const qrError = ref('');
 const queryMessage = ref('');
-let timer: number | null = null;
+let poller: PayStatusPoller | null = null;
 let pollInFlight = false;
 let disposed = false;
 
@@ -76,10 +81,8 @@ async function poll(): Promise<void> {
 }
 
 function stopPolling(): void {
-  if (timer !== null) {
-    window.clearInterval(timer);
-    timer = null;
-  }
+  poller?.dispose();
+  poller = null;
 }
 
 /** 拉起微信收银台；取消/失败后可重新拉起，成功以查单结果为准 */
@@ -122,7 +125,7 @@ onMounted(async () => {
     return;
   }
   void poll();
-  timer = window.setInterval(() => void poll(), POLL_INTERVAL_MS);
+  poller = createPayStatusPoller(() => void poll(), POLL_INTERVAL_MS);
 });
 
 onBeforeUnmount(() => {

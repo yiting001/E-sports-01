@@ -202,6 +202,7 @@ erDiagram
 - 并发首登：绑定表唯一约束兜底，撞约束时清理多余账号并回查绑定登录，保证幂等。
 - JSAPI 支付缺 openid：下单前置校验报错，C 端结算页引导先绑定微信（跳授权→回跳续付，购物草稿保留）。
 - 拉起失败/用户取消：`WeixinJSBridge` 结果区分 ok/cancel/fail；bridge 5 秒未注入按失败处理；PayDialog 保留查单轮询兜底（回调丢失也能终态）。
+- 内置浏览器后台冻结定时器：PayDialog/充值弹层轮询接入 `pay-status-poller`，页面恢复可见（`visibilitychange`/`pageshow`）时立即补查并重启定时器，用户跳去支付宝/收银台支付后返回也能查到支付成功并跳转。
 - 证书解析失败（格式错误、P12 密码错误、缺私钥/公钥）：返回明确 400 文案，不写入任何配置。
 - JSAPI 退款复用微信商户退款驱动，`toRefundProvider` 将 `wechat_jsapi` 归一为微信商户渠道。
 

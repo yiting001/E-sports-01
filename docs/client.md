@@ -116,6 +116,7 @@ apps/client/src
 │  ├─ HallView.vue                      # 搜索/区服筛选、上下线、刷新、分页与接单
 │  └─ HallOrderDetailView.vue           # 大厅详情、失败重试及下线禁用接单
 ├─ utils/interval-poller.ts             # 可暂停/销毁且可测试的定时轮询器
+├─ utils/pay-status-poller.ts           # 支付结果轮询器：页面恢复可见时立即补查并重启定时器
 ├─ api/booster.api.ts                   # 本人入驻概览、提交/重提、押金、上下线接口
 ├─ api/upload.api.ts                     # 登录用户自助上传材料图
 ├─ components/profile/
@@ -157,6 +158,7 @@ flowchart TD
 - 商品详情决定结算页是否为“商品不存在”；钱包、优惠券或会员辅助请求失败各自降级，不把商品误报为下架。
 - 钱包加载失败可刷新；冻结或不足时余额按钮禁用。充值弹层关闭后保留已填写数量、备注、附件、账号和优惠券。
 - `PayDialog` 同一时刻只发一个查单请求；只有明确已支付状态或 `paidAt` 非空才成功跳转，取消状态会停止轮询并显示未支付。
+- 支付/充值轮询使用 `pay-status-poller`：微信等内置浏览器切去支付宝或收银台时后台会冻结 JS 定时器，监听 `visibilitychange`/`pageshow` 在页面恢复可见时立即补查一次支付状态并重启定时轮询，避免返回页面后查不到支付成功、不跳转。
 
 ## 商品详情展示流程
 
