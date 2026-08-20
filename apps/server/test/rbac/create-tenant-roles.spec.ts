@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { BadRequestException } from '@nestjs/common';
 import { BOOSTER_ROLE_CODE, PermissionType, PERMS } from '@app/contracts';
 import { validate } from 'class-validator';
 import { CreateTenantUseCase } from '../../src/modules/rbac/application/use-cases/create-tenant.usecase';
@@ -18,9 +17,6 @@ import type { RoleRepository } from '../../src/modules/rbac/domain/role-reposito
 import type { TenantProvisioningTransaction } from '../../src/modules/rbac/domain/tenant-provisioning-transaction.interface';
 import { TenantEntity } from '../../src/modules/rbac/domain/tenant.entity';
 import type { TenantRepository } from '../../src/modules/rbac/domain/tenant-repository.interface';
-import { User } from '../../src/modules/rbac/domain/user.entity';
-import type { UserRepository } from '../../src/modules/rbac/domain/user-repository.interface';
-import type { PasswordService } from '../../src/modules/rbac/infrastructure/password.service';
 import { CreateTenantDto } from '../../src/modules/rbac/interfaces/dto/create-tenant.dto';
 
 function makePermission(code: string): Permission {
@@ -60,10 +56,6 @@ test('创建租户时一次性播种管理员、会员、客服和打手四类�
       return role;
     },
   };
-  const userRepo: Pick<UserRepository, 'create' | 'save'> = {
-    create: (data: Partial<User>) => Object.assign(new User(), data),
-    save: async (user: User) => Object.assign(user, { id: 'tenant-admin-user' }),
-  };
   const permissionRepo: Pick<PermissionRepository, 'findAll'> = {
     findAll: async () => permissions,
   };
@@ -72,17 +64,14 @@ test('创建租户时一次性播种管理员、会员、客服和打手四类�
       work({
         tenants: tenantRepo,
         roles: roleRepo,
-        users: userRepo,
         permissions: permissionRepo,
       }),
   };
-  const password: Pick<PasswordService, 'hash'> = { hash: async () => 'password-hash' };
-  const useCase = new CreateTenantUseCase(provisioning, password);
+  const useCase = new CreateTenantUseCase(provisioning);
 
   await useCase.execute({
     code: 'tenant-a',
     name: '租户 A',
-    adminPassword: 'Tenant-A#2026',
   });
 
   assert.deepEqual(
@@ -110,66 +99,13 @@ test('创建租户时一次性播种管理员、会员、客服和打手四类�
   );
 });
 
-test('创建租户必须在写入前拒绝弱管理员密码', async () => {
-  let tenantSaved = false;
-  const tenantRepo: Pick<TenantRepository, 'existsByCode' | 'create' | 'save'> = {
-    existsByCode: async () => false,
-    create: (data: Partial<TenantEntity>) => Object.assign(new TenantEntity(), data),
-    save: async (tenant: TenantEntity) => {
-      tenantSaved = true;
-      return tenant;
-    },
-  };
-  const roleRepo: Pick<RoleRepository, 'create' | 'save'> = {
-    create: (data) => Object.assign(new Role(), data),
-    save: async (role) => role,
-  };
-  const userRepo: Pick<UserRepository, 'create' | 'save'> = {
-    create: (data) => Object.assign(new User(), data),
-    save: async (user) => user,
-  };
-  const permissionRepo: Pick<PermissionRepository, 'findAll'> = {
-    findAll: async () => [],
-  };
-  const provisioning: TenantProvisioningTransaction = {
-    run: (work) =>
-      work({
-        tenants: tenantRepo,
-        roles: roleRepo,
-        users: userRepo,
-        permissions: permissionRepo,
-      }),
-  };
-  const password: Pick<PasswordService, 'hash'> = {
-    hash: async () => 'password-hash',
-  };
-  const useCase = new CreateTenantUseCase(provisioning, password);
-
-  for (const adminPassword of ['admin123456', ' Tenant-A#2026 ']) {
-    await assert.rejects(
-      useCase.execute({
-        code: 'tenant-a',
-        name: '租户 A',
-        adminPassword,
-      }),
-      (error: unknown) => error instanceof BadRequestException,
-    );
-  }
-  assert.equal(tenantSaved, false);
-});
-
-test('创建租户 DTO 只接受独立强管理员密码', async () => {
-  const weak = Object.assign(new CreateTenantDto(), {
+test('创建租户 DTO 只需要编码与名称，不再接受管理员账号字段', async () => {
+  const dto = Object.assign(new CreateTenantDto(), {
     code: 'tenant-a',
     name: '租户 A',
-    adminPassword: 'admin123456',
-  });
-  const strong = Object.assign(new CreateTenantDto(), {
-    code: 'tenant-a',
-    name: '租户 A',
-    adminPassword: 'Tenant-A#2026',
   });
 
-  assert.ok((await validate(weak)).some((error) => error.property === 'adminPassword'));
-  assert.equal((await validate(strong)).length, 0);
+  assert.equal((await validate(dto)).length, 0);
+  assert.equal('adminPassword' in dto, false);
+  assert.equal('adminUsername' in dto, false);
 });

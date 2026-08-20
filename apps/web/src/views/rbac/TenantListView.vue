@@ -8,7 +8,6 @@ import CreateTenantDialog from "@/components/rbac/tenant/CreateTenantDialog.vue"
 import EditTenantDialog from "@/components/rbac/tenant/EditTenantDialog.vue";
 import TenantDirectory from "@/components/rbac/tenant/TenantDirectory.vue";
 import TenantStats from "@/components/rbac/tenant/TenantStats.vue";
-import { tenantAdminPasswordError } from "@/components/rbac/tenant/tenant-credentials";
 import { buildTenantSiteUrl } from "@/components/rbac/tenant/tenant-site-url";
 import type { EditTenantForm } from "@/components/rbac/tenant/tenant-ui.types";
 import { ENV } from "@/config/env";
@@ -28,8 +27,6 @@ const createForm = reactive<CreateTenantPayload>({
   code: "",
   name: "",
   remark: "",
-  adminUsername: "",
-  adminPassword: "",
 });
 
 const editVisible = ref(false);
@@ -113,8 +110,6 @@ function openCreate(): void {
   createForm.code = "";
   createForm.name = "";
   createForm.remark = "";
-  createForm.adminUsername = "";
-  createForm.adminPassword = "";
   createVisible.value = true;
 }
 
@@ -127,21 +122,14 @@ async function create(): Promise<void> {
     ElMessage.warning("租户编码与名称必填");
     return;
   }
-  const passwordError = tenantAdminPasswordError(createForm.adminPassword);
-  if (passwordError) {
-    ElMessage.warning(passwordError);
-    return;
-  }
   creating.value = true;
   try {
     await tenantApi.create({
       code: createForm.code,
       name: createForm.name,
       remark: createForm.remark || undefined,
-      adminUsername: createForm.adminUsername || undefined,
-      adminPassword: createForm.adminPassword,
     });
-    ElMessage.success("创建成功，已自动生成租户管理员账号");
+    ElMessage.success("创建成功，可到用户管理为该租户单独创建账号");
     createVisible.value = false;
     await load();
   } finally {

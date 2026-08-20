@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { CreateTenantPayload } from "@app/contracts";
 import { CircleCheckFilled } from "@element-plus/icons-vue";
-import { TENANT_ADMIN_PASSWORD_HINT } from "./tenant-credentials";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -33,7 +32,7 @@ function updateField<K extends keyof CreateTenantPayload>(
   >
     <div class="tenant-dialog__intro">
       <el-icon><CircleCheckFilled /></el-icon>
-      <span>创建后会自动初始化租户管理员角色与账号。</span>
+      <span>仅创建租户并初始化内置角色；管理员账号请到用户管理单独创建并选择所属租户。</span>
     </div>
     <el-form
       label-position="top"
@@ -64,28 +63,6 @@ function updateField<K extends keyof CreateTenantPayload>(
           @update:model-value="(value: string) => updateField('remark', value)"
         />
       </el-form-item>
-      <div class="tenant-form__grid">
-        <el-form-item label="管理员账号">
-          <el-input
-            :model-value="form.adminUsername"
-            placeholder="选填，默认 <编码>_admin"
-            @update:model-value="(value: string) => updateField('adminUsername', value)"
-          />
-        </el-form-item>
-        <el-form-item
-          label="管理员密码"
-          required
-        >
-          <el-input
-            :model-value="form.adminPassword"
-            type="password"
-            show-password
-            autocomplete="new-password"
-            :placeholder="TENANT_ADMIN_PASSWORD_HINT"
-            @update:model-value="(value: string) => updateField('adminPassword', value)"
-          />
-        </el-form-item>
-      </div>
     </el-form>
     <template #footer>
       <div class="admin-drawer__footer">

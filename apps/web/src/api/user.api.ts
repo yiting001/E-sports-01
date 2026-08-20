@@ -8,6 +8,8 @@ export interface CreateUserBody {
   password: string;
   nickname?: string;
   phone?: string;
+  /** 所属租户主键；仅平台超管可指定，缺省为当前租户 */
+  tenantId?: string;
 }
 
 /** 更新用户入参 */

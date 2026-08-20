@@ -8,11 +8,9 @@ import {
   TenantProvisioningTransaction,
 } from '../domain/tenant-provisioning-transaction.interface';
 import { TenantEntity } from '../domain/tenant.entity';
-import { User } from '../domain/user.entity';
 import { TypeormPermissionRepository } from './permission.repository';
 import { TypeormRoleRepository } from './role.repository';
 import { TypeormTenantRepository } from './tenant.repository';
-import { TypeormUserRepository } from './user.repository';
 
 /** TypeORM 租户开通事务适配器。 */
 @Injectable()
@@ -27,7 +25,6 @@ export class TypeormTenantProvisioningTransaction implements TenantProvisioningT
       work({
         tenants: new TypeormTenantRepository(manager.getRepository(TenantEntity)),
         roles: new TypeormRoleRepository(manager.getRepository(Role), this.tenant),
-        users: new TypeormUserRepository(manager.getRepository(User), this.tenant),
         permissions: new TypeormPermissionRepository(manager.getRepository(Permission)),
       }),
     );

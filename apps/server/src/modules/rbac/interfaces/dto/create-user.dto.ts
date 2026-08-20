@@ -41,4 +41,9 @@ export class CreateUserDto implements CreateUserInput {
   @ArrayUnique()
   @IsUUID('4', { each: true })
   roleIds?: string[];
+
+  /** 所属租户主键；仅平台超管可指定，缺省为当前请求租户 */
+  @IsOptional()
+  @IsUUID('4')
+  tenantId?: string;
 }

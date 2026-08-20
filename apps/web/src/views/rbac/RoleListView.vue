@@ -20,7 +20,7 @@ const loading = ref(false);
 
 const dialogVisible = ref(false);
 const editingId = ref<string | null>(null);
-const form = reactive<RoleForm>({ code: '', name: '', remark: '' });
+const form = reactive<RoleForm>({ code: '', name: '', remark: '', tenantId: '' });
 const isEdit = computed(() => editingId.value !== null);
 
 const permVisible = ref(false);
@@ -72,6 +72,7 @@ function openCreate(): void {
   form.code = '';
   form.name = '';
   form.remark = '';
+  form.tenantId = '';
   dialogVisible.value = true;
 }
 
@@ -80,6 +81,7 @@ function openEdit(row: RoleView): void {
   form.code = row.code;
   form.name = row.name;
   form.remark = row.remark;
+  form.tenantId = row.tenantId;
   dialogVisible.value = true;
 }
 
@@ -95,7 +97,12 @@ async function submit(): Promise<void> {
   if (editingId.value) {
     await roleApi.update(editingId.value, { name: form.name, remark: form.remark });
   } else {
-    await roleApi.create({ ...form });
+    await roleApi.create({
+      code: form.code,
+      name: form.name,
+      remark: form.remark,
+      tenantId: form.tenantId || undefined,
+    });
   }
   ElMessage.success(isEdit.value ? '保存成功' : '创建成功');
   dialogVisible.value = false;

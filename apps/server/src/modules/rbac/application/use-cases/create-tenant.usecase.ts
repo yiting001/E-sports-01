@@ -1,13 +1,5 @@
-import { BadRequestException, ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
-import {
-  BOOSTER_ROLE_CODE,
-  CreateTenantPayload,
-  TENANT_ADMIN_PASSWORD_MAX_LENGTH,
-  TENANT_ADMIN_PASSWORD_MIN_LENGTH,
-  TENANT_ADMIN_PASSWORD_PATTERN,
-  TenantStatus,
-  TenantView,
-} from '@app/contracts';
+import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
+import { BOOSTER_ROLE_CODE, CreateTenantPayload, TenantStatus, TenantView } from '@app/contracts';
 import {
   MEMBER_ROLE,
   isPlatformOnlyPermission,
@@ -22,13 +14,12 @@ import {
   TenantProvisioningRepositories,
   TenantProvisioningTransaction,
 } from '../../domain/tenant-provisioning-transaction.interface';
-import { PasswordService } from '../../infrastructure/password.service';
 import { toTenantView } from '../tenant.mapper';
 
 /**
  * 用例：创建租户（仅平台超管）。
- * 同时为新租户播种「租户管理员」角色（不含平台目录与全局规则写权限）
- * 与初始管理员账号，保证新租户开箱即用。
+ * 仅创建租户并播种四类内置角色；管理员账号与租户解耦，
+ * 由超管在用户管理中单独创建并选择所属租户和角色。
  */
 @Injectable()
 export class CreateTenantUseCase {
@@ -37,21 +28,10 @@ export class CreateTenantUseCase {
   constructor(
     @Inject(TENANT_PROVISIONING_TRANSACTION)
     private readonly provisioning: TenantProvisioningTransaction,
-    @Inject(PasswordService)
-    private readonly password: Pick<PasswordService, 'hash'>,
   ) {}
 
   async execute(payload: CreateTenantPayload): Promise<TenantView> {
-    const { adminPassword } = payload;
-    if (
-      adminPassword.length < TENANT_ADMIN_PASSWORD_MIN_LENGTH ||
-      adminPassword.length > TENANT_ADMIN_PASSWORD_MAX_LENGTH ||
-      !TENANT_ADMIN_PASSWORD_PATTERN.test(adminPassword)
-    ) {
-      throw new BadRequestException('管理员密码必须为 12-128 位，并包含大小写字母、数字和特殊字符');
-    }
     const code = payload.code.trim();
-    const passwordHash = await this.password.hash(adminPassword);
     try {
       const tenant = await this.provisioning.run(async (repositories) => {
         if (await repositories.tenants.existsByCode(code)) {
@@ -66,18 +46,10 @@ export class CreateTenantUseCase {
             builtin: false,
           }),
         );
-        const adminRole = await this.seedTenantRoles(repositories, savedTenant.id);
-        await this.seedTenantAdminUser(
-          repositories,
-          savedTenant.id,
-          code,
-          adminRole,
-          payload,
-          passwordHash,
-        );
+        await this.seedTenantRoles(repositories, savedTenant.id);
         return savedTenant;
       });
-      this.logger.log(`已创建租户 [${code}] 并播种租户管理员角色与账号`);
+      this.logger.log(`已创建租户 [${code}] 并播种四类内置角色`);
       return toTenantView(tenant);
     } catch (error) {
       if (error instanceof ConflictException) {
@@ -138,26 +110,6 @@ export class CreateTenantUseCase {
       }),
     );
     return adminRole;
-  }
-
-  /** 为新租户创建初始管理员账号并绑定租户管理员角色 */
-  private async seedTenantAdminUser(
-    repositories: TenantProvisioningRepositories,
-    tenantId: string,
-    code: string,
-    adminRole: Role,
-    payload: CreateTenantPayload,
-    passwordHash: string,
-  ): Promise<void> {
-    const username = payload.adminUsername?.trim() || `${code}_admin`;
-    const user = repositories.users.create({
-      username,
-      passwordHash,
-      nickname: '租户管理员',
-      tenantId,
-      roles: [adminRole],
-    });
-    await repositories.users.save(user);
   }
 }
 

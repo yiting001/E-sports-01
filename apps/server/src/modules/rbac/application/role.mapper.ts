@@ -9,6 +9,7 @@ export function toRoleView(role: Role): RoleView {
     code: role.code,
     name: role.name,
     remark: role.remark,
+    tenantId: role.tenantId,
     permissionIds: (role.permissions ?? []).map((p) => p.id),
     isSuper: role.code === SUPER_ADMIN_ROLE,
     createdAt: role.createdAt.toISOString(),
