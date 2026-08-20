@@ -20,5 +20,10 @@
     "test": "pnpm --filter @app/server test && pnpm --filter @app/web test && pnpm --filter @app/client test",
     "test:e2e:postgres": "pnpm --filter @app/server test:e2e:postgres"
   },
-  "packageManager": "pnpm@9.15.1"
+  "packageManager": "pnpm@9.15.1",
+  "pnpm": {
+    "overrides": {
+      "axios": "1.19.0"
+    }
+  }
 }
