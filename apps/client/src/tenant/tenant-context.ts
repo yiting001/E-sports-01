@@ -32,6 +32,16 @@ export interface TenantEntryResolution {
   error: string | null;
 }
 
+/** hash 路由下 tenantCode 位于 # 之后的路由 query 段；兼容旧链接的 search 参数。 */
+export function extractTenantQuery(search: string, hash: string): string {
+  const searchQuery = new URLSearchParams(search);
+  if (searchQuery.has(TENANT_QUERY_KEY)) {
+    return search;
+  }
+  const queryIndex = hash.indexOf('?');
+  return queryIndex < 0 ? '' : hash.slice(queryIndex + 1);
+}
+
 /** 显式 URL 参数优先；参数语法无效时关闭入口，不能静默落入其他租户。 */
 export function resolveTenantEntry(
   search: string,
@@ -75,8 +85,11 @@ function persistSessionTenantCode(tenantCode: string): void {
 }
 
 function initialTenantEntry(): TenantEntryResolution {
-  const search = typeof window === 'undefined' ? '' : window.location.search;
-  return resolveTenantEntry(search, readSessionTenantCode());
+  const query =
+    typeof window === 'undefined'
+      ? ''
+      : extractTenantQuery(window.location.search, window.location.hash);
+  return resolveTenantEntry(query, readSessionTenantCode());
 }
 
 const initialEntry = initialTenantEntry();

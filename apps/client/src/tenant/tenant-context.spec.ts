@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tokenStorage } from '@/api/token-storage';
 import {
   TenantEntryStatus,
+  extractTenantQuery,
   resolveTenantEntry,
   tenantContext,
 } from './tenant-context';
@@ -45,6 +46,19 @@ afterEach(() => {
 });
 
 describe('C 端租户上下文', () => {
+  it('从 hash 路由 query 提取租户参数，兼容旧 search 参数', () => {
+    expect(extractTenantQuery('', '#/?tenantCode=hash-tenant')).toBe(
+      'tenantCode=hash-tenant'
+    );
+    expect(
+      extractTenantQuery('?tenantCode=search-tenant', '#/')
+    ).toBe('?tenantCode=search-tenant');
+    expect(extractTenantQuery('?other=1', '#/home?tenantCode=hash-tenant')).toBe(
+      'tenantCode=hash-tenant'
+    );
+    expect(extractTenantQuery('', '#/')).toBe('');
+  });
+
   it('按 URL、会话存储、默认租户的顺序解析', () => {
     expect(
       resolveTenantEntry('?tenantCode=url-tenant', 'stored-tenant')

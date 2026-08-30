@@ -60,13 +60,14 @@ flowchart LR
 
 前端按以下优先级确定当前租户：
 
-1. URL 查询参数 `tenantCode`；
+1. URL 查询参数 `tenantCode`（C 端为 hash 路由，参数位于 `#/` 之后的路由 query 段，
+   同时兼容旧链接中位于 `#` 之前的 search 参数）；
 2. 当前应用自己的 `sessionStorage`；
 3. 内置编码 `default`。
 
 C 端和管理端使用不同的会话键，认证令牌也按租户编码分别存储，避免管理端/C 端或
 租户 A/租户 B 复用同一令牌。管理端租户目录的“访问站点”会打开
-`<VITE_CLIENT_BASE_URL>/?tenantCode=<code>`。
+`<VITE_CLIENT_BASE_URL>/#/?tenantCode=<code>`。
 显式配置优先；本地开发未配置时按管理端端口 +1 推断 C 端入口（如 5173 → 5174），同域
 `/admin/` 部署未配置时回退到当前域名根路径。空值且无法安全推断、无效 URL 或非 HTTP(S)
 协议会关闭跳转并提示配置错误，避免误打开管理端自身。

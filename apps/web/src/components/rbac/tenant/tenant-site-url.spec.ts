@@ -10,12 +10,22 @@ describe("租户 C 端站点地址", () => {
         "https://admin.example.com"
       )
     ).toBe(
-      "https://client.example.com/portal?source=admin&tenantCode=tenant-one"
+      "https://client.example.com/portal?source=admin#/?tenantCode=tenant-one"
     );
 
     expect(
       buildTenantSiteUrl("/client/", "tenant-two", "https://example.com")
-    ).toBe("https://example.com/client/?tenantCode=tenant-two");
+    ).toBe("https://example.com/client/#/?tenantCode=tenant-two");
+  });
+
+  it("tenantCode 置于 hash 路由 query 中，保留已有 hash 路径与参数", () => {
+    expect(
+      buildTenantSiteUrl(
+        "https://client.example.com/#/home?foo=1",
+        "tenant-one",
+        "https://admin.example.com"
+      )
+    ).toBe("https://client.example.com/#/home?foo=1&tenantCode=tenant-one");
   });
 
   it("配置缺失、无效或非 HTTP(S) 协议时关闭入口", () => {
@@ -48,7 +58,7 @@ describe("租户 C 端站点地址", () => {
         "tenant-one",
         "https://esports.example.com/admin/rbac/tenants"
       )
-    ).toBe("https://esports.example.com/?tenantCode=tenant-one");
+    ).toBe("https://esports.example.com/#/?tenantCode=tenant-one");
   });
 
   it("本地开发未显式配置时按管理端端口推断 C 端入口", () => {
@@ -58,6 +68,6 @@ describe("租户 C 端站点地址", () => {
         "tenant-two",
         "http://127.0.0.1:5180/rbac/tenants"
       )
-    ).toBe("http://127.0.0.1:5181/?tenantCode=tenant-two");
+    ).toBe("http://127.0.0.1:5181/#/?tenantCode=tenant-two");
   });
 });
