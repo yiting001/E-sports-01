@@ -257,7 +257,7 @@ location ^~ /static/ {
     proxy_set_header Host $host;
 }
 
-# ---------- 管理端（/admin/ 子路径，history 回退） ----------
+# ---------- 管理端（/admin/ 子路径，hash 路由，try_files 仅作兜底） ----------
 location ^~ /admin/ {
     alias /www/wwwroot/esports/apps/web/dist/;
     try_files $uri $uri/ /admin/index.html;
@@ -268,7 +268,7 @@ location = /admin {
     return 301 /admin/;
 }
 
-# ---------- C 端（根路径，history 回退） ----------
+# ---------- C 端（根路径，hash 路由，try_files 仅作兜底） ----------
 location / {
     try_files $uri $uri/ /index.html;
 }
@@ -335,7 +335,7 @@ pm2 save
 | 后端启动报「缺少必需的环境变量」           | `.env` 未放在 `apps/server/` 下，或 PM2 工作目录不对                                                                                              |
 | 前端接口 404                               | Nginx 未配置 `/api/` 反代，或 `VITE_API_BASE_URL` 少了 `/api` 后缀                                                                                |
 | `/admin/` 白屏或资源 404                   | 管理端构建时未加 `VITE_BASE=/admin/`，或 Nginx `alias` 路径末尾少了 `/`                                                                           |
-| `/admin/xxx` 刷新 404                      | `location /admin/` 缺少 `try_files ... /admin/index.html` 回退                                                                                    |
+| `/admin/xxx` 刷新 404                      | 路由已改为 hash 模式（地址形如 `/admin/#/xxx`），刷新不依赖服务端回退；若仍 404 检查 `alias` 路径与旧书签地址                                              |
 | 租户目录“访问站点”报未配置                 | 管理端既未配置 `VITE_CLIENT_BASE_URL`，当前页面也不在同域 `/admin/` 部署或本地可推断端口场景；显式设置 `VITE_CLIENT_BASE_URL=/`                  |
 | 客服/IM 连不上、控制台报 websocket error   | 缺少 `/socket.io/` 的 Upgrade 反代配置                                                                                                            |
 | 上传图片显示 127.0.0.1 链接                | 配置中心 `upload.local.baseUrl` 未改为公网地址                                                                                                    |
