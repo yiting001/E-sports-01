@@ -16,11 +16,28 @@ export function buildTenantSiteUrl(
     if (!ALLOWED_SITE_PROTOCOLS.has(target.protocol)) {
       return null;
     }
-    target.searchParams.set("tenantCode", tenantCode);
+    target.hash = buildHashWithTenantCode(target.hash, tenantCode);
     return target.toString();
   } catch {
     return null;
   }
+}
+
+/** C 端为 hash 路由，tenantCode 须置于 # 之后的路由 query 中。 */
+function buildHashWithTenantCode(hash: string, tenantCode: string): string {
+  const rawHash = hash.startsWith("#") ? hash.slice(1) : hash;
+  const [routePath, routeQuery = ""] = splitHashRoute(rawHash || "/");
+  const query = new URLSearchParams(routeQuery);
+  query.set("tenantCode", tenantCode);
+  return `#${routePath}?${query.toString()}`;
+}
+
+function splitHashRoute(rawHash: string): [string, string] {
+  const queryIndex = rawHash.indexOf("?");
+  if (queryIndex === -1) {
+    return [rawHash, ""];
+  }
+  return [rawHash.slice(0, queryIndex), rawHash.slice(queryIndex + 1)];
 }
 
 function resolveClientBaseUrl(
