@@ -24,6 +24,7 @@ import type { OrderRepository } from '../../src/modules/order/domain/order-repos
 import { OrderEntity } from '../../src/modules/order/domain/order.entity';
 import { CreateOrderDto } from '../../src/modules/order/interfaces/dto/create-order.dto';
 import type { PaymentResolver } from '../../src/modules/wallet/application/payment.resolver';
+import { passthroughPaymentGateway } from './payment-gateway.stub';
 import type { TenantContextService } from '../../src/shared/tenant/tenant-context.service';
 import type { OrderNotifyService } from '../../src/modules/order/application/order-notify.service';
 import type { WechatIdentityService } from '../../src/modules/rbac/application/wechat-identity.service';
@@ -143,6 +144,7 @@ function createFailureFixture(balanceFailure: Error, channelFailure: Error): Fai
       orders,
       products,
       paymentResolver,
+      passthroughPaymentGateway(),
       config,
       memberLevels,
       couponRedeem,

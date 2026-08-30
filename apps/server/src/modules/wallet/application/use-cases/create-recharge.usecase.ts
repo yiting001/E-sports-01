@@ -13,6 +13,7 @@ import {
   RechargeOrderRepository,
 } from '../../domain/recharge-repository.interface';
 import { RechargeOrderEntity } from '../../domain/recharge-order.entity';
+import { PaymentGatewayService } from '../payment-gateway.service';
 import { PaymentResolver } from '../payment.resolver';
 import { WalletService } from '../wallet.service';
 import { buildOrderNo } from '../order-no.util';
@@ -30,6 +31,7 @@ export class CreateRechargeUseCase {
   constructor(
     private readonly walletService: WalletService,
     private readonly paymentResolver: PaymentResolver,
+    private readonly paymentGateway: PaymentGatewayService,
     private readonly config: ConfigService,
     @Inject(RECHARGE_ORDER_REPOSITORY)
     private readonly rechargeRepo: RechargeOrderRepository,
@@ -50,14 +52,16 @@ export class CreateRechargeUseCase {
     }
 
     const wallet = await this.walletService.ensureWallet(userId);
-    const port = this.paymentResolver.resolve(body.provider);
+    // 充值单直接持久化实际执行渠道，后续回调/查单不受网关切换影响
+    const provider = await this.paymentGateway.resolvePaymentProvider(body.provider);
+    const port = this.paymentResolver.resolve(provider);
     const outTradeNo = buildOrderNo('R');
 
     const order = new RechargeOrderEntity();
     order.walletId = wallet.id;
     order.outTradeNo = outTradeNo;
     order.amountFen = body.amountFen;
-    order.provider = body.provider;
+    order.provider = provider;
     order.status = RechargeStatus.Pending;
     order.providerTradeNo = null;
     const saved = await this.rechargeRepo.save(order);
@@ -71,14 +75,14 @@ export class CreateRechargeUseCase {
       amountFen: body.amountFen,
       subject: RECHARGE_SUBJECT,
       notifyUrl: notifyBaseUrl
-        ? `${notifyBaseUrl}/wallet/recharge/callback/${body.provider}`
+        ? `${notifyBaseUrl}/wallet/recharge/callback/${provider}`
         : '',
     });
 
     return {
       orderId: saved.id,
       outTradeNo,
-      provider: body.provider,
+      provider,
       qrCode,
       amountFen: body.amountFen,
       amountYuan: fenToYuan(body.amountFen),

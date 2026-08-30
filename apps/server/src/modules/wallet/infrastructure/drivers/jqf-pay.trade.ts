@@ -1,0 +1,107 @@
+import { BadGatewayException, BadRequestException } from '@nestjs/common';
+import {
+  PaymentCallbackRequest,
+  PaymentCallbackResult,
+  PaymentQueryResult,
+  RechargeCreateInput,
+} from '../../domain/payment-port.interface';
+import { JqfPayConfig } from './jqf-pay.config';
+import { postJqf, verifyJqfSign } from './jqf-pay.request';
+
+/** 统一下单路径 */
+const UNIFIED_ORDER_PATH = 'api/pay/unifiedOrder';
+/** 查单路径 */
+const QUERY_PATH = 'api/pay/query';
+/** 订单状态：支付成功 */
+const STATE_SUCCESS = 2;
+
+/** 统一下单结果（payData 含义随 payDataType 而变） */
+export interface JqfUnifiedOrderResult {
+  payOrderId: string;
+  payDataType: string;
+  payData: string;
+}
+
+/** 计全付统一下单（金额单位为分；wayCode/channelExtra 由具体驱动决定）。 */
+export async function createJqfUnifiedOrder(
+  cfg: JqfPayConfig,
+  input: RechargeCreateInput,
+  wayCode: string,
+  channelExtra: Record<string, string>,
+): Promise<JqfUnifiedOrderResult> {
+  const data = await postJqf(cfg, UNIFIED_ORDER_PATH, {
+    mchOrderNo: input.outTradeNo,
+    wayCode,
+    amount: input.amountFen,
+    currency: 'CNY',
+    subject: input.subject,
+    body: input.subject,
+    notifyUrl: input.notifyUrl || undefined,
+    channelExtra: JSON.stringify(channelExtra),
+  });
+  const payOrderId = data.payOrderId;
+  const payDataType = data.payDataType;
+  const payData = data.payData;
+  if (typeof payOrderId !== 'string' || typeof payDataType !== 'string') {
+    throw new BadGatewayException('计全付下单响应格式异常');
+  }
+  return {
+    payOrderId,
+    payDataType,
+    payData: typeof payData === 'string' ? payData : '',
+  };
+}
+
+/** 主动查单：state=2 视为已支付。 */
+export async function queryJqfTrade(
+  cfg: JqfPayConfig,
+  outTradeNo: string,
+): Promise<PaymentQueryResult> {
+  const data = await postJqf(cfg, QUERY_PATH, { mchOrderNo: outTradeNo });
+  const state = data.state;
+  const payOrderId = data.payOrderId;
+  const amount = data.amount;
+  if (typeof state !== 'number' || typeof payOrderId !== 'string') {
+    throw new BadGatewayException('计全付查单响应格式异常');
+  }
+  const paid = state === STATE_SUCCESS;
+  return {
+    paid,
+    providerTradeNo: payOrderId,
+    paidAmountFen: paid && typeof amount === 'number' && Number.isSafeInteger(amount) ? amount : 0,
+  };
+}
+
+/** 解析并验签计全付支付异步通知；验签失败直接拒绝。 */
+export function parseJqfCallback(
+  cfg: JqfPayConfig,
+  req: PaymentCallbackRequest,
+): PaymentCallbackResult {
+  if (!verifyJqfSign(req.body, cfg.apiKey)) {
+    throw new BadRequestException('计全付回调验签失败');
+  }
+  const mchOrderNo = req.body.mchOrderNo;
+  const payOrderId = req.body.payOrderId;
+  const state = req.body.state;
+  const amount = req.body.amount;
+  if (
+    typeof mchOrderNo !== 'string' ||
+    typeof payOrderId !== 'string' ||
+    typeof state !== 'number'
+  ) {
+    throw new BadRequestException('计全付回调参数异常');
+  }
+  const success = state === STATE_SUCCESS;
+  return {
+    outTradeNo: mchOrderNo,
+    providerTradeNo: payOrderId,
+    paidAmountFen:
+      success && typeof amount === 'number' && Number.isSafeInteger(amount) ? amount : 0,
+    success,
+  };
+}
+
+/** 计全付要求处理成功时返回纯文本 SUCCESS，否则会按梯度重试通知。 */
+export function jqfCallbackAck(): string {
+  return 'SUCCESS';
+}

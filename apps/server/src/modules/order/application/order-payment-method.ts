@@ -23,14 +23,16 @@ export function toRefundProvider(method: OrderPaymentMethod): PaymentProvider | 
   return provider === PaymentProvider.WechatJsapi ? PaymentProvider.Wechat : provider;
 }
 
-/** 渠道回调转换为订单支付方式。 */
+/** 渠道回调转换为订单支付方式（计全付渠道回归对应微信支付方式，订单不感知网关）。 */
 export function toOrderPaymentMethod(provider: PaymentProvider): OrderPaymentMethod {
   switch (provider) {
     case PaymentProvider.Alipay:
       return OrderPaymentMethod.Alipay;
     case PaymentProvider.Wechat:
+    case PaymentProvider.JqfWechat:
       return OrderPaymentMethod.Wechat;
     case PaymentProvider.WechatJsapi:
+    case PaymentProvider.JqfWechatJsapi:
       return OrderPaymentMethod.WechatJsapi;
   }
 }

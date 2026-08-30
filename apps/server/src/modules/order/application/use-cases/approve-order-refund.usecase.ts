@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AdminOrderView, OrderPaymentMethod } from '@app/contracts';
+import { PaymentGatewayService } from '../../../wallet/application/payment-gateway.service';
 import { RefundResolver } from '../../../wallet/application/refund.resolver';
 import {
   RefundExecutionResult,
@@ -32,6 +33,7 @@ export class ApproveOrderRefundUseCase {
     @Inject(ORDER_REFUND_TRANSACTION)
     private readonly refunds: OrderRefundTransaction,
     private readonly refundResolver: RefundResolver,
+    private readonly paymentGateway: PaymentGatewayService,
     private readonly scope: ServiceAgentScope,
     private readonly orderGroup: OrderGroupService,
   ) {}
@@ -48,7 +50,7 @@ export class ApproveOrderRefundUseCase {
       order.refund.paymentMethod !== OrderPaymentMethod.Balance &&
       order.refund.amountFen > 0
     ) {
-      const provider = toRefundProvider(order.refund.paymentMethod);
+      const provider = await this.resolveRefundChannel(order.refund.paymentMethod);
       if (!provider) {
         throw new BadRequestException('退款支付方式不受支持');
       }
@@ -107,7 +109,7 @@ export class ApproveOrderRefundUseCase {
     begun: Exclude<BeginOrderRefundResult, { outcome: 'not_found' | 'invalid_status' }>,
     port: RefundPort | null,
   ): Promise<AdminOrderView> {
-    const paymentProvider = toRefundProvider(begun.refund.paymentMethod);
+    const paymentProvider = await this.resolveRefundChannel(begun.refund.paymentMethod);
     if (!paymentProvider || !port || port.provider !== paymentProvider) {
       throw new BadRequestException('退款支付方式不受支持');
     }
@@ -182,6 +184,14 @@ export class ApproveOrderRefundUseCase {
       return toAdminOrderView(bundle.order);
     }
     return this.markFailed(bundle, result.providerRefundNo, result.failReason || '渠道退款失败');
+  }
+
+  /** 退款渠道：先映射为官方渠道，再按当前支付网关开关切换到实际执行渠道。 */
+  private async resolveRefundChannel(
+    method: OrderPaymentMethod,
+  ): Promise<ReturnType<typeof toRefundProvider>> {
+    const provider = toRefundProvider(method);
+    return provider ? this.paymentGateway.resolveRefundProvider(provider) : null;
   }
 
   private async markFailed(

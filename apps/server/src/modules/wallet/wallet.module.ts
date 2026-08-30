@@ -35,7 +35,12 @@ import { AlipayPayoutDriver } from './infrastructure/drivers/alipay-payout.drive
 import { WechatPayoutDriver } from './infrastructure/drivers/wechat-payout.driver';
 import { AlipayRefundDriver } from './infrastructure/drivers/alipay-refund.driver';
 import { WechatRefundDriver } from './infrastructure/drivers/wechat-refund.driver';
+import { JqfPayConfigFactory } from './infrastructure/drivers/jqf-pay.config';
+import { JqfWechatPaymentDriver } from './infrastructure/drivers/jqf-wechat-payment.driver';
+import { JqfWechatJsapiPaymentDriver } from './infrastructure/drivers/jqf-wechat-jsapi-payment.driver';
+import { JqfRefundDriver } from './infrastructure/drivers/jqf-refund.driver';
 
+import { PaymentGatewayService } from './application/payment-gateway.service';
 import { PaymentResolver } from './application/payment.resolver';
 import { PayoutResolver } from './application/payout.resolver';
 import { RefundResolver } from './application/refund.resolver';
@@ -140,14 +145,26 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     WechatPayoutDriver,
     AlipayRefundDriver,
     WechatRefundDriver,
+    JqfPayConfigFactory,
+    JqfWechatPaymentDriver,
+    JqfWechatJsapiPaymentDriver,
+    JqfRefundDriver,
     {
       provide: PAYMENT_PORTS,
       useFactory: (
         alipay: AlipayPaymentDriver,
         wechat: WechatPaymentDriver,
         wechatJsapi: WechatJsapiPaymentDriver,
-      ) => [alipay, wechat, wechatJsapi],
-      inject: [AlipayPaymentDriver, WechatPaymentDriver, WechatJsapiPaymentDriver],
+        jqfWechat: JqfWechatPaymentDriver,
+        jqfWechatJsapi: JqfWechatJsapiPaymentDriver,
+      ) => [alipay, wechat, wechatJsapi, jqfWechat, jqfWechatJsapi],
+      inject: [
+        AlipayPaymentDriver,
+        WechatPaymentDriver,
+        WechatJsapiPaymentDriver,
+        JqfWechatPaymentDriver,
+        JqfWechatJsapiPaymentDriver,
+      ],
     },
     {
       provide: PAYOUT_PORTS,
@@ -156,10 +173,15 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     },
     {
       provide: REFUND_PORTS,
-      useFactory: (alipay: AlipayRefundDriver, wechat: WechatRefundDriver) => [alipay, wechat],
-      inject: [AlipayRefundDriver, WechatRefundDriver],
+      useFactory: (alipay: AlipayRefundDriver, wechat: WechatRefundDriver, jqf: JqfRefundDriver) => [
+        alipay,
+        wechat,
+        jqf,
+      ],
+      inject: [AlipayRefundDriver, WechatRefundDriver, JqfRefundDriver],
     },
 
+    PaymentGatewayService,
     PaymentResolver,
     PayoutResolver,
     RefundResolver,
@@ -185,6 +207,7 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
   ],
   // 导出支付/退款渠道解析器，供订单复用同一套支付宝/微信配置与驱动
   exports: [
+    PaymentGatewayService,
     PaymentResolver,
     RefundResolver,
     WalletService,

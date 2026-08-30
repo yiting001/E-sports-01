@@ -152,6 +152,14 @@ export const MENU_DEFINITIONS: MenuDefinition[] = [
     group: 'finance',
   },
   {
+    code: 'finance:payment:menu',
+    title: '支付配置',
+    path: 'finance/payment-config',
+    icon: 'CreditCard',
+    sort: 4,
+    group: 'finance',
+  },
+  {
     code: 'rbac:tenant:menu',
     title: '租户管理',
     path: 'rbac/tenants',
