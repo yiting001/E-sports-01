@@ -57,6 +57,12 @@ export class UserDirectory {
     );
   }
 
+  /** 解析用户绑定手机号；用户不存在或未绑定时返回空串（供钱包开户等实名后置流程使用） */
+  async resolvePhone(id: string): Promise<string> {
+    const rows = await this.users.findByIds([id]);
+    return rows[0]?.phone ?? '';
+  }
+
   /** 批量解析用户展示资料，返回 id → { username, nickname } 映射 */
   async resolveProfiles(ids: string[]): Promise<Map<string, UserProfileBrief>> {
     const unique = [...new Set(ids.filter(Boolean))];

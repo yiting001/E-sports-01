@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { ConfigModule } from '../config/config.module';
 import { RbacModule } from '../rbac/rbac.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 import { RealnameAuthEntity } from './domain/realname-auth.entity';
 import { REALNAME_REPOSITORY } from './domain/realname-repository.interface';
@@ -38,6 +39,7 @@ import { RealnamePolicySetController } from './interfaces/controllers/realname.p
   imports: [
     ConfigModule,
     RbacModule,
+    WalletModule,
     TypeOrmModule.forFeature([RealnameAuthEntity]),
   ],
   controllers: [
