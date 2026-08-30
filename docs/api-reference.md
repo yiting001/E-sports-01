@@ -55,7 +55,7 @@
 | --- | --- | --- |
 | GET | `/api/rbac/users` | `rbac:user:list`；支持 `?keyword&status&roleId` |
 | POST | `/api/rbac/users` | `rbac:user:create`；可选 `tenantId`，仅平台超管可指定其他租户 |
-| PATCH | `/api/rbac/users/:id` | `rbac:user:update` |
+| PATCH | `/api/rbac/users/:id` | `rbac:user:update`；可选 `tenantId` 变更所属租户（仅平台超管，迁移时解绑原租户角色） |
 | POST | `/api/rbac/users/:id/password/reset` | `rbac:user:update`；body `{ password }`，6-128 位 |
 | DELETE | `/api/rbac/users/:id` | `rbac:user:remove` |
 | POST | `/api/rbac/users/:id/roles` | `rbac:user:assignRoles` |

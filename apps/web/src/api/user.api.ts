@@ -17,6 +17,8 @@ export interface UpdateUserBody {
   nickname?: string;
   phone?: string;
   status?: string;
+  /** 目标所属租户主键；仅平台超管可变更，变更后原租户角色自动解绑 */
+  tenantId?: string;
 }
 
 /** 重置用户密码入参 */

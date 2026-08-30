@@ -53,8 +53,10 @@ const editForm = reactive<EditUserForm>({
   phone: '',
   status: UserStatusEnum.Enabled,
   roleIds: [],
+  tenantId: '',
 });
 let originalRoleIds: string[] = [];
+let originalTenantId = '';
 
 const resetPasswordVisible = ref(false);
 const resetPasswordForm = reactive<ResetUserPasswordForm>({
@@ -200,15 +202,25 @@ async function create(): Promise<void> {
   await load();
 }
 
+const editRoleOptions = computed(() =>
+  isSuper.value && editForm.tenantId
+    ? roles.value.filter((role) => role.tenantId === editForm.tenantId)
+    : roles.value,
+);
+
 async function openEdit(row: UserView): Promise<void> {
   await ensureRoles();
+  await ensureTenants();
   editForm.id = row.id;
   editForm.username = row.username;
   editForm.nickname = row.nickname;
   editForm.phone = row.phone;
   editForm.status = row.status;
   editForm.roleIds = row.roles.map((role) => role.id);
+  editForm.tenantId =
+    tenants.value.find((tenant) => tenant.code === row.tenantCode)?.id ?? '';
   originalRoleIds = [...editForm.roleIds];
+  originalTenantId = editForm.tenantId;
   editVisible.value = true;
 }
 
@@ -242,7 +254,11 @@ async function resetPassword(): Promise<void> {
 }
 
 function updateEditForm(value: EditUserForm): void {
+  const tenantChanged = value.tenantId !== editForm.tenantId;
   Object.assign(editForm, value);
+  if (tenantChanged) {
+    editForm.roleIds = [];
+  }
 }
 
 function roleIdsChanged(current: string[], original: string[]): boolean {
@@ -254,12 +270,22 @@ function roleIdsChanged(current: string[], original: string[]): boolean {
 }
 
 async function saveEdit(): Promise<void> {
+  if (isSuper.value && !editForm.tenantId) {
+    ElMessage.warning('请选择所属租户');
+    return;
+  }
+  const tenantChanged = isSuper.value && editForm.tenantId !== originalTenantId;
   await userApi.update(editForm.id, {
     nickname: editForm.nickname,
     phone: editForm.phone,
     status: editForm.status,
+    tenantId: tenantChanged ? editForm.tenantId : undefined,
   });
-  if (roleIdsChanged(editForm.roleIds, originalRoleIds)) {
+  if (
+    tenantChanged
+      ? editForm.roleIds.length > 0
+      : roleIdsChanged(editForm.roleIds, originalRoleIds)
+  ) {
     await userApi.assignRoles(editForm.id, editForm.roleIds);
   }
   ElMessage.success('已保存');
@@ -323,8 +349,10 @@ onMounted(() => {
     <edit-user-dialog
       v-model="editVisible"
       :form="editForm"
-      :roles="roles"
+      :roles="editRoleOptions"
       :status-options="statusOptions"
+      :show-tenant="isSuper"
+      :tenant-options="tenants"
       @update:form="updateEditForm"
       @submit="saveEdit"
     />
