@@ -14,6 +14,7 @@ import type { OrderRefundTransaction } from '../../src/modules/order/domain/orde
 import { OrderRefundEntity } from '../../src/modules/order/domain/order-refund.entity';
 import type { OrderRepository } from '../../src/modules/order/domain/order-repository.interface';
 import { OrderEntity } from '../../src/modules/order/domain/order.entity';
+import { passthroughPaymentGateway } from './payment-gateway.stub';
 
 export function makeOrder(
   status: OrderStatus = OrderStatus.PendingService,
@@ -167,6 +168,7 @@ export function approveUseCase(
     repositoryFor(order),
     transactions,
     resolver,
+    passthroughPaymentGateway(),
     scopeAllowing(),
     { syncTitle: async () => undefined } as unknown as OrderGroupService,
   );

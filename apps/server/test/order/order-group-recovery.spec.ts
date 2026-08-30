@@ -21,6 +21,7 @@ import type { OrderPaymentSettlement } from '../../src/modules/order/domain/orde
 import type { OrderRepository } from '../../src/modules/order/domain/order-repository.interface';
 import { OrderEntity } from '../../src/modules/order/domain/order.entity';
 import type { PaymentResolver } from '../../src/modules/wallet/application/payment.resolver';
+import { passthroughPaymentGateway } from './payment-gateway.stub';
 import type { TenantContextService } from '../../src/shared/tenant/tenant-context.service';
 import type { OrderNotifyService } from '../../src/modules/order/application/order-notify.service';
 
@@ -310,7 +311,7 @@ test('支付已落账但首次建群失败时，主动查单会补建且不回�
       throw new Error('已支付订单不应再次查询支付渠道');
     },
   } as unknown as PaymentResolver;
-  const query = new QueryOrderPaymentUseCase(orders, paymentResolver, payment);
+  const query = new QueryOrderPaymentUseCase(orders, paymentResolver, passthroughPaymentGateway(), payment);
 
   await assert.doesNotReject(payment.payWithBalance(order.id, order.userId, order.amountFen));
   assert.equal(order.status, OrderStatus.PendingService);

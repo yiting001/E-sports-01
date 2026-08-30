@@ -136,7 +136,10 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <div class="payment-config" v-loading="loading">
+  <div
+    v-loading="loading"
+    class="payment-config"
+  >
     <el-alert
       v-if="!isSuper"
       type="warning"
@@ -151,41 +154,91 @@ async function save(): Promise<void> {
       title="支付配置加载失败"
       class="payment-config__alert"
     >
-      <el-button size="small" @click="load">重试</el-button>
+      <el-button
+        size="small"
+        @click="load"
+      >
+        重试
+      </el-button>
     </el-alert>
 
-    <el-card shadow="never" class="payment-config__card">
-      <template #header>支付网关</template>
-      <el-form label-width="140px" :disabled="!isSuper">
+    <el-card
+      shadow="never"
+      class="payment-config__card"
+    >
+      <template #header>
+        支付网关
+      </template>
+      <el-form
+        label-width="140px"
+        :disabled="!isSuper"
+      >
         <el-form-item label="微信支付">
           <el-radio-group v-model="form.wechatGateway">
-            <el-radio :value="PaymentGateway.Official">官方渠道</el-radio>
-            <el-radio :value="PaymentGateway.Jqf">计全付</el-radio>
+            <el-radio :value="PaymentGateway.Official">
+              官方渠道
+            </el-radio>
+            <el-radio :value="PaymentGateway.Jqf">
+              计全付
+            </el-radio>
           </el-radio-group>
           <div class="payment-config__tip">
             开启计全付后，微信扫码与公众号（JSAPI）支付、以及对应订单的退款均改走计全付；切换前请先处理完在途待支付订单。
           </div>
         </el-form-item>
         <el-form-item label="支付宝支付">
-          <el-tag type="info">官方渠道</el-tag>
-          <div class="payment-config__tip">计全付暂不支持支付宝，支付宝始终使用官方渠道。</div>
+          <el-tag type="info">
+            官方渠道
+          </el-tag>
+          <div class="payment-config__tip">
+            计全付暂不支持支付宝，支付宝始终使用官方渠道。
+          </div>
         </el-form-item>
       </el-form>
     </el-card>
 
-    <el-card shadow="never" class="payment-config__card">
-      <template #header>计全付配置</template>
-      <el-form label-width="140px" :disabled="!isSuper">
-        <el-form-item label="网关地址" :required="jqfEnabled">
-          <el-input v-model="form.jqfApiBase" placeholder="https://pay.example.com（末尾不带 /）" />
+    <el-card
+      shadow="never"
+      class="payment-config__card"
+    >
+      <template #header>
+        计全付配置
+      </template>
+      <el-form
+        label-width="140px"
+        :disabled="!isSuper"
+      >
+        <el-form-item
+          label="网关地址"
+          :required="jqfEnabled"
+        >
+          <el-input
+            v-model="form.jqfApiBase"
+            placeholder="https://pay.example.com（末尾不带 /）"
+          />
         </el-form-item>
-        <el-form-item label="商户号 mchNo" :required="jqfEnabled">
-          <el-input v-model="form.jqfMchNo" placeholder="计全付商户号" />
+        <el-form-item
+          label="商户号 mchNo"
+          :required="jqfEnabled"
+        >
+          <el-input
+            v-model="form.jqfMchNo"
+            placeholder="计全付商户号"
+          />
         </el-form-item>
-        <el-form-item label="应用 appId" :required="jqfEnabled">
-          <el-input v-model="form.jqfAppId" placeholder="计全付应用 appId" />
+        <el-form-item
+          label="应用 appId"
+          :required="jqfEnabled"
+        >
+          <el-input
+            v-model="form.jqfAppId"
+            placeholder="计全付应用 appId"
+          />
         </el-form-item>
-        <el-form-item label="接口私钥 apiKey" :required="jqfEnabled && !apiKeyConfigured">
+        <el-form-item
+          label="接口私钥 apiKey"
+          :required="jqfEnabled && !apiKeyConfigured"
+        >
           <el-input
             v-model="form.jqfApiKey"
             type="password"
@@ -197,7 +250,12 @@ async function save(): Promise<void> {
     </el-card>
 
     <div class="payment-config__actions">
-      <el-button type="primary" :loading="saving" :disabled="!isSuper || loading" @click="save">
+      <el-button
+        type="primary"
+        :loading="saving"
+        :disabled="!isSuper || loading"
+        @click="save"
+      >
         保存配置
       </el-button>
     </div>
