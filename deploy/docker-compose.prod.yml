@@ -1,0 +1,61 @@
+# 生产部署编排：复用宿主机上现有 PostgreSQL/Redis（不由本编排管理，不得改动）。
+# server 使用 host 网络直连 127.0.0.1:5432/6379，并沿用宿主机现有 .env（含 PORT）。
+# 可调参数集中在同目录 .env（由 deploy.sh 首次生成，模板见 .env.example）。
+
+name: esports
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: server
+    image: esports/server:latest
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - ${ESPORTS_SERVER_ENV_FILE:?请在 deploy 目录 .env 中配置后端环境变量文件绝对路径}
+    volumes:
+      - ${ESPORTS_UPLOADS_DIR:?请在 deploy 目录 .env 中配置上传目录绝对路径}:/app/uploads
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/commerce/public/categories').then((response) => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    image: esports/web:latest
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:${ESPORTS_WEB_PORT:-8080}:80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: client
+    image: esports/client:latest
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:${ESPORTS_CLIENT_PORT:-8081}:80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5

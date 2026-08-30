@@ -1,0 +1,87 @@
+# push 到 esports 分支时自动构建并部署到生产服务器（Docker 方式）。
+# 构建在 CI 完成（服务器内存有限不做编译），产物经 SCP 上传后由 deploy/deploy.sh 打镜像并拉起。
+# 依赖仓库 Actions secrets：DEPLOY_SSH_HOST / DEPLOY_SSH_USER / DEPLOY_SSH_PASSWORD。
+
+name: Deploy esports
+
+on:
+  push:
+    branches:
+      - esports
+
+concurrency:
+  group: deploy-esports
+  cancel-in-progress: false
+
+env:
+  DEPLOY_DIR: /www/wwwroot/esports-docker
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建共享契约与后端单文件产物
+        run: |
+          pnpm --filter @app/contracts build
+          pnpm --filter @app/server bundle
+
+      - name: 构建 C 端（同域相对地址）
+        run: pnpm build:client
+        env:
+          VITE_API_BASE_URL: /api
+          VITE_WS_BASE_URL: ''
+          VITE_CLIENT_BASE_URL: /
+
+      - name: 构建管理端（/admin/ 子路径）
+        run: pnpm build:web
+        env:
+          VITE_BASE: /admin/
+          VITE_API_BASE_URL: /api
+          VITE_WS_BASE_URL: ''
+          VITE_CLIENT_BASE_URL: /
+
+      - name: 组装部署包
+        run: |
+          mkdir -p deploy/artifacts/server
+          cp apps/server/bundle/main.js deploy/artifacts/server/main.js
+          cp -r apps/client/dist deploy/artifacts/client-dist
+          cp -r apps/web/dist deploy/artifacts/web-dist
+          tar -czf esports-deploy.tar.gz -C deploy .
+
+      - name: 上传部署包
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          password: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+          source: esports-deploy.tar.gz
+          target: ${{ env.DEPLOY_DIR }}/
+
+      - name: 服务器端部署
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          password: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd ${{ env.DEPLOY_DIR }}
+            rm -rf artifacts Dockerfile docker-compose.prod.yml nginx-static.conf deploy.sh .env.example
+            tar -xzf esports-deploy.tar.gz
+            rm -f esports-deploy.tar.gz
+            bash deploy.sh

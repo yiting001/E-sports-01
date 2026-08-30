@@ -38,6 +38,7 @@
 | 部署文档         | [deployment.md](./deployment.md)                   | 环境变量、构建顺序、PM2 启停、Nginx 反代与更新部署检查清单                                                   |
 | API 参考         | [api-reference.md](./api-reference.md)             | 全部 REST 端点与 WS 事件、统一响应结构、权限码一览                                                           |
 | 宝塔部署         | [deploy-bt.md](./deploy-bt.md)                     | 宝塔面板（CentOS 7+）单站点部署：前后端同域名，Nginx 按路径转发（/、/admin/、/api、/socket.io、/static）     |
+| CI/CD 自动部署   | [deploy-cicd.md](./deploy-cicd.md)                 | push esports 分支自动部署：GitHub Actions 构建产物 + 服务器 Docker Compose 拉起，复用现有数据库/Redis        |
 
 ## 总体架构
 
