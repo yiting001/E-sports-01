@@ -7,6 +7,8 @@ export interface EditUserForm {
   phone: string;
   status: UserStatusEnum;
   roleIds: string[];
+  /** 所属租户主键；仅平台超管可变更 */
+  tenantId: string;
 }
 
 export interface UserFiltersForm {

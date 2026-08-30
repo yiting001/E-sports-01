@@ -2,6 +2,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Matches,
   ValidateIf,
@@ -30,4 +31,9 @@ export class UpdateUserDto implements UpdateUserInput {
   @IsString()
   @Length(6, 128)
   password?: string;
+
+  /** 目标所属租户主键；仅平台超管可变更，变更后自动解绑原租户角色 */
+  @IsOptional()
+  @IsUUID('4')
+  tenantId?: string;
 }
