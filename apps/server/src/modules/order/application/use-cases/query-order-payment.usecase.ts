@@ -1,5 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { OrderStatus, OrderView } from '@app/contracts';
+import { PaymentGatewayService } from '../../../wallet/application/payment-gateway.service';
 import { PaymentResolver } from '../../../wallet/application/payment.resolver';
 import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository.interface';
 import { toPaymentProvider } from '../order-payment-method';
@@ -17,6 +18,7 @@ export class QueryOrderPaymentUseCase {
     @Inject(ORDER_REPOSITORY)
     private readonly orders: OrderRepository,
     private readonly paymentResolver: PaymentResolver,
+    private readonly paymentGateway: PaymentGatewayService,
     private readonly settle: OrderPaymentSettleService,
   ) {}
 
@@ -29,10 +31,11 @@ export class QueryOrderPaymentUseCase {
       await this.settle.ensurePaidOrderGroup(order);
       return toOwnerOrderView(order);
     }
-    const provider = toPaymentProvider(order.provider);
-    if (!provider) {
+    const baseProvider = toPaymentProvider(order.provider);
+    if (!baseProvider) {
       return toOwnerOrderView(order);
     }
+    const provider = await this.paymentGateway.resolvePaymentProvider(baseProvider);
     const port = this.paymentResolver.resolve(provider);
     const result = await port.queryTrade(order.orderNo);
     if (result.paid) {

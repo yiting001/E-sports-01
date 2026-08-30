@@ -1,0 +1,226 @@
+<script setup lang="ts">
+import type { ConfigItemView } from '@app/contracts';
+import { CONFIG_KEYS, ConfigGroup, ConfigValueType, PaymentGateway } from '@app/contracts';
+import { computed, onMounted, reactive, ref } from 'vue';
+import { ElMessage } from 'element-plus';
+import { configApi } from '@/api/config.api';
+import { useAuthStore } from '@/stores/auth.store';
+
+/** 本页维护的支付相关配置键 */
+const KEYS = {
+  wechatGateway: CONFIG_KEYS.wallet.paymentWechatGateway,
+  alipayGateway: CONFIG_KEYS.wallet.paymentAlipayGateway,
+  jqfApiBase: CONFIG_KEYS.wallet.jqfApiBase,
+  jqfMchNo: CONFIG_KEYS.wallet.jqfMchNo,
+  jqfAppId: CONFIG_KEYS.wallet.jqfAppId,
+  jqfApiKey: CONFIG_KEYS.wallet.jqfApiKey,
+} as const;
+
+interface PaymentConfigForm {
+  wechatGateway: PaymentGateway;
+  jqfApiBase: string;
+  jqfMchNo: string;
+  jqfAppId: string;
+  /** 敏感项不回显；留空提交表示保持原值不变 */
+  jqfApiKey: string;
+}
+
+const auth = useAuthStore();
+const isSuper = computed(() => auth.profile?.isSuper === true);
+const loading = ref(false);
+const saving = ref(false);
+const loadFailed = ref(false);
+const apiKeyConfigured = ref(false);
+const form = reactive<PaymentConfigForm>({
+  wechatGateway: PaymentGateway.Official,
+  jqfApiBase: '',
+  jqfMchNo: '',
+  jqfAppId: '',
+  jqfApiKey: '',
+});
+
+const jqfEnabled = computed(() => form.wechatGateway === PaymentGateway.Jqf);
+
+onMounted(load);
+
+async function load(): Promise<void> {
+  loading.value = true;
+  loadFailed.value = false;
+  try {
+    const list = await configApi.list(ConfigGroup.Wallet);
+    const byKey = new Map<string, ConfigItemView>(list.map((item) => [item.key, item]));
+    form.wechatGateway =
+      byKey.get(KEYS.wechatGateway)?.value === PaymentGateway.Jqf
+        ? PaymentGateway.Jqf
+        : PaymentGateway.Official;
+    form.jqfApiBase = byKey.get(KEYS.jqfApiBase)?.value ?? '';
+    form.jqfMchNo = byKey.get(KEYS.jqfMchNo)?.value ?? '';
+    form.jqfAppId = byKey.get(KEYS.jqfAppId)?.value ?? '';
+    form.jqfApiKey = '';
+    const apiKeyItem = byKey.get(KEYS.jqfApiKey);
+    apiKeyConfigured.value = apiKeyItem !== undefined && apiKeyItem.value !== '';
+  } catch {
+    loadFailed.value = true;
+  } finally {
+    loading.value = false;
+  }
+}
+
+function validate(): string {
+  if (!jqfEnabled.value) {
+    return '';
+  }
+  const base = form.jqfApiBase.trim();
+  if (!base.startsWith('https://')) {
+    return '计全付网关地址必须以 https:// 开头';
+  }
+  if (!form.jqfMchNo.trim() || !form.jqfAppId.trim()) {
+    return '开启计全付需填写商户号与 appId';
+  }
+  if (!apiKeyConfigured.value && !form.jqfApiKey.trim()) {
+    return '开启计全付需填写接口私钥 apiKey';
+  }
+  return '';
+}
+
+async function save(): Promise<void> {
+  if (!isSuper.value) {
+    return;
+  }
+  const error = validate();
+  if (error) {
+    ElMessage.warning(error);
+    return;
+  }
+  saving.value = true;
+  try {
+    const items: Array<{ key: string; value: string; secret?: boolean; remark: string }> = [
+      {
+        key: KEYS.wechatGateway,
+        value: form.wechatGateway,
+        remark: '微信支付网关：official 官方直连 / jqf 计全付（开启后微信扫码与公众号支付均走计全付）',
+      },
+      {
+        key: KEYS.jqfApiBase,
+        value: form.jqfApiBase.trim().replace(/\/+$/, ''),
+        remark: '计全付网关地址（如 https://pay.example.com，末尾不带 /）',
+      },
+      { key: KEYS.jqfMchNo, value: form.jqfMchNo.trim(), remark: '计全付商户号 mchNo' },
+      { key: KEYS.jqfAppId, value: form.jqfAppId.trim(), remark: '计全付应用 appId' },
+      {
+        key: KEYS.jqfApiKey,
+        value: form.jqfApiKey.trim(),
+        secret: true,
+        remark: '计全付接口私钥 apiKey（MD5 签名密钥）',
+      },
+    ];
+    for (const item of items) {
+      await configApi.upsert({
+        key: item.key,
+        value: item.value,
+        type: ConfigValueType.String,
+        group: ConfigGroup.Wallet,
+        remark: item.remark,
+        secret: item.secret ?? false,
+      });
+    }
+    if (form.jqfApiKey.trim()) {
+      apiKeyConfigured.value = true;
+    }
+    form.jqfApiKey = '';
+    ElMessage.success('支付配置已保存');
+  } finally {
+    saving.value = false;
+  }
+}
+</script>
+
+<template>
+  <div class="payment-config" v-loading="loading">
+    <el-alert
+      v-if="!isSuper"
+      type="warning"
+      :closable="false"
+      title="仅平台超级管理员可修改支付配置"
+      class="payment-config__alert"
+    />
+    <el-alert
+      v-if="loadFailed"
+      type="error"
+      :closable="false"
+      title="支付配置加载失败"
+      class="payment-config__alert"
+    >
+      <el-button size="small" @click="load">重试</el-button>
+    </el-alert>
+
+    <el-card shadow="never" class="payment-config__card">
+      <template #header>支付网关</template>
+      <el-form label-width="140px" :disabled="!isSuper">
+        <el-form-item label="微信支付">
+          <el-radio-group v-model="form.wechatGateway">
+            <el-radio :value="PaymentGateway.Official">官方渠道</el-radio>
+            <el-radio :value="PaymentGateway.Jqf">计全付</el-radio>
+          </el-radio-group>
+          <div class="payment-config__tip">
+            开启计全付后，微信扫码与公众号（JSAPI）支付、以及对应订单的退款均改走计全付；切换前请先处理完在途待支付订单。
+          </div>
+        </el-form-item>
+        <el-form-item label="支付宝支付">
+          <el-tag type="info">官方渠道</el-tag>
+          <div class="payment-config__tip">计全付暂不支持支付宝，支付宝始终使用官方渠道。</div>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card shadow="never" class="payment-config__card">
+      <template #header>计全付配置</template>
+      <el-form label-width="140px" :disabled="!isSuper">
+        <el-form-item label="网关地址" :required="jqfEnabled">
+          <el-input v-model="form.jqfApiBase" placeholder="https://pay.example.com（末尾不带 /）" />
+        </el-form-item>
+        <el-form-item label="商户号 mchNo" :required="jqfEnabled">
+          <el-input v-model="form.jqfMchNo" placeholder="计全付商户号" />
+        </el-form-item>
+        <el-form-item label="应用 appId" :required="jqfEnabled">
+          <el-input v-model="form.jqfAppId" placeholder="计全付应用 appId" />
+        </el-form-item>
+        <el-form-item label="接口私钥 apiKey" :required="jqfEnabled && !apiKeyConfigured">
+          <el-input
+            v-model="form.jqfApiKey"
+            type="password"
+            show-password
+            :placeholder="apiKeyConfigured ? '已配置（不回显），留空保持原值不变' : '计全付接口私钥（MD5 签名密钥）'"
+          />
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <div class="payment-config__actions">
+      <el-button type="primary" :loading="saving" :disabled="!isSuper || loading" @click="save">
+        保存配置
+      </el-button>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.payment-config {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+}
+
+.payment-config__tip {
+  width: 100%;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.6;
+}
+
+.payment-config__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+</style>

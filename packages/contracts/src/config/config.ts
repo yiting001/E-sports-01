@@ -258,6 +258,20 @@ export const CONFIG_KEYS = {
     wechatPlatformSerialNo: 'wallet.wechat.platformSerialNo',
     /** 微信公众号 JSAPI 支付开关（微信内浏览器拉起收银台，关闭时微信内也回退扫码） */
     wechatJsapiEnabled: 'wallet.wechat.jsapiEnabled',
+
+    /** 微信支付网关：official 官方直连 / jqf 计全付（开启后微信扫码与 JSAPI 均走计全付） */
+    paymentWechatGateway: 'wallet.payment.wechatGateway',
+    /** 支付宝支付网关：当前计全付不支持支付宝，仅 official 生效（jqf 为预留位） */
+    paymentAlipayGateway: 'wallet.payment.alipayGateway',
+
+    /** 计全付网关地址（如 https://pay.example.com，末尾不带 /） */
+    jqfApiBase: 'wallet.jqf.apiBase',
+    /** 计全付商户号 mchNo */
+    jqfMchNo: 'wallet.jqf.mchNo',
+    /** 计全付应用 appId */
+    jqfAppId: 'wallet.jqf.appId',
+    /** 计全付接口私钥 apiKey（密文保存，用于请求签名与回调验签） */
+    jqfApiKey: 'wallet.jqf.apiKey',
   },
   booster: {
     /** 打手等级档位（JSON 数组：等级/名称/完成单数门槛/提成万分比） */

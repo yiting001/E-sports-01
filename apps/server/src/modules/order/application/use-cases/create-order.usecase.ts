@@ -24,6 +24,7 @@ import {
 } from '../../../booster/application/booster-selection.service';
 import { MemberLevelService } from '../../../member/application/member-level.service';
 import { WechatIdentityService } from '../../../rbac/application/wechat-identity.service';
+import { PaymentGatewayService } from '../../../wallet/application/payment-gateway.service';
 import { PaymentResolver } from '../../../wallet/application/payment.resolver';
 import { buildOrderNo } from '../../../wallet/application/order-no.util';
 import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository.interface';
@@ -48,6 +49,7 @@ export class CreateOrderUseCase {
     @Inject(PRODUCT_REPOSITORY)
     private readonly products: ProductRepository,
     private readonly paymentResolver: PaymentResolver,
+    private readonly paymentGateway: PaymentGatewayService,
     private readonly config: ConfigService,
     private readonly memberLevels: MemberLevelService,
     private readonly couponRedeem: CouponRedeemService,
@@ -85,7 +87,10 @@ export class CreateOrderUseCase {
       throw new BadRequestException('订单金额异常');
     }
 
-    const channelProvider = toPaymentProvider(payload.provider);
+    const baseProvider = toPaymentProvider(payload.provider);
+    const channelProvider = baseProvider
+      ? await this.paymentGateway.resolvePaymentProvider(baseProvider)
+      : null;
     const port = channelProvider ? this.paymentResolver.resolve(channelProvider) : null;
     const payerOpenid = await this.resolveJsapiPayer(userId, payload.provider);
     const orderNo = buildOrderNo('O');
@@ -186,7 +191,7 @@ export class CreateOrderUseCase {
         outTradeNo: orderNo,
         amountFen,
         subject: product.title,
-        notifyUrl: notifyBaseUrl ? `${notifyBaseUrl}/order/pay/callback/${payload.provider}` : '',
+        notifyUrl: notifyBaseUrl ? `${notifyBaseUrl}/order/pay/callback/${port.provider}` : '',
         payerOpenid,
       });
       qrCode = result.qrCode;

@@ -10,6 +10,10 @@ export enum PaymentProvider {
   Wechat = 'wechat',
   /** 微信公众号 JSAPI（微信内浏览器拉起收银台，与 Native 扫码共用商户凭证） */
   WechatJsapi = 'wechat_jsapi',
+  /** 计全付微信扫码（WX_NATIVE，开启计全网关后替代官方微信扫码） */
+  JqfWechat = 'jqf_wechat',
+  /** 计全付微信公众号（WX_JSAPI，开启计全网关后替代官方 JSAPI） */
+  JqfWechatJsapi = 'jqf_wechat_jsapi',
 }
 
 /** 支付渠道展示文案 */
@@ -17,6 +21,22 @@ export const PAYMENT_PROVIDER_TEXT: Record<PaymentProvider, string> = {
   [PaymentProvider.Alipay]: '支付宝',
   [PaymentProvider.Wechat]: '微信',
   [PaymentProvider.WechatJsapi]: '微信公众号',
+  [PaymentProvider.JqfWechat]: '计全微信',
+  [PaymentProvider.JqfWechatJsapi]: '计全微信公众号',
+};
+
+/** 支付网关：同一支付方式可在官方直连与计全付聚合之间切换 */
+export enum PaymentGateway {
+  /** 官方直连（微信商户/支付宝开放平台） */
+  Official = 'official',
+  /** 计全付聚合支付 */
+  Jqf = 'jqf',
+}
+
+/** 支付网关展示文案 */
+export const PAYMENT_GATEWAY_TEXT: Record<PaymentGateway, string> = {
+  [PaymentGateway.Official]: '官方渠道',
+  [PaymentGateway.Jqf]: '计全付',
 };
 
 /** 提现（付款）渠道；微信为预留位，调用即提示未开通 */

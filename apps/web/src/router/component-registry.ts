@@ -19,6 +19,7 @@ const COMPONENT_REGISTRY: Record<string, ComponentLoader> = {
   'finance:withdrawal:menu': () => import('@/views/finance/WithdrawalAdminView.vue'),
   'finance:penalty:menu': () => import('@/views/finance/PenaltyAdminView.vue'),
   'finance:tax:menu': () => import('@/views/finance/TaxConfigAdminView.vue'),
+  'finance:payment:menu': () => import('@/views/finance/PaymentConfigView.vue'),
   'wallet:admin:menu': () => import('@/views/wallet/WalletAdminView.vue'),
   'rbac:tenant:menu': () => import('@/views/rbac/TenantListView.vue'),
   'rbac:user:menu': () => import('@/views/rbac/UserListView.vue'),
