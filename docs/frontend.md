@@ -27,7 +27,7 @@ apps/web/src/
 ├── router/
 │   ├── routes.ts           路由表（含 meta.permission）
 │   ├── guard.ts            全局前置守卫
-│   └── index.ts            路由装配
+│   └── index.ts            路由装配（hash 模式，无需服务端回退配置）
 ├── directives/permission.directive.ts   v-permission 指令
 ├── composables/
 │   ├── use-menus.ts        按权限过滤菜单

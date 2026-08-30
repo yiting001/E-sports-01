@@ -1,15 +1,15 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHashHistory } from 'vue-router';
 import MainLayout from '@/layouts/MainLayout.vue';
 import { registerAuthGuard } from './guard';
 import { useBrandingStore } from '@/stores/branding.store';
 
 /**
- * 路由表：登录页独立于主布局全屏展示；四个一级 Tab 页挂在主布局下。
+ * 路由表（hash 模式，无需服务端回退配置）：登录页独立于主布局全屏展示；四个一级 Tab 页挂在主布局下。
  * 页面组件按需懒加载，避免首屏包体膨胀。
  * 需登录的页面通过 meta.requiresAuth 声明，具体拦截逻辑见 guard.ts。
  */
 export const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes: [
     {
       path: '/login',

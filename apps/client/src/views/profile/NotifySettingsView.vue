@@ -73,7 +73,7 @@ async function bindOfficial(): Promise<void> {
   }
   acting.value = true;
   try {
-    const redirectUri = `${window.location.origin}${route.fullPath}`;
+    const redirectUri = new URL(router.resolve(route.fullPath).href, window.location.href).toString();
     const { url } = await notifyApi.wechatAuthorizeUrl(redirectUri);
     window.location.href = url;
   } catch {
