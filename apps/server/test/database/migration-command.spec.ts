@@ -91,8 +91,8 @@ test('migration:show 返回待执行状态并始终关闭连接', async () => {
 
   assert.equal(dataSource.runCalls, 0);
   assert.equal(dataSource.destroyCalls, 1);
-  assert.match(output.join(''), /\[ \].*RelaxBoosterServiceRegionsCheck1786000000000/);
   assert.match(output.join(''), /\[ \].*AddAuthWechatIdentity1786100000000/);
+  assert.match(output.join(''), /\[ \].*AddRbacRoleSoftDelete1786300000000/);
   assert.match(output.join(''), /2 pending migration/i);
 });
 
@@ -100,8 +100,8 @@ test('migration:run 以单事务执行并输出实际完成的迁移', async () 
   const dataSource = new FakeMigrationDataSource('typeorm_migrations');
   dataSource.history = migrationHistory().slice(0, -2);
   dataSource.executedMigrations = [
-    { name: 'RelaxBoosterServiceRegionsCheck1786000000000' },
     { name: 'AddAuthWechatIdentity1786100000000' },
+    { name: 'AddRbacRoleSoftDelete1786300000000' },
   ];
   const output: string[] = [];
 
@@ -116,8 +116,8 @@ test('migration:run 以单事务执行并输出实际完成的迁移', async () 
   assert.equal(dataSource.unlockCalls, 1);
   assert.equal(dataSource.releaseCalls, 1);
   assert.equal(dataSource.destroyCalls, 1);
-  assert.match(output.join(''), /RelaxBoosterServiceRegionsCheck1786000000000/);
   assert.match(output.join(''), /AddAuthWechatIdentity1786100000000/);
+  assert.match(output.join(''), /AddRbacRoleSoftDelete1786300000000/);
 });
 
 test('migration 执行失败时保留原始错误并关闭连接', async () => {
