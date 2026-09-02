@@ -91,8 +91,11 @@ test('migration:show 返回待执行状态并始终关闭连接', async () => {
 
   assert.equal(dataSource.runCalls, 0);
   assert.equal(dataSource.destroyCalls, 1);
-  assert.match(output.join(''), /\[ \].*RelaxBoosterServiceRegionsCheck1786000000000/);
   assert.match(output.join(''), /\[ \].*AddAuthWechatIdentity1786100000000/);
+  assert.match(
+    output.join(''),
+    /\[ \].*AddPaymentChannelFeeAndPayoutSnapshot1786200000000/,
+  );
   assert.match(output.join(''), /2 pending migration/i);
 });
 

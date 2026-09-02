@@ -60,6 +60,8 @@ function createSuccessOrder(
     accountName: '张三',
     idCardNo: '11010119900101003X',
     providerOrderId: 'ali-1',
+    channelOrderNo: 'T-ali-1',
+    channelFeeFen: 120,
     failReason: null,
     createdAt: new Date('2026-07-01T00:00:00.000Z'),
     ...overrides,
@@ -78,6 +80,9 @@ test('ExportWithdrawalTaxUseCase 导出已到账提现单为报税 CSV', async (
           outBizNo: 'W124',
           accountName: '李,四',
           idCardNo: null,
+          provider: PayoutProvider.JqfWechat,
+          channelOrderNo: null,
+          channelFeeFen: 0,
         }),
       ];
     },
@@ -92,10 +97,12 @@ test('ExportWithdrawalTaxUseCase 导出已到账提现单为报税 CSV', async (
   const lines = result.csv.split('\n');
   assert.equal(lines.length, 3);
   assert.ok(lines[0].startsWith('序号,姓名,身份证号'));
+  assert.ok(lines[0].endsWith('提现渠道,上游转账单号,渠道手续费(元)'));
   assert.equal(
     lines[1],
-    '1,张三,11010119900101003X,user@example.com,1000.00,30.00,970.00,W123,ali-1,2026-07-01T00:00:00.000Z',
+    '1,张三,11010119900101003X,user@example.com,1000.00,30.00,970.00,W123,ali-1,2026-07-01T00:00:00.000Z,支付宝,T-ali-1,1.20',
   );
   assert.ok(lines[2].includes('"李,四"'));
   assert.ok(lines[2].includes(',,user@example.com'));
+  assert.ok(lines[2].endsWith(',微信零钱（计全付）,,0.00'));
 });

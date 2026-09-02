@@ -38,7 +38,12 @@ import { WechatRefundDriver } from './infrastructure/drivers/wechat-refund.drive
 import { JqfPayConfigFactory } from './infrastructure/drivers/jqf-pay.config';
 import { JqfWechatPaymentDriver } from './infrastructure/drivers/jqf-wechat-payment.driver';
 import { JqfWechatJsapiPaymentDriver } from './infrastructure/drivers/jqf-wechat-jsapi-payment.driver';
-import { JqfRefundDriver } from './infrastructure/drivers/jqf-refund.driver';
+import { JqfAlipayPaymentDriver } from './infrastructure/drivers/jqf-alipay-payment.driver';
+import { JqfAlipayRefundDriver, JqfRefundDriver } from './infrastructure/drivers/jqf-refund.driver';
+import {
+  JqfAlipayTransferDriver,
+  JqfWechatTransferDriver,
+} from './infrastructure/drivers/jqf-transfer.driver';
 
 import { PaymentGatewayService } from './application/payment-gateway.service';
 import { PaymentResolver } from './application/payment.resolver';
@@ -47,6 +52,7 @@ import { RefundResolver } from './application/refund.resolver';
 import { WalletService } from './application/wallet.service';
 import { WechatJsapiPayerService } from './application/wechat-jsapi-payer.service';
 import { WalletFinanceReadService } from './application/wallet-finance-read.service';
+import { WithdrawalSettlementService } from './application/withdrawal-settlement.service';
 import { GetMyWalletUseCase } from './application/use-cases/get-my-wallet.usecase';
 import { GetWalletStatsUseCase } from './application/use-cases/get-wallet-stats.usecase';
 import { ListTransactionsUseCase } from './application/use-cases/list-transactions.usecase';
@@ -60,6 +66,8 @@ import { AdjustWalletUseCase } from './application/use-cases/adjust-wallet.useca
 import { ListMyWithdrawalsUseCase } from './application/use-cases/list-my-withdrawals.usecase';
 import { ListWithdrawalsUseCase } from './application/use-cases/list-withdrawals.usecase';
 import { ApproveWithdrawalUseCase } from './application/use-cases/approve-withdrawal.usecase';
+import { SyncWithdrawalUseCase } from './application/use-cases/sync-withdrawal.usecase';
+import { HandleWithdrawalCallbackUseCase } from './application/use-cases/handle-withdrawal-callback.usecase';
 import { RejectWithdrawalUseCase } from './application/use-cases/reject-withdrawal.usecase';
 import { ExportWithdrawalTaxUseCase } from './application/use-cases/export-withdrawal-tax.usecase';
 import { GetWithdrawTaxConfigUseCase } from './application/use-cases/get-withdraw-tax-config.usecase';
@@ -73,11 +81,13 @@ import { RechargeCallbackController } from './interfaces/controllers/recharge.ca
 import { RechargeQueryController } from './interfaces/controllers/recharge.query.controller';
 import { WithdrawalCreateController } from './interfaces/controllers/withdrawal.create.controller';
 import { WithdrawalMineController } from './interfaces/controllers/withdrawal.mine.controller';
+import { WithdrawalCallbackController } from './interfaces/controllers/withdrawal.callback.controller';
 import { WalletAdminListController } from './interfaces/controllers/wallet.admin.list.controller';
 import { WalletAdminTransactionsController } from './interfaces/controllers/wallet.admin.transactions.controller';
 import { WalletAdminAdjustController } from './interfaces/controllers/wallet.admin.adjust.controller';
 import { WithdrawalAdminListController } from './interfaces/controllers/withdrawal.admin.list.controller';
 import { WithdrawalAdminApproveController } from './interfaces/controllers/withdrawal.admin.approve.controller';
+import { WithdrawalAdminSyncController } from './interfaces/controllers/withdrawal.admin.sync.controller';
 import { WithdrawalAdminRejectController } from './interfaces/controllers/withdrawal.admin.reject.controller';
 import { WithdrawalAdminExportController } from './interfaces/controllers/withdrawal.admin.export.controller';
 import { TaxConfigAdminGetController } from './interfaces/controllers/tax-config.admin.get.controller';
@@ -86,8 +96,9 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
 /**
  * 钱包模块。
  * DDD 四层装配。个人侧（登录即用，无需特定权限）：我的钱包/统计/明细、充值
- * （支付宝/微信扫码、微信公众号 JSAPI；官方协议或计全付聚合网关）、提现申请（审核制，支付宝转账到账），打开无则自动初始化。
- * 管理侧（RBAC 门控）：钱包管理（列表/明细/调整）与财务提现管理（审核通过即转账/驳回退款）。
+ * （支付宝/微信扫码、微信公众号 JSAPI；官方协议或计全付聚合网关）、提现申请（审核制；支付宝官方转账或
+ * 计全付转账到支付宝/微信零钱，异步结果由转账通知与主动查单收敛），打开无则自动初始化。
+ * 管理侧（RBAC 门控）：钱包管理（列表/明细/调整）与财务提现管理（审核通过即发起转账/驳回退款/同步渠道状态）。
  * 充值/提现渠道均为「策略模式 + 配置驱动」，凭证全部入配置中心，无硬编码。
  */
 @Module({
@@ -110,11 +121,13 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     RechargeQueryController,
     WithdrawalCreateController,
     WithdrawalMineController,
+    WithdrawalCallbackController,
     WalletAdminListController,
     WalletAdminTransactionsController,
     WalletAdminAdjustController,
     WithdrawalAdminListController,
     WithdrawalAdminApproveController,
+    WithdrawalAdminSyncController,
     WithdrawalAdminRejectController,
     WithdrawalAdminExportController,
     TaxConfigAdminGetController,
@@ -149,7 +162,11 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     JqfPayConfigFactory,
     JqfWechatPaymentDriver,
     JqfWechatJsapiPaymentDriver,
+    JqfAlipayPaymentDriver,
     JqfRefundDriver,
+    JqfAlipayRefundDriver,
+    JqfAlipayTransferDriver,
+    JqfWechatTransferDriver,
     {
       provide: PAYMENT_PORTS,
       useFactory: (
@@ -158,28 +175,41 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
         wechatJsapi: WechatJsapiPaymentDriver,
         jqfWechat: JqfWechatPaymentDriver,
         jqfWechatJsapi: JqfWechatJsapiPaymentDriver,
-      ) => [alipay, wechat, wechatJsapi, jqfWechat, jqfWechatJsapi],
+        jqfAlipay: JqfAlipayPaymentDriver,
+      ) => [alipay, wechat, wechatJsapi, jqfWechat, jqfWechatJsapi, jqfAlipay],
       inject: [
         AlipayPaymentDriver,
         WechatPaymentDriver,
         WechatJsapiPaymentDriver,
         JqfWechatPaymentDriver,
         JqfWechatJsapiPaymentDriver,
+        JqfAlipayPaymentDriver,
       ],
     },
     {
       provide: PAYOUT_PORTS,
-      useFactory: (alipay: AlipayPayoutDriver, wechat: WechatPayoutDriver) => [alipay, wechat],
-      inject: [AlipayPayoutDriver, WechatPayoutDriver],
+      useFactory: (
+        alipay: AlipayPayoutDriver,
+        wechat: WechatPayoutDriver,
+        jqfAlipay: JqfAlipayTransferDriver,
+        jqfWechat: JqfWechatTransferDriver,
+      ) => [alipay, wechat, jqfAlipay, jqfWechat],
+      inject: [
+        AlipayPayoutDriver,
+        WechatPayoutDriver,
+        JqfAlipayTransferDriver,
+        JqfWechatTransferDriver,
+      ],
     },
     {
       provide: REFUND_PORTS,
-      useFactory: (alipay: AlipayRefundDriver, wechat: WechatRefundDriver, jqf: JqfRefundDriver) => [
-        alipay,
-        wechat,
-        jqf,
-      ],
-      inject: [AlipayRefundDriver, WechatRefundDriver, JqfRefundDriver],
+      useFactory: (
+        alipay: AlipayRefundDriver,
+        wechat: WechatRefundDriver,
+        jqf: JqfRefundDriver,
+        jqfAlipay: JqfAlipayRefundDriver,
+      ) => [alipay, wechat, jqf, jqfAlipay],
+      inject: [AlipayRefundDriver, WechatRefundDriver, JqfRefundDriver, JqfAlipayRefundDriver],
     },
 
     PaymentGatewayService,
@@ -189,6 +219,7 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     WalletService,
     WechatJsapiPayerService,
     WalletFinanceReadService,
+    WithdrawalSettlementService,
     GetMyWalletUseCase,
     GetWalletStatsUseCase,
     ListTransactionsUseCase,
@@ -202,6 +233,8 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     ListMyWithdrawalsUseCase,
     ListWithdrawalsUseCase,
     ApproveWithdrawalUseCase,
+    SyncWithdrawalUseCase,
+    HandleWithdrawalCallbackUseCase,
     RejectWithdrawalUseCase,
     ExportWithdrawalTaxUseCase,
     GetWithdrawTaxConfigUseCase,

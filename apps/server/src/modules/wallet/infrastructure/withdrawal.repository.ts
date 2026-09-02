@@ -31,6 +31,12 @@ export class TypeormWithdrawalRepository implements WithdrawalOrderRepository {
     });
   }
 
+  findByOutBizNo(outBizNo: string): Promise<WithdrawalOrderEntity | null> {
+    return this.repo.findOne({
+      where: withTenant<WithdrawalOrderEntity>(this.tenant, { outBizNo }),
+    });
+  }
+
   paginateByWallet(
     walletId: string,
     skip: number,

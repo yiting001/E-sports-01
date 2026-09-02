@@ -31,9 +31,13 @@ export const financeApi = {
   ): Promise<PaginatedResult<WithdrawalAdminView>> {
     return http.get('/wallet/admin/withdrawals', { params: query });
   },
-  /** 审核通过：发起支付宝转账到收款账号 */
+  /** 审核通过：按提现单执行渠道发起转账（异步渠道保持「转账中」，由回调/同步收敛） */
   approve(id: string): Promise<WithdrawalResultView> {
     return http.post(`/wallet/admin/withdrawals/${id}/approve`);
+  },
+  /** 主动向渠道查单同步「转账中」提现单状态 */
+  sync(id: string): Promise<WithdrawalResultView> {
+    return http.post(`/wallet/admin/withdrawals/${id}/sync`);
   },
   /** 驳回：退回余额并留存驳回原因 */
   reject(id: string, body: RejectWithdrawalBody): Promise<WithdrawalResultView> {

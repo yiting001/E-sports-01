@@ -1,24 +1,37 @@
 <script setup lang="ts">
 /**
  * 提现管理页（菜单 finance:withdrawal:menu，财务分组）。
- * 分页展示用户提现工单（可按状态过滤），展示金额/手续费/到账额与收款支付宝账户；
- * 支持审核通过（立即发起支付宝转账到账）与驳回（填写理由，全额退回余额）。
+ * 分页展示用户提现工单（可按状态过滤），展示金额/手续费/到账额、执行渠道与渠道侧快照（上游单号/状态/手续费）；
+ * 支持审核通过（按执行渠道发起转账，异步渠道保持「转账中」）、驳回（填写理由，全额退回余额）
+ * 与对「转账中」单据主动向渠道查单同步。动作逻辑见 use-withdrawal-review.ts。
  */
 import { onMounted, ref } from 'vue';
 import {
   PAGINATION_DEFAULTS,
+  PAYOUT_CHANNEL_STATE_TEXT,
+  PAYOUT_PROVIDER_TEXT,
   PERMS,
-  PayoutProvider,
   WITHDRAWAL_STATUS_TEXT,
   WithdrawalStatus,
+  type PayoutChannelState,
+  type PayoutProvider,
   type WithdrawalAdminView,
 } from '@app/contracts';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import { Check, Close, Download, Money, Refresh, Search, View } from '@element-plus/icons-vue';
+import {
+  Check,
+  Close,
+  Download,
+  Money,
+  Refresh,
+  RefreshRight,
+  Search,
+  View,
+} from '@element-plus/icons-vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import { financeApi } from '@/api/finance.api';
+import { useWithdrawalReview } from './use-withdrawal-review';
 import './WithdrawalAdminView.css';
 
 const list = ref<WithdrawalAdminView[]>([]);
@@ -27,14 +40,8 @@ const page = ref(1);
 const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const statusFilter = ref<WithdrawalStatus | undefined>(undefined);
 const loading = ref(false);
-const exporting = ref(false);
 const detailVisible = ref(false);
 const currentWithdrawal = ref<WithdrawalAdminView | null>(null);
-
-const payoutProviderText: Record<PayoutProvider, string> = {
-  [PayoutProvider.Alipay]: '支付宝',
-  [PayoutProvider.Wechat]: '微信',
-};
 
 const statusTagType: Record<
   WithdrawalStatus,
@@ -55,7 +62,7 @@ const statusOptions = [
   })),
 ];
 
-function formatDate(value: string): string {
+function formatDate(value: string | null): string {
   if (!value) {
     return '-';
   }
@@ -110,57 +117,8 @@ function syncCurrentWithdrawal(id: string): void {
   detailVisible.value = latest !== null;
 }
 
-/** 一键导出报税表单：拉取已到账提现单 CSV，加 BOM 生成文件下载（Excel 中文不乱码） */
-async function exportTaxReport(): Promise<void> {
-  exporting.value = true;
-  try {
-    const result = await financeApi.exportTaxReport();
-    if (result.count === 0) {
-      ElMessage.info('暂无已到账的提现单可导出');
-      return;
-    }
-    const blob = new Blob([`\uFEFF${result.csv}`], {
-      type: 'text/csv;charset=utf-8',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = result.filename;
-    link.click();
-    URL.revokeObjectURL(url);
-    ElMessage.success(`已导出 ${result.count} 条报税记录`);
-  } finally {
-    exporting.value = false;
-  }
-}
-
-async function approve(row: WithdrawalAdminView): Promise<void> {
-  await ElMessageBox.confirm(
-    `确认通过 ${row.nickname || row.username} 的提现申请？将立即向支付宝账号 ${row.account}（${row.accountName}）转账 ¥${row.arriveYuan}。`,
-    '审核通过',
-    { type: 'warning' },
-  );
-  const result = await financeApi.approve(row.id);
-  if (result.status === WithdrawalStatus.Success) {
-    ElMessage.success('已通过，转账成功');
-  } else {
-    ElMessage.error(`转账失败，余额已退回：${result.failReason ?? ''}`);
-  }
-  await load();
-  syncCurrentWithdrawal(row.id);
-}
-
-async function reject(row: WithdrawalAdminView): Promise<void> {
-  const { value } = await ElMessageBox.prompt(
-    `请输入驳回 ${row.nickname || row.username} 提现申请的理由（金额将全额退回余额）`,
-    '驳回提现',
-    { inputPattern: /\S+/, inputErrorMessage: '驳回理由不能为空' },
-  );
-  await financeApi.reject(row.id, { reason: value });
-  ElMessage.success('已驳回并退回余额');
-  await load();
-  syncCurrentWithdrawal(row.id);
-}
+const { exporting, syncingId, approve, syncChannel, reject, exportTaxReport } =
+  useWithdrawalReview({ reload: load, syncCurrent: syncCurrentWithdrawal });
 
 onMounted(() => {
   void load();
@@ -253,6 +211,20 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column
+          label="渠道"
+          min-width="150"
+        >
+          <template #default="{ row }">
+            <div class="withdrawal-payee">
+              <strong>{{ PAYOUT_PROVIDER_TEXT[row.provider as PayoutProvider] }}</strong>
+              <small v-if="row.channelState">
+                {{ PAYOUT_CHANNEL_STATE_TEXT[row.channelState as PayoutChannelState] }}
+              </small>
+              <small v-if="Number(row.channelFeeFen) > 0">渠道费 ¥{{ row.channelFeeYuan }}</small>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column
           label="状态"
           width="100"
         >
@@ -309,6 +281,17 @@ onMounted(() => {
                   驳回
                 </el-button>
               </template>
+              <el-button
+                v-if="row.status === WithdrawalStatus.Processing"
+                v-permission="PERMS.finance.withdrawalReview"
+                link
+                type="primary"
+                :icon="RefreshRight"
+                :loading="syncingId === row.id"
+                @click="syncChannel(row)"
+              >
+                同步
+              </el-button>
             </div>
           </template>
         </el-table-column>
@@ -368,8 +351,8 @@ onMounted(() => {
           <el-descriptions-item label="到账金额">
             ¥{{ currentWithdrawal.arriveYuan }}
           </el-descriptions-item>
-          <el-descriptions-item label="收款渠道">
-            {{ payoutProviderText[currentWithdrawal.provider as PayoutProvider] }}
+          <el-descriptions-item label="执行渠道">
+            {{ PAYOUT_PROVIDER_TEXT[currentWithdrawal.provider] }}
           </el-descriptions-item>
           <el-descriptions-item label="收款账号">
             {{ currentWithdrawal.account }}
@@ -382,6 +365,25 @@ onMounted(() => {
           </el-descriptions-item>
           <el-descriptions-item label="渠道单号">
             {{ currentWithdrawal.providerOrderId || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="上游转账单号">
+            {{ currentWithdrawal.channelOrderNo || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="渠道状态">
+            {{
+              currentWithdrawal.channelState
+                ? PAYOUT_CHANNEL_STATE_TEXT[currentWithdrawal.channelState]
+                : '-'
+            }}
+          </el-descriptions-item>
+          <el-descriptions-item label="渠道手续费">
+            ¥{{ currentWithdrawal.channelFeeYuan }}
+          </el-descriptions-item>
+          <el-descriptions-item label="渠道错误">
+            {{ currentWithdrawal.channelErrMsg || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="最近同步">
+            {{ formatDate(currentWithdrawal.channelSyncedAt) }}
           </el-descriptions-item>
           <el-descriptions-item label="失败/驳回原因">
             {{ currentWithdrawal.failReason || '-' }}
@@ -415,6 +417,16 @@ onMounted(() => {
               驳回
             </el-button>
           </template>
+          <el-button
+            v-if="currentWithdrawal?.status === WithdrawalStatus.Processing"
+            v-permission="PERMS.finance.withdrawalReview"
+            type="primary"
+            :icon="RefreshRight"
+            :loading="syncingId === currentWithdrawal.id"
+            @click="syncChannel(currentWithdrawal)"
+          >
+            同步渠道状态
+          </el-button>
         </div>
       </template>
     </el-drawer>

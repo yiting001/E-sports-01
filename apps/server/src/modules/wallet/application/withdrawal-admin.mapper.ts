@@ -34,6 +34,12 @@ export function toWithdrawalAdminView(
     accountName: order.accountName,
     idCardNo: order.idCardNo,
     providerOrderId: order.providerOrderId,
+    channelOrderNo: order.channelOrderNo,
+    channelState: order.channelState,
+    channelErrMsg: order.channelErrMsg,
+    channelFeeFen: order.channelFeeFen,
+    channelFeeYuan: fenToYuan(order.channelFeeFen),
+    channelSyncedAt: order.channelSyncedAt?.toISOString() ?? null,
     failReason: order.failReason,
     createdAt: order.createdAt.toISOString(),
   };

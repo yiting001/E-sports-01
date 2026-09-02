@@ -12,6 +12,9 @@ export interface WithdrawalOrderRepository {
   /** 按 id 查询提现订单（当前租户内） */
   findById(id: string): Promise<WithdrawalOrderEntity | null>;
 
+  /** 按商户提现单号查询（渠道异步通知定位提现单；公开回调无租户上下文时全局查找） */
+  findByOutBizNo(outBizNo: string): Promise<WithdrawalOrderEntity | null>;
+
   /** 按钱包分页查询提现订单（C 端我的提现记录，按创建时间倒序） */
   paginateByWallet(
     walletId: string,
