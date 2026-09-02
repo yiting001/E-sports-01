@@ -117,6 +117,8 @@
 
 静态访问：本地驱动文件经 `upload.localBaseUrl`（默认同源 `/static`）对外提供；独立 API 域名部署时应配置完整 URL。
 
+接口本身不转码；管理端与 C 端 `uploadApi` 在发送前按 contracts `UPLOAD_MEDIA_LIMITS` 压缩图片（长边 ≤ 1920，优先 WebP，文件名扩展名随之变化）并拒绝超过 50 MB 的视频，服务端 `upload.maxFileSize` 仍为最终兜底，见 [upload.md](./upload.md#前端媒体预处理图片压缩--视频限制)。
+
 ## WebSocket IM
 
 REST：

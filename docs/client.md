@@ -118,7 +118,10 @@ apps/client/src
 ├─ utils/interval-poller.ts             # 可暂停/销毁且可测试的定时轮询器
 ├─ utils/pay-status-poller.ts           # 支付结果轮询器：页面恢复可见时立即补查并重启定时器
 ├─ api/booster.api.ts                   # 本人入驻概览、提交/重提、押金、上下线接口
-├─ api/upload.api.ts                     # 登录用户自助上传材料图
+├─ api/upload.api.ts                     # 登录用户自助上传；发送前统一压缩图片、拒绝超限视频并 toast 提示
+├─ utils/upload-media.ts                 # 上传前媒体预处理分派（与管理端同源实现）
+├─ utils/image-compress.ts               # 图片压缩纯逻辑，阈值取 contracts UPLOAD_MEDIA_LIMITS
+├─ utils/browser-image-codec.ts          # Canvas 编解码实现
 ├─ components/profile/
 │  ├─ BoosterAnnouncementCard.vue        # 公告文字 + 后台配置图片 + 加载失败状态
 │  ├─ BoosterApplicationForm.vue         # 编辑 / 只读共用完整资料表单
@@ -221,6 +224,8 @@ flowchart TD
 ## 打手入驻页面流程
 
 页面先调用 `GET /booster/mine`，一次取得申请记录、实名前置开关、本人实名状态、押金策略和公告图。材料图复用 `POST /upload/self`，上传完成后只把返回 URL 放进 `POST /booster` 的申请载荷。
+
+C 端头像、实名证件、打手材料、订单备注附件、客服聊天等所有图片/视频上传都经 `uploadApi.uploadSelf`，图片在手机浏览器内先压缩（长边 ≤ 1920、优先 WebP）再上传，视频超过 50 MB 直接 toast 拒绝；细节见 [upload.md](./upload.md#前端媒体预处理图片压缩--视频限制)。
 
 ```mermaid
 flowchart TD
