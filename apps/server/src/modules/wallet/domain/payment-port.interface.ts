@@ -9,6 +9,8 @@ export interface RechargeCreateInput {
   subject: string;
   /** 异步通知回调地址 */
   notifyUrl: string;
+  /** 支付完成后同步跳回的前端地址（仅支持同步跳转的聚合网关使用，官方扫码渠道忽略） */
+  returnUrl?: string;
   /** 付款人 openid（仅微信公众号 JSAPI 渠道必传，其余渠道忽略） */
   payerOpenid?: string;
 }

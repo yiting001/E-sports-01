@@ -5,6 +5,7 @@ import {
   BoosterServiceRegion,
   OrderBoosterSelectionMode,
   OrderPaymentMethod,
+  PAY_RETURN_URL_MAX_LENGTH,
   RemarkMediaItem,
   RemarkMediaType,
 } from '@app/contracts';
@@ -17,6 +18,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUrl,
   Max,
   MaxLength,
   Matches,
@@ -97,4 +99,14 @@ export class CreateOrderDto implements CreateOrderPayload {
   @IsOptional()
   @IsString()
   userCouponId?: string;
+
+  /** 支付完成后同步跳回的前端地址（须为 HTTP/HTTPS 完整地址） */
+  @IsOptional()
+  @IsString()
+  @MaxLength(PAY_RETURN_URL_MAX_LENGTH)
+  @IsUrl(
+    { require_tld: false, require_protocol: true, protocols: ['http', 'https'] },
+    { message: '支付回跳地址无效' },
+  )
+  returnUrl?: string;
 }

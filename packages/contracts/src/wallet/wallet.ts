@@ -3,6 +3,7 @@
  * 金额一律以「分」为单位的整数传输，避免浮点误差；
  * 展示用「元」字符串由 fenToYuan 统一换算，前端只读不参与计算。
  */
+import type { WechatJsapiPayParams } from "../order/order";
 
 /** 充值（收款）渠道 */
 export enum PaymentProvider {
@@ -24,6 +25,13 @@ export const PAYMENT_PROVIDER_TEXT: Record<PaymentProvider, string> = {
   [PaymentProvider.JqfWechat]: '计全微信',
   [PaymentProvider.JqfWechatJsapi]: '计全微信公众号',
 };
+
+/** 用户可选的充值支付方式（计全付渠道由服务端按网关开关映射，不由前端直接指定） */
+export const RECHARGE_PAYMENT_PROVIDERS = [
+  PaymentProvider.Alipay,
+  PaymentProvider.Wechat,
+  PaymentProvider.WechatJsapi,
+] as const;
 
 /** 支付网关：同一支付方式可在官方直连与计全付聚合之间切换 */
 export enum PaymentGateway {
@@ -211,18 +219,43 @@ export interface CreateRechargeBody {
   /** 充值金额（分） */
   amountFen: number;
   provider: PaymentProvider;
+  /** 支付完成后同步跳回的前端地址（选填，仅支持同步跳转的聚合网关使用） */
+  returnUrl?: string;
 }
 
-/** 发起充值结果（扫码支付：返回二维码内容，前端渲染成二维码供用户扫码） */
+/** 发起充值结果（扫码支付：返回二维码内容；JSAPI：返回拉起支付参数） */
 export interface CreateRechargeResult {
   orderId: string;
   outTradeNo: string;
   provider: PaymentProvider;
-  /** 二维码内容（支付宝 qr_code / 微信 code_url） */
+  /** 二维码内容（支付宝 qr_code / 微信 code_url）；JSAPI 支付为空串 */
   qrCode: string;
+  /** 微信公众号 JSAPI 拉起支付参数；非 JSAPI 支付为 null */
+  jsapiParams: WechatJsapiPayParams | null;
   amountFen: number;
   amountYuan: string;
 }
+
+/**
+ * 支付同步跳转地址（returnUrl）长度上限：计全付 returnUrl 字段为 String(128)，
+ * 该上限包含服务端替换占位符或追加 payRef 后的完整地址。
+ */
+export const PAY_RETURN_URL_MAX_LENGTH = 128;
+
+/**
+ * returnUrl 中的业务单据占位符：前端传 `…#/orders/{payRef}` 这类地址，
+ * 服务端下单时用订单 id / 充值单号替换，使支付完成后直接跳回原业务页（订单详情、钱包等）。
+ */
+export const PAY_RETURN_REF_PLACEHOLDER = "{payRef}";
+
+/**
+ * 支付回跳 querystring 键：地址中没有占位符时服务端把 payRef 追加为 query（充值单号 outTradeNo），
+ * returnPageAction 由计全付追加。
+ */
+export const PAY_RETURN_QUERY_KEYS = {
+  ref: "payRef",
+  action: "returnPageAction",
+} as const;
 
 /** 充值支付结果查询视图（前端轮询查单用） */
 export interface RechargeStatusView {

@@ -10,6 +10,7 @@ import {
 import RechargeDialog from '@/components/wallet/RechargeDialog.vue';
 import { walletApi } from '@/api/wallet.api';
 import { useToast } from '@/composables/use-toast';
+import { usePayReturnRecharge } from '@/composables/use-pay-return-recharge';
 import { usePortalStore } from '@/stores/portal.store';
 import { isWalletBalanceUnavailable } from '@/utils/checkout-state';
 import { isWechatBrowser } from '@/utils/wechat-env';
@@ -121,6 +122,8 @@ async function handleRechargePaid(): Promise<void> {
     toast.show('充值成功，余额已刷新');
   }
 }
+
+usePayReturnRecharge(handleRechargePaid);
 
 /** 环境与开关对齐：草稿/持久化的微信方式与当前可用的微信方式不一致时自动纠正 */
 watch(

@@ -29,6 +29,12 @@ function md5Upper(source: string): string {
   return createHash('md5').update(source, 'utf8').digest('hex').toUpperCase();
 }
 
+/** 构造带商户身份与合法签名的计全付异步通知体 */
+function signedCallback(fields: Record<string, string | number>): Record<string, unknown> {
+  const body = { mchNo: CFG.mchNo, appId: CFG.appId, ...fields };
+  return { ...body, sign: signJqfParams(body, API_KEY) };
+}
+
 test('计全付签名按 key 字典序拼接并过滤空值与 sign 字段', () => {
   const sign = signJqfParams(
     { b: '2', a: '1', empty: '', missing: undefined, sign: 'SHOULD-IGNORE', amount: 100 },
@@ -51,13 +57,12 @@ test('计全付验签接受合法签名并拒绝被篡改的通知', () => {
 });
 
 test('计全付回调验签通过后映射支付结果，验签失败直接拒绝', () => {
-  const body: Record<string, unknown> = {
+  const signed = signedCallback({
     mchOrderNo: 'R20260722000000123456',
     payOrderId: 'P202607220001',
     state: 2,
     amount: 500,
-  };
-  const signed = { ...body, sign: signJqfParams(body as Record<string, string | number>, API_KEY) };
+  });
 
   const result = parseJqfCallback(CFG, { body: signed, rawBody: '', headers: {} });
   assert.deepEqual(result, {
@@ -75,16 +80,83 @@ test('计全付回调验签通过后映射支付结果，验签失败直接拒�
 });
 
 test('计全付回调未支付状态不计入实付金额', () => {
-  const body: Record<string, unknown> = {
+  const signed = signedCallback({
     mchOrderNo: 'R20260722000000123456',
     payOrderId: 'P202607220001',
     state: 1,
     amount: 500,
-  };
-  const signed = { ...body, sign: signJqfParams(body as Record<string, string | number>, API_KEY) };
+  });
   const result = parseJqfCallback(CFG, { body: signed, rawBody: '', headers: {} });
   assert.equal(result.success, false);
   assert.equal(result.paidAmountFen, 0);
+});
+
+test('计全付表单回调中的字符串数值按整数解析并确认支付成功', () => {
+  const signed = signedCallback({
+    mchOrderNo: 'R20260722000000123456',
+    payOrderId: 'P202607220001',
+    state: '2',
+    amount: '500',
+  });
+  const result = parseJqfCallback(CFG, { body: signed, rawBody: '', headers: {} });
+  assert.deepEqual(result, {
+    outTradeNo: 'R20260722000000123456',
+    providerTradeNo: 'P202607220001',
+    paidAmountFen: 500,
+    success: true,
+  });
+});
+
+test('计全付回调非整数状态或金额视为参数异常', () => {
+  const badState = signedCallback({
+    mchOrderNo: 'R20260722000000123456',
+    payOrderId: 'P202607220001',
+    state: 'paid',
+    amount: '500',
+  });
+  assert.throws(
+    () => parseJqfCallback(CFG, { body: badState, rawBody: '', headers: {} }),
+    BadRequestException,
+  );
+  const badAmount = signedCallback({
+    mchOrderNo: 'R20260722000000123456',
+    payOrderId: 'P202607220001',
+    state: '2',
+    amount: '5.00',
+  });
+  assert.throws(
+    () => parseJqfCallback(CFG, { body: badAmount, rawBody: '', headers: {} }),
+    BadRequestException,
+  );
+});
+
+test('计全付回调商户号或 appId 与本地配置不一致时拒绝', () => {
+  const fields = {
+    mchOrderNo: 'R20260722000000123456',
+    payOrderId: 'P202607220001',
+    state: '2',
+    amount: '500',
+  };
+  const otherMch = { mchNo: 'M0000000000', appId: CFG.appId, ...fields };
+  assert.throws(
+    () =>
+      parseJqfCallback(CFG, {
+        body: { ...otherMch, sign: signJqfParams(otherMch, API_KEY) },
+        rawBody: '',
+        headers: {},
+      }),
+    /商户号或 appId 不匹配/,
+  );
+  const otherApp = { mchNo: CFG.mchNo, appId: 'other-app', ...fields };
+  assert.throws(
+    () =>
+      parseJqfCallback(CFG, {
+        body: { ...otherApp, sign: signJqfParams(otherApp, API_KEY) },
+        rawBody: '',
+        headers: {},
+      }),
+    /商户号或 appId 不匹配/,
+  );
 });
 
 test('计全付请求时间戳为东八区 yyyyMMddHHmmss', () => {

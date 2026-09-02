@@ -25,7 +25,7 @@
 | 服务订单         | [order.md](./order.md)                             | 双端权威计价、结构化游戏资料、大厅检索、并发安全派单、三种支付方式与三阶段群标题                             |
 | 订单退款         | [order-refund.md](./order-refund.md)               | 用户申请、后台审核、客服独立授权、余额与支付宝/微信原路退款、并发幂等及失败恢复                              |
 | 微信公众号登录/支付 | [wechat-official.md](./wechat-official.md)      | 公众号网页授权一键登录 + 微信内 JSAPI 拉起支付（均可开关），支付证书 PEM/P12 上传解析                        |
-| 支付网关/计全付  | [payment-gateway.md](./payment-gateway.md)         | 支付方式与执行网关解耦（策略+适配器），计全付微信扫码/JSAPI/退款接入与管理端「支付配置」页                   |
+| 支付网关/计全付  | [payment-gateway.md](./payment-gateway.md)         | 支付方式与执行网关解耦（策略+适配器），计全付微信扫码/JSAPI/退款接入、回调解析、同步跳转回订单详情/钱包页与管理端「支付配置」页 |
 | 商品评论         | [review.md](./review.md)                           | 订单完成后一单一评（打星 + 文字），商品详情页脱敏展示评论与平均分，管理端隐藏/恢复/删除治理                  |
 | 打手入驻         | [booster.md](./booster.md)                         | 入驻审核、打手自主上下线、脱敏挑人目录/主页和安全语音试听，含 migration 与隐私边界                           |
 | 商品管理         | [commerce.md](./commerce.md)                       | 分类 + 商品 CRUD、手机/电脑双端价格、左右分类目录、方形完整主图与正式 migration                              |

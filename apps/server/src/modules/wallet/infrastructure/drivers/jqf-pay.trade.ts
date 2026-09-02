@@ -22,7 +22,10 @@ export interface JqfUnifiedOrderResult {
   payData: string;
 }
 
-/** 计全付统一下单（金额单位为分；wayCode/channelExtra 由具体驱动决定）。 */
+/**
+ * 计全付统一下单（金额单位为分；wayCode/channelExtra 由具体驱动决定）。
+ * returnUrl 为支付完成后的同步跳转地址，计全付会把通知参数与 returnPageAction 拼到其 querystring。
+ */
 export async function createJqfUnifiedOrder(
   cfg: JqfPayConfig,
   input: RechargeCreateInput,
@@ -37,6 +40,7 @@ export async function createJqfUnifiedOrder(
     subject: input.subject,
     body: input.subject,
     notifyUrl: input.notifyUrl || undefined,
+    returnUrl: input.returnUrl || undefined,
     channelExtra: JSON.stringify(channelExtra),
   });
   const payOrderId = data.payOrderId;
@@ -72,7 +76,24 @@ export async function queryJqfTrade(
   };
 }
 
-/** 解析并验签计全付支付异步通知；验签失败直接拒绝。 */
+/**
+ * 解析计全付通知中的整数字段：异步通知以 application/x-www-form-urlencoded 送达，
+ * 数值字段（state/amount）到达时为字符串，需与 JSON 数值同等接受。
+ */
+function readJqfInt(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isSafeInteger(value) ? value : null;
+  }
+  if (typeof value === 'string' && /^-?\d+$/.test(value)) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+/**
+ * 解析并验签计全付支付异步通知；验签失败或商户号/appId 与本地配置不一致直接拒绝。
+ */
 export function parseJqfCallback(
   cfg: JqfPayConfig,
   req: PaymentCallbackRequest,
@@ -80,23 +101,25 @@ export function parseJqfCallback(
   if (!verifyJqfSign(req.body, cfg.apiKey)) {
     throw new BadRequestException('计全付回调验签失败');
   }
+  if (req.body.mchNo !== cfg.mchNo || req.body.appId !== cfg.appId) {
+    throw new BadRequestException('计全付回调商户号或 appId 不匹配');
+  }
   const mchOrderNo = req.body.mchOrderNo;
   const payOrderId = req.body.payOrderId;
-  const state = req.body.state;
-  const amount = req.body.amount;
-  if (
-    typeof mchOrderNo !== 'string' ||
-    typeof payOrderId !== 'string' ||
-    typeof state !== 'number'
-  ) {
+  const state = readJqfInt(req.body.state);
+  const amount = readJqfInt(req.body.amount);
+  if (typeof mchOrderNo !== 'string' || typeof payOrderId !== 'string' || state === null) {
     throw new BadRequestException('计全付回调参数异常');
   }
   const success = state === STATE_SUCCESS;
+  const paidAmountFen = success ? amount : 0;
+  if (paidAmountFen === null) {
+    throw new BadRequestException('计全付回调支付金额异常');
+  }
   return {
     outTradeNo: mchOrderNo,
     providerTradeNo: payOrderId,
-    paidAmountFen:
-      success && typeof amount === 'number' && Number.isSafeInteger(amount) ? amount : 0,
+    paidAmountFen,
     success,
   };
 }

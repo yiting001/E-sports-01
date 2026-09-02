@@ -5,6 +5,8 @@
  * （下单/支付/下发大厅/接单/完成/取消）；
  * 已建群订单提供「进入订单群」入口，待付款订单可取消；退款申请入口在订单列表，
  * 详情仅展示退款审核/渠道进度。
+ * 也是聚合网关支付完成后的同步回跳落点（与弹层支付成功后的跳转一致）：
+ * 回跳访问且订单仍待付款时调主动查单确认，不以跳转参数为支付依据。
  */
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -23,12 +25,15 @@ import OrderRefundPanel from "@/components/order/OrderRefundPanel.vue";
 import RemarkMediaGallery from "@/components/order/RemarkMediaGallery.vue";
 import { orderApi } from "@/api/order.api";
 import { useToast } from "@/composables/use-toast";
-import { formatOrderDateTime as formatTime } from "@/utils/order-status";
+import { formatOrderDateTime as formatTime, isOrderPaid } from "@/utils/order-status";
+import { isPayReturnVisit, stripPayReturnQuery } from "@/utils/pay-return";
+import { useCheckoutDraftStore } from "@/stores/checkout-draft.store";
 import "./OrderDetailView.css";
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const checkout = useCheckoutDraftStore();
 
 const order = ref<OrderView | null>(null);
 const loading = ref(true);
@@ -81,11 +86,34 @@ async function cancel(): Promise<void> {
   toast.show("订单已取消");
 }
 
+/** 支付渠道回跳：仍待付款则主动查单（异步回调可能晚于跳转），确认已付后提示并清理结算上下文 */
+async function confirmPayReturn(current: OrderView): Promise<OrderView> {
+  void router.replace({ query: stripPayReturnQuery(route.query) });
+  let latest = current;
+  if (!isOrderPaid(latest)) {
+    try {
+      latest = await orderApi.payQuery(latest.id, { silent: true });
+    } catch {
+      return latest;
+    }
+  }
+  if (isOrderPaid(latest)) {
+    checkout.clearOrderContext();
+    toast.show("支付成功，客服将尽快为您安排服务");
+  } else {
+    toast.show("支付结果确认中，已付款请稍后刷新订单");
+  }
+  return latest;
+}
+
 async function loadOrder(): Promise<void> {
   loading.value = true;
   loadError.value = false;
   try {
-    order.value = await orderApi.detail(route.params.id as string);
+    const detail = await orderApi.detail(route.params.id as string);
+    order.value = isPayReturnVisit(route.query)
+      ? await confirmPayReturn(detail)
+      : detail;
   } catch {
     order.value = null;
     loadError.value = true;

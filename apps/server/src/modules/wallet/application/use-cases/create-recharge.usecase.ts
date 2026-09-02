@@ -3,6 +3,7 @@ import {
   CONFIG_KEYS,
   CreateRechargeBody,
   CreateRechargeResult,
+  PaymentProvider,
   RechargeStatus,
   WALLET_DEFAULTS,
   fenToYuan,
@@ -16,15 +17,18 @@ import { RechargeOrderEntity } from '../../domain/recharge-order.entity';
 import { PaymentGatewayService } from '../payment-gateway.service';
 import { PaymentResolver } from '../payment.resolver';
 import { WalletService } from '../wallet.service';
+import { WechatJsapiPayerService } from '../wechat-jsapi-payer.service';
 import { buildOrderNo } from '../order-no.util';
+import { buildPayReturnUrl } from '../pay-return-url';
 
 /** 充值订单标题 */
 const RECHARGE_SUBJECT = '钱包充值';
 
 /**
  * 用例：发起充值。
- * 校验金额下限 → 定位/初始化钱包 → 落充值订单(pending) → 调对应渠道下单取二维码。
- * 真正入账在异步回调用例完成，本用例不改余额。
+ * 校验金额下限 → 定位/初始化钱包 → 落充值订单(pending) → 调对应渠道下单，
+ * 扫码渠道返回二维码，公众号 JSAPI 渠道返回拉起支付参数；前端传入 returnUrl 时追加充值单标识后透传给渠道。
+ * 真正入账在异步回调/主动查单用例完成，本用例不改余额。
  */
 @Injectable()
 export class CreateRechargeUseCase {
@@ -33,6 +37,7 @@ export class CreateRechargeUseCase {
     private readonly paymentResolver: PaymentResolver,
     private readonly paymentGateway: PaymentGatewayService,
     private readonly config: ConfigService,
+    private readonly jsapiPayer: WechatJsapiPayerService,
     @Inject(RECHARGE_ORDER_REPOSITORY)
     private readonly rechargeRepo: RechargeOrderRepository,
   ) {}
@@ -51,11 +56,16 @@ export class CreateRechargeUseCase {
       );
     }
 
+    const payerOpenid =
+      body.provider === PaymentProvider.WechatJsapi
+        ? await this.jsapiPayer.resolveOpenid(userId)
+        : undefined;
     const wallet = await this.walletService.ensureWallet(userId);
     // 充值单直接持久化实际执行渠道，后续回调/查单不受网关切换影响
     const provider = await this.paymentGateway.resolvePaymentProvider(body.provider);
     const port = this.paymentResolver.resolve(provider);
     const outTradeNo = buildOrderNo('R');
+    const returnUrl = buildPayReturnUrl(body.returnUrl, outTradeNo);
 
     const order = new RechargeOrderEntity();
     order.walletId = wallet.id;
@@ -70,13 +80,15 @@ export class CreateRechargeUseCase {
       CONFIG_KEYS.wallet.notifyBaseUrl,
       '',
     );
-    const { qrCode } = await port.createRecharge({
+    const { qrCode, jsapiParams } = await port.createRecharge({
       outTradeNo,
       amountFen: body.amountFen,
       subject: RECHARGE_SUBJECT,
       notifyUrl: notifyBaseUrl
         ? `${notifyBaseUrl}/wallet/recharge/callback/${provider}`
         : '',
+      returnUrl,
+      payerOpenid,
     });
 
     return {
@@ -84,6 +96,7 @@ export class CreateRechargeUseCase {
       outTradeNo,
       provider,
       qrCode,
+      jsapiParams: jsapiParams ?? null,
       amountFen: body.amountFen,
       amountYuan: fenToYuan(body.amountFen),
     };

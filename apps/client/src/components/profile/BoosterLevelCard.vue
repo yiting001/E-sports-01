@@ -4,6 +4,7 @@
  * 展示当前等级、完成单数与押金缴纳进度；
  * 押金在配置的最低/最高交付额区间内自选金额缴纳（达最低额方可接单）；
  * 后台开启实名要求且未通过时展示实名认证入口（未实名不可接单）。
+ * 押金缴纳成功后抛出 deposit-paid，由父级刷新资金/余额卡。
  */
 import { computed, onMounted, ref } from 'vue';
 import {
@@ -15,6 +16,7 @@ import {
 import { boosterApi } from '@/api/booster.api';
 import { useToast } from '@/composables/use-toast';
 
+const emit = defineEmits<{ (e: 'deposit-paid'): void }>();
 const toast = useToast();
 
 const mine = ref<BoosterMineView | null>(null);
@@ -57,6 +59,7 @@ async function payDeposit(): Promise<void> {
     await boosterApi.payDeposit(amountFen);
     toast.show('押金已缴纳');
     amountYuan.value = '';
+    emit('deposit-paid');
     await load();
   } finally {
     paying.value = false;

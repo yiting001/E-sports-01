@@ -27,13 +27,15 @@ import type { PaymentResolver } from '../../src/modules/wallet/application/payme
 import { passthroughPaymentGateway } from './payment-gateway.stub';
 import type { TenantContextService } from '../../src/shared/tenant/tenant-context.service';
 import type { OrderNotifyService } from '../../src/modules/order/application/order-notify.service';
-import type { WechatIdentityService } from '../../src/modules/rbac/application/wechat-identity.service';
+import type { WechatJsapiPayerService } from '../../src/modules/wallet/application/wechat-jsapi-payer.service';
 
-/** 微信身份桩：余额支付用例不涉及 JSAPI，按未绑定返回空串 */
-function wechatIdentityStub(): WechatIdentityService {
+/** JSAPI 付款人桩：余额支付用例不涉及 JSAPI，被调用即视为用例走错分支 */
+function jsapiPayerStub(): WechatJsapiPayerService {
   return {
-    findOpenid: async () => '',
-  } as unknown as WechatIdentityService;
+    resolveOpenid: async () => {
+      throw new Error('余额支付不应触发 JSAPI 付款人校验');
+    },
+  } as unknown as WechatJsapiPayerService;
 }
 
 /** 订单微信通知桩：单测不关心推送，只需满足依赖签名 */
@@ -150,7 +152,7 @@ function createFailureFixture(balanceFailure: Error, channelFailure: Error): Fai
       couponRedeem,
       settle,
       boosterSelection,
-      wechatIdentityStub(),
+      jsapiPayerStub(),
     ),
     currentOrder: () => storedOrder,
     restoredOrderIds,
