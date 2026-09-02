@@ -210,16 +210,22 @@ sequenceDiagram
   participant CB as recharge.callback
   participant LED as WalletLedger
 
-  FE->>API: POST /wallet/recharge {amountFen, provider}
-  API->>DRV: createRecharge(outTradeNo, ...)
-  DRV->>PAY: 下单（precreate / native）
-  PAY-->>DRV: 二维码内容
-  DRV-->>FE: qrCode（前端渲染二维码）
+  FE->>API: POST /wallet/recharge {amountFen, provider, returnUrl?}
+  API->>API: JSAPI 时解析付款人 openid；returnUrl 追加 payKind=recharge&payRef=充值单号
+  API->>DRV: createRecharge(outTradeNo, returnUrl, payerOpenid, ...)
+  DRV->>PAY: 下单（precreate / native / JSAPI）
+  PAY-->>DRV: 二维码内容 或 JSAPI 拉起参数
+  DRV-->>FE: qrCode（渲染二维码）/ jsapiParams（WeixinJSBridge 拉起）
   PAY-->>CB: 异步回调（支付完成）
-  CB->>DRV: parseCallback（验签/解密）
+  CB->>DRV: parseCallback（验签/解密/商户身份与金额校验）
   CB->>LED: creditRecharge（幂等入账）
   CB-->>PAY: 渠道要求的应答（success / SUCCESS）
+  FE->>API: 弹层轮询 GET /wallet/recharge/:outTradeNo/status（回调丢失时主动查单兜底入账）
+  PAY-->>FE: （计全付）同步跳回 /#/pay/return?payKind&payRef&returnPageAction
+  FE->>API: 落地页再查充值状态，paid 后跳回钱包并刷新余额/流水
 ```
+
+充值不到账的排查顺序：先看充值单状态（仍 pending 说明回调与查单均未确认支付），再看回调接口是否返回 400（验签/商户号/金额/参数格式）。计全付回调为表单编码，数值字段以字符串到达，解析细节见 [payment-gateway.md](./payment-gateway.md)。打手保证金从钱包余额扣缴（`POST /booster/deposit/pay`），充值未入账则无法缴纳；保证金展示值始终读服务端 `GET /booster/funds/mine`，前端不自行推算。
 
 服务订单余额扣款不经过 `PaymentProvider` 或充值渠道驱动，也没有新的钱包 REST 端点；入口仍是 `POST /order`。完整原子事务与失败补偿见 [order.md](./order.md#钱包余额支付时序)。
 
@@ -255,6 +261,7 @@ sequenceDiagram
 | Key                               | 说明                                                       | 敏感 |
 | --------------------------------- | ---------------------------------------------------------- | ---- |
 | `wallet.payment.provider`         | 默认充值渠道（alipay/wechat）                              |      |
+| `wallet.wechat.jsapiEnabled`      | 公众号 JSAPI 支付开关；开启且微信内时充值/结算直接拉起收银台（详见 wechat-official.md） |      |
 | `wallet.payout.provider`          | 默认提现渠道（alipay）                                     |      |
 | `wallet.minRechargeFen`           | 最小充值金额（分）                                         |      |
 | `wallet.minWithdrawFen`           | 最小提现金额（分）                                         |      |
@@ -278,6 +285,7 @@ sequenceDiagram
 
 > 真实到账需在配置中心填入对应商户凭证；未配置时下单/转账会如实返回「渠道未配置」。
 > 回调地址需公网可达：`{notifyBaseUrl}/wallet/recharge/callback/{provider}`。
+> `POST /wallet/recharge` 的 `provider` 仅接受 `alipay` / `wechat` / `wechat_jsapi`；`returnUrl` 选填，需为 http(s) 绝对地址且追加业务参数后不超过 128 字符（计全付字段上限）。
 
 ## 前端
 
@@ -304,7 +312,9 @@ flowchart LR
 - `api/wallet.api.ts`：直连既有接口 `/wallet/mine`、`/wallet/transactions`、`/wallet/recharge`、`/wallet/withdrawal`。
 - `views/wallet/WalletView.vue`（路由 `/wallet`，需登录）：余额卡 + 充值/提现入口 + 分页流水明细（类型/方向/变更后余额）。
 - `views/wallet/WalletView.responsive.css`：钱包页 PC 响应式布局，标题栏、余额卡与流水明细统一收敛到内容宽度，移动端保持全屏钱包。
-- `components/wallet/RechargeDialog.vue`：金额（元）+ 支付宝/微信 → 生成扫码二维码，轮询余额高于基线即视为入账并自动刷新。
+- `components/wallet/RechargeDialog.vue`：金额（元）+ 支付宝/微信；微信内且后台开启 JSAPI 时以 `wechat_jsapi` 下单并用 `invokeWechatJsapiPay` 拉起收银台（取消/失败可重新拉起），否则生成扫码二维码；下单携带 `returnUrl=…/#/pay/return`；用 `createPayStatusPoller` 轮询 `GET /wallet/recharge/:outTradeNo/status`，充值单 paid 后抛出 `paid` 由钱包页刷新余额与流水，closed 提示重新发起。
+- `views/pay/PayReturnView.vue`（路由 `/pay/return`，需登录）：计全付同步跳转落地页，按 `payKind` 查充值状态或订单支付状态（有限轮询），成功后充值跳钱包、订单跳订单详情；取消/关闭/延迟/查询失败/参数无效各有状态与重新查询、返回入口。详见 [payment-gateway.md](./payment-gateway.md)。
+- 个人中心打手「我的资金」（`BoosterFundsCard`）与余额卡在押金缴纳成功后由 `ProfileView` 通过 key 重建并重新拉取，保证金/余额不再停留在旧值。
 - `components/order/CheckoutPaymentMethods.vue`：结算页独立加载钱包，展示余额并处理加载失败、刷新、冻结、余额不足和原地充值；订单金额变化后重新判断可用性。
 - 余额方式成功时后端返回 `paid=true`，结算页直接进入订单详情，不打开渠道二维码弹层。
 - `components/wallet/WithdrawDialog.vue`：金额 + 支付宝账号/实名 → 提交提现申请；输入金额时按费率实时展示手续费与预计到账金额，提交后提示等待审核。

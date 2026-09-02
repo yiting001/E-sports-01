@@ -6,6 +6,7 @@ import {
   OrderBoosterSelectionMode,
   OrderPaymentMethod,
   OrderStatus,
+  PayReturnKind,
   ProductStatus,
   WechatJsapiPayParams,
   calcDiscountedFen,
@@ -23,10 +24,11 @@ import {
   SelectedBoosterSnapshot,
 } from '../../../booster/application/booster-selection.service';
 import { MemberLevelService } from '../../../member/application/member-level.service';
-import { WechatIdentityService } from '../../../rbac/application/wechat-identity.service';
 import { PaymentGatewayService } from '../../../wallet/application/payment-gateway.service';
 import { PaymentResolver } from '../../../wallet/application/payment.resolver';
+import { WechatJsapiPayerService } from '../../../wallet/application/wechat-jsapi-payer.service';
 import { buildOrderNo } from '../../../wallet/application/order-no.util';
+import { buildPayReturnUrl } from '../../../wallet/application/pay-return-url';
 import { ORDER_REPOSITORY, OrderRepository } from '../../domain/order-repository.interface';
 import { toPaymentProvider } from '../order-payment-method';
 import { OrderPaymentSettleService } from '../order-payment.service';
@@ -37,7 +39,7 @@ const ZERO_AMOUNT_TRADE_NO = 'ZERO_AMOUNT';
 /**
  * 用例：创建服务订单并发起扫码支付。
  * 校验商品在架 → 按会员等级折扣、可选优惠券抵扣固化原价/折扣/抵扣/实付快照
- * → 落订单(待付款)并核销用券 → 调支付渠道下单取二维码。
+ * → 落订单(待付款)并核销用券 → 调支付渠道下单取二维码/JSAPI 参数（前端传 returnUrl 时追加订单标识后透传）。
  * 抵扣到 0 元的订单免真实支付，直接走唯一落账口标记已支付。
  * 非 0 元单真正标记已支付在异步回调/主动查单完成。
  */
@@ -55,7 +57,7 @@ export class CreateOrderUseCase {
     private readonly couponRedeem: CouponRedeemService,
     private readonly settle: OrderPaymentSettleService,
     private readonly boosterSelection: BoosterSelectionService,
-    private readonly wechatIdentity: WechatIdentityService,
+    private readonly jsapiPayer: WechatJsapiPayerService,
   ) {}
 
   async execute(userId: string, payload: CreateOrderPayload): Promise<CreateOrderResult> {
@@ -92,7 +94,10 @@ export class CreateOrderUseCase {
       ? await this.paymentGateway.resolvePaymentProvider(baseProvider)
       : null;
     const port = channelProvider ? this.paymentResolver.resolve(channelProvider) : null;
-    const payerOpenid = await this.resolveJsapiPayer(userId, payload.provider);
+    const payerOpenid =
+      payload.provider === OrderPaymentMethod.WechatJsapi
+        ? await this.jsapiPayer.resolveOpenid(userId)
+        : undefined;
     const orderNo = buildOrderNo('O');
 
     const saved = await this.orders.save(
@@ -192,6 +197,7 @@ export class CreateOrderUseCase {
         amountFen,
         subject: product.title,
         notifyUrl: notifyBaseUrl ? `${notifyBaseUrl}/order/pay/callback/${port.provider}` : '',
+        returnUrl: buildPayReturnUrl(payload.returnUrl, PayReturnKind.Order, saved.id),
         payerOpenid,
       });
       qrCode = result.qrCode;
@@ -214,28 +220,6 @@ export class CreateOrderUseCase {
       discountBp: memberTier.discountBp,
       couponDeductionFen,
     };
-  }
-
-  /**
-   * JSAPI 支付前置校验：开关开启且当前用户已绑定公众号 openid。
-   * 其余支付方式返回 undefined，不影响原有流程。
-   */
-  private async resolveJsapiPayer(
-    userId: string,
-    method: OrderPaymentMethod,
-  ): Promise<string | undefined> {
-    if (method !== OrderPaymentMethod.WechatJsapi) {
-      return undefined;
-    }
-    const enabled = await this.config.getBoolean(CONFIG_KEYS.wallet.wechatJsapiEnabled, false);
-    if (!enabled) {
-      throw new BadRequestException('微信公众号支付未开启');
-    }
-    const openid = await this.wechatIdentity.findOpenid(userId);
-    if (!openid) {
-      throw new BadRequestException('请先在微信内完成微信登录或绑定后再支付');
-    }
-    return openid;
   }
 
   private async resolveRequestedBooster(

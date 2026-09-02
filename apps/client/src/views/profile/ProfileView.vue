@@ -3,7 +3,9 @@
  * 我的页：头部（登录/身份切换）→ 订单入口 → 余额/客服双卡 → 更多功能 → 版本号。
  * 各区块拆为独立组件，本视图只做纵向编排。
  * 打手身份下只保留头部、等级/押金卡与余额/客服卡；购物身份展示会员等级卡。
+ * 押金缴纳后通过 key 重建资金卡与余额卡，保证保证金/余额以服务端最新数据展示。
  */
+import { ref } from 'vue';
 import BalanceCards from '@/components/profile/BalanceCards.vue';
 import BoosterFundsCard from '@/components/profile/BoosterFundsCard.vue';
 import BoosterLevelCard from '@/components/profile/BoosterLevelCard.vue';
@@ -18,6 +20,8 @@ import { useRoleStore } from '@/stores/role.store';
 
 const member = useMemberStore();
 const role = useRoleStore();
+/** 资金相关卡片的重建版本号；押金缴纳后递增 */
+const fundsVersion = ref(0);
 
 void member.refresh();
 </script>
@@ -26,11 +30,17 @@ void member.refresh();
   <div class="profile">
     <ProfileHeader />
     <OrderEntries v-if="!role.isBoosterMode" />
-    <BoosterLevelCard v-if="role.isBoosterMode" />
-    <BoosterFundsCard v-if="role.isBoosterMode" />
+    <BoosterLevelCard
+      v-if="role.isBoosterMode"
+      @deposit-paid="fundsVersion += 1"
+    />
+    <BoosterFundsCard
+      v-if="role.isBoosterMode"
+      :key="`funds-${fundsVersion}`"
+    />
     <NotifyEntryCard v-if="role.isBoosterMode" />
     <MemberLevelCard v-if="!role.isBoosterMode" />
-    <BalanceCards />
+    <BalanceCards :key="`balance-${fundsVersion}`" />
     <FeatureGrid v-if="!role.isBoosterMode" />
     <p class="version">
       {{ APP_VERSION_TEXT }}

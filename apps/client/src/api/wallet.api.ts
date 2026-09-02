@@ -24,13 +24,13 @@ export const walletApi = {
   ): Promise<PaginatedResult<WalletTransactionView>> {
     return http.get('/wallet/transactions', { params: { page, pageSize } });
   },
-  /** 发起充值，返回扫码支付二维码内容 */
+  /** 发起充值，返回扫码二维码内容或公众号 JSAPI 拉起参数 */
   recharge(body: CreateRechargeBody): Promise<CreateRechargeResult> {
     return http.post('/wallet/recharge', body);
   },
   /** 主动查询充值支付结果（调渠道官方查单兜底，回调未达也能确认入账） */
-  rechargeStatus(outTradeNo: string): Promise<RechargeStatusView> {
-    return http.get(`/wallet/recharge/${outTradeNo}/status`);
+  rechargeStatus(outTradeNo: string, options?: RequestOptions): Promise<RechargeStatusView> {
+    return http.get(`/wallet/recharge/${outTradeNo}/status`, options);
   },
   /** 发起提现（支付宝转账） */
   withdraw(body: CreateWithdrawalBody): Promise<WithdrawalResultView> {

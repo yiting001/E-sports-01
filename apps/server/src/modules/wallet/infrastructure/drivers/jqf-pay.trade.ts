@@ -112,10 +112,14 @@ export function parseJqfCallback(
     throw new BadRequestException('计全付回调参数异常');
   }
   const success = state === STATE_SUCCESS;
+  const paidAmountFen = success ? amount : 0;
+  if (paidAmountFen === null) {
+    throw new BadRequestException('计全付回调支付金额异常');
+  }
   return {
     outTradeNo: mchOrderNo,
     providerTradeNo: payOrderId,
-    paidAmountFen: success && amount !== null ? amount : 0,
+    paidAmountFen,
     success,
   };
 }

@@ -45,6 +45,7 @@ import { PaymentResolver } from './application/payment.resolver';
 import { PayoutResolver } from './application/payout.resolver';
 import { RefundResolver } from './application/refund.resolver';
 import { WalletService } from './application/wallet.service';
+import { WechatJsapiPayerService } from './application/wechat-jsapi-payer.service';
 import { WalletFinanceReadService } from './application/wallet-finance-read.service';
 import { GetMyWalletUseCase } from './application/use-cases/get-my-wallet.usecase';
 import { GetWalletStatsUseCase } from './application/use-cases/get-wallet-stats.usecase';
@@ -85,7 +86,7 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
 /**
  * 钱包模块。
  * DDD 四层装配。个人侧（登录即用，无需特定权限）：我的钱包/统计/明细、充值
- * （支付宝/微信扫码，官方协议）、提现申请（审核制，支付宝转账到账），打开无则自动初始化。
+ * （支付宝/微信扫码、微信公众号 JSAPI；官方协议或计全付聚合网关）、提现申请（审核制，支付宝转账到账），打开无则自动初始化。
  * 管理侧（RBAC 门控）：钱包管理（列表/明细/调整）与财务提现管理（审核通过即转账/驳回退款）。
  * 充值/提现渠道均为「策略模式 + 配置驱动」，凭证全部入配置中心，无硬编码。
  */
@@ -186,6 +187,7 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     PayoutResolver,
     RefundResolver,
     WalletService,
+    WechatJsapiPayerService,
     WalletFinanceReadService,
     GetMyWalletUseCase,
     GetWalletStatsUseCase,
@@ -211,6 +213,7 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     PaymentResolver,
     RefundResolver,
     WalletService,
+    WechatJsapiPayerService,
     WalletFinanceReadService,
     WALLET_LEDGER,
     WALLET_TRANSACTION_PARTICIPANT,

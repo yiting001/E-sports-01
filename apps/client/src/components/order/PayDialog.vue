@@ -12,9 +12,9 @@ import {
   ORDER_PAYMENT_METHOD_TEXT,
   OrderStatus,
   type CreateOrderResult,
-  type OrderView,
 } from '@app/contracts';
 import { orderApi } from '@/api/order.api';
+import { isOrderPaid } from '@/utils/order-status';
 import {
   createPayStatusPoller,
   type PayStatusPoller,
@@ -40,17 +40,6 @@ const isJsapi = props.order.jsapiParams !== null;
 /** JSAPI 拉起中（防重复点击） */
 const invoking = ref(false);
 
-const PAID_ORDER_STATUSES: ReadonlySet<OrderStatus> = new Set<OrderStatus>([
-  OrderStatus.PendingService,
-  OrderStatus.Dispatching,
-  OrderStatus.Serving,
-  OrderStatus.Completed,
-]);
-
-function isPaid(order: OrderView): boolean {
-  return Boolean(order.paidAt) || PAID_ORDER_STATUSES.has(order.status);
-}
-
 async function poll(): Promise<void> {
   if (pollInFlight || disposed) {
     return;
@@ -62,7 +51,7 @@ async function poll(): Promise<void> {
       return;
     }
     queryMessage.value = '';
-    if (isPaid(order)) {
+    if (isOrderPaid(order)) {
       stopPolling();
       emit('paid');
       return;

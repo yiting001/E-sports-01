@@ -5,7 +5,7 @@ import type { AuthUser } from '../../../rbac/interfaces/auth/metadata';
 import { CreateRechargeUseCase } from '../../application/use-cases/create-recharge.usecase';
 import { CreateRechargeDto } from '../dto/create-recharge.dto';
 
-/** 路由：发起充值，返回扫码支付二维码（POST /wallet/recharge）；仅登录态，所有角色可用 */
+/** 路由：发起充值，返回扫码二维码或公众号 JSAPI 拉起参数（POST /wallet/recharge）；仅登录态，所有角色可用 */
 @Controller('wallet')
 export class RechargeCreateController {
   constructor(private readonly useCase: CreateRechargeUseCase) {}

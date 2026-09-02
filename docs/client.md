@@ -117,6 +117,9 @@ apps/client/src
 │  └─ HallOrderDetailView.vue           # 大厅详情、失败重试及下线禁用接单
 ├─ utils/interval-poller.ts             # 可暂停/销毁且可测试的定时轮询器
 ├─ utils/pay-status-poller.ts           # 支付结果轮询器：页面恢复可见时立即补查并重启定时器
+├─ utils/pay-return.ts                  # 计全付同步跳转 returnUrl 生成与回跳参数解析（hash query / search 兼容）
+├─ utils/pay-return-query.ts            # 回跳落地页按 payKind 查充值单/订单支付状态
+├─ views/pay/PayReturnView.vue          # /pay/return 支付结果落地页（需登录；查单确认后跳钱包/订单详情）
 ├─ api/booster.api.ts                   # 本人入驻概览、提交/重提、押金、上下线接口
 ├─ api/upload.api.ts                     # 登录用户自助上传；发送前统一压缩图片、拒绝超限视频并 toast 提示
 ├─ utils/upload-media.ts                 # 上传前媒体预处理分派（与管理端同源实现）
