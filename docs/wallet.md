@@ -273,7 +273,7 @@ sequenceDiagram
 | `wallet.payment.provider`         | 默认充值渠道（alipay/wechat）                              |      |
 | `wallet.wechat.jsapiEnabled`      | 公众号 JSAPI 支付开关；开启且微信内时充值/结算直接拉起收银台（详见 wechat-official.md） |      |
 | `wallet.payout.provider`          | 默认提现渠道（alipay）                                     |      |
-| `wallet.payout.gateway`           | 提现网关：`official` 官方支付宝转账 / `jqf` 计全付转账（支付宝 + 微信零钱；管理端「财务 → 支付配置」） |      |
+| `wallet.payout.gateway`           | 提现网关，默认 `jqf` 计全付转账（支付宝 + 微信零钱；普通用户 / 打手 / 客服钱包提现共用）/ `official` 官方支付宝转账（管理端「财务 → 支付配置」） |      |
 | `wallet.minRechargeFen`           | 最小充值金额（分）                                         |      |
 | `wallet.minWithdrawFen`           | 最小提现金额（分）                                         |      |
 | `wallet.withdrawFeeRateBp`        | 提现手续费率（万分比，100 = 1%，0 免费；阶梯未命中时回退） |      |

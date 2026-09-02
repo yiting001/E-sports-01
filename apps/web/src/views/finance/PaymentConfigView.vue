@@ -37,7 +37,7 @@ const apiKeyConfigured = ref(false);
 const form = reactive<PaymentConfigForm>({
   wechatGateway: PaymentGateway.Official,
   alipayGateway: PaymentGateway.Official,
-  payoutGateway: PaymentGateway.Official,
+  payoutGateway: PaymentGateway.Jqf,
   jqfApiBase: '',
   jqfMchNo: '',
   jqfAppId: '',
@@ -52,8 +52,14 @@ const jqfEnabled = computed(
     form.payoutGateway === PaymentGateway.Jqf,
 );
 
-function readGateway(item: ConfigItemView | undefined): PaymentGateway {
-  return item?.value === PaymentGateway.Jqf ? PaymentGateway.Jqf : PaymentGateway.Official;
+function readGateway(
+  item: ConfigItemView | undefined,
+  fallback: PaymentGateway = PaymentGateway.Official,
+): PaymentGateway {
+  if (item?.value === PaymentGateway.Jqf) {
+    return PaymentGateway.Jqf;
+  }
+  return item?.value === PaymentGateway.Official ? PaymentGateway.Official : fallback;
 }
 
 onMounted(load);
@@ -66,7 +72,7 @@ async function load(): Promise<void> {
     const byKey = new Map<string, ConfigItemView>(list.map((item) => [item.key, item]));
     form.wechatGateway = readGateway(byKey.get(KEYS.wechatGateway));
     form.alipayGateway = readGateway(byKey.get(KEYS.alipayGateway));
-    form.payoutGateway = readGateway(byKey.get(KEYS.payoutGateway));
+    form.payoutGateway = readGateway(byKey.get(KEYS.payoutGateway), PaymentGateway.Jqf);
     form.jqfApiBase = byKey.get(KEYS.jqfApiBase)?.value ?? '';
     form.jqfMchNo = byKey.get(KEYS.jqfMchNo)?.value ?? '';
     form.jqfAppId = byKey.get(KEYS.jqfAppId)?.value ?? '';
@@ -233,8 +239,8 @@ async function save(): Promise<void> {
             </el-radio>
           </el-radio-group>
           <div class="payment-config__tip">
-            官方渠道仅支持支付宝转账；开启计全付后支付宝与微信零钱提现均走计全付转账，结果由转账通知与主动查单收敛。
-            提现单在申请时固定执行渠道，切换不影响在途单据。
+            普通用户、打手、客服的钱包提现共用本网关。默认计全付转账：支付宝与微信零钱提现均由计全付转账打款，结果由转账通知与主动查单收敛；
+            官方渠道仅支持支付宝转账。提现单在申请时固定执行渠道，切换不影响在途单据。
           </div>
         </el-form-item>
       </el-form>

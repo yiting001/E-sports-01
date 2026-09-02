@@ -125,7 +125,7 @@ stateDiagram-v2
 | --- | --- |
 | `wallet.payment.wechatGateway` | 微信支付网关：`official` 官方直连 / `jqf` 计全付（扫码与 JSAPI 一起切换） |
 | `wallet.payment.alipayGateway` | 支付宝网关：`official` 官方直连 / `jqf` 计全付（ALI_QR 扫码，退款走 `JqfAlipayRefundDriver`） |
-| `wallet.payout.gateway` | 提现网关：`official` 官方支付宝转账 / `jqf` 计全付转账（支付宝 + 微信零钱）；提现单创建时固定执行渠道 |
+| `wallet.payout.gateway` | 提现网关，默认 `jqf` 计全付转账（支付宝 + 微信零钱；普通用户 / 打手 / 客服钱包提现共用）/ `official` 官方支付宝转账；提现单创建时固定执行渠道 |
 | `wallet.notifyBaseUrl` | 回调公网基地址；转账通知为 `{notifyBaseUrl}/wallet/withdrawal/callback/{jqf_alipay\|jqf_wechat}` |
 | `wallet.jqf.apiBase` | 计全付网关地址（必须 `https://`，末尾不带 `/`） |
 | `wallet.jqf.mchNo` / `wallet.jqf.appId` | 计全付商户号与应用 appId |

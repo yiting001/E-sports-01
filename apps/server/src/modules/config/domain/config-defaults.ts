@@ -349,11 +349,11 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
   },
   {
     key: CONFIG_KEYS.wallet.payoutGateway,
-    value: PaymentGateway.Official,
+    value: PaymentGateway.Jqf,
     type: ConfigValueType.String,
     group: ConfigGroup.Wallet,
     remark:
-      '提现网关：official 官方直连（仅支付宝可用）/ jqf 计全付转账（支付宝与微信零钱均可，结果由转账通知/查单异步收敛）',
+      '提现网关（普通用户/打手/客服钱包提现共用）：jqf 计全付转账（默认，支付宝与微信零钱均可，结果由转账通知/查单异步收敛）/ official 官方直连（仅支付宝可用）',
   },
   {
     key: CONFIG_KEYS.wallet.minRechargeFen,
