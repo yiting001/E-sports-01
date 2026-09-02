@@ -59,6 +59,7 @@ import { ListRolesUseCase } from './application/use-cases/list-roles.usecase';
 import { CreateRoleUseCase } from './application/use-cases/create-role.usecase';
 import { UpdateRoleUseCase } from './application/use-cases/update-role.usecase';
 import { RemoveRoleUseCase } from './application/use-cases/remove-role.usecase';
+import { RestoreRoleUseCase } from './application/use-cases/restore-role.usecase';
 import { AssignRolePermissionsUseCase } from './application/use-cases/assign-role-permissions.usecase';
 import { ListPermissionsUseCase } from './application/use-cases/list-permissions.usecase';
 import { ListGrantablePermissionsUseCase } from './application/use-cases/list-grantable-permissions.usecase';
@@ -98,6 +99,7 @@ import { RoleListController } from './interfaces/controllers/role.list.controlle
 import { RoleCreateController } from './interfaces/controllers/role.create.controller';
 import { RoleUpdateController } from './interfaces/controllers/role.update.controller';
 import { RoleRemoveController } from './interfaces/controllers/role.remove.controller';
+import { RoleRestoreController } from './interfaces/controllers/role.restore.controller';
 import { RoleAssignPermissionsController } from './interfaces/controllers/role.assign-permissions.controller';
 import { RoleGrantablePermissionsController } from './interfaces/controllers/role.grantable-permissions.controller';
 import { PermissionListController } from './interfaces/controllers/permission.list.controller';
@@ -146,6 +148,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     RoleCreateController,
     RoleUpdateController,
     RoleRemoveController,
+    RoleRestoreController,
     RoleAssignPermissionsController,
     RoleGrantablePermissionsController,
     PermissionListController,
@@ -200,6 +203,7 @@ import { TenantRemoveController } from './interfaces/controllers/tenant.remove.c
     CreateRoleUseCase,
     UpdateRoleUseCase,
     RemoveRoleUseCase,
+    RestoreRoleUseCase,
     AssignRolePermissionsUseCase,
     ListPermissionsUseCase,
     ListGrantablePermissionsUseCase,

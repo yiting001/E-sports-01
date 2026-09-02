@@ -336,7 +336,7 @@ flowchart LR
 ## 数据、异常与测试边界
 
 - `WalletTxnType.OrderPayment` 的存储值为 `order_payment`，沿用 `wallet_transaction.type` 的现有 `varchar(16)`；没有表结构变化和 migration。
-- migration `1786200000000-add-payment-channel-fee-and-payout-snapshot`：`service_order.channel_fee_fen`、`wallet_recharge_order.channelFeeFen`（渠道手续费，默认 0），`wallet_withdrawal_order` 新增 `channelOrderNo` / `channelState` / `channelErrCode` / `channelErrMsg` / `channelFeeFen` / `channelSyncedAt` 渠道快照字段；存量数据无需回填。
+- migration `1786500000000-add-payment-channel-fee-and-payout-snapshot`：`service_order.channel_fee_fen`、`wallet_recharge_order.channelFeeFen`（渠道手续费，默认 0），`wallet_withdrawal_order` 新增 `channelOrderNo` / `channelState` / `channelErrCode` / `channelErrMsg` / `channelFeeFen` / `channelSyncedAt` 渠道快照字段；存量数据无需回填。
 - 提现链路单测：`test/wallet/jqf-transfer.spec.ts`（转账状态映射、通知验签、手续费汇总、发起失败分类、查单 NotFound/未知）、`test/wallet/withdrawal-settlement.spec.ts`（审核占位与渠道选择、结果未知不回滚、通知渠道/金额校验、成功/处理中/失败/重复通知幂等、查单宽限期）。真实计全付转账需在有商户凭证的环境小额实测。
 - `WalletTxnType.OrderRefund` 的存储值为 `order_refund`，余额退款作为入账流水并关联原服务订单 id。
 - 钱包不存在、冻结或余额不足会使余额事务完整回滚，订单创建用例随后取消仍为待付款的新订单并回退已核销优惠券；前端展示服务端返回的最终校验结果。

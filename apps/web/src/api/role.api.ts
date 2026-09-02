@@ -1,4 +1,4 @@
-import type { PaginatedResult, PermissionNode, RoleView } from '@app/contracts';
+import type { PaginatedResult, PermissionNode, RoleListQuery, RoleView } from '@app/contracts';
 import { http } from './http';
 
 /** 新建角色入参 */
@@ -18,8 +18,20 @@ export interface UpdateRoleBody {
 
 /** 角色管理接口 */
 export const roleApi = {
-  list(page: number, pageSize: number): Promise<PaginatedResult<RoleView>> {
-    return http.get('/rbac/roles', { params: { page, pageSize } });
+  list(
+    page: number,
+    pageSize: number,
+    query: RoleListQuery = {},
+  ): Promise<PaginatedResult<RoleView>> {
+    return http.get('/rbac/roles', {
+      params: {
+        page,
+        pageSize,
+        keyword: query.keyword || undefined,
+        code: query.code || undefined,
+        kind: query.kind || undefined,
+      },
+    });
   },
   grantablePermissions(): Promise<PermissionNode[]> {
     return http.get('/rbac/roles/grantable-permissions');
@@ -30,8 +42,13 @@ export const roleApi = {
   update(id: string, body: UpdateRoleBody): Promise<RoleView> {
     return http.patch(`/rbac/roles/${id}`, body);
   },
+  /** 软删除：角色进入回收站，用户绑定与权限关联保留 */
   remove(id: string): Promise<void> {
     return http.delete(`/rbac/roles/${id}`);
+  },
+  /** 从回收站恢复角色 */
+  restore(id: string): Promise<RoleView> {
+    return http.post(`/rbac/roles/${id}/restore`);
   },
   assignPermissions(id: string, permissionIds: string[]): Promise<void> {
     return http.post(`/rbac/roles/${id}/permissions`, { permissionIds });

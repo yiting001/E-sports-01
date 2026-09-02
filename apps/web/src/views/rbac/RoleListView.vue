@@ -9,7 +9,12 @@ import RolePermissionDialog from '@/components/rbac/RolePermissionDialog.vue';
 import RoleDirectory from '@/components/rbac/role/RoleDirectory.vue';
 import RoleFormDialog from '@/components/rbac/role/RoleFormDialog.vue';
 import RoleStats from '@/components/rbac/role/RoleStats.vue';
-import type { RoleForm } from '@/components/rbac/role/role-ui.types';
+import {
+  ROLE_CATEGORY_ALL,
+  toRoleListQuery,
+  type RoleFilter,
+  type RoleForm,
+} from '@/components/rbac/role/role-ui.types';
 import { useAuthStore } from '@/stores/auth.store';
 import './RoleListView.css';
 import './RoleListView.responsive.css';
@@ -19,6 +24,7 @@ const total = ref(0);
 const page = ref<number>(PAGINATION_DEFAULTS.page);
 const pageSize = ref<number>(PAGINATION_DEFAULTS.pageSize);
 const loading = ref(false);
+const filter = reactive<RoleFilter>({ keyword: '', category: ROLE_CATEGORY_ALL });
 
 const dialogVisible = ref(false);
 const editingId = ref<string | null>(null);
@@ -38,7 +44,7 @@ async function ensureTenants(): Promise<void> {
   }
 }
 
-const builtinCount = computed(() => list.value.filter((item) => item.isSuper).length);
+const builtinCount = computed(() => list.value.filter((item) => item.isBuiltin).length);
 const configurableCount = computed(() => Math.max(total.value - builtinCount.value, 0));
 const permissionCount = computed(() =>
   list.value.reduce((sum, item) => sum + item.permissionIds.length, 0),
@@ -60,12 +66,19 @@ function formatDate(value: string): string {
 async function load(): Promise<void> {
   loading.value = true;
   try {
-    const res = await roleApi.list(page.value, pageSize.value);
+    const res = await roleApi.list(page.value, pageSize.value, toRoleListQuery(filter));
     list.value = res.list;
     total.value = res.total;
   } finally {
     loading.value = false;
   }
+}
+
+async function search(value: RoleFilter): Promise<void> {
+  filter.keyword = value.keyword;
+  filter.category = value.category;
+  page.value = PAGINATION_DEFAULTS.page;
+  await load();
 }
 
 async function changePage(value: number): Promise<void> {
@@ -132,9 +145,24 @@ function openPermissions(row: RoleView): void {
 }
 
 async function remove(row: RoleView): Promise<void> {
-  await ElMessageBox.confirm(`确认删除角色 ${row.name}？`, '提示', { type: 'warning' });
+  await ElMessageBox.confirm(
+    `确认删除角色 ${row.name}？删除后持有该角色的用户立即失去对应权限，可在「已删除」分类中恢复。`,
+    '提示',
+    { type: 'warning' },
+  );
   await roleApi.remove(row.id);
-  ElMessage.success('已删除');
+  ElMessage.success('已删除，可在「已删除」分类中恢复');
+  await load();
+}
+
+async function restore(row: RoleView): Promise<void> {
+  await ElMessageBox.confirm(
+    `确认恢复角色 ${row.name}？恢复后原有用户绑定与权限重新生效。`,
+    '提示',
+    { type: 'info' },
+  );
+  await roleApi.restore(row.id);
+  ElMessage.success('已恢复');
   await load();
 }
 
@@ -155,12 +183,15 @@ onMounted(load);
       :page="page"
       :page-size="pageSize"
       :loading="loading"
+      :filter="filter"
       :format-date="formatDate"
       @refresh="load"
+      @search="search"
       @create="openCreate"
       @edit="openEdit"
       @permissions="openPermissions"
       @remove="remove"
+      @restore="restore"
       @update:page="changePage"
       @update:page-size="changePageSize"
     />

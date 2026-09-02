@@ -45,6 +45,7 @@ function makeRole(code: string, tenantId: string, permissions: Permission[]): Ro
     name: code,
     remark: '',
     permissions,
+    deletedAt: null,
     users: [],
   });
 }
@@ -62,15 +63,20 @@ interface Harness {
 
 function buildHarness(roles: Role[], permissions: Permission[], tenants: TenantEntity[]): Harness {
   const savedRoleIds: string[] = [];
+  const alive = (): Role[] => roles.filter((role) => role.deletedAt === null);
   const roleRepo: RoleRepository = {
-    findById: async (id) => roles.find((role) => role.id === id) ?? null,
-    findByIds: async (ids) => roles.filter((role) => ids.includes(role.id)),
-    findByCode: async (code) => roles.find((role) => role.code === code) ?? null,
+    findById: async (id) => alive().find((role) => role.id === id) ?? null,
+    findByIds: async (ids) => alive().filter((role) => ids.includes(role.id)),
+    findByCode: async (code) => alive().find((role) => role.code === code) ?? null,
     findByCodeForTenant: async (code, tenantId) =>
-      roles.find((role) => role.code === code && role.tenantId === tenantId) ?? null,
-    findAllOutsideTenant: async (tenantId) => roles.filter((role) => role.tenantId !== tenantId),
-    existsByCode: async (code) => roles.some((role) => role.code === code),
-    paginate: async () => [roles, roles.length],
+      alive().find((role) => role.code === code && role.tenantId === tenantId) ?? null,
+    existsByCodeForTenantWithDeleted: async (code, tenantId) =>
+      roles.some((role) => role.code === code && role.tenantId === tenantId),
+    findDeletedById: async (id) =>
+      roles.find((role) => role.id === id && role.deletedAt !== null) ?? null,
+    findAllOutsideTenant: async (tenantId) => alive().filter((role) => role.tenantId !== tenantId),
+    existsByCode: async (code) => alive().some((role) => role.code === code),
+    paginate: async () => [alive(), alive().length],
     create: (data) => Object.assign(new Role(), data),
     save: async (role) => {
       if (!role.id) {
@@ -81,6 +87,7 @@ function buildHarness(roles: Role[], permissions: Permission[], tenants: TenantE
       return role;
     },
     remove: async () => undefined,
+    restore: async () => undefined,
   };
   const permissionRepo: PermissionRepository = {
     findAll: async () => permissions,
@@ -203,6 +210,32 @@ test('RbacSeeder 只为缺失内置角色的存量租户新建角色，且租户
   await harness.seeder.onApplicationBootstrap();
   assert.equal(harness.savedRoleIds.length, savedBefore);
   assert.equal(harness.invalidateAllCalls(), 1);
+});
+
+test('RbacSeeder 不会复活管理员已软删除的内置角色', async () => {
+  const deletedService = makeRole(SERVICE_ROLE, 'tenant-c', []);
+  deletedService.deletedAt = new Date('2026-01-01T00:00:00Z');
+  const harness = buildHarness(
+    [
+      ...baseRoles(),
+      makeRole(TENANT_ADMIN_ROLE, 'tenant-c', []),
+      makeRole(MEMBER_ROLE, 'tenant-c', []),
+      deletedService,
+      makeRole(BOOSTER_ROLE_CODE, 'tenant-c', []),
+    ],
+    SERVICE_ROLE_PERMISSION_CODES.map(makePermission),
+    [makeTenant(DEFAULT_TENANT_ID), makeTenant('tenant-c')],
+  );
+
+  await harness.seeder.onApplicationBootstrap();
+
+  assert.deepEqual(harness.savedRoleIds, []);
+  assert.equal(
+    harness.roles.filter((role) => role.tenantId === 'tenant-c' && role.code === SERVICE_ROLE)
+      .length,
+    1,
+  );
+  assert.equal(harness.invalidateAllCalls(), 0);
 });
 
 test('RbacSeeder 启动时从租户角色移除平台级权限，并保留其余业务权限', async () => {

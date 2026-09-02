@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { CircleCheckFilled, Lock } from '@element-plus/icons-vue';
 import type { TenantView } from '@app/contracts';
-import type { RoleForm } from './role-ui.types';
+import { applyRoleCode, roleCodeOptions, type RoleForm } from './role-ui.types';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -20,6 +21,12 @@ const emit = defineEmits<{
 function updateField<K extends keyof RoleForm>(key: K, value: RoleForm[K]): void {
   emit('update:form', { ...props.form, [key]: value });
 }
+
+const codeOptions = computed(() => roleCodeOptions(props.form.code));
+
+function selectCode(value: string | null): void {
+  emit('update:form', applyRoleCode(props.form, value));
+}
 </script>
 
 <template>
@@ -35,7 +42,11 @@ function updateField<K extends keyof RoleForm>(key: K, value: RoleForm[K]): void
         <Lock v-if="isEdit" />
         <CircleCheckFilled v-else />
       </el-icon>
-      <span>{{ isEdit ? '角色编码创建后不可修改，避免授权引用漂移。' : '创建角色后可在角色目录中继续分配权限。' }}</span>
+      <span>{{
+        isEdit
+          ? '角色编码创建后不可修改，避免授权引用漂移。'
+          : '编码可重复：同编码角色各自独立授权、独立绑定用户，建议用名称区分；创建后可在角色目录中继续分配权限。'
+      }}</span>
     </div>
     <el-form
       label-position="top"
@@ -62,12 +73,24 @@ function updateField<K extends keyof RoleForm>(key: K, value: RoleForm[K]): void
       </el-form-item>
       <div class="role-form__grid">
         <el-form-item label="角色编码">
-          <el-input
+          <el-select
             :model-value="form.code"
             :disabled="isEdit"
-            placeholder="如 service 或 operator"
-            @update:model-value="(value: string) => updateField('code', value)"
-          />
+            filterable
+            allow-create
+            default-first-option
+            clearable
+            placeholder="选择内置编码，或输入自定义编码后回车"
+            class="role-form__code"
+            @update:model-value="selectCode"
+          >
+            <el-option
+              v-for="item in codeOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="角色名称">
           <el-input

@@ -124,8 +124,7 @@ export class RbacSeeder implements OnApplicationBootstrap {
     remark: string,
     permissions: Permission[],
   ): Promise<number> {
-    const existing = await this.roleRepo.findByCodeForTenant(code, tenantId);
-    if (existing) {
+    if (await this.roleRepo.existsByCodeForTenantWithDeleted(code, tenantId)) {
       return 0;
     }
     await this.roleRepo.save(this.roleRepo.create({ code, name, remark, tenantId, permissions }));

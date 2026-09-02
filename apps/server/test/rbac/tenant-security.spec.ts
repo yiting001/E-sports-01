@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { DEFAULT_TENANT_CODE, DEFAULT_TENANT_ID, TenantStatus } from '@app/contracts';
 import { PermissionResolver } from '../../src/modules/rbac/application/permission-resolver.service';
 import { TenantResolver } from '../../src/modules/rbac/application/tenant-resolver.service';
@@ -92,26 +92,36 @@ test('非默认租户即使存在 admin 角色也不能获得平台超管旁路'
   assert.equal((await resolver.resolve(user.id)).isSuper, false);
 });
 
-test('普通角色创建入口拒绝保留的 admin 编码', async () => {
-  const roleRepo: Pick<
-    RoleRepository,
-    'existsByCode' | 'findByCodeForTenant' | 'create' | 'save'
-  > = {
-    existsByCode: async () => false,
-    findByCodeForTenant: async () => null,
+test('通用角色创建入口允许补建内置编码，同编码角色可重复创建', async () => {
+  const saved: Role[] = [makeRole('role-admin', 'tenant-a', SUPER_ADMIN_ROLE)];
+  const roleRepo: Pick<RoleRepository, 'create' | 'save'> = {
     create: (data: Partial<Role>) =>
-      Object.assign(makeRole('created-role', 'tenant-a', data.code ?? 'role'), data),
-    save: async (role: Role) => role,
+      Object.assign(
+        makeRole(`created-role-${saved.length}`, 'tenant-a', data.code ?? 'role'),
+        data,
+      ),
+    save: async (role: Role) => {
+      saved.push(role);
+      return role;
+    },
   };
   const tenantRepo: Pick<TenantRepository, 'findById'> = {
     findById: async () => null,
   };
-  const useCase = new CreateRoleUseCase(roleRepo, tenantRepo, new TenantContextService());
+  const tenantContext = new TenantContextService();
+  const useCase = new CreateRoleUseCase(roleRepo, tenantRepo, tenantContext);
 
-  await assert.rejects(
-    useCase.execute({ code: SUPER_ADMIN_ROLE, name: '伪超管' }),
-    (error: unknown) => error instanceof ConflictException,
-  );
+  await tenantContext.run({ tenantId: 'tenant-a', isSuper: false }, async () => {
+    const created = await useCase.execute({ code: 'service', name: '客服' });
+    assert.equal(created.code, 'service');
+    assert.equal(created.isBuiltin, true);
+    assert.equal(created.isSuper, false);
+
+    const duplicated = await useCase.execute({ code: SUPER_ADMIN_ROLE, name: '第二个 admin' });
+    assert.equal(duplicated.code, SUPER_ADMIN_ROLE);
+    assert.equal(duplicated.deletable, true, '非默认租户的 admin 不是平台超管，可删');
+    assert.equal(saved.filter((role) => role.code === SUPER_ADMIN_ROLE).length, 2);
+  });
 });
 
 test('用户只能绑定与自己同租户的角色，平台超管也不能建立跨租户关联', async () => {

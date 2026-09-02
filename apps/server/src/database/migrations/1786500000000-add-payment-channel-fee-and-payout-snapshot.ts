@@ -7,8 +7,8 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  *   供异步回调 / 主动查单收敛状态与财务对账；历史单据保持为空。
  * 钱包表沿用 TypeORM 默认命名（camelCase 列名），订单表沿用既有 snake_case 显式列名。
  */
-export class AddPaymentChannelFeeAndPayoutSnapshot1786200000000 implements MigrationInterface {
-  name = 'AddPaymentChannelFeeAndPayoutSnapshot1786200000000';
+export class AddPaymentChannelFeeAndPayoutSnapshot1786500000000 implements MigrationInterface {
+  name = 'AddPaymentChannelFeeAndPayoutSnapshot1786500000000';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
