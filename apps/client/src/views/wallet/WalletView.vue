@@ -2,6 +2,7 @@
 /**
  * 我的钱包页（全屏）：余额卡 + 充值/提现入口 + 流水明细/提现记录页签。
  * 直连后端钱包模块既有接口；充值入账、提现提交后自动刷新余额与列表。
+ * 也是本页发起充值后支付渠道同步跳回的落点：带回充值单号时查单确认，已入账则按同一成功流程刷新。
  */
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -17,6 +18,7 @@ import WithdrawDialog from '@/components/wallet/WithdrawDialog.vue';
 import WithdrawalRecords from '@/components/wallet/WithdrawalRecords.vue';
 import { walletApi } from '@/api/wallet.api';
 import { useToast } from '@/composables/use-toast';
+import { usePayReturnRecharge } from '@/composables/use-pay-return-recharge';
 import './WalletView.responsive.css';
 
 const PAGE_SIZE = 10;
@@ -73,6 +75,8 @@ async function onRecharged(): Promise<void> {
   toast.show('充值成功，已入账');
   await Promise.all([loadWallet(), loadTransactions(true)]);
 }
+
+usePayReturnRecharge(onRecharged);
 
 /** 提现提交后：关弹层 → 切到提现记录页签并刷新余额与列表 */
 async function onWithdrawn(): Promise<void> {

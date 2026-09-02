@@ -211,7 +211,7 @@ sequenceDiagram
   participant LED as WalletLedger
 
   FE->>API: POST /wallet/recharge {amountFen, provider, returnUrl?}
-  API->>API: JSAPI 时解析付款人 openid；returnUrl 追加 payKind=recharge&payRef=充值单号
+  API->>API: JSAPI 时解析付款人 openid；returnUrl 追加 payRef=充值单号
   API->>DRV: createRecharge(outTradeNo, returnUrl, payerOpenid, ...)
   DRV->>PAY: 下单（precreate / native / JSAPI）
   PAY-->>DRV: 二维码内容 或 JSAPI 拉起参数
@@ -221,8 +221,8 @@ sequenceDiagram
   CB->>LED: creditRecharge（幂等入账）
   CB-->>PAY: 渠道要求的应答（success / SUCCESS）
   FE->>API: 弹层轮询 GET /wallet/recharge/:outTradeNo/status（回调丢失时主动查单兜底入账）
-  PAY-->>FE: （计全付）同步跳回 /#/pay/return?payKind&payRef&returnPageAction
-  FE->>API: 落地页再查充值状态，paid 后跳回钱包并刷新余额/流水
+  PAY-->>FE: （计全付）同步跳回发起充值的页面 /#/wallet?payRef&returnPageAction
+  FE->>API: 钱包页/结算页挂载时再查充值状态，paid 后复用原有充值成功处理刷新余额/流水
 ```
 
 充值不到账的排查顺序：先看充值单状态（仍 pending 说明回调与查单均未确认支付），再看回调接口是否返回 400（验签/商户号/金额/参数格式）。计全付回调为表单编码，数值字段以字符串到达，解析细节见 [payment-gateway.md](./payment-gateway.md)。打手保证金从钱包余额扣缴（`POST /booster/deposit/pay`），充值未入账则无法缴纳；保证金展示值始终读服务端 `GET /booster/funds/mine`，前端不自行推算。
@@ -312,8 +312,8 @@ flowchart LR
 - `api/wallet.api.ts`：直连既有接口 `/wallet/mine`、`/wallet/transactions`、`/wallet/recharge`、`/wallet/withdrawal`。
 - `views/wallet/WalletView.vue`（路由 `/wallet`，需登录）：余额卡 + 充值/提现入口 + 分页流水明细（类型/方向/变更后余额）。
 - `views/wallet/WalletView.responsive.css`：钱包页 PC 响应式布局，标题栏、余额卡与流水明细统一收敛到内容宽度，移动端保持全屏钱包。
-- `components/wallet/RechargeDialog.vue`：金额（元）+ 支付宝/微信；微信内且后台开启 JSAPI 时以 `wechat_jsapi` 下单并用 `invokeWechatJsapiPay` 拉起收银台（取消/失败可重新拉起），否则生成扫码二维码；下单携带 `returnUrl=…/#/pay/return`；用 `createPayStatusPoller` 轮询 `GET /wallet/recharge/:outTradeNo/status`，充值单 paid 后抛出 `paid` 由钱包页刷新余额与流水，closed 提示重新发起。
-- `views/pay/PayReturnView.vue`（路由 `/pay/return`，需登录）：计全付同步跳转落地页，按 `payKind` 查充值状态或订单支付状态（有限轮询），成功后充值跳钱包、订单跳订单详情；取消/关闭/延迟/查询失败/参数无效各有状态与重新查询、返回入口。详见 [payment-gateway.md](./payment-gateway.md)。
+- `components/wallet/RechargeDialog.vue`：金额（元）+ 支付宝/微信；微信内且后台开启 JSAPI 时以 `wechat_jsapi` 下单并用 `invokeWechatJsapiPay` 拉起收银台（取消/失败可重新拉起），否则生成扫码二维码；下单携带 `returnUrl` 为当前页面地址（钱包页 / 结算页）；用 `createPayStatusPoller` 轮询 `GET /wallet/recharge/:outTradeNo/status`，充值单 paid 后抛出 `paid` 由钱包页刷新余额与流水，closed 提示重新发起。
+- `composables/use-pay-return-recharge.ts`：钱包页与结算页挂载时消费计全付同步跳回带的 `payRef`（先清理 query 防重复），查 `GET /wallet/recharge/:outTradeNo/status`，paid 时复用页面原有的充值成功处理（`onRecharged` / `handleRechargePaid`），pending/closed/查询失败仅提示；不新增独立支付结果页。订单支付回跳直接落订单详情，详见 [payment-gateway.md](./payment-gateway.md)。
 - 个人中心打手「我的资金」（`BoosterFundsCard`）与余额卡在押金缴纳成功后由 `ProfileView` 通过 key 重建并重新拉取，保证金/余额不再停留在旧值。
 - `components/order/CheckoutPaymentMethods.vue`：结算页独立加载钱包，展示余额并处理加载失败、刷新、冻结、余额不足和原地充值；订单金额变化后重新判断可用性。
 - 余额方式成功时后端返回 `paid=true`，结算页直接进入订单详情，不打开渠道二维码弹层。

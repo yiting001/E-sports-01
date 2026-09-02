@@ -2,7 +2,6 @@ import { createRouter, createWebHashHistory } from 'vue-router';
 import MainLayout from '@/layouts/MainLayout.vue';
 import { registerAuthGuard } from './guard';
 import { useBrandingStore } from '@/stores/branding.store';
-import { PAY_RETURN_ROUTE_PATH } from '@/utils/pay-return';
 
 /**
  * 路由表（hash 模式，无需服务端回退配置）：登录页独立于主布局全屏展示；四个一级 Tab 页挂在主布局下。
@@ -59,12 +58,6 @@ export const router = createRouter({
       name: 'wallet',
       component: () => import('@/views/wallet/WalletView.vue'),
       meta: { title: '我的钱包', requiresAuth: true },
-    },
-    {
-      path: PAY_RETURN_ROUTE_PATH,
-      name: 'pay-return',
-      component: () => import('@/views/pay/PayReturnView.vue'),
-      meta: { title: '支付结果', requiresAuth: true },
     },
     {
       path: '/orders',

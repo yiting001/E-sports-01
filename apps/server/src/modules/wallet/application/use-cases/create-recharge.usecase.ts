@@ -3,7 +3,6 @@ import {
   CONFIG_KEYS,
   CreateRechargeBody,
   CreateRechargeResult,
-  PayReturnKind,
   PaymentProvider,
   RechargeStatus,
   WALLET_DEFAULTS,
@@ -66,7 +65,7 @@ export class CreateRechargeUseCase {
     const provider = await this.paymentGateway.resolvePaymentProvider(body.provider);
     const port = this.paymentResolver.resolve(provider);
     const outTradeNo = buildOrderNo('R');
-    const returnUrl = buildPayReturnUrl(body.returnUrl, PayReturnKind.Recharge, outTradeNo);
+    const returnUrl = buildPayReturnUrl(body.returnUrl, outTradeNo);
 
     const order = new RechargeOrderEntity();
     order.walletId = wallet.id;

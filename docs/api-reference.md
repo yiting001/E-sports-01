@@ -161,7 +161,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | GET | `/api/wallet/mine` | 登录态 | 当前用户钱包，不存在则自动初始化 → `{ id, balanceFen, balanceYuan, status }` |
 | GET | `/api/wallet/stats` | 登录态 | 钱包统计（余额、累计充值/提现、成功笔数） |
 | GET | `/api/wallet/transactions` | 登录态 | 分页查询本人收支明细，`?page&pageSize`，按时间倒序；订单余额支付记录类型为 `order_payment` |
-| POST | `/api/wallet/recharge` | 登录态 | 发起充值 `{ amountFen, provider, returnUrl? }`（provider: alipay/wechat/wechat_jsapi；returnUrl 为计全付同步跳转地址，服务端追加 `payKind=recharge&payRef=充值单号`，追加后 ≤128 字符）→ `{ orderId, outTradeNo, provider, qrCode, jsapiParams, amountFen, amountYuan }`（JSAPI 时 `jsapiParams` 为微信拉起参数，否则 `null`） |
+| POST | `/api/wallet/recharge` | 登录态 | 发起充值 `{ amountFen, provider, returnUrl? }`（provider: alipay/wechat/wechat_jsapi；returnUrl 为计全付同步跳转地址（发起充值的页面），服务端追加 `payRef=充值单号`，追加后 ≤128 字符）→ `{ orderId, outTradeNo, provider, qrCode, jsapiParams, amountFen, amountYuan }`（JSAPI 时 `jsapiParams` 为微信拉起参数，否则 `null`） |
 | GET | `/api/wallet/recharge/:outTradeNo/status` | 登录态 | 充值单状态查询（仍 pending 时向渠道主动查单并幂等入账，仅本人可查）→ `{ outTradeNo, status }` |
 | POST | `/api/wallet/recharge/callback/:provider` | 公开 | 支付渠道异步回调（验签后幂等入账），返回渠道要求的原始应答 |
 | POST | `/api/wallet/withdrawal` | 登录态 | 发起提现 `{ amountFen, provider, account, accountName }`（provider 仅 alipay；wechat 预留）→ `{ orderId, status, failReason }` |
@@ -178,7 +178,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 
 ```jsonc
 // POST /api/wallet/recharge  请求
-{ "amountFen": 1000, "provider": "alipay", "returnUrl": "https://m.example.com/#/pay/return" }
+{ "amountFen": 1000, "provider": "alipay", "returnUrl": "https://m.example.com/#/wallet" }
 // data（qrCode 由前端渲染成二维码供扫码支付；JSAPI 时 qrCode 为空串、jsapiParams 为拉起参数）
 { "orderId": "...", "outTradeNo": "R1782...", "provider": "alipay", "qrCode": "https://qr.alipay.com/...", "jsapiParams": null, "amountFen": 1000, "amountYuan": "10.00" }
 ```
@@ -354,7 +354,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
 | GET | `/api/commerce/public/products/:id` | 公开 | 单个上架商品详情（下架/不存在均 404）；`priceFen/originPriceFen` 为手机端价格，`pcPriceFen/pcOriginPriceFen` 为电脑端价格 |
-| POST | `/api/order` | 登录 | 创建订单并支付 `{ productId, quantity, provider, gameAccountId, gameTextId?, serviceRegion, boosterSelectionMode, requestedBoosterId?, accountInfo?, remark?, remarkMedia?, userCouponId?, returnUrl? }`；provider 为 `alipay/wechat/wechat_jsapi/balance`；returnUrl 为计全付同步跳转地址（服务端追加 `payKind=order&payRef=订单 id`）。渠道支付返回二维码或 JSAPI 拉起参数，余额/0 元支付返回 `paid: true` 并直接落账 |
+| POST | `/api/order` | 登录 | 创建订单并支付 `{ productId, quantity, provider, gameAccountId, gameTextId?, serviceRegion, boosterSelectionMode, requestedBoosterId?, accountInfo?, remark?, remarkMedia?, userCouponId?, returnUrl? }`；provider 为 `alipay/wechat/wechat_jsapi/balance`；returnUrl 为计全付同步跳转地址，形如 `…/#/orders/{payRef}`（服务端把 `{payRef}` 替换为订单 id，支付后直接回订单详情；无占位符则追加 `payRef`）。渠道支付返回二维码或 JSAPI 拉起参数，余额/0 元支付返回 `paid: true` 并直接落账 |
 | POST | `/api/order/pay/callback/:provider` | 公开 | 支付渠道异步回调（验签后幂等落账：待付款 → 待客服处理，并累加销量） |
 | GET | `/api/order/mine` | 登录 | 分页查询我的订单 `?page&pageSize&status`（status 可选，tabs 按状态过滤），按创建时间倒序 |
 | GET | `/api/order/:id` | 登录 | 我的单笔订单，仅本人可见；已支付但无群时幂等补建订单群 |

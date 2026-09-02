@@ -37,7 +37,10 @@ import {
   resolveCheckoutServiceRegion,
 } from "@/utils/checkout-state";
 import { resolveMediaUrl } from "@/utils/media-url";
-import { buildClientPayReturnUrl } from "@/utils/pay-return";
+import {
+  ORDER_PAY_RETURN_PATH,
+  buildClientPayReturnUrl,
+} from "@/utils/pay-return";
 import "./CheckoutView.css";
 import "./CheckoutView.responsive.css";
 
@@ -264,7 +267,7 @@ async function submit(): Promise<void> {
       remark: remark.value || undefined,
       remarkMedia: remarkMedia.value.length ? remarkMedia.value : undefined,
       userCouponId: selectedCoupon.value?.id || undefined,
-      returnUrl: buildClientPayReturnUrl(),
+      returnUrl: buildClientPayReturnUrl(ORDER_PAY_RETURN_PATH),
     });
     payOrder.value = result;
     if (result.paid) {

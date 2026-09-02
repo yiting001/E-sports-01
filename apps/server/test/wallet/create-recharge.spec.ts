@@ -3,7 +3,6 @@ import test from 'node:test';
 import { BadRequestException } from '@nestjs/common';
 import {
   PAY_RETURN_URL_MAX_LENGTH,
-  PayReturnKind,
   PaymentProvider,
   RechargeStatus,
   type WechatJsapiPayParams,
@@ -22,7 +21,7 @@ import type { RechargeOrderEntity } from '../../src/modules/wallet/domain/rechar
 import type { RechargeOrderRepository } from '../../src/modules/wallet/domain/recharge-repository.interface';
 import { passthroughPaymentGateway } from '../order/payment-gateway.stub';
 
-const RETURN_URL = 'https://m.example.test/#/pay/return';
+const RETURN_URL = 'https://m.example.test/#/wallet';
 
 const JSAPI_PARAMS: WechatJsapiPayParams = {
   appId: 'wx-test-app',
@@ -33,29 +32,37 @@ const JSAPI_PARAMS: WechatJsapiPayParams = {
   paySign: 'sign',
 };
 
-test('支付回跳地址追加业务单据标识，兼容已带 query 的地址', () => {
+test('支付回跳地址无占位符时追加 payRef query，兼容已带 query 的地址', () => {
   assert.equal(
-    buildPayReturnUrl(RETURN_URL, PayReturnKind.Recharge, 'R20260722000000123456'),
-    `${RETURN_URL}?payKind=recharge&payRef=R20260722000000123456`,
+    buildPayReturnUrl(RETURN_URL, 'R20260722000000123456'),
+    `${RETURN_URL}?payRef=R20260722000000123456`,
   );
   assert.equal(
-    buildPayReturnUrl(`${RETURN_URL}?from=app`, PayReturnKind.Order, 'order-1'),
-    `${RETURN_URL}?from=app&payKind=order&payRef=order-1`,
+    buildPayReturnUrl(`${RETURN_URL}?from=app`, 'R1'),
+    `${RETURN_URL}?from=app&payRef=R1`,
   );
   assert.equal(
-    buildPayReturnUrl('https://m.example.test/?from=app#/pay/return', PayReturnKind.Order, 'order-1'),
-    'https://m.example.test/?from=app#/pay/return?payKind=order&payRef=order-1',
+    buildPayReturnUrl('https://m.example.test/?from=app#/wallet', 'R1'),
+    'https://m.example.test/?from=app#/wallet?payRef=R1',
   );
-  assert.equal(buildPayReturnUrl(undefined, PayReturnKind.Order, 'order-1'), undefined);
-  assert.equal(buildPayReturnUrl('', PayReturnKind.Order, 'order-1'), undefined);
+  assert.equal(buildPayReturnUrl(undefined, 'R1'), undefined);
+  assert.equal(buildPayReturnUrl('', 'R1'), undefined);
 });
 
-test('支付回跳地址拼接后超过计全付字段上限时拒绝', () => {
-  const longUrl = `https://m.example.test/${'a'.repeat(PAY_RETURN_URL_MAX_LENGTH)}`;
-  assert.throws(
-    () => buildPayReturnUrl(longUrl, PayReturnKind.Recharge, 'R1'),
-    BadRequestException,
+test('支付回跳地址含 {payRef} 占位符时原位替换为单据标识（直接跳订单详情）', () => {
+  assert.equal(
+    buildPayReturnUrl('https://m.example.test/#/orders/{payRef}', 'order-1'),
+    'https://m.example.test/#/orders/order-1',
   );
+  assert.equal(
+    buildPayReturnUrl('https://m.example.test/#/orders/{payRef}?tab=all', 'a/b c'),
+    'https://m.example.test/#/orders/a%2Fb%20c?tab=all',
+  );
+});
+
+test('支付回跳地址写入业务参数后超过计全付字段上限时拒绝', () => {
+  const longUrl = `https://m.example.test/${'a'.repeat(PAY_RETURN_URL_MAX_LENGTH)}`;
+  assert.throws(() => buildPayReturnUrl(longUrl, 'R1'), BadRequestException);
 });
 
 interface RechargeFixture {
@@ -124,7 +131,7 @@ test('扫码充值透传带充值单号的回跳地址，返回二维码且 jsap
   assert.equal(fixture.createInputs.length, 1);
   const input = fixture.createInputs[0];
   assert.equal(input.outTradeNo, result.outTradeNo);
-  assert.equal(input.returnUrl, `${RETURN_URL}?payKind=recharge&payRef=${result.outTradeNo}`);
+  assert.equal(input.returnUrl, `${RETURN_URL}?payRef=${result.outTradeNo}`);
   assert.equal(input.payerOpenid, undefined);
   assert.equal(input.notifyUrl, 'https://api.example.test/wallet/recharge/callback/wechat');
   assert.deepEqual(fixture.openidLookups, []);

@@ -1,60 +1,57 @@
 import { describe, expect, it } from 'vitest';
-import { PayReturnKind, PayReturnPageAction } from '@app/contracts';
-import { buildClientPayReturnUrl, parsePayReturnParams } from './pay-return';
+import {
+  ORDER_PAY_RETURN_PATH,
+  buildClientPayReturnUrl,
+  isPayReturnVisit,
+  readPayReturnRef,
+  stripPayReturnQuery,
+} from './pay-return';
 
 describe('buildClientPayReturnUrl', () => {
-  it('以当前站点 + hash 路由拼出落地页地址', () => {
+  it('以当前站点 + hash 路由拼出目标页地址（订单详情占位符 / 充值来源页）', () => {
     expect(
-      buildClientPayReturnUrl({ origin: 'https://m.example.test', pathname: '/' }),
-    ).toBe('https://m.example.test/#/pay/return');
+      buildClientPayReturnUrl(ORDER_PAY_RETURN_PATH, {
+        origin: 'https://m.example.test',
+        pathname: '/',
+      }),
+    ).toBe('https://m.example.test/#/orders/{payRef}');
     expect(
-      buildClientPayReturnUrl({ origin: 'https://m.example.test', pathname: '/client/' }),
-    ).toBe('https://m.example.test/client/#/pay/return');
+      buildClientPayReturnUrl('/wallet', {
+        origin: 'https://m.example.test',
+        pathname: '/client/',
+      }),
+    ).toBe('https://m.example.test/client/#/wallet');
   });
 });
 
-describe('parsePayReturnParams', () => {
-  it('从 hash 路由 query 读取服务端追加的业务标识与渠道回传动作', () => {
-    expect(
-      parsePayReturnParams(
-        {
-          payKind: 'recharge',
-          payRef: 'R20260722000000123456',
-          returnPageAction: 'SUCCESS_PAGE',
-          mchOrderNo: 'R20260722000000123456',
-        },
-        '',
-      ),
-    ).toEqual({
-      kind: PayReturnKind.Recharge,
-      ref: 'R20260722000000123456',
-      action: PayReturnPageAction.Success,
-    });
+describe('isPayReturnVisit', () => {
+  it('仅在渠道追加 returnPageAction 时视为支付回跳', () => {
+    expect(isPayReturnVisit({ returnPageAction: 'SUCCESS_PAGE' })).toBe(true);
+    expect(isPayReturnVisit({ returnPageAction: 'CANCEL_PAGE', payRef: 'R1' })).toBe(true);
+    expect(isPayReturnVisit({})).toBe(false);
+    expect(isPayReturnVisit({ returnPageAction: '' })).toBe(false);
+  });
+});
+
+describe('readPayReturnRef', () => {
+  it('从 hash 路由 query 读取充值单号，重复参数取首个', () => {
+    expect(readPayReturnRef({ payRef: 'R20260722000000123456' }, '')).toBe(
+      'R20260722000000123456',
+    );
+    expect(readPayReturnRef({ payRef: ['R1', 'R2'] }, '')).toBe('R1');
   });
 
-  it('兼容参数被拼在 # 之前的情形（location.search）', () => {
-    expect(
-      parsePayReturnParams({}, '?payKind=order&payRef=order-1&returnPageAction=CANCEL_PAGE'),
-    ).toEqual({
-      kind: PayReturnKind.Order,
-      ref: 'order-1',
-      action: PayReturnPageAction.Cancel,
-    });
+  it('兼容参数被拼在 # 之前的情形（location.search），缺失时返回 null', () => {
+    expect(readPayReturnRef({}, '?payRef=R1&returnPageAction=SUCCESS_PAGE')).toBe('R1');
+    expect(readPayReturnRef({}, '')).toBeNull();
+    expect(readPayReturnRef({ payRef: '' }, '')).toBeNull();
   });
+});
 
-  it('重复参数取首个值，未知动作视为需查单确认', () => {
+describe('stripPayReturnQuery', () => {
+  it('去掉 payRef/returnPageAction，保留页面自身 query', () => {
     expect(
-      parsePayReturnParams(
-        { payKind: ['recharge', 'order'], payRef: ['R1', 'R2'], returnPageAction: 'OTHER' },
-        '',
-      ),
-    ).toEqual({ kind: PayReturnKind.Recharge, ref: 'R1', action: null });
-  });
-
-  it('缺少业务标识或类型非法时返回 null', () => {
-    expect(parsePayReturnParams({}, '')).toBeNull();
-    expect(parsePayReturnParams({ payKind: 'recharge' }, '')).toBeNull();
-    expect(parsePayReturnParams({ payKind: 'unknown', payRef: 'R1' }, '')).toBeNull();
-    expect(parsePayReturnParams({ payKind: 'order', payRef: '' }, '')).toBeNull();
+      stripPayReturnQuery({ payRef: 'R1', returnPageAction: 'SUCCESS_PAGE', tab: 'all' }),
+    ).toEqual({ tab: 'all' });
   });
 });

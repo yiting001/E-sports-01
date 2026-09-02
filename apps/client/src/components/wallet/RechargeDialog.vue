@@ -7,6 +7,7 @@
  * 查到已支付即通知父组件；下单时透传应用内回跳地址，供支持同步跳转的网关支付后跳回。
  */
 import { computed, onBeforeUnmount, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import QRCode from 'qrcode';
 import {
   PaymentProvider,
@@ -38,6 +39,7 @@ const POLL_INTERVAL_MS = 3000;
 
 const emit = defineEmits<{ paid: []; close: [] }>();
 
+const route = useRoute();
 const toast = useToast();
 const portal = usePortalStore();
 
@@ -139,7 +141,7 @@ async function submit(): Promise<void> {
     const created = await walletApi.recharge({
       amountFen,
       provider: submitProvider.value,
-      returnUrl: buildClientPayReturnUrl(),
+      returnUrl: buildClientPayReturnUrl(route.path),
     });
     if (disposed) {
       return;

@@ -238,33 +238,21 @@ export interface CreateRechargeResult {
 
 /**
  * 支付同步跳转地址（returnUrl）长度上限：计全付 returnUrl 字段为 String(128)，
- * 该上限包含服务端追加的回跳业务参数（payKind/payRef）。
+ * 该上限包含服务端替换占位符或追加 payRef 后的完整地址。
  */
 export const PAY_RETURN_URL_MAX_LENGTH = 128;
 
 /**
- * 聚合网关支付完成后同步跳回前端时拼在 querystring 中的动作标识
- *（计全付 returnPageAction）。
+ * returnUrl 中的业务单据占位符：前端传 `…#/orders/{payRef}` 这类地址，
+ * 服务端下单时用订单 id / 充值单号替换，使支付完成后直接跳回原业务页（订单详情、钱包等）。
  */
-export enum PayReturnPageAction {
-  Success = "SUCCESS_PAGE",
-  Cancel = "CANCEL_PAGE",
-}
-
-/** 支付回跳落地页要处理的业务单据类型 */
-export enum PayReturnKind {
-  /** 钱包充值单，payRef 为充值单号 outTradeNo */
-  Recharge = "recharge",
-  /** 商品订单，payRef 为订单 id */
-  Order = "order",
-}
+export const PAY_RETURN_REF_PLACEHOLDER = "{payRef}";
 
 /**
- * 支付回跳落地页 querystring 键：payKind/payRef 由服务端下单时追加到 returnUrl，
+ * 支付回跳 querystring 键：地址中没有占位符时服务端把 payRef 追加为 query（充值单号 outTradeNo），
  * returnPageAction 由计全付追加。
  */
 export const PAY_RETURN_QUERY_KEYS = {
-  kind: "payKind",
   ref: "payRef",
   action: "returnPageAction",
 } as const;

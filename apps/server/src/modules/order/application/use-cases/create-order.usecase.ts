@@ -6,7 +6,6 @@ import {
   OrderBoosterSelectionMode,
   OrderPaymentMethod,
   OrderStatus,
-  PayReturnKind,
   ProductStatus,
   WechatJsapiPayParams,
   calcDiscountedFen,
@@ -197,7 +196,7 @@ export class CreateOrderUseCase {
         amountFen,
         subject: product.title,
         notifyUrl: notifyBaseUrl ? `${notifyBaseUrl}/order/pay/callback/${port.provider}` : '',
-        returnUrl: buildPayReturnUrl(payload.returnUrl, PayReturnKind.Order, saved.id),
+        returnUrl: buildPayReturnUrl(payload.returnUrl, saved.id),
         payerOpenid,
       });
       qrCode = result.qrCode;
