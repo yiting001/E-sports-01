@@ -65,7 +65,7 @@ function updateField<K extends keyof RoleForm>(key: K, value: RoleForm[K]): void
           <el-input
             :model-value="form.code"
             :disabled="isEdit"
-            placeholder="如 service 或 operator"
+            placeholder="如 operator；也可填内置编码 admin / tenant_admin / member / service / booster 补建"
             @update:model-value="(value: string) => updateField('code', value)"
           />
         </el-form-item>

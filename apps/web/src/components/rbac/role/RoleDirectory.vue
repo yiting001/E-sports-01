@@ -1,22 +1,31 @@
 <script setup lang="ts">
 import type { RoleView } from '@app/contracts';
 import { PERMS } from '@app/contracts';
-import { Clock, Delete, EditPen, Key, Plus, Refresh, Setting } from '@element-plus/icons-vue';
+import { Clock, Delete, EditPen, Key, Plus, Refresh, Search, Setting } from '@element-plus/icons-vue';
+import { reactive, watch } from 'vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
+import {
+  ROLE_CATEGORY_ALL,
+  ROLE_CATEGORY_OPTIONS,
+  builtinRoleLabel,
+  type RoleFilter,
+} from './role-ui.types';
 
-defineProps<{
+const props = defineProps<{
   list: RoleView[];
   total: number;
   page: number;
   pageSize: number;
   loading: boolean;
+  filter: RoleFilter;
   formatDate: (value: string) => string;
 }>();
 
 const emit = defineEmits<{
   refresh: [];
+  search: [value: RoleFilter];
   create: [];
   edit: [row: RoleView];
   permissions: [row: RoleView];
@@ -24,6 +33,30 @@ const emit = defineEmits<{
   'update:page': [value: number];
   'update:pageSize': [value: number];
 }>();
+
+const draft = reactive<RoleFilter>({ ...props.filter });
+watch(
+  () => props.filter,
+  (value) => Object.assign(draft, value),
+  { deep: true },
+);
+
+function submitSearch(): void {
+  emit('search', { ...draft });
+}
+
+function resetSearch(): void {
+  draft.keyword = '';
+  draft.category = ROLE_CATEGORY_ALL;
+  submitSearch();
+}
+
+function roleTypeText(row: RoleView): string {
+  if (row.isSuper) {
+    return '内置超管';
+  }
+  return row.isBuiltin ? `内置·${builtinRoleLabel(row.code)}` : '自定义角色';
+}
 </script>
 
 <template>
@@ -50,6 +83,50 @@ const emit = defineEmits<{
       </div>
     </template>
 
+    <el-form
+      inline
+      class="role-filter"
+      @submit.prevent="submitSearch"
+    >
+      <el-form-item label="角色名称">
+        <el-input
+          v-model="draft.keyword"
+          clearable
+          placeholder="按名称或编码搜索"
+          :prefix-icon="Search"
+          class="role-filter__keyword"
+          @keyup.enter="submitSearch"
+          @clear="submitSearch"
+        />
+      </el-form-item>
+      <el-form-item label="编码分类">
+        <el-select
+          v-model="draft.category"
+          class="role-filter__category"
+          @change="submitSearch"
+        >
+          <el-option
+            v-for="option in ROLE_CATEGORY_OPTIONS"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button
+          type="primary"
+          :icon="Search"
+          @click="submitSearch"
+        >
+          搜索
+        </el-button>
+        <el-button @click="resetSearch">
+          重置
+        </el-button>
+      </el-form-item>
+    </el-form>
+
     <app-data-table
       :data="list"
       :loading="loading"
@@ -74,11 +151,11 @@ const emit = defineEmits<{
       </el-table-column>
       <el-table-column
         label="类型"
-        width="96"
+        width="124"
       >
         <template #default="{ row }">
-          <span :class="['role-type', row.isSuper ? 'is-super' : '']">
-            {{ row.isSuper ? '内置角色' : '业务角色' }}
+          <span :class="['role-type', row.isSuper ? 'is-super' : '', row.isBuiltin ? 'is-builtin' : '']">
+            {{ roleTypeText(row) }}
           </span>
         </template>
       </el-table-column>
@@ -142,7 +219,7 @@ const emit = defineEmits<{
               type="danger"
               link
               :icon="Delete"
-              :disabled="row.isSuper"
+              :disabled="row.isBuiltin"
               @click="emit('remove', row)"
             >
               删除

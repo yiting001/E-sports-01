@@ -64,9 +64,9 @@
 
 | 方法 | 路径 | 权限码 |
 | --- | --- | --- |
-| GET | `/api/rbac/roles` | `rbac:role:list` |
+| GET | `/api/rbac/roles` | `rbac:role:list`；可选 `keyword`（名称/编码模糊）、`code`（编码精确）、`kind=builtin\|custom` |
 | GET | `/api/rbac/roles/grantable-permissions` | `rbac:role:assignPermissions`；按当前操作者过滤可授予权限 |
-| POST | `/api/rbac/roles` | `rbac:role:create`；可选 `tenantId`，仅平台超管可指定其他租户 |
+| POST | `/api/rbac/roles` | `rbac:role:create`；可选 `tenantId`，仅平台超管可指定其他租户；内置编码可补建，租户内重复返回 409 |
 | PATCH | `/api/rbac/roles/:id` | `rbac:role:update` |
 | DELETE | `/api/rbac/roles/:id` | `rbac:role:remove`；内置角色返回 409 |
 | POST | `/api/rbac/roles/:id/permissions` | `rbac:role:assignPermissions` |

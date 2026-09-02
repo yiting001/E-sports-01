@@ -1,4 +1,4 @@
-import { BOOSTER_ROLE_CODE, PERMS } from '@app/contracts';
+import { BUILTIN_ROLE_CODES, PERMS } from '@app/contracts';
 
 /**
  * 超级管理员角色码。
@@ -27,14 +27,11 @@ export const MEMBER_ROLE = 'member';
  */
 export const SERVICE_ROLE = 'service';
 
-/** 仅由系统播种或领域流程维护，不能通过通用角色接口创建的内置角色。 */
-export const RESERVED_ROLE_CODES = [
-  SUPER_ADMIN_ROLE,
-  TENANT_ADMIN_ROLE,
-  MEMBER_ROLE,
-  SERVICE_ROLE,
-  BOOSTER_ROLE_CODE,
-] as const;
+/**
+ * 内置角色编码（与 contracts `BUILTIN_ROLE_OPTIONS` 同源）。
+ * 由系统播种或领域流程维护，允许平台超管通过通用角色接口补建，但不能通用删除。
+ */
+export const RESERVED_ROLE_CODES: readonly string[] = BUILTIN_ROLE_CODES;
 
 export const RESERVED_ROLE_CODE_SET: ReadonlySet<string> = new Set(RESERVED_ROLE_CODES);
 

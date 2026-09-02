@@ -1,6 +1,6 @@
 import { RoleView } from '@app/contracts';
 import { Role } from '../domain/role.entity';
-import { SUPER_ADMIN_ROLE } from '../domain/rbac.constants';
+import { RESERVED_ROLE_CODE_SET, SUPER_ADMIN_ROLE } from '../domain/rbac.constants';
 
 /** 领域角色实体 → 对外视图 */
 export function toRoleView(role: Role): RoleView {
@@ -12,6 +12,7 @@ export function toRoleView(role: Role): RoleView {
     tenantId: role.tenantId,
     permissionIds: (role.permissions ?? []).map((p) => p.id),
     isSuper: role.code === SUPER_ADMIN_ROLE,
+    isBuiltin: RESERVED_ROLE_CODE_SET.has(role.code),
     createdAt: role.createdAt.toISOString(),
   };
 }
