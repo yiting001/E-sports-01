@@ -17,6 +17,7 @@ import { AddNotifyWechatBinding1785900000000 } from './migrations/1785900000000-
 import { RelaxBoosterServiceRegionsCheck1786000000000 } from './migrations/1786000000000-relax-booster-service-regions-check';
 import { AddAuthWechatIdentity1786100000000 } from './migrations/1786100000000-add-auth-wechat-identity';
 import { AddRbacRoleSoftDelete1786300000000 } from './migrations/1786300000000-add-rbac-role-soft-delete';
+import { DropRbacRoleCodeUnique1786400000000 } from './migrations/1786400000000-drop-rbac-role-code-unique';
 
 export type ServerMigrationConstructor = new () => MigrationInterface;
 
@@ -49,6 +50,7 @@ export const SERVER_MIGRATIONS: ServerMigrationConstructor[] = [
   RelaxBoosterServiceRegionsCheck1786000000000,
   AddAuthWechatIdentity1786100000000,
   AddRbacRoleSoftDelete1786300000000,
+  DropRbacRoleCodeUnique1786400000000,
 ];
 
 export const SERVER_MIGRATION_DEFINITIONS: ServerMigrationDefinition[] =

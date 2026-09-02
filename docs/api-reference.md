@@ -66,10 +66,10 @@
 | --- | --- | --- |
 | GET | `/api/rbac/roles` | `rbac:role:list`；可选 `keyword`（名称/编码模糊）、`code`（编码精确）、`kind=builtin\|custom\|deleted`（`deleted` 只看已软删除角色） |
 | GET | `/api/rbac/roles/grantable-permissions` | `rbac:role:assignPermissions`；按当前操作者过滤可授予权限 |
-| POST | `/api/rbac/roles` | `rbac:role:create`；可选 `tenantId`，仅平台超管可指定其他租户；内置编码可补建，租户内重复返回 409 |
+| POST | `/api/rbac/roles` | `rbac:role:create`；可选 `tenantId`，仅平台超管可指定其他租户；编码不要求唯一，同编码角色各自独立授权与绑定用户 |
 | PATCH | `/api/rbac/roles/:id` | `rbac:role:update` |
 | DELETE | `/api/rbac/roles/:id` | `rbac:role:remove`；软删除（标记 `deleted_at`，保留用户绑定与权限关联）；默认租户平台超管角色返回 409，不存在返回 404 |
-| POST | `/api/rbac/roles/:id/restore` | `rbac:role:remove`；恢复已软删除角色；未删除/不存在返回 404，同编码角色已重建返回 409 |
+| POST | `/api/rbac/roles/:id/restore` | `rbac:role:remove`；恢复已软删除角色；未删除/不存在返回 404（同编码角色已重建也可恢复，两者并存） |
 | POST | `/api/rbac/roles/:id/permissions` | `rbac:role:assignPermissions` |
 
 ### 权限

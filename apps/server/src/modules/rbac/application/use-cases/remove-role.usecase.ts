@@ -10,8 +10,9 @@ import { isPlatformSuperRole } from '../role.mapper';
 @Injectable()
 export class RemoveRoleUseCase {
   constructor(
-    @Inject(ROLE_REPOSITORY) private readonly roleRepo: RoleRepository,
-    private readonly resolver: PermissionResolver,
+    @Inject(ROLE_REPOSITORY)
+    private readonly roleRepo: Pick<RoleRepository, 'findById' | 'remove'>,
+    private readonly resolver: Pick<PermissionResolver, 'invalidateAll'>,
   ) {}
 
   async execute(id: string): Promise<void> {

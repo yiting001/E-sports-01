@@ -179,7 +179,7 @@ test('恢复未删除或不存在的角色返回 404', async () => {
   await assert.rejects(useCase.execute('missing'), NotFoundException);
 });
 
-test('同编码角色已重建时不能恢复旧角色', async () => {
+test('同编码角色已重建时旧角色仍可恢复，两者并存各自独立', async () => {
   const deleted = makeRole('custom_operator');
   deleted.id = 'role-old';
   deleted.deletedAt = new Date('2026-01-02T00:00:00Z');
@@ -187,6 +187,10 @@ test('同编码角色已重建时不能恢复旧角色', async () => {
   const repository = new MemoryRoleRepository([deleted, recreated]);
   const useCase = new RestoreRoleUseCase(repository, createResolver());
 
-  await assert.rejects(useCase.execute(deleted.id), ConflictException);
-  assert.ok((await repository.findDeletedById(deleted.id))?.deletedAt instanceof Date);
+  const view = await useCase.execute(deleted.id);
+
+  assert.equal(view.id, deleted.id);
+  assert.equal(view.deletedAt, null);
+  assert.equal((await repository.findById(recreated.id))?.code, 'custom_operator');
+  assert.equal((await repository.findById(deleted.id))?.code, 'custom_operator');
 });

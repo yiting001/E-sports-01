@@ -3,12 +3,15 @@ import { TenantScopedEntity } from '../../../shared/domain/tenant-scoped.entity'
 import { Permission } from './permission.entity';
 import { User } from './user.entity';
 
-/** 租户内角色编码部分唯一索引名（migration 与 synchronize 共用） */
-export const ROLE_CODE_UNIQUE_INDEX = 'UQ_rbac_role_tenant_code_alive';
+/** 租户内角色编码查询索引名（migration 与 synchronize 共用） */
+export const ROLE_CODE_INDEX = 'IDX_rbac_role_tenant_code';
 
-/** 角色实体，连接用户与权限的中间概念。角色码在租户内唯一（仅约束未软删除的行） */
+/**
+ * 角色实体，连接用户与权限的中间概念。
+ * 角色码只表达内置语义与分类，同租户可存在多个同编码角色，各自独立授权。
+ */
 @Entity('rbac_role')
-@Index(ROLE_CODE_UNIQUE_INDEX, ['tenantId', 'code'], { unique: true, where: '"deleted_at" IS NULL' })
+@Index(ROLE_CODE_INDEX, ['tenantId', 'code'])
 export class Role extends TenantScopedEntity {
   @Column({ length: 64 })
   code!: string;
