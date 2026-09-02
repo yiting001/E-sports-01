@@ -211,17 +211,33 @@ export interface CreateRechargeBody {
   /** 充值金额（分） */
   amountFen: number;
   provider: PaymentProvider;
+  /** 支付完成后同步跳回的前端地址（选填，仅支持同步跳转的聚合网关使用） */
+  returnUrl?: string;
 }
 
-/** 发起充值结果（扫码支付：返回二维码内容，前端渲染成二维码供用户扫码） */
+/** 发起充值结果（扫码支付：返回二维码内容；JSAPI：返回拉起支付参数） */
 export interface CreateRechargeResult {
   orderId: string;
   outTradeNo: string;
   provider: PaymentProvider;
-  /** 二维码内容（支付宝 qr_code / 微信 code_url） */
+  /** 二维码内容（支付宝 qr_code / 微信 code_url）；JSAPI 支付为空串 */
   qrCode: string;
+  /** 微信公众号 JSAPI 拉起支付参数；非 JSAPI 支付为 null */
+  jsapiParams: WechatJsapiPayParams | null;
   amountFen: number;
   amountYuan: string;
+}
+
+/** 支付同步跳转地址参数限制 */
+export const PAY_RETURN_URL_MAX_LENGTH = 512;
+
+/**
+ * 聚合网关支付完成后同步跳回前端时拼在 querystring 中的动作标识
+ *（计全付 returnPageAction）。
+ */
+export enum PayReturnPageAction {
+  Success = "SUCCESS_PAGE",
+  Cancel = "CANCEL_PAGE",
 }
 
 /** 充值支付结果查询视图（前端轮询查单用） */

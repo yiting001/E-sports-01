@@ -151,6 +151,8 @@ export interface CreateOrderPayload {
   accountInfo?: string;
   /** 抵扣用的我的优惠券 id（选填，不用券不传） */
   userCouponId?: string;
+  /** 支付完成后同步跳回的前端地址（选填，仅支持同步跳转的聚合网关使用） */
+  returnUrl?: string;
 }
 
 /** 微信公众号 JSAPI 拉起支付所需参数（WeixinJSBridge.getBrandWCPayRequest 入参） */
