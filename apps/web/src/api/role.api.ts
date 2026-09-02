@@ -42,8 +42,13 @@ export const roleApi = {
   update(id: string, body: UpdateRoleBody): Promise<RoleView> {
     return http.patch(`/rbac/roles/${id}`, body);
   },
+  /** 软删除：角色进入回收站，用户绑定与权限关联保留 */
   remove(id: string): Promise<void> {
     return http.delete(`/rbac/roles/${id}`);
+  },
+  /** 从回收站恢复角色 */
+  restore(id: string): Promise<RoleView> {
+    return http.post(`/rbac/roles/${id}/restore`);
   },
   assignPermissions(id: string, permissionIds: string[]): Promise<void> {
     return http.post(`/rbac/roles/${id}/permissions`, { permissionIds });
