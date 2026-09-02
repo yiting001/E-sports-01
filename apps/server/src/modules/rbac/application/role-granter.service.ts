@@ -7,13 +7,16 @@ import { PermissionResolver } from './permission-resolver.service';
  * 角色授予服务（对外部模块暴露的最小角色写口）。
  * 供业务模块在自身流程中按角色码为用户授予/回收内置角色
  * （如打手入驻审核通过授予 booster），避免各模块直接操作 RBAC 仓储。
+ * 同编码存在多个角色时，授予固定绑定租户内最早创建的那个（即播种的内置角色）。
  */
 @Injectable()
 export class RoleGranter {
   constructor(
-    @Inject(ROLE_REPOSITORY) private readonly roles: RoleRepository,
-    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
-    private readonly resolver: PermissionResolver,
+    @Inject(ROLE_REPOSITORY)
+    private readonly roles: Pick<RoleRepository, 'findByCodeForTenant'>,
+    @Inject(USER_REPOSITORY)
+    private readonly users: Pick<UserRepository, 'findById' | 'save'>,
+    private readonly resolver: Pick<PermissionResolver, 'invalidate'>,
   ) {}
 
   /** 判断用户是否拥有指定角色码（供业务模块做角色级访问断言） */

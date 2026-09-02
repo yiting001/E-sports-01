@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { RoleView } from '@app/contracts';
 import { TenantContextService } from '../../../../shared/tenant/tenant-context.service';
 import { ROLE_REPOSITORY, RoleRepository } from '../../domain/role-repository.interface';
@@ -23,15 +17,12 @@ export interface CreateRoleInput {
   tenantId?: string;
 }
 
-/** 用例：创建角色（可选择所属租户；内置编码在租户内缺失时同样可补建，只受租户内唯一约束） */
+/** 用例：创建角色（可选择所属租户；编码不要求唯一，同编码角色各自独立授权） */
 @Injectable()
 export class CreateRoleUseCase {
   constructor(
     @Inject(ROLE_REPOSITORY)
-    private readonly roleRepo: Pick<
-      RoleRepository,
-      'existsByCode' | 'findByCodeForTenant' | 'create' | 'save'
-    >,
+    private readonly roleRepo: Pick<RoleRepository, 'create' | 'save'>,
     @Inject(TENANT_REPOSITORY)
     private readonly tenantRepo: Pick<TenantRepository, 'findById'>,
     private readonly tenant: TenantContextService,
@@ -39,12 +30,6 @@ export class CreateRoleUseCase {
 
   async execute(input: CreateRoleInput): Promise<RoleView> {
     const tenantId = await this.resolveTenantId(input.tenantId);
-    const duplicated = tenantId
-      ? (await this.roleRepo.findByCodeForTenant(input.code, tenantId)) !== null
-      : await this.roleRepo.existsByCode(input.code);
-    if (duplicated) {
-      throw new ConflictException('角色编码已存在');
-    }
     const entity = this.roleRepo.create({
       code: input.code,
       name: input.name,

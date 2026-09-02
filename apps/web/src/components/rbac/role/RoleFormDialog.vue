@@ -42,7 +42,11 @@ function selectCode(value: string | null): void {
         <Lock v-if="isEdit" />
         <CircleCheckFilled v-else />
       </el-icon>
-      <span>{{ isEdit ? '角色编码创建后不可修改，避免授权引用漂移。' : '创建角色后可在角色目录中继续分配权限。' }}</span>
+      <span>{{
+        isEdit
+          ? '角色编码创建后不可修改，避免授权引用漂移。'
+          : '编码可重复：同编码角色各自独立授权、独立绑定用户，建议用名称区分；创建后可在角色目录中继续分配权限。'
+      }}</span>
     </div>
     <el-form
       label-position="top"

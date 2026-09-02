@@ -59,7 +59,7 @@ erDiagram
   }
   ROLE {
     uuid id
-    string code "admin=超管；租户内未删除行唯一"
+    string code "admin=超管；不唯一，同编码可多实例"
     string name
     timestamptz deleted_at "软删除标记，空=有效"
   }
@@ -129,18 +129,25 @@ flowchart LR
   并通过 `PUT /rbac/users/:id/roles` 把本租户已有角色分配给本租户用户（绑定跨租户角色返回 403）。
 - **内置角色生命周期**：`admin`、`tenant_admin`、`member`、`service`、`booster`（contracts
   `BUILTIN_ROLE_OPTIONS`，服务端 `RESERVED_ROLE_CODES` 同源）由系统播种或领域流程维护；若某租户内缺失，
-  平台超管可通过 `POST /rbac/roles` 直接补建，仅受租户内编码唯一约束（重复返回 409 `角色编码已存在`）。
+  平台超管可通过 `POST /rbac/roles` 直接补建。
   非默认租户内补建的 `admin` 不会获得平台超管旁路（`PermissionResolver` 仅承认默认租户的 `admin`）。
   `RoleView.isBuiltin` 标识内置编码，`isSuper` 仅标识 `admin`，`deletable` 标识是否允许删除。
+- **角色编码不唯一，授权按角色实例独立**：同一租户内可存在多个同编码角色（如两个 `service`），每个角色行有独立的
+  `id`、名称、`rbac_role_permission` 授权与 `rbac_user_role` 绑定；用户分配（`PUT /rbac/users/:id/roles`）、角色授权、
+  删除/恢复均按 `roleId` 操作，修改或删除其中一个实例不影响其余同编码角色。编码只用于内置语义与分类：
+  `PermissionResolver` 按用户绑定的具体角色行聚合权限，`roles` 中可出现重复编码；业务流程按编码自动授予（`RoleGranter`、
+  手机注册/微信登录授 `member`）时，`findByCodeForTenant` 固定取租户内**最早创建**的同编码角色（即播种的内置角色），
+  不会因管理员新建同编码角色而改变。默认租户内任何 `admin` 编码角色均为平台超管（不可删），因此不应随意在默认租户
+  新建 `admin` 编码角色。migration `1786400000000-drop-rbac-role-code-unique.ts` 删除部分唯一索引
+  `UQ_rbac_role_tenant_code_alive`，改为普通索引 `IDX_rbac_role_tenant_code`（`down` 还原部分唯一索引，若已存在同编码活跃行会失败，需先人工合并）。
 - **角色软删除与恢复**：`DELETE /rbac/roles/:id` 只标记 `rbac_role.deleted_at`（TypeORM `@DeleteDateColumn`），
   不删除 `rbac_user_role` / `rbac_role_permission` 关联行；唯一不可删的是默认租户的 `admin`（409），其余内置编码
   与自定义角色均可删，角色不存在返回 404。已删角色在默认查询、用户角色加载与 `PermissionResolver`（基于
   `findByIds` 实时读取角色）中自动失效，持有者立即失去对应权限。
   `POST /rbac/roles/:id/restore`（复用 `rbac:role:remove`，`@PlatformOnly`）恢复后原有绑定与权限重新生效；
-  若同编码角色已被重建则返回 409，未删除/不存在返回 404。租户内编码唯一约束改为部分唯一索引
-  `UQ_rbac_role_tenant_code_alive`（`WHERE deleted_at IS NULL`），因此软删后可重建同编码角色；migration
-  `1786300000000-add-rbac-role-soft-delete.ts`（`down` 会物理清除已软删行后恢复全量唯一索引）。启动播种器
-  用 `existsByCodeForTenantWithDeleted` 判重，不会复活管理员已删除的内置角色。
+  未删除/不存在返回 404；编码不唯一，即使同编码角色已重建也可恢复，两者并存。软删除 migration 为
+  `1786300000000-add-rbac-role-soft-delete.ts`。启动播种器用 `existsByCodeForTenantWithDeleted` 判重（含已删行与
+  管理员新建的同编码角色），不会复活管理员已删除的内置角色，也不会在已有同编码角色时重复播种。
 - **角色列表筛选**：`GET /rbac/roles` 支持 `keyword`（名称/编码模糊）、`code`（编码精确，用于按内置编码
   分类查看）、`kind=builtin|custom|deleted`（内置/自定义/已删除分类，`deleted` 只返回软删除行），均经
   `ListRolesQueryDto` 校验；`code` 与 `kind` 同时传入时以 `code` 为准，`keyword` 与编码条件叠加时只匹配名称。
@@ -209,7 +216,7 @@ flowchart TD
 
 - 角色总数、内置角色、可配置角色、已绑定权限四类概览。
 - 筛选栏：按名称/编码关键词搜索，按编码分类（全部 / 各内置编码 / 自定义角色 / 已删除（可恢复））查看；搜索、改分类、重置均回到第一页。
-- 新建角色的编码为可搜索下拉：直接选内置编码补建（租户内重复时后端 409；名称为空时自动带出内置名称），或输入自定义编码回车新增（`allow-create`）；类型列区分内置超管 / 内置·xx / 自定义角色 / 已删除。
+- 新建角色的编码为可搜索下拉：直接选内置编码（名称为空时自动带出内置名称），或输入自定义编码回车新增（`allow-create`）；编码可重复，表单下方提示同编码角色各自独立授权，建议用名称区分；类型列区分内置超管 / 内置·xx / 自定义角色 / 已删除。
 - 删除为软删除：删除按钮仅对 `deletable=false`（默认租户平台超管）禁用，确认框提示持有者立即失去权限、可在「已删除」分类恢复；「已删除（可恢复）」分类展示回收站（时间列改为删除时间），行操作只保留「恢复」（二次确认，按钮权限复用 `rbac:role:remove`，调 `roleApi.restore`）。
 - 角色目录保持表格视图，窄屏通过目录容器横向滚动。
 - 目录表格复用 `AppDataTable`，避免不同 RBAC 页面重复维护滚动容器样式。

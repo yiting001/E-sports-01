@@ -69,6 +69,7 @@ export class TypeormRoleRepository implements RoleRepository {
     return this.repo.findOne({
       where: withTenant<Role>(this.tenant, { code }) as FindOptionsWhere<Role>,
       relations: { permissions: true },
+      order: { createdAt: 'ASC' },
     });
   }
 
@@ -76,6 +77,7 @@ export class TypeormRoleRepository implements RoleRepository {
     return this.repo.findOne({
       where: { code, tenantId },
       relations: { permissions: true },
+      order: { createdAt: 'ASC' },
     });
   }
 
