@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ROLE_CATEGORY_ALL,
   ROLE_CATEGORY_CUSTOM,
+  ROLE_CATEGORY_DELETED,
   ROLE_CATEGORY_OPTIONS,
   applyRoleCode,
   builtinRoleLabel,
@@ -35,7 +36,13 @@ describe('角色列表筛选转换', () => {
     });
   });
 
-  it('分类下拉覆盖全部内置编码并附带自定义选项', () => {
+  it('选择已删除分类时按 kind=deleted 查回收站', () => {
+    expect(toRoleListQuery({ keyword: '', category: ROLE_CATEGORY_DELETED })).toEqual({
+      kind: 'deleted',
+    });
+  });
+
+  it('分类下拉覆盖全部内置编码并附带自定义、已删除选项', () => {
     const values = ROLE_CATEGORY_OPTIONS.map((option) => option.value);
     expect(values).toEqual([
       ROLE_CATEGORY_ALL,
@@ -45,6 +52,7 @@ describe('角色列表筛选转换', () => {
       'service',
       'booster',
       ROLE_CATEGORY_CUSTOM,
+      ROLE_CATEGORY_DELETED,
     ]);
     expect(builtinRoleLabel('booster')).toBe('打手');
     expect(builtinRoleLabel('operator')).toBe('');

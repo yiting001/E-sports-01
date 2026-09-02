@@ -17,8 +17,8 @@ export const BUILTIN_ROLE_CODES: readonly string[] = BUILTIN_ROLE_OPTIONS.map(
   (item) => item.code,
 );
 
-/** 角色分类：内置角色 / 自定义角色 */
-export type RoleKind = 'builtin' | 'custom';
+/** 角色分类：内置角色 / 自定义角色 / 已软删除角色（回收站） */
+export type RoleKind = 'builtin' | 'custom' | 'deleted';
 
 /** 角色列表筛选条件 */
 export interface RoleListQuery {
@@ -42,7 +42,11 @@ export interface RoleView {
   permissionIds: string[];
   /** 是否内置超级管理员：为真时拥有全部权限，无需也无法单独分配 */
   isSuper: boolean;
-  /** 是否内置角色编码（admin/tenant_admin/member/service/booster）：不可通用删除 */
+  /** 是否内置角色编码（admin/tenant_admin/member/service/booster） */
   isBuiltin: boolean;
+  /** 是否允许删除：仅默认租户的平台超管角色不可删除 */
+  deletable: boolean;
+  /** 软删除时间；未删除为 null */
+  deletedAt: string | null;
   createdAt: string;
 }

@@ -2,7 +2,7 @@ import type { RoleKind, RoleListQuery } from '@app/contracts';
 import { IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/http/pagination.dto';
 
-const ROLE_KINDS: readonly RoleKind[] = ['builtin', 'custom'];
+const ROLE_KINDS: readonly RoleKind[] = ['builtin', 'custom', 'deleted'];
 
 /** 角色列表查询入参 */
 export class ListRolesQueryDto extends PaginationQueryDto implements RoleListQuery {

@@ -145,9 +145,24 @@ function openPermissions(row: RoleView): void {
 }
 
 async function remove(row: RoleView): Promise<void> {
-  await ElMessageBox.confirm(`确认删除角色 ${row.name}？`, '提示', { type: 'warning' });
+  await ElMessageBox.confirm(
+    `确认删除角色 ${row.name}？删除后持有该角色的用户立即失去对应权限，可在「已删除」分类中恢复。`,
+    '提示',
+    { type: 'warning' },
+  );
   await roleApi.remove(row.id);
-  ElMessage.success('已删除');
+  ElMessage.success('已删除，可在「已删除」分类中恢复');
+  await load();
+}
+
+async function restore(row: RoleView): Promise<void> {
+  await ElMessageBox.confirm(
+    `确认恢复角色 ${row.name}？恢复后原有用户绑定与权限重新生效。`,
+    '提示',
+    { type: 'info' },
+  );
+  await roleApi.restore(row.id);
+  ElMessage.success('已恢复');
   await load();
 }
 
@@ -176,6 +191,7 @@ onMounted(load);
       @edit="openEdit"
       @permissions="openPermissions"
       @remove="remove"
+      @restore="restore"
       @update:page="changePage"
       @update:page-size="changePageSize"
     />

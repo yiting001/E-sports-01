@@ -14,6 +14,8 @@ export interface RoleForm {
 export const ROLE_CATEGORY_ALL = '';
 /** 自定义（非内置编码）角色分类 */
 export const ROLE_CATEGORY_CUSTOM = 'custom';
+/** 已软删除角色分类（回收站，可恢复） */
+export const ROLE_CATEGORY_DELETED = 'deleted';
 
 /** 下拉项 */
 export interface RoleCodeOption {
@@ -26,11 +28,12 @@ export const BUILTIN_ROLE_CODE_OPTIONS: readonly RoleCodeOption[] = BUILTIN_ROLE
   (item) => ({ value: item.code, label: `${item.label}（${item.code}）` }),
 );
 
-/** 角色编码分类下拉项：全部 / 各内置编码 / 自定义角色 */
+/** 角色编码分类下拉项：全部 / 各内置编码 / 自定义角色 / 已删除 */
 export const ROLE_CATEGORY_OPTIONS: readonly RoleCodeOption[] = [
   { value: ROLE_CATEGORY_ALL, label: '全部角色' },
   ...BUILTIN_ROLE_CODE_OPTIONS,
   { value: ROLE_CATEGORY_CUSTOM, label: '自定义角色' },
+  { value: ROLE_CATEGORY_DELETED, label: '已删除（可恢复）' },
 ];
 
 /** 角色列表筛选态 */
@@ -45,6 +48,8 @@ export function toRoleListQuery(filter: RoleFilter): RoleListQuery {
   const query: RoleListQuery = keyword ? { keyword } : {};
   if (filter.category === ROLE_CATEGORY_CUSTOM) {
     query.kind = 'custom';
+  } else if (filter.category === ROLE_CATEGORY_DELETED) {
+    query.kind = 'deleted';
   } else if (filter.category !== ROLE_CATEGORY_ALL) {
     query.code = filter.category;
   }

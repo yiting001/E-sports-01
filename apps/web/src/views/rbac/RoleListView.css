@@ -96,6 +96,11 @@
   background: var(--el-color-warning-light-9);
 }
 
+.role-type.is-deleted {
+  color: var(--el-color-info);
+  background: var(--el-color-info-light-9);
+}
+
 .role-filter {
   display: flex;
   flex-wrap: wrap;

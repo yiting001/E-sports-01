@@ -1,13 +1,24 @@
 <script setup lang="ts">
 import type { RoleView } from '@app/contracts';
 import { PERMS } from '@app/contracts';
-import { Clock, Delete, EditPen, Key, Plus, Refresh, Search, Setting } from '@element-plus/icons-vue';
-import { reactive, watch } from 'vue';
+import {
+  Clock,
+  Delete,
+  EditPen,
+  Key,
+  Plus,
+  Refresh,
+  RefreshLeft,
+  Search,
+  Setting,
+} from '@element-plus/icons-vue';
+import { computed, reactive, watch } from 'vue';
 import AppDataTable from '@/components/common/AppDataTable.vue';
 import AppPanel from '@/components/common/AppPanel.vue';
 import { PAGE_SIZE_OPTIONS } from '@/config/pagination';
 import {
   ROLE_CATEGORY_ALL,
+  ROLE_CATEGORY_DELETED,
   ROLE_CATEGORY_OPTIONS,
   builtinRoleLabel,
   type RoleFilter,
@@ -30,6 +41,7 @@ const emit = defineEmits<{
   edit: [row: RoleView];
   permissions: [row: RoleView];
   remove: [row: RoleView];
+  restore: [row: RoleView];
   'update:page': [value: number];
   'update:pageSize': [value: number];
 }>();
@@ -41,6 +53,8 @@ watch(
   { deep: true },
 );
 
+const showDeleted = computed(() => props.filter.category === ROLE_CATEGORY_DELETED);
+
 function submitSearch(): void {
   emit('search', { ...draft });
 }
@@ -51,7 +65,14 @@ function resetSearch(): void {
   submitSearch();
 }
 
+function isDeleted(row: RoleView): boolean {
+  return row.deletedAt !== null;
+}
+
 function roleTypeText(row: RoleView): string {
+  if (isDeleted(row)) {
+    return '已删除';
+  }
   if (row.isSuper) {
     return '内置超管';
   }
@@ -154,7 +175,14 @@ function roleTypeText(row: RoleView): string {
         width="124"
       >
         <template #default="{ row }">
-          <span :class="['role-type', row.isSuper ? 'is-super' : '', row.isBuiltin ? 'is-builtin' : '']">
+          <span
+            :class="[
+              'role-type',
+              isDeleted(row) ? 'is-deleted' : '',
+              row.isSuper ? 'is-super' : '',
+              row.isBuiltin ? 'is-builtin' : '',
+            ]"
+          >
             {{ roleTypeText(row) }}
           </span>
         </template>
@@ -180,13 +208,13 @@ function roleTypeText(row: RoleView): string {
         </template>
       </el-table-column>
       <el-table-column
-        label="创建时间"
+        :label="showDeleted ? '删除时间' : '创建时间'"
         width="150"
       >
         <template #default="{ row }">
           <span class="role-date">
             <el-icon><Clock /></el-icon>
-            {{ formatDate(row.createdAt) }}
+            {{ formatDate(row.deletedAt ?? row.createdAt) }}
           </span>
         </template>
       </el-table-column>
@@ -195,7 +223,24 @@ function roleTypeText(row: RoleView): string {
         width="240"
       >
         <template #default="{ row }">
-          <div class="role-actions">
+          <div
+            v-if="isDeleted(row)"
+            class="role-actions"
+          >
+            <el-button
+              v-permission="PERMS.role.remove"
+              type="primary"
+              link
+              :icon="RefreshLeft"
+              @click="emit('restore', row)"
+            >
+              恢复
+            </el-button>
+          </div>
+          <div
+            v-else
+            class="role-actions"
+          >
             <el-button
               v-permission="PERMS.role.update"
               type="primary"
@@ -219,7 +264,7 @@ function roleTypeText(row: RoleView): string {
               type="danger"
               link
               :icon="Delete"
-              :disabled="row.isBuiltin"
+              :disabled="!row.deletable"
               @click="emit('remove', row)"
             >
               删除
