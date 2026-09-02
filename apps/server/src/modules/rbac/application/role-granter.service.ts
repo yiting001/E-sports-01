@@ -16,6 +16,7 @@ export class RoleGranter {
     private readonly roles: Pick<RoleRepository, 'findByCodeForTenant'>,
     @Inject(USER_REPOSITORY)
     private readonly users: Pick<UserRepository, 'findById' | 'save'>,
+    @Inject(PermissionResolver)
     private readonly resolver: Pick<PermissionResolver, 'invalidate'>,
   ) {}
 
