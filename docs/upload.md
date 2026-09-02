@@ -16,8 +16,9 @@
 - **自定义访问域名**：`upload.ossPublicBaseUrl` 配置后（如 CDN/加速域名 `https://oss.example.com`），新上传文件返回 `域名/文件key` 形式的访问地址；留空时使用 OSS SDK 返回的默认 bucket 地址。已上传文件的历史 URL 不会自动改写。
 - **前端文件库**：`UploadView` 提供文件统计、上传入口、分页目录、访问链接和删除操作；表格复用 `AppDataTable`，窄屏通过统一横向滚动避免字段遮挡。
 - **打手语音复用**：语音由 booster 模块专用接口先做 5 MB、MIME 与文件头双重校验，再复用 `UploadFileUseCase` 和当前存储驱动，不把音频安全规则塞入通用上传模块。
+- **前端图片压缩**：管理端与 C 端的 `uploadApi.upload/uploadSelf` 在发送前统一在浏览器内重采样并重新编码图片（长边 ≤ 1920、优先 WebP），原图不再直传；视频暂不转码，超过 50 MB 前端直接拒绝并提示。详见下文「前端媒体预处理」。
 
-明确非目标：通用上传接口不负责图片/视频内容嗅探、病毒扫描、内容审核、转码或引用计数；清空业务字段只移除 URL，不会自动删除旧对象。
+明确非目标：服务端通用上传接口不负责图片/视频内容嗅探、病毒扫描、内容审核、服务端转码或引用计数；图片压缩只在浏览器端完成，服务端不校验图片是否已压缩；清空业务字段只移除 URL，不会自动删除旧对象。
 
 ## 目录结构（DDD 四层）
 
@@ -57,6 +58,53 @@ apps/web/src/views/upload/
 ```
 
 `UploadView` 不承载存储策略判断，只展示接口返回的 `driver`、`size`、`mimeType`、`createdAt` 等元数据；上传失败仍交给全局 HTTP 拦截器提示，页面只处理成功反馈与文件输入重置。
+
+### 前端媒体预处理（图片压缩 / 视频限制）
+
+所有图片、视频上传入口（管理端文件库、`ImageUploader`、富文本、IM；C 端订单备注、客服聊天、头像、实名、打手材料等）都经过两端的 `uploadApi`，预处理围绕这一入口实现，组件无需各自处理：
+
+```
+apps/{web,client}/src/
+├── api/upload.api.ts                 发送前调用 prepareUploadMedia；预处理失败与 HTTP 错误一样统一提示后抛出
+└── utils/
+    ├── upload-media.ts               按 MIME 分派：图片压缩 / 视频体积校验 / 其它原样
+    ├── image-compress.ts             纯逻辑：尺寸计算、跳过判定、输出格式候选、扩展名替换（可在 Node 单测）
+    └── browser-image-codec.ts        浏览器实现：createImageBitmap / <img> 解码，Canvas toBlob 编码
+```
+
+阈值为前后端共享常量 `UPLOAD_MEDIA_LIMITS`（`packages/contracts/src/upload/storage.ts`）：
+
+| 常量 | 默认 | 说明 |
+| --- | --- | --- |
+| `imageMaxEdge` | 1920 | 压缩后长边最大像素，等比缩小、不放大 |
+| `imageQuality` | 0.82 | WebP/JPEG 编码质量 |
+| `imageSkipBelowBytes` | 200 KB | 体积低于此值且尺寸未超限的图片不重编码 |
+| `videoMaxSizeMb` | 50 | 视频超过此体积前端直接拒绝 |
+
+处理规则：
+
+- 输出格式优先 `image/webp`；浏览器不支持时 PNG 源回退 PNG（保留透明），其余回退 JPEG（先铺白底）。文件名保留主名、扩展名随输出类型替换（如 `IMG_01.HEIC → IMG_01.webp`）。
+- GIF（会丢动画）、SVG（矢量）不压缩，原样上传；非 image/video 文件（语音、证书等）不受影响。
+- 上传前未缩放且重编码结果不比原文件小时保留原文件（原文件本身已足够小）。
+- 解码失败（如浏览器不认 HEIC）或所有编码格式均不可用时报错并提示，**不会静默回退为原图直传**。
+- Canvas 重编码会丢弃 EXIF（含 GPS），方向信息在解码阶段由 `createImageBitmap({ imageOrientation: 'from-image' })` 应用到像素。
+- 服务端 `upload.maxFileSize` 校验保持不变，仍是最终兜底；管理端 `ImageUploader` 原有的 5 MB 原图限制已移除，交由压缩处理。
+
+```mermaid
+flowchart LR
+  F[File] --> P{MIME}
+  P -->|image/* 非 GIF/SVG| D[解码位图]
+  D --> S{小于 200KB 且尺寸未超限?}
+  S -->|是| U[原样上传]
+  S -->|否| R[等比缩到长边≤1920]
+  R --> E[WebP → PNG/JPEG 回退编码]
+  E -->|成功| U
+  E -->|全部失败| X[提示并拒绝]
+  P -->|video/*| V{≤50MB?}
+  V -->|是| U
+  V -->|否| X
+  P -->|其它| U
+```
 
 ```mermaid
 flowchart LR
@@ -181,7 +229,8 @@ sequenceDiagram
 - **策略模式 + 配置驱动**：切换存储无需改代码，体现"对扩展开放、对修改关闭"。
 - **应用层统一生成 key**：`object-key` 负责对象命名（日期分目录 + uuid），驱动只负责落字节，职责清晰。
 - **大小上限走配置中心**：`upload.maxFileSize` 以 **MB** 为单位、可热调，不是写死常量；应用层换算为字节后比较，超限抛 `413`，错误信息以 MB 展示。
-- **失败有反馈**：上传等任意请求失败时，由全局 http 拦截器统一 `ElMessage.error` 弹出后端 message（`resolveHttpErrorMessage` 提取），杜绝静默失败；`UploadView` 仅负责成功提示与重置输入。
+- **失败有反馈**：上传等任意请求失败时，由全局 http 拦截器统一 `ElMessage.error` 弹出后端 message（`resolveHttpErrorMessage` 提取），杜绝静默失败；图片压缩/视频超限等发送前失败由 `uploadApi` 同样统一提示（管理端 `ElMessage`，C 端 toast）后抛出；`UploadView` 仅负责成功提示与重置输入。
+- **压缩在浏览器端完成**：服务端不引入 sharp/ffmpeg 等媒体依赖，上传链路、存储驱动与数据模型均无变化；编解码能力通过 `ImageCodec` 接口注入，纯逻辑可在 Node 下单测。
 - **删除一致性**：存储对象与数据库记录同删，避免孤儿文件/记录。
 
 ## API、权限与安全边界
@@ -201,6 +250,8 @@ sequenceDiagram
 
 - 存储驱动找不到、配置错误、大小超限或驱动写入失败会返回明确错误；业务前端保留可重试状态，不静默吞掉失败。
 - `apps/server/test/booster/booster-voice-file.spec.ts` 覆盖语音 MIME/文件头匹配、未知内容、5 MB 上限和安全扩展名；上传主流程、local/OSS 真实驱动、删除补偿与 RBAC 仍缺端到端测试。
+- `apps/{web,client}/src/utils/image-compress.spec.ts`、`upload-media.spec.ts` 以注入的假 codec 覆盖缩放计算、跳过判定、WebP → JPEG/PNG 回退、解码/编码失败报错、GIF/非图片原样、视频超限拒绝；真实 Canvas 编码质量与体积可以预期但仍依赖浏览器，需在真实页面抽查。
+- 视频本次仅限制体积，浏览器端/服务端转码待后续迭代；服务端不校验图片是否已压缩，绕过前端直调接口仍可上传原图（受 `upload.maxFileSize` 限制）。
 - 根目录 `pnpm test` 当前串行执行服务端、管理端和客户端测试，实际结果与数量以交付汇报为准；该套件包含语音校验回归，但不等同于真实对象存储和浏览器播放验证。
 - `RemoveFileUseCase` 先删对象再删元数据；若后续数据库删除失败，当前没有自动补偿重建对象。旧文件清理也需人工通过文件库确认引用后执行。
 

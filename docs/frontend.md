@@ -22,7 +22,11 @@ apps/web/src/
 ├── api/
 │   ├── http.ts             axios 实例（请求注入令牌 / 响应解包 / 401 刷新 / 失败统一弹提示，可用 silent 关闭）
 │   ├── token-storage.ts    localStorage 令牌读写（infra.accessToken/refreshToken）
-│   └── {auth,user,role,permission,config,upload,im}.api.ts  各模块请求函数
+│   └── {auth,user,role,permission,config,upload,im}.api.ts  各模块请求函数（upload.api 发送前统一压缩图片 / 校验视频体积）
+├── utils/
+│   ├── upload-media.ts     上传前媒体预处理分派（图片 → 压缩，视频 → 体积上限，其它原样）
+│   ├── image-compress.ts   图片压缩纯逻辑（尺寸 / 跳过判定 / 格式回退 / 扩展名），codec 注入可单测
+│   └── browser-image-codec.ts  Canvas 编解码实现
 ├── stores/auth.store.ts    鉴权状态（login/logout/profile/hasPermission）
 ├── router/
 │   ├── routes.ts           路由表（含 meta.permission）
@@ -359,6 +363,7 @@ flowchart LR
   `infra.accessToken.<tenantCode>` / `infra.refreshToken.<tenantCode>`，默认租户仅一次性迁移
   旧键，避免跨租户复用会话。
 - **权限码共享**：路由 `meta.permission` 与指令复用 contracts 的 `PERMS`，与后端同源。
+- **图片上传先压缩**：`ImageUploader`、富文本、IM、文件库等所有图片/视频入口都经 `uploadApi`，由其在发送前按 `UPLOAD_MEDIA_LIMITS` 压缩图片、拒绝超限视频并统一 `ElMessage` 提示，组件不各自处理；细节见 [upload.md](./upload.md#前端媒体预处理图片压缩--视频限制)。
 
 ## 视图清单
 

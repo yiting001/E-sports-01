@@ -12,14 +12,10 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
 const uploading = ref(false);
 
-/** 限制为图片且不超过 5MB */
+/** 限制为图片；体积由 uploadApi 统一压缩处理，此处不再限制原图大小 */
 function beforeUpload(file: File): boolean {
   if (!file.type.startsWith('image/')) {
     ElMessage.warning('仅支持上传图片文件');
-    return false;
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    ElMessage.warning('图片大小不能超过 5MB');
     return false;
   }
   return true;
