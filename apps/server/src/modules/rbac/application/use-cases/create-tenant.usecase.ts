@@ -2,10 +2,10 @@ import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import { BOOSTER_ROLE_CODE, CreateTenantPayload, TenantStatus, TenantView } from '@app/contracts';
 import {
   MEMBER_ROLE,
-  isPlatformOnlyPermission,
   SERVICE_ROLE,
   SERVICE_ROLE_PERMISSION_CODES,
   TENANT_ADMIN_ROLE,
+  TENANT_ADMIN_ROLE_REMARK,
 } from '../../domain/rbac.constants';
 import { Permission } from '../../domain/permission.entity';
 import { Role } from '../../domain/role.entity';
@@ -18,8 +18,8 @@ import { toTenantView } from '../tenant.mapper';
 
 /**
  * 用例：创建租户（仅平台超管）。
- * 仅创建租户并播种四类内置角色；管理员账号与租户解耦，
- * 由超管在用户管理中单独创建并选择所属租户和角色。
+ * 仅创建租户并播种四类内置角色；租户管理员角色不预赋任何权限，
+ * 具体权限与管理员账号均由平台超管在角色/用户管理中单独授予。
  */
 @Injectable()
 export class CreateTenantUseCase {
@@ -62,13 +62,12 @@ export class CreateTenantUseCase {
     }
   }
 
-  /** 创建租户管理员、会员、客服和打手四类基础角色。 */
+  /** 创建租户管理员、会员、客服和打手四类基础角色；仅客服带工作台默认权限。 */
   private async seedTenantRoles(
     repositories: TenantProvisioningRepositories,
     tenantId: string,
   ): Promise<Role> {
     const allPerms = await repositories.permissions.findAll();
-    const grantable = allPerms.filter((permission) => !isPlatformOnlyPermission(permission.code));
     const permissionsByCode = new Map(allPerms.map((permission) => [permission.code, permission]));
     const servicePermissions = SERVICE_ROLE_PERMISSION_CODES.map((code) =>
       permissionsByCode.get(code),
@@ -77,9 +76,9 @@ export class CreateTenantUseCase {
       repositories.roles.create({
         code: TENANT_ADMIN_ROLE,
         name: '租户管理员',
-        remark: '内置角色，拥有本租户业务权限',
+        remark: TENANT_ADMIN_ROLE_REMARK,
         tenantId,
-        permissions: grantable,
+        permissions: [],
       }),
     );
     await repositories.roles.save(

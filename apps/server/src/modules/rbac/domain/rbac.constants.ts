@@ -8,9 +8,12 @@ export const SUPER_ADMIN_ROLE = 'admin';
 
 /**
  * 租户管理员角色码（每个租户内置一份）。
- * 拥有本租户业务权限，但不含平台目录与全局规则写权限。
+ * 创建时不带权限，由平台超管授予本租户业务权限；不可持有平台级权限。
  */
 export const TENANT_ADMIN_ROLE = 'tenant_admin';
+
+/** 租户管理员角色创建时的备注：该角色不预赋权限，由平台超管按需授予。 */
+export const TENANT_ADMIN_ROLE_REMARK = '内置角色，权限由平台超管授予';
 
 /**
  * 普通用户（会员）角色码。
@@ -45,8 +48,17 @@ export const PLATFORM_ONLY_PERMISSION_PREFIXES = [
   permissionFamilyPrefix(PERMS.permission.list),
 ] as const;
 
-/** 仅平台超管可执行的全局业务规则写权限。 */
+/** 角色管理写权限：角色的创建、修改、删除与授权只由平台超管执行，租户只能把已有角色分配给本租户用户。 */
+export const ROLE_MANAGEMENT_PERMISSION_CODES = [
+  PERMS.role.create,
+  PERMS.role.update,
+  PERMS.role.remove,
+  PERMS.role.assignPermissions,
+] as const;
+
+/** 仅平台超管可执行的全局业务规则写权限与角色管理写权限。 */
 export const PLATFORM_ONLY_PERMISSION_CODES = [
+  ...ROLE_MANAGEMENT_PERMISSION_CODES,
   PERMS.member.levelSet,
   PERMS.booster.levelSet,
   PERMS.booster.depositPolicySet,

@@ -3,10 +3,12 @@ import { RoleView } from '@app/contracts';
 import { UpdateRoleUseCase } from '../../application/use-cases/update-role.usecase';
 import { PERMS } from '../../domain/permission-codes';
 import { Permissions } from '../auth/permissions.decorator';
+import { PlatformOnly } from '../auth/platform-only.decorator';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 
 /** 路由：更新角色信息 */
 @Controller('rbac/roles')
+@PlatformOnly()
 export class RoleUpdateController {
   constructor(private readonly useCase: UpdateRoleUseCase) {}
 

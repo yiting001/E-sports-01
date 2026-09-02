@@ -4,7 +4,6 @@ import {
   DEFAULT_TENANT_CODE,
   DEFAULT_TENANT_ID,
   PermissionType,
-  PERMS,
   TenantStatus,
 } from '@app/contracts';
 import { loadEnvConfig } from '../../../bootstrap/env.config';
@@ -22,9 +21,9 @@ import {
   SERVICE_ROLE_PERMISSION_CODES,
   SUPER_ADMIN_ROLE,
   TENANT_ADMIN_ROLE,
+  TENANT_ADMIN_ROLE_REMARK,
 } from '../domain/rbac.constants';
 import { Permission } from '../domain/permission.entity';
-import { Role } from '../domain/role.entity';
 import { ROLE_REPOSITORY, RoleRepository } from '../domain/role-repository.interface';
 import { TENANT_REPOSITORY, TenantRepository } from '../domain/tenant-repository.interface';
 import { USER_REPOSITORY, UserRepository } from '../domain/user-repository.interface';
@@ -32,8 +31,9 @@ import { PasswordService } from './password.service';
 
 /**
  * RBAC 启动播种器。
- * 幂等地补齐：api 权限、超级管理员角色、初始管理员账号。
- * 仅在缺失时创建，已存在则跳过，可安全重复执行。
+ * 幂等地补齐：api/menu 权限、默认租户、超级管理员角色、各租户内置角色、初始管理员账号。
+ * 角色仅在缺失时创建；存量角色的权限由平台超管手动维护，
+ * 启动时只剔除租户角色不应持有的平台级权限，不回填或新增任何权限。
  */
 @Injectable()
 export class RbacSeeder implements OnApplicationBootstrap {
@@ -63,113 +63,96 @@ export class RbacSeeder implements OnApplicationBootstrap {
     await this.pruneObsoleteMenus();
     const superRole = await this.ensureSuperRole();
     await this.ensureTenantBaseRoles();
-    await this.ensureTenantAdminRefundPermission();
+    await this.pruneTenantPlatformPermissions();
     await this.ensureAdminUser(superRole.id);
   }
 
-  /** 保留升级兼容：存量租户管理员至少具备退款审核权限。 */
-  private async ensureTenantAdminRefundPermission(): Promise<void> {
-    const roles = await this.roleRepo.findAllByCode(TENANT_ADMIN_ROLE);
-    let changed = false;
-    for (const role of roles) {
-      changed = (await this.ensureRolePermissions(role, [PERMS.order.refundReview])) || changed;
-    }
-    if (changed) {
-      await this.permissions.invalidateAll();
-    }
-  }
-
-  /** 为全部存量租户幂等补齐四类基础角色及其内置权限。 */
+  /**
+   * 为全部存量租户补齐缺失的四类基础角色。
+   * 仅新建缺失角色；已存在的角色不读取、不改写权限，避免覆盖超管手动维护的授权。
+   */
   private async ensureTenantBaseRoles(): Promise<void> {
     const tenants = await this.tenantRepo.findAll();
     const allPermissions = await this.permRepo.findAll();
-    const tenantAdminPermissions = allPermissions.filter(
-      (permission) => !isPlatformOnlyPermission(permission.code),
-    );
-    let changed = false;
+    const permissionsByCode = new Map(allPermissions.map((permission) => [permission.code, permission]));
+    const servicePermissions = SERVICE_ROLE_PERMISSION_CODES.map((code) =>
+      permissionsByCode.get(code),
+    ).filter((permission): permission is Permission => permission !== undefined);
+    let created = 0;
     for (const tenant of tenants) {
       if (tenant.id !== DEFAULT_TENANT_ID) {
-        changed = (await this.ensureTenantAdminRole(tenant.id, tenantAdminPermissions)) || changed;
+        created += await this.createRoleIfMissing(
+          tenant.id,
+          TENANT_ADMIN_ROLE,
+          '租户管理员',
+          TENANT_ADMIN_ROLE_REMARK,
+          [],
+        );
       }
-      changed =
-        (await this.ensureBuiltinRole(
-          tenant.id,
-          MEMBER_ROLE,
-          '普通用户',
-          '内置角色，短信自助注册用户默认角色',
-        )) || changed;
-      changed =
-        (await this.ensureBuiltinRole(
-          tenant.id,
-          SERVICE_ROLE,
-          '客服',
-          '内置角色，负责接待用户咨询/处理订单，可被商品关联为负责客服',
-          SERVICE_ROLE_PERMISSION_CODES,
-        )) || changed;
-      changed =
-        (await this.ensureBuiltinRole(
-          tenant.id,
-          BOOSTER_ROLE_CODE,
-          '打手',
-          '内置角色，打手入驻申请审核通过后自动授予',
-        )) || changed;
+      created += await this.createRoleIfMissing(
+        tenant.id,
+        MEMBER_ROLE,
+        '普通用户',
+        '内置角色，短信自助注册用户默认角色',
+        [],
+      );
+      created += await this.createRoleIfMissing(
+        tenant.id,
+        SERVICE_ROLE,
+        '客服',
+        '内置角色，负责接待用户咨询/处理订单，可被商品关联为负责客服',
+        servicePermissions,
+      );
+      created += await this.createRoleIfMissing(
+        tenant.id,
+        BOOSTER_ROLE_CODE,
+        '打手',
+        '内置角色，打手入驻申请审核通过后自动授予',
+        [],
+      );
     }
-    if (changed) {
+    if (created > 0) {
+      this.logger.log(`已为存量租户补齐 ${created} 个缺失的内置角色`);
       await this.permissions.invalidateAll();
     }
   }
 
-  private async ensureTenantAdminRole(
-    tenantId: string,
-    permissions: Permission[],
-  ): Promise<boolean> {
-    const existing = await this.roleRepo.findByCodeForTenant(TENANT_ADMIN_ROLE, tenantId);
-    if (!existing) {
-      await this.roleRepo.save(
-        this.roleRepo.create({
-          code: TENANT_ADMIN_ROLE,
-          name: '租户管理员',
-          remark: '内置角色，拥有本租户业务权限',
-          tenantId,
-          permissions,
-        }),
-      );
-      return true;
-    }
-    const current = new Set((existing.permissions ?? []).map((permission) => permission.code));
-    const expected = new Set(permissions.map((permission) => permission.code));
-    const unchanged =
-      current.size === expected.size && [...expected].every((code) => current.has(code));
-    if (unchanged) {
-      return false;
-    }
-    existing.permissions = permissions;
-    await this.roleRepo.save(existing);
-    return true;
-  }
-
-  private async ensureBuiltinRole(
+  private async createRoleIfMissing(
     tenantId: string,
     code: string,
     name: string,
     remark: string,
-    permissionCodes: string[] = [],
-  ): Promise<boolean> {
-    let role = await this.roleRepo.findByCodeForTenant(code, tenantId);
-    if (!role) {
-      role = await this.roleRepo.save(
-        this.roleRepo.create({
-          code,
-          name,
-          remark,
-          tenantId,
-          permissions: [],
-        }),
-      );
-      await this.ensureRolePermissions(role, permissionCodes);
-      return true;
+    permissions: Permission[],
+  ): Promise<number> {
+    const existing = await this.roleRepo.findByCodeForTenant(code, tenantId);
+    if (existing) {
+      return 0;
     }
-    return this.ensureRolePermissions(role, permissionCodes);
+    await this.roleRepo.save(this.roleRepo.create({ code, name, remark, tenantId, permissions }));
+    return 1;
+  }
+
+  /**
+   * 安全收敛：非默认租户的角色不得持有平台级权限（租户/权限目录、全局规则写、角色管理写）。
+   * 只删不增，用于清理旧版播种或平台级范围扩大前遗留的授权。
+   */
+  private async pruneTenantPlatformPermissions(): Promise<void> {
+    const roles = await this.roleRepo.findAllOutsideTenant(DEFAULT_TENANT_ID);
+    let pruned = 0;
+    for (const role of roles) {
+      const owned = role.permissions ?? [];
+      const kept = owned.filter((permission) => !isPlatformOnlyPermission(permission.code));
+      if (kept.length === owned.length) {
+        continue;
+      }
+      role.permissions = kept;
+      await this.roleRepo.save(role);
+      pruned += owned.length - kept.length;
+    }
+    if (pruned > 0) {
+      this.logger.warn(`已从租户角色移除 ${pruned} 项平台级权限`);
+      await this.permissions.invalidateAll();
+    }
   }
 
   /**
@@ -219,29 +202,6 @@ export class RbacSeeder implements OnApplicationBootstrap {
     });
     this.logger.log('已创建超级管理员角色');
     return this.roleRepo.save(role);
-  }
-
-  /** 幂等地为角色补齐给定权限码（仅新增缺失项，保留管理员后续手动授予的权限） */
-  private async ensureRolePermissions(role: Role, codes: string[]): Promise<boolean> {
-    const owned = new Set((role.permissions ?? []).map((p) => p.code));
-    const missing = codes.filter((code) => !owned.has(code));
-    if (missing.length === 0) {
-      return false;
-    }
-    const granted: Permission[] = [];
-    for (const code of missing) {
-      const perm = await this.permRepo.findByCode(code);
-      if (perm) {
-        granted.push(perm);
-      }
-    }
-    if (granted.length === 0) {
-      return false;
-    }
-    role.permissions = [...(role.permissions ?? []), ...granted];
-    await this.roleRepo.save(role);
-    this.logger.log(`角色 ${role.code} 补齐 ${granted.length} 项权限`);
-    return true;
   }
 
   private async ensureAdminUser(superRoleId: string): Promise<void> {

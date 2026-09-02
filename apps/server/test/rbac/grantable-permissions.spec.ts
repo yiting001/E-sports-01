@@ -11,7 +11,13 @@ import type { PermissionRepository } from '../../src/modules/rbac/domain/permiss
 import { Role } from '../../src/modules/rbac/domain/role.entity';
 import type { RoleRepository } from '../../src/modules/rbac/domain/role-repository.interface';
 import { AUTH_METADATA } from '../../src/modules/rbac/interfaces/auth/metadata';
+import { RoleAssignPermissionsController } from '../../src/modules/rbac/interfaces/controllers/role.assign-permissions.controller';
+import { RoleCreateController } from '../../src/modules/rbac/interfaces/controllers/role.create.controller';
 import { RoleGrantablePermissionsController } from '../../src/modules/rbac/interfaces/controllers/role.grantable-permissions.controller';
+import { RoleListController } from '../../src/modules/rbac/interfaces/controllers/role.list.controller';
+import { RoleRemoveController } from '../../src/modules/rbac/interfaces/controllers/role.remove.controller';
+import { RoleUpdateController } from '../../src/modules/rbac/interfaces/controllers/role.update.controller';
+import { UserAssignRolesController } from '../../src/modules/rbac/interfaces/controllers/user.assign-roles.controller';
 import { TenantContextService } from '../../src/shared/tenant/tenant-context.service';
 
 function permission(code: string): Permission {
@@ -30,12 +36,14 @@ function permission(code: string): Permission {
   });
 }
 
-test('可授予权限目录对租户过滤平台权限，对平台超管返回全部', async () => {
+test('可授予权限目录对租户过滤平台与角色管理写权限，对平台超管返回全部', async () => {
   const permissions = [
     permission(PERMS.tenant.list),
     permission(PERMS.permission.list),
     permission(PERMS.realname.policy),
     permission(PERMS.invite.configSet),
+    permission(PERMS.role.create),
+    permission(PERMS.role.assignPermissions),
     permission(PERMS.realname.policyView),
     permission(PERMS.role.list),
   ];
@@ -64,7 +72,7 @@ test('可授予权限目录对租户过滤平台权限，对平台超管返回�
   );
 });
 
-test('可授予权限使用独立角色路由且不放开平台权限目录', () => {
+test('可授予权限使用独立角色路由', () => {
   assert.equal(Reflect.getMetadata(PATH_METADATA, RoleGrantablePermissionsController), 'rbac/roles');
   assert.equal(
     Reflect.getMetadata(PATH_METADATA, RoleGrantablePermissionsController.prototype.list),
@@ -77,8 +85,26 @@ test('可授予权限使用独立角色路由且不放开平台权限目录', ()
     ),
     [PERMS.role.assignPermissions],
   );
+});
+
+test('角色的创建、修改、删除、授权与可授予目录仅平台超管可访问，角色列表与用户分配角色对租户开放', () => {
+  const platformOnlyControllers = [
+    RoleCreateController,
+    RoleUpdateController,
+    RoleRemoveController,
+    RoleAssignPermissionsController,
+    RoleGrantablePermissionsController,
+  ];
+  for (const controller of platformOnlyControllers) {
+    assert.equal(
+      Reflect.getMetadata(AUTH_METADATA.platformOnly, controller),
+      true,
+      `${controller.name} 缺少 @PlatformOnly()`,
+    );
+  }
+  assert.equal(Reflect.getMetadata(AUTH_METADATA.platformOnly, RoleListController), undefined);
   assert.equal(
-    Reflect.getMetadata(AUTH_METADATA.platformOnly, RoleGrantablePermissionsController),
+    Reflect.getMetadata(AUTH_METADATA.platformOnly, UserAssignRolesController),
     undefined,
   );
 });
