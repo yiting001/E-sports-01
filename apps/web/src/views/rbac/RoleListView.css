@@ -143,6 +143,10 @@
   gap: 12px;
 }
 
+.role-form__code {
+  width: 100%;
+}
+
 .role-permission-dialog .el-tree {
   max-height: 440px;
   overflow: auto;
