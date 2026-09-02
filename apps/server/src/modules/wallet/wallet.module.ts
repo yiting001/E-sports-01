@@ -7,6 +7,7 @@ import { WalletEntity } from './domain/wallet.entity';
 import { WalletTransactionEntity } from './domain/wallet-transaction.entity';
 import { RechargeOrderEntity } from './domain/recharge-order.entity';
 import { WithdrawalOrderEntity } from './domain/withdrawal-order.entity';
+import { JqfWalletAccountEntity } from './domain/jqf-wallet-account.entity';
 
 import { WALLET_REPOSITORY } from './domain/wallet-repository.interface';
 import { WALLET_TRANSACTION_REPOSITORY } from './domain/transaction-repository.interface';
@@ -16,11 +17,14 @@ import { WALLET_LEDGER } from './domain/ledger.interface';
 import { PAYMENT_PORTS } from './domain/payment-port.interface';
 import { PAYOUT_PORTS } from './domain/payout-port.interface';
 import { REFUND_PORTS } from './domain/refund-port.interface';
+import { JQF_WALLET_ACCOUNT_REPOSITORY } from './domain/jqf-wallet-account-repository.interface';
+import { JQF_WALLET_OPEN_PORT } from './domain/jqf-wallet-open-port.interface';
 
 import { TypeormWalletRepository } from './infrastructure/wallet.repository';
 import { TypeormTransactionRepository } from './infrastructure/transaction.repository';
 import { TypeormRechargeRepository } from './infrastructure/recharge.repository';
 import { TypeormWithdrawalRepository } from './infrastructure/withdrawal.repository';
+import { TypeormJqfWalletAccountRepository } from './infrastructure/jqf-wallet-account.repository';
 import { TypeormWalletLedger } from './infrastructure/wallet.ledger';
 import {
   TypeormWalletTransactionParticipant,
@@ -39,8 +43,10 @@ import { JqfPayConfigFactory } from './infrastructure/drivers/jqf-pay.config';
 import { JqfWechatPaymentDriver } from './infrastructure/drivers/jqf-wechat-payment.driver';
 import { JqfWechatJsapiPaymentDriver } from './infrastructure/drivers/jqf-wechat-jsapi-payment.driver';
 import { JqfRefundDriver } from './infrastructure/drivers/jqf-refund.driver';
+import { JqfWalletDriver } from './infrastructure/drivers/jqf-wallet.driver';
 
 import { PaymentGatewayService } from './application/payment-gateway.service';
+import { JqfWalletService } from './application/jqf-wallet.service';
 import { PaymentResolver } from './application/payment.resolver';
 import { PayoutResolver } from './application/payout.resolver';
 import { RefundResolver } from './application/refund.resolver';
@@ -98,6 +104,7 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
       WalletTransactionEntity,
       RechargeOrderEntity,
       WithdrawalOrderEntity,
+      JqfWalletAccountEntity,
     ]),
   ],
   controllers: [
@@ -130,6 +137,11 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
       provide: WITHDRAWAL_ORDER_REPOSITORY,
       useClass: TypeormWithdrawalRepository,
     },
+    {
+      provide: JQF_WALLET_ACCOUNT_REPOSITORY,
+      useClass: TypeormJqfWalletAccountRepository,
+    },
+    { provide: JQF_WALLET_OPEN_PORT, useClass: JqfWalletDriver },
     { provide: WALLET_LEDGER, useClass: TypeormWalletLedger },
     {
       provide: WALLET_TRANSACTION_PARTICIPANT,
@@ -182,6 +194,7 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     },
 
     PaymentGatewayService,
+    JqfWalletService,
     PaymentResolver,
     PayoutResolver,
     RefundResolver,
@@ -208,6 +221,7 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
   // 导出支付/退款渠道解析器，供订单复用同一套支付宝/微信配置与驱动
   exports: [
     PaymentGatewayService,
+    JqfWalletService,
     PaymentResolver,
     RefundResolver,
     WalletService,

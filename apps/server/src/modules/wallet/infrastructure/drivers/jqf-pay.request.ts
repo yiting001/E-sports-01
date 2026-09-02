@@ -70,12 +70,13 @@ export async function postJqf(
   cfg: JqfPayConfig,
   path: string,
   params: Record<string, JqfParamValue>,
+  version: string = JQF_API_VERSION,
 ): Promise<Record<string, unknown>> {
   const payload: Record<string, JqfParamValue> = {
     ...params,
     mchNo: cfg.mchNo,
     appId: cfg.appId,
-    version: JQF_API_VERSION,
+    version,
     signType: JQF_SIGN_TYPE,
     reqTime: jqfReqTime(),
   };
