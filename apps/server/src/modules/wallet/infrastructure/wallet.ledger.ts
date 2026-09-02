@@ -17,7 +17,35 @@ import {
   CreditRechargeInput,
   ReserveWithdrawalInput,
   WalletLedger,
+  WithdrawalChannelMeta,
 } from '../domain/ledger.interface';
+
+/** 把渠道快照合并到提现单：只覆写本次有值的字段，避免后到的空值抹掉已知信息。 */
+function applyChannelMeta(
+  order: WithdrawalOrderEntity,
+  meta: Partial<WithdrawalChannelMeta>,
+  now: Date,
+): void {
+  if (meta.providerOrderId) {
+    order.providerOrderId = meta.providerOrderId;
+  }
+  if (meta.channelOrderNo) {
+    order.channelOrderNo = meta.channelOrderNo;
+  }
+  if (meta.channelState) {
+    order.channelState = meta.channelState;
+  }
+  if (meta.channelErrCode !== undefined) {
+    order.channelErrCode = meta.channelErrCode;
+  }
+  if (meta.channelErrMsg !== undefined) {
+    order.channelErrMsg = meta.channelErrMsg;
+  }
+  if (typeof meta.channelFeeFen === 'number') {
+    order.channelFeeFen = meta.channelFeeFen;
+  }
+  order.channelSyncedAt = now;
+}
 
 /**
  * 钱包账务单元的 TypeORM 实现（唯一余额写入口）。
@@ -48,6 +76,7 @@ export class TypeormWalletLedger implements WalletLedger {
       await m.getRepository(WalletEntity).save(wallet);
       order.status = RechargeStatus.Paid;
       order.providerTradeNo = input.providerTradeNo;
+      order.channelFeeFen = input.channelFeeFen ?? 0;
       await m.getRepository(RechargeOrderEntity).save(order);
       await this.appendTxn(m, {
         wallet,
@@ -122,23 +151,43 @@ export class TypeormWalletLedger implements WalletLedger {
 
   async markWithdrawalSuccess(
     orderId: string,
-    providerOrderId: string,
-  ): Promise<void> {
-    await this.dataSource.transaction(async (m) => {
+    meta: WithdrawalChannelMeta,
+  ): Promise<boolean> {
+    return this.dataSource.transaction(async (m) => {
       const order = await m.getRepository(WithdrawalOrderEntity).findOne({
         where: { id: orderId },
+        lock: { mode: 'pessimistic_write' },
       });
       if (!order || order.status !== WithdrawalStatus.Processing) {
-        return;
+        return false;
       }
       order.status = WithdrawalStatus.Success;
-      order.providerOrderId = providerOrderId;
+      order.failReason = null;
+      applyChannelMeta(order, meta, new Date());
       await m.getRepository(WithdrawalOrderEntity).save(order);
       const wallet = await this.lockWallet(m, order.walletId);
       if (wallet) {
         wallet.totalWithdrawFen += order.amountFen;
         await m.getRepository(WalletEntity).save(wallet);
       }
+      return true;
+    });
+  }
+
+  async syncWithdrawalChannel(
+    orderId: string,
+    meta: Partial<WithdrawalChannelMeta>,
+  ): Promise<void> {
+    await this.dataSource.transaction(async (m) => {
+      const order = await m.getRepository(WithdrawalOrderEntity).findOne({
+        where: { id: orderId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!order || order.status !== WithdrawalStatus.Processing) {
+        return;
+      }
+      applyChannelMeta(order, meta, new Date());
+      await m.getRepository(WithdrawalOrderEntity).save(order);
     });
   }
 
@@ -146,17 +195,19 @@ export class TypeormWalletLedger implements WalletLedger {
     orderId: string,
     reason: string,
     toStatus: WithdrawalStatus.Failed | WithdrawalStatus.Rejected,
-  ): Promise<void> {
-    await this.dataSource.transaction(async (m) => {
+    meta: Partial<WithdrawalChannelMeta> = {},
+  ): Promise<boolean> {
+    return this.dataSource.transaction(async (m) => {
       const order = await m.getRepository(WithdrawalOrderEntity).findOne({
         where: { id: orderId },
+        lock: { mode: 'pessimistic_write' },
       });
       const refundable = new Set([
         WithdrawalStatus.Pending,
         WithdrawalStatus.Processing,
       ]);
       if (!order || !refundable.has(order.status)) {
-        return;
+        return false;
       }
       const wallet = await this.lockWallet(m, order.walletId);
       if (wallet) {
@@ -173,7 +224,9 @@ export class TypeormWalletLedger implements WalletLedger {
       }
       order.status = toStatus;
       order.failReason = reason.slice(0, 255);
+      applyChannelMeta(order, meta, new Date());
       await m.getRepository(WithdrawalOrderEntity).save(order);
+      return true;
     });
   }
 

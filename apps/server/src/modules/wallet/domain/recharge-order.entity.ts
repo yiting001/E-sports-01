@@ -31,4 +31,8 @@ export class RechargeOrderEntity extends TenantScopedEntity {
   /** 渠道交易号（支付成功后回填） */
   @Column({ type: 'varchar', length: 64, nullable: true })
   providerTradeNo!: string | null;
+
+  /** 渠道手续费（分，支付成功后由渠道回传，商户承担） */
+  @Column({ type: 'bigint', default: 0, transformer: bigintTransformer })
+  channelFeeFen!: number;
 }

@@ -175,6 +175,10 @@ export class OrderEntity extends TenantScopedEntity {
   @Column({ name: 'paid_at', type: 'timestamptz', nullable: true })
   paidAt!: Date | null;
 
+  /** 支付渠道手续费（分，支付成功后由渠道回传，商户承担） */
+  @Column({ name: 'channel_fee_fen', type: 'bigint', default: 0, transformer: bigintTransformer })
+  channelFeeFen!: number;
+
   /** 下发接单大厅时间（客服下发时回填） */
   @Column({ name: 'dispatched_at', type: 'timestamptz', nullable: true })
   dispatchedAt!: Date | null;

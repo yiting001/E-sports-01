@@ -26,6 +26,7 @@ export class HandleRechargeCallbackUseCase {
         outTradeNo: result.outTradeNo,
         providerTradeNo: result.providerTradeNo,
         paidAmountFen: result.paidAmountFen,
+        channelFeeFen: result.channelFeeFen ?? null,
       });
     }
     return port.callbackAck();

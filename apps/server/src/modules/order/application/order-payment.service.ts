@@ -43,12 +43,14 @@ export class OrderPaymentSettleService {
     method: OrderPaymentMethod,
     providerTradeNo: string,
     paidAmountFen: number,
+    channelFeeFen: number | null = null,
   ): Promise<void> {
     const paidOrder = await this.settlement.settle({
       orderNo,
       method,
       providerTradeNo,
       paidAmountFen,
+      channelFeeFen,
     });
     await this.runPostCommitEffects(paidOrder);
   }

@@ -6,7 +6,7 @@ import {
   RechargeCreateInput,
 } from '../../domain/payment-port.interface';
 import { JqfPayConfig } from './jqf-pay.config';
-import { postJqf, verifyJqfSign } from './jqf-pay.request';
+import { postJqf, readJqfFen, readJqfInt, verifyJqfSign } from './jqf-pay.request';
 
 /** 统一下单路径 */
 const UNIFIED_ORDER_PATH = 'api/pay/unifiedOrder';
@@ -62,33 +62,22 @@ export async function queryJqfTrade(
   outTradeNo: string,
 ): Promise<PaymentQueryResult> {
   const data = await postJqf(cfg, QUERY_PATH, { mchOrderNo: outTradeNo });
-  const state = data.state;
+  const state = readJqfInt(data.state);
   const payOrderId = data.payOrderId;
-  const amount = data.amount;
-  if (typeof state !== 'number' || typeof payOrderId !== 'string') {
+  const amount = readJqfInt(data.amount);
+  if (state === null || typeof payOrderId !== 'string') {
     throw new BadGatewayException('计全付查单响应格式异常');
   }
   const paid = state === STATE_SUCCESS;
+  if (paid && (amount === null || amount <= 0)) {
+    throw new BadGatewayException('计全付查单支付金额异常');
+  }
   return {
     paid,
     providerTradeNo: payOrderId,
-    paidAmountFen: paid && typeof amount === 'number' && Number.isSafeInteger(amount) ? amount : 0,
+    paidAmountFen: paid && amount !== null ? amount : 0,
+    channelFeeFen: readJqfFen(data.mchFeeAmount),
   };
-}
-
-/**
- * 解析计全付通知中的整数字段：异步通知以 application/x-www-form-urlencoded 送达，
- * 数值字段（state/amount）到达时为字符串，需与 JSON 数值同等接受。
- */
-function readJqfInt(value: unknown): number | null {
-  if (typeof value === 'number') {
-    return Number.isSafeInteger(value) ? value : null;
-  }
-  if (typeof value === 'string' && /^-?\d+$/.test(value)) {
-    const parsed = Number(value);
-    return Number.isSafeInteger(parsed) ? parsed : null;
-  }
-  return null;
 }
 
 /**
@@ -121,6 +110,7 @@ export function parseJqfCallback(
     providerTradeNo: payOrderId,
     paidAmountFen,
     success,
+    channelFeeFen: readJqfFen(req.body.mchFeeAmount),
   };
 }
 

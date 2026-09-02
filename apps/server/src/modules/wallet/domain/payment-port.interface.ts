@@ -41,6 +41,8 @@ export interface PaymentQueryResult {
   providerTradeNo: string;
   /** 实付金额（分，已支付时有值） */
   paidAmountFen: number;
+  /** 渠道向平台收取的手续费（分）；渠道未返回或不支持时为 null */
+  channelFeeFen?: number | null;
 }
 
 /** 支付渠道回调解析结果 */
@@ -53,6 +55,8 @@ export interface PaymentCallbackResult {
   paidAmountFen: number;
   /** 是否支付成功 */
   success: boolean;
+  /** 渠道向平台收取的手续费（分）；渠道未返回或不支持时为 null */
+  channelFeeFen?: number | null;
 }
 
 /**

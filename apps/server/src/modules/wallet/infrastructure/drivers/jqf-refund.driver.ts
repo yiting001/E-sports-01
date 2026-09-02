@@ -23,12 +23,13 @@ const REFUND_NOT_FOUND_TEXTS = ['退款订单不存在', '原订单不存在'];
 
 /**
  * 计全付原路退款驱动（微信 Native 与 JSAPI 共用商户号，统一走本驱动）。
+ * 计全付退款接口不区分支付方式（按 mchOrderNo 原路退回），支付宝变体仅改变 provider 标识。
  * 幂等键为 mchRefundNo；请求传输失败或状态无法确认时抛 RefundOutcomeUnknownError，
  * 由上层保留处理中状态后主动查询。
  */
 @Injectable()
 export class JqfRefundDriver implements RefundPort {
-  readonly provider = PaymentProvider.JqfWechat;
+  readonly provider: PaymentProvider = PaymentProvider.JqfWechat;
 
   constructor(private readonly configFactory: JqfPayConfigFactory) {}
 
@@ -98,6 +99,12 @@ export class JqfRefundDriver implements RefundPort {
       throw new RefundOutcomeUnknownError('计全付退款业务结果无法确认');
     }
   }
+}
+
+/** 计全付支付宝二维码支付的原路退款（与微信共用商户号与退款接口）。 */
+@Injectable()
+export class JqfAlipayRefundDriver extends JqfRefundDriver {
+  override readonly provider: PaymentProvider = PaymentProvider.JqfAlipay;
 }
 
 /** 判断错误是否为「退款单不存在」类业务失败。 */

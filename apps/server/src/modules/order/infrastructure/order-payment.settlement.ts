@@ -50,6 +50,7 @@ export class TypeormOrderPaymentSettlement implements OrderPaymentSettlement {
       await this.increaseProductSales(manager, order);
       await this.recordMemberSpend(manager, order);
       this.markOrderPaid(order, input.providerTradeNo);
+      order.channelFeeFen = input.channelFeeFen ?? 0;
       await orderRepo.save(order);
       return order;
     });
