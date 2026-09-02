@@ -12,6 +12,7 @@ export class RemoveRoleUseCase {
   constructor(
     @Inject(ROLE_REPOSITORY)
     private readonly roleRepo: Pick<RoleRepository, 'findById' | 'remove'>,
+    @Inject(PermissionResolver)
     private readonly resolver: Pick<PermissionResolver, 'invalidateAll'>,
   ) {}
 
