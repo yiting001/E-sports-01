@@ -92,13 +92,15 @@ test('非默认租户即使存在 admin 角色也不能获得平台超管旁路'
   assert.equal((await resolver.resolve(user.id)).isSuper, false);
 });
 
-test('普通角色创建入口拒绝保留的 admin 编码', async () => {
+test('通用角色创建入口允许补建租户内缺失的内置编码，已存在时仍按重复拒绝', async () => {
+  const existing = [makeRole('role-admin', 'tenant-a', SUPER_ADMIN_ROLE)];
   const roleRepo: Pick<
     RoleRepository,
     'existsByCode' | 'findByCodeForTenant' | 'create' | 'save'
   > = {
-    existsByCode: async () => false,
-    findByCodeForTenant: async () => null,
+    existsByCode: async (code) => existing.some((role) => role.code === code),
+    findByCodeForTenant: async (code, tenantId) =>
+      existing.find((role) => role.code === code && role.tenantId === tenantId) ?? null,
     create: (data: Partial<Role>) =>
       Object.assign(makeRole('created-role', 'tenant-a', data.code ?? 'role'), data),
     save: async (role: Role) => role,
@@ -106,12 +108,21 @@ test('普通角色创建入口拒绝保留的 admin 编码', async () => {
   const tenantRepo: Pick<TenantRepository, 'findById'> = {
     findById: async () => null,
   };
-  const useCase = new CreateRoleUseCase(roleRepo, tenantRepo, new TenantContextService());
+  const tenantContext = new TenantContextService();
+  const useCase = new CreateRoleUseCase(roleRepo, tenantRepo, tenantContext);
 
-  await assert.rejects(
-    useCase.execute({ code: SUPER_ADMIN_ROLE, name: '伪超管' }),
-    (error: unknown) => error instanceof ConflictException,
-  );
+  await tenantContext.run({ tenantId: 'tenant-a', isSuper: false }, async () => {
+    const created = await useCase.execute({ code: 'service', name: '客服' });
+    assert.equal(created.code, 'service');
+    assert.equal(created.isBuiltin, true);
+    assert.equal(created.isSuper, false);
+
+    await assert.rejects(
+      useCase.execute({ code: SUPER_ADMIN_ROLE, name: '重复超管' }),
+      (error: unknown) =>
+        error instanceof ConflictException && error.message === '角色编码已存在',
+    );
+  });
 });
 
 test('用户只能绑定与自己同租户的角色，平台超管也不能建立跨租户关联', async () => {

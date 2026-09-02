@@ -1,3 +1,4 @@
+import type { RoleListQuery } from '@app/contracts';
 import { Role } from './role.entity';
 
 export const ROLE_REPOSITORY = Symbol('ROLE_REPOSITORY');
@@ -12,7 +13,8 @@ export interface RoleRepository {
   /** 启动播种用：查询指定租户之外的全部角色（含权限）。 */
   findAllOutsideTenant(tenantId: string): Promise<Role[]>;
   existsByCode(code: string): Promise<boolean>;
-  paginate(skip: number, take: number, keyword?: string): Promise<[Role[], number]>;
+  /** 分页查询：keyword 模糊匹配名称/编码，code 精确匹配，kind 按内置/自定义分类。 */
+  paginate(skip: number, take: number, filter?: RoleListQuery): Promise<[Role[], number]>;
   create(data: Partial<Role>): Role;
   save(role: Role): Promise<Role>;
   remove(id: string): Promise<void>;

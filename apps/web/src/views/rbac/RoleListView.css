@@ -86,9 +86,33 @@
   background: var(--el-color-success-light-9);
 }
 
+.role-type.is-builtin {
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}
+
 .role-type.is-super {
   color: var(--el-color-warning);
   background: var(--el-color-warning-light-9);
+}
+
+.role-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+
+.role-filter .el-form-item {
+  margin-bottom: 8px;
+}
+
+.role-filter__keyword {
+  width: 240px;
+}
+
+.role-filter__category {
+  width: 200px;
 }
 
 .role-permission-count {

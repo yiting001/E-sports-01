@@ -126,8 +126,15 @@ flowchart LR
 - **角色管理边界**：`POST/PATCH/DELETE /rbac/roles`、`PUT /rbac/roles/:id/permissions`、
   `GET /rbac/roles/grantable-permissions` 仅默认租户平台超管可用；租户管理员只能查看本租户角色，
   并通过 `PUT /rbac/users/:id/roles` 把本租户已有角色分配给本租户用户（绑定跨租户角色返回 403）。
-- **内置角色生命周期**：`admin`、`tenant_admin`、`member`、`service`、`booster` 由系统播种或领域流程
-  维护，通用删除接口返回 409；自定义角色仍可删除。
+- **内置角色生命周期**：`admin`、`tenant_admin`、`member`、`service`、`booster`（contracts
+  `BUILTIN_ROLE_OPTIONS`，服务端 `RESERVED_ROLE_CODES` 同源）由系统播种或领域流程维护；若某租户内缺失，
+  平台超管可通过 `POST /rbac/roles` 直接补建，仅受租户内编码唯一约束（重复返回 409 `角色编码已存在`）。
+  非默认租户内补建的 `admin` 不会获得平台超管旁路（`PermissionResolver` 仅承认默认租户的 `admin`）。
+  通用删除接口对内置编码返回 409；自定义角色仍可删除。`RoleView.isBuiltin` 标识内置编码，
+  `isSuper` 仅标识 `admin`。
+- **角色列表筛选**：`GET /rbac/roles` 支持 `keyword`（名称/编码模糊）、`code`（编码精确，用于按内置编码
+  分类查看）、`kind=builtin|custom`（内置/自定义分类），均经 `ListRolesQueryDto` 校验；`code` 与 `kind`
+  同时传入时以 `code` 为准，`keyword` 与编码条件叠加时只匹配名称。查询仍经租户作用域过滤。
 
 ## 权限颗粒度
 
@@ -191,6 +198,8 @@ flowchart TD
 已实现能力：
 
 - 角色总数、内置角色、可配置角色、已绑定权限四类概览。
+- 筛选栏：按名称/编码关键词搜索，按编码分类（全部 / 各内置编码 / 自定义角色）查看；搜索、改分类、重置均回到第一页。
+- 新建角色可直接填内置编码补建（租户内重复时后端 409）；类型列区分内置超管 / 内置·xx / 自定义角色，内置编码行删除按钮禁用。
 - 角色目录保持表格视图，窄屏通过目录容器横向滚动。
 - 目录表格复用 `AppDataTable`，避免不同 RBAC 页面重复维护滚动容器样式。
 - 分页使用 Element Plus `sizes`，支持选择每页 10/20/50/100 条并回到第一页重新查询。

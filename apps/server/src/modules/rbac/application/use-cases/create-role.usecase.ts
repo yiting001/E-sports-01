@@ -13,7 +13,6 @@ import {
   TenantRepository,
 } from '../../domain/tenant-repository.interface';
 import { toRoleView } from '../role.mapper';
-import { RESERVED_ROLE_CODE_SET } from '../../domain/rbac.constants';
 
 /** 创建角色入参 */
 export interface CreateRoleInput {
@@ -24,7 +23,7 @@ export interface CreateRoleInput {
   tenantId?: string;
 }
 
-/** 用例：创建角色（可选择所属租户） */
+/** 用例：创建角色（可选择所属租户；内置编码在租户内缺失时同样可补建，只受租户内唯一约束） */
 @Injectable()
 export class CreateRoleUseCase {
   constructor(
@@ -39,9 +38,6 @@ export class CreateRoleUseCase {
   ) {}
 
   async execute(input: CreateRoleInput): Promise<RoleView> {
-    if (RESERVED_ROLE_CODE_SET.has(input.code)) {
-      throw new ConflictException('内置角色编码不能通过通用入口创建');
-    }
     const tenantId = await this.resolveTenantId(input.tenantId);
     const duplicated = tenantId
       ? (await this.roleRepo.findByCodeForTenant(input.code, tenantId)) !== null

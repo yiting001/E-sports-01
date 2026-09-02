@@ -6,6 +6,7 @@ import { PermissionResolver } from '../../src/modules/rbac/application/permissio
 import { RESERVED_ROLE_CODES } from '../../src/modules/rbac/domain/rbac.constants';
 import { Role } from '../../src/modules/rbac/domain/role.entity';
 import type { RoleRepository } from '../../src/modules/rbac/domain/role-repository.interface';
+import type { RoleListQuery } from '@app/contracts';
 
 class MemoryRoleRepository implements RoleRepository {
   private readonly roles = new Map<string, Role>();
@@ -48,7 +49,8 @@ class MemoryRoleRepository implements RoleRepository {
     return Promise.resolve([...this.roles.values()].some((role) => role.code === code));
   }
 
-  paginate(skip: number, take: number, keyword?: string): Promise<[Role[], number]> {
+  paginate(skip: number, take: number, filter: RoleListQuery = {}): Promise<[Role[], number]> {
+    const keyword = filter.keyword;
     const found = [...this.roles.values()].filter(
       (role) => !keyword || role.code.includes(keyword) || role.name.includes(keyword),
     );
