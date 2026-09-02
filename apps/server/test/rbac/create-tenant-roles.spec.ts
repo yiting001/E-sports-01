@@ -28,10 +28,11 @@ function makePermission(code: string): Permission {
   });
 }
 
-test('创建租户时一次性播种管理员、会员、客服和打手四类基础角色', async () => {
+test('创建租户时一次性播种四类基础角色，租户管理员不带任何权限', async () => {
   const permissions = [
     makePermission(PERMS.tenant.list),
     makePermission(PERMS.permission.list),
+    makePermission(PERMS.order.list),
     ...PLATFORM_ONLY_PERMISSION_CODES.map(makePermission),
     ...SERVICE_ROLE_PERMISSION_CODES.map(makePermission),
   ];
@@ -79,19 +80,7 @@ test('创建租户时一次性播种管理员、会员、客服和打手四类�
     [TENANT_ADMIN_ROLE, MEMBER_ROLE, SERVICE_ROLE, BOOSTER_ROLE_CODE],
   );
   const tenantAdmin = savedRoles.find((role) => role.code === TENANT_ADMIN_ROLE);
-  assert.equal(
-    tenantAdmin?.permissions.some((permission) => permission.code.startsWith('rbac:tenant:')),
-    false,
-  );
-  assert.equal(
-    tenantAdmin?.permissions.some((permission) => permission.code.startsWith('rbac:permission:')),
-    false,
-  );
-  const platformOnlyPermissionCodes = new Set<string>(PLATFORM_ONLY_PERMISSION_CODES);
-  assert.equal(
-    tenantAdmin?.permissions.some((permission) => platformOnlyPermissionCodes.has(permission.code)),
-    false,
-  );
+  assert.deepEqual(tenantAdmin?.permissions, []);
   const service = savedRoles.find((role) => role.code === SERVICE_ROLE);
   assert.deepEqual(
     new Set(service?.permissions.map((permission) => permission.code)),

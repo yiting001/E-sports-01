@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, In, Repository } from 'typeorm';
+import { ILike, In, Not, Repository } from 'typeorm';
 import type { FindOptionsWhere } from 'typeorm';
 import { TenantContextService } from '../../../shared/tenant/tenant-context.service';
 import { withTenant } from '../../../shared/tenant/tenant-scope.util';
@@ -47,8 +47,8 @@ export class TypeormRoleRepository implements RoleRepository {
     });
   }
 
-  findAllByCode(code: string): Promise<Role[]> {
-    return this.repo.find({ where: { code }, relations: { permissions: true } });
+  findAllOutsideTenant(tenantId: string): Promise<Role[]> {
+    return this.repo.find({ where: { tenantId: Not(tenantId) }, relations: { permissions: true } });
   }
 
   async existsByCode(code: string): Promise<boolean> {

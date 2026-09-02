@@ -40,8 +40,8 @@ class MemoryRoleRepository implements RoleRepository {
     );
   }
 
-  findAllByCode(code: string): Promise<Role[]> {
-    return Promise.resolve([...this.roles.values()].filter((role) => role.code === code));
+  findAllOutsideTenant(tenantId: string): Promise<Role[]> {
+    return Promise.resolve([...this.roles.values()].filter((role) => role.tenantId !== tenantId));
   }
 
   existsByCode(code: string): Promise<boolean> {

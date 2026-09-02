@@ -9,8 +9,8 @@ export interface RoleRepository {
   findByCode(code: string): Promise<Role | null>;
   /** 启动播种和跨租户平台流程用：显式限定租户查询角色。 */
   findByCodeForTenant(code: string, tenantId: string): Promise<Role | null>;
-  /** 启动播种用：跨租户查询同一内置角色码。 */
-  findAllByCode(code: string): Promise<Role[]>;
+  /** 启动播种用：查询指定租户之外的全部角色（含权限）。 */
+  findAllOutsideTenant(tenantId: string): Promise<Role[]>;
   existsByCode(code: string): Promise<boolean>;
   paginate(skip: number, take: number, keyword?: string): Promise<[Role[], number]>;
   create(data: Partial<Role>): Role;

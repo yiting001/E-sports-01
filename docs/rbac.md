@@ -14,7 +14,7 @@ JWT **双令牌**（access + refresh）鉴权，超级管理员走 bypass 拥有
 - **鉴权基础设施**：JWT、租户访问与权限三段守卫；`@TenantPublic` 建立免登录租户上下文，
   `@PlatformOnly` 保护租户/权限目录，`@Permissions` 校验业务权限。
 - **权限实时解析**：`PermissionResolver` 每次从用户真实角色聚合权限，不做跨请求缓存，用户停用、撤权和租户停用立即生效。
-- **启动播种**：创建超级管理员角色 `admin` 与初始管理员账号，按权限码登记处播种 api 权限，并按 contracts `MENU_DEFINITIONS` 播种 menu 权限（菜单码按「业务命名空间 + `:menu`」组织，如 `rbac:user:menu`、`im:service:menu`，使其与同域接口/按钮权限归并到同一棵权限树；启动时清理不在清单内的历史 menu 权限）。新增内置角色权限需幂等补齐；退款审核权限实际补给存量 `tenant_admin`。
+- **启动播种**：创建超级管理员角色 `admin` 与初始管理员账号，按权限码登记处播种 api 权限，并按 contracts `MENU_DEFINITIONS` 播种 menu 权限（菜单码按「业务命名空间 + `:menu`」组织，如 `rbac:user:menu`、`im:service:menu`，使其与同域接口/按钮权限归并到同一棵权限树；启动时清理不在清单内的历史 menu 权限）。内置角色只在缺失时新建（新建的 `tenant_admin`、`member`、`booster` 不带权限，`service` 带客服工作台默认权限）；**已存在的角色不回填、不新增任何权限**，管理员手动收窄的授权不会因部署/重启而恢复。启动时唯一的角色权限写操作是从非默认租户角色中剔除平台级权限（只删不增）。
 - **可见菜单下发**：`GET /rbac/menus/mine` 返回当前用户可见菜单（按其授权码过滤，超管全量），前端据此渲染菜单并动态注册路由。
 
 ## 目录结构（DDD 四层）
@@ -119,9 +119,13 @@ flowchart LR
 - `@CurrentUser()`：将解析出的登录身份注入控制器方法参数。
 - **超管 bypass**：用户和 `admin` 角色必须都属于固定默认租户才产生 `isSuper`；子租户
   创建同名角色不能越权。其 profile 的显式 `permissions` 为空，前端据 `isSuper` 放行。
-- **租户管理员边界**：内置 `tenant_admin` 不授予租户/权限目录，也不授予会员等级、
-  打手等级、押金策略、实名策略和邀请奖励五类平台全局写权限；对应 Controller 同时由
-  `@PlatformOnly()` 作后端二次保护。
+- **租户管理员边界**：内置 `tenant_admin` 创建时不带任何权限，由平台超管在角色授权页按需授予；
+  可授予范围排除平台级权限——租户/权限目录、会员等级、打手等级、押金策略、实名策略、邀请奖励
+  五类全局写权限，以及角色的创建/修改/删除/授权四个角色管理写权限（`isPlatformOnlyPermission`）。
+  对应 Controller 同时由 `@PlatformOnly()` 作后端二次保护，启动播种器还会剔除租户角色中遗留的平台级权限。
+- **角色管理边界**：`POST/PATCH/DELETE /rbac/roles`、`PUT /rbac/roles/:id/permissions`、
+  `GET /rbac/roles/grantable-permissions` 仅默认租户平台超管可用；租户管理员只能查看本租户角色，
+  并通过 `PUT /rbac/users/:id/roles` 把本租户已有角色分配给本租户用户（绑定跨租户角色返回 403）。
 - **内置角色生命周期**：`admin`、`tenant_admin`、`member`、`service`、`booster` 由系统播种或领域流程
   维护，通用删除接口返回 409；自定义角色仍可删除。
 
