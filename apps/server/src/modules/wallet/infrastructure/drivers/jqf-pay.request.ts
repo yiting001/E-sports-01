@@ -18,17 +18,13 @@ interface JqfEnvelope {
 }
 
 /**
- * 计全付 MD5 签名：过滤空值与 sign 字段 → 按 key ASCII 字典序（不区分大小写）排序
- * → 拼 key1=value1&key2=value2 → 末尾追加 &key=apiKey → MD5 转大写。
+ * 计全付 MD5 签名（技术规范 pageId=213）：过滤空值与 sign 字段 → 参数名区分大小写、
+ * 按 ASCII 码从小到大排序 → 拼 key1=value1&key2=value2 → 末尾追加 &key=apiKey → MD5 转大写。
  */
 export function signJqfParams(params: Record<string, JqfParamValue>, apiKey: string): string {
   const pairs = Object.entries(params)
     .filter(([key, value]) => key !== 'sign' && value !== undefined && String(value) !== '')
-    .sort(([a], [b]) => {
-      const la = a.toLowerCase();
-      const lb = b.toLowerCase();
-      return la < lb ? -1 : la > lb ? 1 : 0;
-    })
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([key, value]) => `${key}=${String(value)}`);
   const source = `${pairs.join('&')}&key=${apiKey}`;
   return createHash('md5').update(source, 'utf8').digest('hex').toUpperCase();
@@ -52,14 +48,43 @@ export function verifyJqfSign(body: Record<string, unknown>, apiKey: string): bo
   return signJqfParams(params, apiKey) === sign.toUpperCase();
 }
 
-/** 请求时间戳，格式 yyyyMMddHHmmss（东八区）。 */
+/** 请求时间戳：接口文档约定为 13 位毫秒时间戳。 */
 export function jqfReqTime(now = new Date()): string {
-  const cst = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-  const pad = (n: number): string => String(n).padStart(2, '0');
-  return (
-    `${cst.getUTCFullYear()}${pad(cst.getUTCMonth() + 1)}${pad(cst.getUTCDate())}` +
-    `${pad(cst.getUTCHours())}${pad(cst.getUTCMinutes())}${pad(cst.getUTCSeconds())}`
-  );
+  return String(now.getTime());
+}
+
+/**
+ * 读取计全付整数字段：异步通知以 application/x-www-form-urlencoded 送达，
+ * 数值字段（state/amount）到达时为字符串，需与 JSON 数值同等接受。
+ */
+export function readJqfInt(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isSafeInteger(value) ? value : null;
+  }
+  if (typeof value === 'string' && /^-?\d+$/.test(value)) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+/**
+ * 读取计全付以「分」计的金额字段（如手续费 mchOrderFeeAmount 为 BigDecimal 形式 `800.000000`），
+ * 四舍五入到整数分；缺失或非法返回 null。
+ */
+export function readJqfFen(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Math.round(value) : null;
+  }
+  if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value)) {
+    return Math.round(Number(value));
+  }
+  return null;
+}
+
+/** 读取可选字符串字段（空串视为缺失）。 */
+export function readJqfString(value: unknown): string | null {
+  return typeof value === 'string' && value !== '' ? value : null;
 }
 
 /**

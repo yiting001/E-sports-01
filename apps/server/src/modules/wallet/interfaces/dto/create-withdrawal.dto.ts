@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsString, Length, Matches, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Length, Matches, Min } from 'class-validator';
 import {
   CreateWithdrawalBody,
   ID_CARD_NO_PATTERN,
@@ -15,10 +15,11 @@ export class CreateWithdrawalDto implements CreateWithdrawalBody {
   @IsEnum(PayoutProvider)
   provider!: PayoutProvider;
 
-  /** 收款方支付宝登录号（邮箱/手机号） */
+  /** 收款方支付宝登录号（邮箱/手机号）；微信零钱无需填写，服务端取绑定的 openid */
+  @IsOptional()
   @IsString()
   @Length(1, 128)
-  account!: string;
+  account?: string;
 
   /** 收款方真实姓名 */
   @IsString()

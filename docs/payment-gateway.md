@@ -5,16 +5,17 @@
 **目标**
 
 - 把「支付方式」（微信扫码 / 微信公众号 JSAPI / 支付宝）与「执行网关」（官方直连 / 计全付聚合）解耦：同一支付方式可在管理端「支付配置」页一键切换网关，业务层（订单、充值、退款）不感知网关差异。
-- 接入计全付（jeepay 协议，见仓库根目录 `jqfpay-skill/`）：微信扫码（WX_NATIVE）、微信公众号（WX_JSAPI）下单、查单、异步回调验签、原路退款。
-- 支付配置可视化：管理端新增「支付配置」菜单页，平台超管可维护网关开关与计全付凭证（网关地址 / mchNo / appId / apiKey）。
+- 接入计全付（jeepay 协议，见仓库根目录 `jqfpay-skill/`）：微信扫码（WX_NATIVE）、微信公众号（WX_JSAPI）、支付宝扫码（ALI_QR）下单、查单、异步回调验签、原路退款；用户提现走计全付转账（`api/transferOrder`，支付宝 ALIPAY_CASH / 微信零钱 WX_CASH），结果由转账通知 + 主动查单收敛（提现状态机见 [wallet.md](./wallet.md)）。
+- 平台内部钱包仍是主账本（余额/冻结/流水/展示）；充值、订单支付、退款、提现的真实资金经计全付渠道处理，渠道手续费（计全付 `mchFeeAmount` / `mchOrderFeeAmount + mchApicostFeeAmount`）落到充值单/订单/提现单的 `channelFeeFen` 供财务对账。
+- 支付配置可视化：管理端「支付配置」菜单页，平台超管可维护微信支付 / 支付宝支付 / 用户提现三个网关开关与计全付凭证（网关地址 / mchNo / appId / apiKey）。
 - 同步跳转回应用：复用官方渠道支付成功后的既有落点，不新增支付结果页。下单上送 `returnUrl=…/#/orders/{payRef}`（服务端替换为订单 id → 直接回订单详情），充值上送发起充值的页面地址（钱包页 / 结算页，服务端追加 `payRef=充值单号`）；计全付支付完成后携 `returnPageAction` 跳回，目标页**以服务端查单结果为准**再走原有成功处理（订单详情提示已支付；钱包/结算页刷新余额与流水）。
 - 充值支持微信公众号 JSAPI：微信内且后台开启 `wallet.wechat.jsapiEnabled` 时，充值直接拉起微信收银台（与订单结算页一致），不再只能展示二维码。
 
 **非目标**
 
-- 计全付当前不支持支付宝，支付宝网关固定官方渠道（配置键 `wallet.payment.alipayGateway` 为预留位）。
-- 不涉及提现（付款）渠道切换；不接入计全付钱包 / 转账 / 分账能力。
-- 不改动订单 / 充值 / 退款的业务状态机与数据模型（无新增表、无 migration）。
+- 不接入计全付「钱包」产品（特约商户托管钱包，需身份证+银行卡开户，不支持提到微信零钱/支付宝），也不调用商户自身余额提现 `api/cashout`。
+- 不接入计全付分账：分账需先绑定接收方且比例受通道上限约束（微信官方默认 30%），与平台打手提成比例冲突，属业务模式决策，提成仍由内部钱包记账。
+- 不改动订单 / 充值 / 退款 / 提现的业务状态机；数据模型仅新增渠道手续费与提现渠道快照字段（migration `1786500000000`）。
 - 同步跳转参数（`returnPageAction` 等）不作为支付成功依据，入账仍只由异步回调与主动查单完成；不新增对账定时任务。
 
 ## 2. 目录结构与分层职责
@@ -33,7 +34,12 @@ apps/server/src/modules/wallet/
     ├── jqf-pay.trade.ts               # 统一下单/查单/回调解析等交易公共函数
     ├── jqf-wechat-payment.driver.ts   # 计全微信扫码（WX_NATIVE，payDataType=codeUrl）
     ├── jqf-wechat-jsapi-payment.driver.ts # 计全微信公众号（WX_JSAPI，payData 为 JSBridge 拉起参数）
-    └── jqf-refund.driver.ts           # 计全原路退款（Native/JSAPI 共用）
+    ├── jqf-alipay-payment.driver.ts   # 计全支付宝扫码（ALI_QR）
+    ├── jqf-refund.driver.ts           # 计全原路退款（微信 Native/JSAPI 与支付宝各一个 provider）
+    └── jqf-transfer.driver.ts         # 计全转账：支付宝 ALIPAY_CASH / 微信零钱 WX_CASH（发起/查单/通知验签）
+apps/server/src/modules/wallet/application/
+    ├── withdrawal-settlement.service.ts        # 提现渠道结果 → 账本状态收敛（审核/通知/查单共用）
+    └── use-cases/handle-withdrawal-callback.usecase.ts / sync-withdrawal.usecase.ts
 
 apps/web/src/views/finance/PaymentConfigView.vue   # 管理端「支付配置」页
 packages/contracts/src/wallet/wallet.ts            # PaymentProvider 新增 jqf_* 渠道、PaymentGateway 枚举、回跳契约 PAY_RETURN_URL_MAX_LENGTH/PAY_RETURN_REF_PLACEHOLDER/PAY_RETURN_QUERY_KEYS
@@ -118,12 +124,14 @@ stateDiagram-v2
 | 配置键 | 说明 |
 | --- | --- |
 | `wallet.payment.wechatGateway` | 微信支付网关：`official` 官方直连 / `jqf` 计全付（扫码与 JSAPI 一起切换） |
-| `wallet.payment.alipayGateway` | 支付宝网关：当前仅 `official` 生效（`jqf` 预留位） |
+| `wallet.payment.alipayGateway` | 支付宝网关：`official` 官方直连 / `jqf` 计全付（ALI_QR 扫码，退款走 `JqfAlipayRefundDriver`） |
+| `wallet.payout.gateway` | 提现网关，默认 `jqf` 计全付转账（支付宝 + 微信零钱；普通用户 / 打手 / 客服钱包提现共用）/ `official` 官方支付宝转账；提现单创建时固定执行渠道 |
+| `wallet.notifyBaseUrl` | 回调公网基地址；转账通知为 `{notifyBaseUrl}/wallet/withdrawal/callback/{jqf_alipay\|jqf_wechat}` |
 | `wallet.jqf.apiBase` | 计全付网关地址（必须 `https://`，末尾不带 `/`） |
 | `wallet.jqf.mchNo` / `wallet.jqf.appId` | 计全付商户号与应用 appId |
 | `wallet.jqf.apiKey` | 接口私钥（**敏感项密文保存，不回显**；编辑留空表示保持原值） |
 
-- 渠道枚举：`PaymentProvider` 新增 `jqf_wechat` / `jqf_wechat_jsapi`；回调路由 `/wallet/recharge/callback/:provider`、`/order/pay/callback/:provider` 复用现有控制器，按渠道分发驱动。
+- 渠道枚举：`PaymentProvider` 新增 `jqf_wechat` / `jqf_wechat_jsapi` / `jqf_alipay`，`PayoutProvider` 新增 `jqf_alipay` / `jqf_wechat`；回调路由 `/wallet/recharge/callback/:provider`、`/order/pay/callback/:provider` 复用现有控制器，按渠道分发驱动。
 - 订单支付方式不感知网关：`toOrderPaymentMethod` 把计全渠道回归对应微信支付方式；充值单持久化实际执行渠道，回调/查单不受后续网关切换影响。
 - 计全付协议要点：MD5 签名（key ASCII 字典序 + `&key=apiKey` 后取大写 MD5）、金额单位分、`reqTime` 东八区 `yyyyMMddHHmmss`、支付成功 `state=2`、应答 `SUCCESS`。
 - 异步回调为表单编码，`state`/`amount` 到达时是字符串：`parseJqfCallback` 接受十进制整数字符串，非整数（如 `5.00`、`paid`）拒绝；回调 `mchNo`/`appId` 必须与配置一致；成功回调缺金额或金额非法拒绝。入账时仍由订单/充值回调用例比对单据金额并幂等。
@@ -157,12 +165,14 @@ stateDiagram-v2
 - 单测 `apps/server/test/wallet/create-recharge.spec.ts`：回跳地址（`{payRef}` 占位符替换与编码 / 无占位符追加 payRef / 已带 query / `?x#/...` / 超长拒绝）、Native 充值透传 returnUrl 且 `jsapiParams=null`、JSAPI 充值解析 openid 并返回拉起参数、低于下限不落充值单。
 - C 端 Vitest `apps/client/src/utils/pay-return.spec.ts` / `composables/use-pay-return-recharge.spec.ts`：回跳地址生成、回跳访问识别、payRef 读取（hash query / location.search）与清理、充值查单结果映射（paid/pending/closed/error）。
 - 既有订单用例单测通过直通网关桩（`test/order/payment-gateway.stub.ts`）聚焦自身逻辑。
-- 已运行：`pnpm lint` / `pnpm typecheck` / `pnpm build` / `pnpm build:server` / `git diff --check` 通过；web/client Vitest 全绿；server `node --test` 281 例中 280 通过，唯一失败为既有 `RbacSeeder` 用例依赖 `NODE_ENV` 环境变量，与支付无关。真实计全付回调/跳转未在沙箱环境验证（无商户凭证）。
+- 提现链路单测 `test/wallet/jqf-transfer.spec.ts`（转账驱动：状态映射/验签/手续费/发起失败分类/查单）与 `test/wallet/withdrawal-settlement.spec.ts`（审核、通知、查单三条路径的状态收敛与幂等），详见 [wallet.md](./wallet.md)。
+- 真实计全付回调/跳转/转账未在沙箱环境验证（无商户凭证），上线后需小额实测；本地验证结果以每次交付汇报为准。
 
 ## 9. 尚未实现与后续路线
 
-- 计全付支付宝（渠道方开放后：新增 ALI_* 驱动 + `resolveAlipayGateway` 映射即可）。
-- 计全付回调通知的对账任务（当前依赖异步通知 + 用户侧查单兜底，与官方渠道一致）。
+- 计全付回调通知的对账任务（当前依赖异步通知 + 用户侧查单兜底，与官方渠道一致）；提现「转账中」单据目前由财务手动同步，定时自动同步待后续。
+- 计全付分账（接收方绑定 + 通道比例上限）需业务确认后再评估。
+- 官方微信商家转账驱动仍为占位（`available=false`），微信零钱提现需开启计全付提现网关。
 - 渠道下单失败时已落库的 pending 充值单没有自动关单（既有行为，不影响余额），后续可结合对账任务定时关闭。
 - 同步跳转只在计全付渠道有效；官方微信/支付宝渠道忽略 `returnUrl`，仍依赖弹层轮询与回调。
 - 真实计全付回调与同步跳转需在具备商户凭证的环境验证一次（本次仅单测与构建）。

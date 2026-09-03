@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth.store';
 const KEYS = {
   wechatGateway: CONFIG_KEYS.wallet.paymentWechatGateway,
   alipayGateway: CONFIG_KEYS.wallet.paymentAlipayGateway,
+  payoutGateway: CONFIG_KEYS.wallet.payoutGateway,
   jqfApiBase: CONFIG_KEYS.wallet.jqfApiBase,
   jqfMchNo: CONFIG_KEYS.wallet.jqfMchNo,
   jqfAppId: CONFIG_KEYS.wallet.jqfAppId,
@@ -18,6 +19,8 @@ const KEYS = {
 
 interface PaymentConfigForm {
   wechatGateway: PaymentGateway;
+  alipayGateway: PaymentGateway;
+  payoutGateway: PaymentGateway;
   jqfApiBase: string;
   jqfMchNo: string;
   jqfAppId: string;
@@ -33,13 +36,31 @@ const loadFailed = ref(false);
 const apiKeyConfigured = ref(false);
 const form = reactive<PaymentConfigForm>({
   wechatGateway: PaymentGateway.Official,
+  alipayGateway: PaymentGateway.Official,
+  payoutGateway: PaymentGateway.Jqf,
   jqfApiBase: '',
   jqfMchNo: '',
   jqfAppId: '',
   jqfApiKey: '',
 });
 
-const jqfEnabled = computed(() => form.wechatGateway === PaymentGateway.Jqf);
+/** 任一网关开启计全付时，计全付商户配置为必填 */
+const jqfEnabled = computed(
+  () =>
+    form.wechatGateway === PaymentGateway.Jqf ||
+    form.alipayGateway === PaymentGateway.Jqf ||
+    form.payoutGateway === PaymentGateway.Jqf,
+);
+
+function readGateway(
+  item: ConfigItemView | undefined,
+  fallback: PaymentGateway = PaymentGateway.Official,
+): PaymentGateway {
+  if (item?.value === PaymentGateway.Jqf) {
+    return PaymentGateway.Jqf;
+  }
+  return item?.value === PaymentGateway.Official ? PaymentGateway.Official : fallback;
+}
 
 onMounted(load);
 
@@ -49,10 +70,9 @@ async function load(): Promise<void> {
   try {
     const list = await configApi.list(ConfigGroup.Wallet);
     const byKey = new Map<string, ConfigItemView>(list.map((item) => [item.key, item]));
-    form.wechatGateway =
-      byKey.get(KEYS.wechatGateway)?.value === PaymentGateway.Jqf
-        ? PaymentGateway.Jqf
-        : PaymentGateway.Official;
+    form.wechatGateway = readGateway(byKey.get(KEYS.wechatGateway));
+    form.alipayGateway = readGateway(byKey.get(KEYS.alipayGateway));
+    form.payoutGateway = readGateway(byKey.get(KEYS.payoutGateway), PaymentGateway.Jqf);
     form.jqfApiBase = byKey.get(KEYS.jqfApiBase)?.value ?? '';
     form.jqfMchNo = byKey.get(KEYS.jqfMchNo)?.value ?? '';
     form.jqfAppId = byKey.get(KEYS.jqfAppId)?.value ?? '';
@@ -99,6 +119,16 @@ async function save(): Promise<void> {
         key: KEYS.wechatGateway,
         value: form.wechatGateway,
         remark: '微信支付网关：official 官方直连 / jqf 计全付（开启后微信扫码与公众号支付均走计全付）',
+      },
+      {
+        key: KEYS.alipayGateway,
+        value: form.alipayGateway,
+        remark: '支付宝支付网关：official 官方直连 / jqf 计全付（开启后支付宝扫码支付与退款走计全付）',
+      },
+      {
+        key: KEYS.payoutGateway,
+        value: form.payoutGateway,
+        remark: '提现网关：official 官方直连 / jqf 计全付转账（开启后支付宝与微信零钱提现均走计全付）',
       },
       {
         key: KEYS.jqfApiBase,
@@ -187,11 +217,30 @@ async function save(): Promise<void> {
           </div>
         </el-form-item>
         <el-form-item label="支付宝支付">
-          <el-tag type="info">
-            官方渠道
-          </el-tag>
+          <el-radio-group v-model="form.alipayGateway">
+            <el-radio :value="PaymentGateway.Official">
+              官方渠道
+            </el-radio>
+            <el-radio :value="PaymentGateway.Jqf">
+              计全付
+            </el-radio>
+          </el-radio-group>
           <div class="payment-config__tip">
-            计全付暂不支持支付宝，支付宝始终使用官方渠道。
+            开启计全付后，支付宝扫码支付与对应订单的退款均改走计全付（ALI_QR）；已创建的待支付单仍按下单时的渠道回调与查单。
+          </div>
+        </el-form-item>
+        <el-form-item label="用户提现">
+          <el-radio-group v-model="form.payoutGateway">
+            <el-radio :value="PaymentGateway.Official">
+              官方渠道
+            </el-radio>
+            <el-radio :value="PaymentGateway.Jqf">
+              计全付转账
+            </el-radio>
+          </el-radio-group>
+          <div class="payment-config__tip">
+            普通用户、打手、客服的钱包提现共用本网关。默认计全付转账：支付宝与微信零钱提现均由计全付转账打款，结果由转账通知与主动查单收敛；
+            官方渠道仅支持支付宝转账。提现单在申请时固定执行渠道，切换不影响在途单据。
           </div>
         </el-form-item>
       </el-form>

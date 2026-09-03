@@ -345,7 +345,15 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     value: WALLET_DEFAULTS.payoutProvider,
     type: ConfigValueType.String,
     group: ConfigGroup.Wallet,
-    remark: '默认提现渠道：alipay（wechat 预留）',
+    remark: '默认提现渠道：alipay / wechat',
+  },
+  {
+    key: CONFIG_KEYS.wallet.payoutGateway,
+    value: PaymentGateway.Jqf,
+    type: ConfigValueType.String,
+    group: ConfigGroup.Wallet,
+    remark:
+      '提现网关（普通用户/打手/客服钱包提现共用）：jqf 计全付转账（默认，支付宝与微信零钱均可，结果由转账通知/查单异步收敛）/ official 官方直连（仅支付宝可用）',
   },
   {
     key: CONFIG_KEYS.wallet.minRechargeFen,
@@ -403,7 +411,7 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     value: PaymentGateway.Official,
     type: ConfigValueType.String,
     group: ConfigGroup.Wallet,
-    remark: '支付宝支付网关：当前计全付不支持支付宝，请保持 official（jqf 为预留位）',
+    remark: '支付宝支付网关：official 官方直连 / jqf 计全付（开启后支付宝扫码与对应退款均走计全付）',
   },
   {
     key: CONFIG_KEYS.wallet.jqfApiBase,

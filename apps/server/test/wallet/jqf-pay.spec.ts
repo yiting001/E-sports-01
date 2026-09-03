@@ -62,6 +62,7 @@ test('计全付回调验签通过后映射支付结果，验签失败直接拒�
     payOrderId: 'P202607220001',
     state: 2,
     amount: 500,
+    mchFeeAmount: 3,
   });
 
   const result = parseJqfCallback(CFG, { body: signed, rawBody: '', headers: {} });
@@ -70,6 +71,7 @@ test('计全付回调验签通过后映射支付结果，验签失败直接拒�
     providerTradeNo: 'P202607220001',
     paidAmountFen: 500,
     success: true,
+    channelFeeFen: 3,
   });
   assert.equal(jqfCallbackAck(), 'SUCCESS');
 
@@ -104,6 +106,7 @@ test('计全付表单回调中的字符串数值按整数解析并确认支付�
     providerTradeNo: 'P202607220001',
     paidAmountFen: 500,
     success: true,
+    channelFeeFen: null,
   });
 });
 
@@ -159,9 +162,9 @@ test('计全付回调商户号或 appId 与本地配置不一致时拒绝', () =
   );
 });
 
-test('计全付请求时间戳为东八区 yyyyMMddHHmmss', () => {
-  assert.equal(jqfReqTime(new Date('2026-07-22T00:01:02.000Z')), '20260722080102');
-  assert.equal(jqfReqTime(new Date('2026-07-21T23:59:59.000Z')), '20260722075959');
+test('计全付请求时间戳为 13 位毫秒时间戳', () => {
+  assert.equal(jqfReqTime(new Date('2026-07-22T00:01:02.000Z')), '1784678462000');
+  assert.match(jqfReqTime(), /^\d{13}$/);
 });
 
 function gatewayWith(wechatGateway: string): PaymentGatewayService {

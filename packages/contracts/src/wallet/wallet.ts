@@ -15,6 +15,8 @@ export enum PaymentProvider {
   JqfWechat = 'jqf_wechat',
   /** 计全付微信公众号（WX_JSAPI，开启计全网关后替代官方 JSAPI） */
   JqfWechatJsapi = 'jqf_wechat_jsapi',
+  /** 计全付支付宝扫码（ALI_QR，开启计全网关后替代官方支付宝扫码） */
+  JqfAlipay = 'jqf_alipay',
 }
 
 /** 支付渠道展示文案 */
@@ -24,6 +26,7 @@ export const PAYMENT_PROVIDER_TEXT: Record<PaymentProvider, string> = {
   [PaymentProvider.WechatJsapi]: '微信公众号',
   [PaymentProvider.JqfWechat]: '计全微信',
   [PaymentProvider.JqfWechatJsapi]: '计全微信公众号',
+  [PaymentProvider.JqfAlipay]: '计全支付宝',
 };
 
 /** 用户可选的充值支付方式（计全付渠道由服务端按网关开关映射，不由前端直接指定） */
@@ -47,11 +50,54 @@ export const PAYMENT_GATEWAY_TEXT: Record<PaymentGateway, string> = {
   [PaymentGateway.Jqf]: '计全付',
 };
 
-/** 提现（付款）渠道；微信为预留位，调用即提示未开通 */
+/**
+ * 提现（付款）渠道。用户只选择「支付宝 / 微信零钱」，
+ * 服务端按提现网关开关映射为实际执行渠道（官方直连或计全付转账）并持久化到提现单。
+ */
 export enum PayoutProvider {
+  /** 支付宝官方转账（alipay.fund.trans.uni.transfer） */
   Alipay = 'alipay',
+  /** 微信官方商家转账（预留位，调用即提示未开通） */
   Wechat = 'wechat',
+  /** 计全付转账 → 支付宝账户（ifCode=alipay，entryType=ALIPAY_CASH） */
+  JqfAlipay = 'jqf_alipay',
+  /** 计全付转账 → 微信零钱（ifCode=wxpay，entryType=WX_CASH，收款标识为服务端绑定的 openid） */
+  JqfWechat = 'jqf_wechat',
 }
+
+/** 提现渠道展示文案 */
+export const PAYOUT_PROVIDER_TEXT: Record<PayoutProvider, string> = {
+  [PayoutProvider.Alipay]: '支付宝',
+  [PayoutProvider.Wechat]: '微信零钱',
+  [PayoutProvider.JqfAlipay]: '支付宝（计全付）',
+  [PayoutProvider.JqfWechat]: '微信零钱（计全付）',
+};
+
+/** 用户可选的提现方式（计全付渠道由服务端按网关开关映射，不由前端直接指定） */
+export const WITHDRAW_PAYOUT_PROVIDERS = [PayoutProvider.Alipay, PayoutProvider.Wechat] as const;
+
+/** 提现渠道侧转账状态（渠道无关的归一值，由各驱动从渠道原始状态映射） */
+export enum PayoutChannelState {
+  /** 渠道已受理、尚未开始转账 */
+  Created = 'created',
+  /** 转账中 */
+  Processing = 'processing',
+  /** 转账成功 */
+  Success = 'success',
+  /** 转账失败 */
+  Failed = 'failed',
+  /** 转账关闭（渠道关单，资金未出） */
+  Closed = 'closed',
+}
+
+/** 渠道转账状态展示文案 */
+export const PAYOUT_CHANNEL_STATE_TEXT: Record<PayoutChannelState, string> = {
+  [PayoutChannelState.Created]: '渠道已受理',
+  [PayoutChannelState.Processing]: '渠道转账中',
+  [PayoutChannelState.Success]: '渠道转账成功',
+  [PayoutChannelState.Failed]: '渠道转账失败',
+  [PayoutChannelState.Closed]: '渠道已关单',
+};
 
 /** 钱包状态 */
 export enum WalletStatus {
@@ -268,8 +314,11 @@ export interface CreateWithdrawalBody {
   /** 提现金额（分） */
   amountFen: number;
   provider: PayoutProvider;
-  /** 收款方账号（支付宝登录号：邮箱或手机号） */
-  account: string;
+  /**
+   * 收款方账号：支付宝为登录号（邮箱或手机号）；
+   * 微信零钱不需要填写，服务端取当前账号绑定的公众号 openid 作为收款标识。
+   */
+  account?: string;
   /** 收款方真实姓名 */
   accountName: string;
   /** 收款方身份证号（报税用，18 位） */
@@ -299,7 +348,7 @@ export interface WithdrawalView {
   arriveYuan: string;
   provider: PayoutProvider;
   status: WithdrawalStatus;
-  /** 收款方支付宝账号 */
+  /** 收款方账号（支付宝登录号；微信零钱为脱敏后的 openid） */
   account: string;
   /** 失败/驳回原因 */
   failReason: string | null;
@@ -327,8 +376,19 @@ export interface WithdrawalAdminView {
   accountName: string;
   /** 收款方身份证号（报税用；历史单据可能为空） */
   idCardNo: string | null;
-  /** 渠道转账单号（成功后回填） */
+  /** 渠道转账单号（计全付 transferId / 支付宝 order_id，发起转账后回填） */
   providerOrderId: string | null;
+  /** 最终资金渠道（微信/支付宝）的转账单号（聚合网关通知/查单回填） */
+  channelOrderNo: string | null;
+  /** 渠道侧转账状态（官方直连或尚未发起时为 null） */
+  channelState: PayoutChannelState | null;
+  /** 渠道错误描述（渠道失败时回填） */
+  channelErrMsg: string | null;
+  /** 渠道向平台收取的手续费（分，含技术服务费；由渠道通知/查单回填，官方直连或未回填为 0） */
+  channelFeeFen: number;
+  channelFeeYuan: string;
+  /** 渠道状态最近一次同步时间（通知或主动查单） */
+  channelSyncedAt: string | null;
   /** 失败/驳回原因 */
   failReason: string | null;
   createdAt: string;

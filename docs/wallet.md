@@ -61,14 +61,19 @@
 - **订单支付并发安全**：按订单行再钱包行的固定顺序加锁；锁内校验租户、用户、待付款状态、支付方式、金额、钱包启用状态和余额。同一订单只扣一次，同一钱包并发支付不能透支。
 - **投诉直接扣款**：反馈模块通过 `FeedbackPenaltySettlement` 和各模块公开的事务参与端口执行。余额分支按“反馈 → 订单 → wallet”加锁，扣余额并写 `penalty` 出账流水；押金分支按“反馈 → 订单 → booster_application”加锁且不写钱包流水。两条路径都在同一事务内保存罚款并完成反馈，`bizOrderId` 保存反馈 ID，同反馈重试不会重复扣款。该路径不调用管理端人工调账接口。
 - **打手资金事务**：缴押、退款和通用罚款由打手模块先锁 `booster_application`，再通过钱包参与端口锁 `wallet`；押金、钱包余额、流水和罚款任一步失败都会整体回滚。
-- **提现资金安全**：申请即冻结扣减；审核通过时先在事务内「待审核 → 处理中」占位（防并发重复转账）再发起转账；转账失败/审核驳回在事务内全额回滚余额并写补偿入账流水。
-- **提现状态机**：`pending`（待审核）→ `processing`（转账中）→ `success` / `failed`；`pending` → `rejected`（驳回）。
+- **提现资金安全**：申请即冻结扣减；审核通过时先在事务内「待审核 → 处理中」占位（防并发重复转账）再发起转账；渠道**明确**失败/关单或审核驳回才在事务内全额回滚余额并写补偿入账流水；请求已发出但结果未知（网关不可达/响应异常）一律保持 `processing`，绝不回滚，防止「钱已出、余额又退」。
+- **提现状态机**：`pending`（待审核）→ `processing`（转账中）→ `success` / `failed`；`pending` → `rejected`（驳回）。`processing` 由三条路径共用 `WithdrawalSettlementService` 幂等收敛：审核发起的同步结果、渠道异步通知（`POST /wallet/withdrawal/callback/:provider`）、财务主动查单（`POST /wallet/admin/withdrawals/:id/sync`）。终态后的重复/乱序通知不再改变余额与状态。
+- **提现执行渠道固定**：用户选的是收款方式（支付宝 / 微信零钱），创建时由 `PaymentGatewayService.resolvePayoutProvider` 按 `wallet.payout.gateway` 解析为实际执行渠道（`alipay` / `jqf_alipay` / `jqf_wechat`）并持久化到提现单；审核、回调、查单均按提现单保存的渠道解析端口，切换网关不影响在途单。
+- **微信零钱收款标识**：客户端不得提交 openid；服务端通过 `WechatIdentityService.findOpenid` 读取当前用户绑定的公众号 openid，未绑定则拒绝申请；C 端提现记录中的 openid 脱敏展示。
+- **渠道手续费**：充值单/服务订单的 `channelFeeFen` 与提现单的 `channelFeeFen`（计全付 `mchOrderFeeAmount + mchApicostFeeAmount`）仅作财务对账字段，不参与用户余额计算；提现手续费 `feeFen` 仍由平台费率/阶梯税费决定。
 
 ## 渠道策略（策略模式 + 配置驱动）
 
 - 充值端口 `PaymentPort`、原路退款端口 `RefundPort`、提现端口 `PayoutPort` 为抽象；具体渠道为可插拔策略，由解析器按请求渠道挑选。
 - 新增渠道 = 实现端口 + 注册进 `PAYMENT_PORTS` / `REFUND_PORTS` / `PAYOUT_PORTS`，上层用例零改动。
-- 提现端口含 `available` 标记，预留渠道（微信）在**扣款前**即被拦截，避免无谓的冻结/回滚。
+- 提现端口含 `available` 标记，官方微信商家转账仍为占位（`available=false`），在**扣款前**即被拦截；提现网关切到计全付后微信零钱由 `JqfWechatTransferDriver` 承接。
+- 计全付提现驱动 `JqfAlipayTransferDriver`（`ifCode=alipay, entryType=ALIPAY_CASH`）/ `JqfWechatTransferDriver`（`ifCode=wxpay, entryType=WX_CASH`）共用 `JqfTransferDriverBase`：`api/transferOrder` 发起、`api/transfer/query` 查单、转账通知验签；渠道状态 0/1 → 处理中、2 → 成功、3/4 → 失败/关单；发起被业务拒绝时先按商户单号查一次，渠道确实无单才判定失败（避免重复提交被误判）；网关不可达抛 `PayoutOutcomeUnknownError`。
+- 主动查单对「渠道无此单」的判定：仅当提现单**没有渠道单号**且距上次更新超过 5 分钟宽限期（`PAYOUT_NOT_FOUND_GRACE_MS`）才视为未出款并回滚，否则保持 `processing` 等待下次同步。
 - 微信支付含 Native 扫码与公众号 JSAPI 两个驱动（回调验签/查单复用 `wechat-pay.trade` 公共函数），JSAPI 驱动与开关、证书上传见 [wechat-official.md](./wechat-official.md)。
 
 ## 目录结构（DDD 四层）
@@ -237,24 +242,29 @@ sequenceDiagram
   participant API as withdrawal.create
   participant LED as WalletLedger
   participant ADM as 财务（提现管理）
-  participant DRV as 支付宝转账
+  participant DRV as PayoutPort（官方支付宝 / 计全付转账）
+  participant CB as 转账通知 / 主动查单
 
-  FE->>API: POST /wallet/withdrawal {amountFen, account, accountName}
-  API->>LED: reserveWithdrawal（算手续费→冻结扣减→建 pending 订单）
+  FE->>API: POST /wallet/withdrawal {amountFen, provider, account?, accountName, idCardNo}
+  API->>API: resolvePayoutProvider → 实际执行渠道；微信零钱取服务端 openid
+  API->>LED: reserveWithdrawal（算手续费→冻结扣减→建 pending 订单，存执行渠道）
   API-->>FE: { status: pending, feeFen, arriveFen }
   ADM->>LED: approve → beginWithdrawalTransfer（pending → processing 占位）
-  ADM->>DRV: transfer（uni.transfer，金额 = amount - fee）
-  alt 转账成功
-    DRV-->>ADM: providerOrderId
-    ADM->>LED: markWithdrawalSuccess（置 success）
-  else 转账失败
-    DRV-->>ADM: 抛异常
-    ADM->>LED: refundWithdrawal（回滚余额→置 failed）
+  ADM->>DRV: transfer（金额 = amount - fee，notifyUrl）
+  alt 渠道同步成功（官方支付宝 / state=2）
+    ADM->>LED: markWithdrawalSuccess（置 success + 渠道快照）
+  else 渠道受理中（state 0/1）或结果未知
+    ADM->>LED: syncWithdrawalChannel（保持 processing，不回滚）
+    CB->>LED: 通知验签/查单 → apply（成功置 success / 失败回滚置 failed / 仍处理中刷快照）
+  else 渠道明确失败/关单
+    ADM->>LED: refundWithdrawal（回滚余额→置 failed + 渠道错误快照）
   end
   opt 审核驳回
     ADM->>LED: reject → refundWithdrawal（全额退回→置 rejected，留存理由）
   end
 ```
+
+转账通知入口 `POST /wallet/withdrawal/callback/:provider`（公开，验签 + `mchNo`/`appId` 校验）：按 `mchOrderNo`（即 `outBizNo`，全局唯一）定位提现单 → 校验 URL 渠道与提现单执行渠道一致 → 校验通知金额等于 `amountFen - feeFen` → 幂等推进 → 回 `SUCCESS`。日志只记单号/渠道/金额，不记完整报文。
 
 ## 配置项（ConfigGroup.Wallet）
 
@@ -263,6 +273,7 @@ sequenceDiagram
 | `wallet.payment.provider`         | 默认充值渠道（alipay/wechat）                              |      |
 | `wallet.wechat.jsapiEnabled`      | 公众号 JSAPI 支付开关；开启且微信内时充值/结算直接拉起收银台（详见 wechat-official.md） |      |
 | `wallet.payout.provider`          | 默认提现渠道（alipay）                                     |      |
+| `wallet.payout.gateway`           | 提现网关，默认 `jqf` 计全付转账（支付宝 + 微信零钱；普通用户 / 打手 / 客服钱包提现共用）/ `official` 官方支付宝转账（管理端「财务 → 支付配置」） |      |
 | `wallet.minRechargeFen`           | 最小充值金额（分）                                         |      |
 | `wallet.minWithdrawFen`           | 最小提现金额（分）                                         |      |
 | `wallet.withdrawFeeRateBp`        | 提现手续费率（万分比，100 = 1%，0 免费；阶梯未命中时回退） |      |
@@ -284,7 +295,8 @@ sequenceDiagram
 | `wallet.wechat.platformSerialNo`  | 平台证书序列号                                             |      |
 
 > 真实到账需在配置中心填入对应商户凭证；未配置时下单/转账会如实返回「渠道未配置」。
-> 回调地址需公网可达：`{notifyBaseUrl}/wallet/recharge/callback/{provider}`。
+> 回调地址需公网可达：充值 `{notifyBaseUrl}/wallet/recharge/callback/{provider}`，提现转账通知 `{notifyBaseUrl}/wallet/withdrawal/callback/{provider}`（`jqf_alipay` / `jqf_wechat`）。
+> `POST /wallet/withdrawal` 的 `provider` 仅接受 `alipay` / `wechat`（用户收款方式）；`account` 仅支付宝必填，微信零钱由服务端取绑定 openid。
 > `POST /wallet/recharge` 的 `provider` 仅接受 `alipay` / `wechat` / `wechat_jsapi`；`returnUrl` 选填，需为 http(s) 绝对地址且追加业务参数后不超过 128 字符（计全付字段上限）。
 
 ## 前端
@@ -292,7 +304,7 @@ sequenceDiagram
 - 路由 `/wallet` 由后端按 `wallet:menu` 菜单权限动态下发（组件在 `component-registry` 以 code 登记），侧边菜单「我的钱包」仅对获授权角色可见。
 - 充值/提现按钮以 `v-permission` 绑定 `wallet:recharge` / `wallet:withdraw`，无权时隐藏。
 - `stores/wallet.store.ts`：打开页面并发拉取钱包/统计/首页流水；收支成功后 `refresh`。
-- 管理端 `/finance/withdrawals` 采用「轻量列表 + 右侧详情抽屉」：列表只展示申请用户、金额信息、收款信息、状态、申请时间与操作；详情抽屉完整展示提现金额、手续费、到账金额、收款渠道、收款账号、渠道单号、失败/驳回原因，并在底部固定审核按钮，便于财务扫描列表后再处理单笔工单。
+- 管理端 `/finance/withdrawals` 采用「轻量列表 + 右侧详情抽屉」：列表展示申请用户、金额信息、收款信息、执行渠道、渠道手续费、状态、申请时间与操作；详情抽屉完整展示提现金额、手续费、到账金额、执行渠道、收款账号、渠道单号、上游转账单号、渠道状态/错误、渠道手续费、最近同步时间、失败/驳回原因，并在底部固定审核按钮；`processing` 工单提供「同步状态」主动查单。动作逻辑抄出到 `use-withdrawal-review.ts`。
 
 ```mermaid
 flowchart LR
@@ -304,7 +316,8 @@ flowchart LR
 ```
 
 - `views/wallet/WalletView.vue`：余额卡片、统计卡片、明细表格分页；充值弹窗（金额+渠道，下单后用 `qrcode` 渲染二维码，支付完成点「我已支付」刷新）；提现弹窗（金额+支付宝账号+姓名，提交后进入待审核）。
-- `views/finance/WithdrawalAdminView.vue`（菜单 `finance:withdrawal:menu`，财务分组）：提现工单分页（状态筛选），表格保留扫描所需的关键列，右侧详情抽屉展示完整金额、收款、渠道与失败信息；待审核工单可「通过」（二次确认后立即转账）/「驳回」（填写理由，退回余额）；`api/finance.api.ts` 封装列表/审核接口。
+- `views/finance/WithdrawalAdminView.vue`（菜单 `finance:withdrawal:menu`，财务分组）：提现工单分页（状态筛选），表格保留扫描所需的关键列，右侧详情抽屉展示完整金额、收款、渠道快照与失败信息；待审核工单可「通过」（二次确认后按执行渠道转账，渠道受理中提示「转账中」）/「驳回」（填写理由，退回余额），转账中工单可「同步状态」；`api/finance.api.ts` 封装列表/审核/同步/导出接口。报税 CSV 尾部新增「提现渠道 / 上游转账单号 / 渠道手续费(元)」三列。
+- `views/finance/PaymentConfigView.vue`（仅平台超管可改）：微信支付 / 支付宝支付 / 用户提现三个网关各自在「官方 / 计全付」间切换，任一开启计全付时商户参数必填；`apiKey` 为 secret不回显，留空保存保持原值。
 - `views/finance/TaxConfigAdminView.vue`（菜单 `finance:tax:menu`，财务分组）：提现阶梯税费可视化配置，表格按「起始金额（元）→ 税费率（%）」增删改档位，展示适用区间与税费示例，头部提示回退单一费率；保存需二次确认（`GET/PUT /wallet/admin/tax-config`，写入配置中心 `wallet.withdrawTaxTiers`，保存后立即对新提现申请生效）。
 
 ## C 端（apps/client）
@@ -317,12 +330,14 @@ flowchart LR
 - 个人中心打手「我的资金」（`BoosterFundsCard`）与余额卡在押金缴纳成功后由 `ProfileView` 通过 key 重建并重新拉取，保证金/余额不再停留在旧值。
 - `components/order/CheckoutPaymentMethods.vue`：结算页独立加载钱包，展示余额并处理加载失败、刷新、冻结、余额不足和原地充值；订单金额变化后重新判断可用性。
 - 余额方式成功时后端返回 `paid=true`，结算页直接进入订单详情，不打开渠道二维码弹层。
-- `components/wallet/WithdrawDialog.vue`：金额 + 支付宝账号/实名 → 提交提现申请；输入金额时按费率实时展示手续费与预计到账金额，提交后提示等待审核。
+- `components/wallet/WithdrawDialog.vue`：金额 + 提现方式（支付宝 / 微信零钱）+ 实名/身份证号 → 提交提现申请；支付宝需填收款账号，微信零钱不展示也不提交账号（服务端取绑定 openid，未绑定时后端提示先在微信内登录）；输入金额时按费率实时展示手续费与预计到账金额，提交后提示等待审核。`WithdrawalRecords.vue` 展示提现方式与脱敏账号。
 - 个人中心 `BalanceCards` 余额卡展示真实余额，点击进钱包页。
 
 ## 数据、异常与测试边界
 
 - `WalletTxnType.OrderPayment` 的存储值为 `order_payment`，沿用 `wallet_transaction.type` 的现有 `varchar(16)`；没有表结构变化和 migration。
+- migration `1786500000000-add-payment-channel-fee-and-payout-snapshot`：`service_order.channel_fee_fen`、`wallet_recharge_order.channelFeeFen`（渠道手续费，默认 0），`wallet_withdrawal_order` 新增 `channelOrderNo` / `channelState` / `channelErrCode` / `channelErrMsg` / `channelFeeFen` / `channelSyncedAt` 渠道快照字段；存量数据无需回填。
+- 提现链路单测：`test/wallet/jqf-transfer.spec.ts`（转账状态映射、通知验签、手续费汇总、发起失败分类、查单 NotFound/未知）、`test/wallet/withdrawal-settlement.spec.ts`（审核占位与渠道选择、结果未知不回滚、通知渠道/金额校验、成功/处理中/失败/重复通知幂等、查单宽限期）。真实计全付转账需在有商户凭证的环境小额实测。
 - `WalletTxnType.OrderRefund` 的存储值为 `order_refund`，余额退款作为入账流水并关联原服务订单 id。
 - 钱包不存在、冻结或余额不足会使余额事务完整回滚，订单创建用例随后取消仍为待付款的新订单并回退已核销优惠券；前端展示服务端返回的最终校验结果。
 - 会员累计消费和订单建群属于事务提交后的副作用，失败不会退回余额或把已支付订单改回未付款；错误会记录供后续补偿排查。

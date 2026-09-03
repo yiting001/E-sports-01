@@ -42,6 +42,7 @@ export class QueryRechargeUseCase {
         outTradeNo,
         providerTradeNo: result.providerTradeNo,
         paidAmountFen: result.paidAmountFen,
+        channelFeeFen: result.channelFeeFen ?? null,
       });
       if (credited) {
         return { outTradeNo, status: RechargeStatus.Paid };

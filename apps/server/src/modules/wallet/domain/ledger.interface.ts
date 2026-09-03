@@ -1,5 +1,6 @@
 import {
   FundDirection,
+  PayoutChannelState,
   PayoutProvider,
   WalletTxnType,
   WithdrawalStatus,
@@ -12,6 +13,18 @@ export interface CreditRechargeInput {
   outTradeNo: string;
   providerTradeNo: string;
   paidAmountFen: number;
+  /** 渠道手续费（分），渠道未回传时为空 */
+  channelFeeFen?: number | null;
+}
+
+/** 提现单渠道侧快照（发起/通知/查单后回填） */
+export interface WithdrawalChannelMeta {
+  providerOrderId: string | null;
+  channelOrderNo: string | null;
+  channelState: PayoutChannelState | null;
+  channelErrCode: string | null;
+  channelErrMsg: string | null;
+  channelFeeFen: number | null;
 }
 
 /** 提现冻结扣减入参 */
@@ -75,21 +88,31 @@ export interface WalletLedger {
     orderId: string,
   ): Promise<WithdrawalOrderEntity | null>;
 
-  /** 转账成功：累计提现 + 置订单 success + 回填渠道单号 */
+  /**
+   * 转账成功（幂等）：仅 processing 单累计提现 + 置 success + 回填渠道快照，返回 true；
+   * 已是终态或订单不存在返回 false（重复通知安全）。
+   */
   markWithdrawalSuccess(
     orderId: string,
-    providerOrderId: string,
+    meta: WithdrawalChannelMeta,
+  ): Promise<boolean>;
+
+  /** 渠道仍在处理中：仅刷新 processing 单的渠道快照与同步时间，不动余额与状态。 */
+  syncWithdrawalChannel(
+    orderId: string,
+    meta: Partial<WithdrawalChannelMeta>,
   ): Promise<void>;
 
   /**
-   * 提现回滚：回滚余额、写补偿入账流水，按场景置订单终态
-   * （转账失败 → failed；审核驳回 → rejected）。
+   * 提现回滚（幂等）：仅 pending/processing 单回滚余额、写补偿入账流水，按场景置终态
+   * （转账失败 → failed；审核驳回 → rejected），可同时回填渠道快照；返回是否发生回滚。
    */
   refundWithdrawal(
     orderId: string,
     reason: string,
     toStatus: WithdrawalStatus.Failed | WithdrawalStatus.Rejected,
-  ): Promise<void>;
+    meta?: Partial<WithdrawalChannelMeta>,
+  ): Promise<boolean>;
 
   /**
    * 管理端人工调整余额（增加/扣减），写入一条 adjust 流水。

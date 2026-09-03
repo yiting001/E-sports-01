@@ -217,8 +217,10 @@ export const CONFIG_KEYS = {
   wallet: {
     /** 当前生效的充值渠道：alipay / wechat */
     paymentProvider: 'wallet.payment.provider',
-    /** 当前生效的提现渠道：alipay（wechat 预留） */
+    /** 当前生效的默认提现渠道：alipay / wechat */
     payoutProvider: 'wallet.payout.provider',
+    /** 提现（付款）网关：official 官方直连 / jqf 计全付转账（开启后支付宝与微信零钱提现均走计全付 api/transferOrder） */
+    payoutGateway: 'wallet.payout.gateway',
     /** 最小充值金额（分） */
     minRechargeFen: 'wallet.minRechargeFen',
     /** 最小提现金额（分） */
@@ -261,7 +263,7 @@ export const CONFIG_KEYS = {
 
     /** 微信支付网关：official 官方直连 / jqf 计全付（开启后微信扫码与 JSAPI 均走计全付） */
     paymentWechatGateway: 'wallet.payment.wechatGateway',
-    /** 支付宝支付网关：当前计全付不支持支付宝，仅 official 生效（jqf 为预留位） */
+    /** 支付宝支付网关：official 官方直连 / jqf 计全付（开启后支付宝扫码支付与对应退款均走计全付 ALI_QR） */
     paymentAlipayGateway: 'wallet.payment.alipayGateway',
 
     /** 计全付网关地址（如 https://pay.example.com，末尾不带 /） */

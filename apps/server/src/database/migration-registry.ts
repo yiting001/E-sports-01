@@ -18,6 +18,7 @@ import { RelaxBoosterServiceRegionsCheck1786000000000 } from './migrations/17860
 import { AddAuthWechatIdentity1786100000000 } from './migrations/1786100000000-add-auth-wechat-identity';
 import { AddRbacRoleSoftDelete1786300000000 } from './migrations/1786300000000-add-rbac-role-soft-delete';
 import { DropRbacRoleCodeUnique1786400000000 } from './migrations/1786400000000-drop-rbac-role-code-unique';
+import { AddPaymentChannelFeeAndPayoutSnapshot1786500000000 } from './migrations/1786500000000-add-payment-channel-fee-and-payout-snapshot';
 
 export type ServerMigrationConstructor = new () => MigrationInterface;
 
@@ -51,6 +52,7 @@ export const SERVER_MIGRATIONS: ServerMigrationConstructor[] = [
   AddAuthWechatIdentity1786100000000,
   AddRbacRoleSoftDelete1786300000000,
   DropRbacRoleCodeUnique1786400000000,
+  AddPaymentChannelFeeAndPayoutSnapshot1786500000000,
 ];
 
 export const SERVER_MIGRATION_DEFINITIONS: ServerMigrationDefinition[] =

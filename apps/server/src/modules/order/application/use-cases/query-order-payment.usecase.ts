@@ -44,6 +44,7 @@ export class QueryOrderPaymentUseCase {
         order.provider,
         result.providerTradeNo,
         result.paidAmountFen,
+        result.channelFeeFen ?? null,
       );
       const settled = await this.orders.findById(id);
       if (settled) {

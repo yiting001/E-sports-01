@@ -29,6 +29,7 @@ export class HandleOrderCallbackUseCase {
         toOrderPaymentMethod(provider),
         result.providerTradeNo,
         result.paidAmountFen,
+        result.channelFeeFen ?? null,
       );
     }
     return port.callbackAck();

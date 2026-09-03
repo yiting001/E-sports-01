@@ -5,6 +5,7 @@
  */
 import { onMounted, ref } from 'vue';
 import {
+  PAYOUT_PROVIDER_TEXT,
   WITHDRAWAL_STATUS_TEXT,
   WithdrawalStatus,
   type WithdrawalView,
@@ -89,7 +90,7 @@ onMounted(() => {
           </span>
         </p>
         <p class="wd-meta">
-          手续费 {{ wd.feeYuan }} · 到账 {{ wd.arriveYuan }} · {{ wd.account }}
+          手续费 {{ wd.feeYuan }} · 到账 {{ wd.arriveYuan }} · {{ PAYOUT_PROVIDER_TEXT[wd.provider] }} {{ wd.account }}
         </p>
         <p
           v-if="wd.failReason"

@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   PaginatedResult,
+  PayoutProvider,
   WithdrawalView,
   fenToYuan,
 } from '@app/contracts';
@@ -10,6 +11,17 @@ import {
 } from '../../domain/withdrawal-repository.interface';
 import { WithdrawalOrderEntity } from '../../domain/withdrawal-order.entity';
 import { WalletService } from '../wallet.service';
+
+/** 微信零钱提现的收款标识为 openid，对 C 端脱敏展示（保留首尾各 4 位） */
+export function maskPayoutAccount(provider: PayoutProvider, account: string): string {
+  if (provider !== PayoutProvider.Wechat && provider !== PayoutProvider.JqfWechat) {
+    return account;
+  }
+  if (account.length <= 8) {
+    return '****';
+  }
+  return `${account.slice(0, 4)}****${account.slice(-4)}`;
+}
 
 /** 提现订单实体 → C 端我的提现记录视图 */
 function toWithdrawalView(order: WithdrawalOrderEntity): WithdrawalView {
@@ -24,7 +36,7 @@ function toWithdrawalView(order: WithdrawalOrderEntity): WithdrawalView {
     arriveYuan: fenToYuan(arriveFen),
     provider: order.provider,
     status: order.status,
-    account: order.account,
+    account: maskPayoutAccount(order.provider, order.account),
     failReason: order.failReason,
     createdAt: order.createdAt.toISOString(),
   };

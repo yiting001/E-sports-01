@@ -7,6 +7,8 @@ export interface SettleOrderPaymentInput {
   method: OrderPaymentMethod;
   providerTradeNo: string;
   paidAmountFen: number;
+  /** 渠道手续费（分），渠道未回传时为空 */
+  channelFeeFen?: number | null;
 }
 
 /** 钱包余额支付入参 */

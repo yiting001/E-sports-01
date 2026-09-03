@@ -1,13 +1,16 @@
 <script setup lang="ts">
 /**
- * 提现弹层：金额（元）+ 支付宝收款账号/姓名/身份证号（报税）→ 提交提现申请（审核制）。
+ * 提现弹层：金额（元）+ 提现方式（支付宝 / 微信零钱）+ 姓名/身份证号（报税）→ 提交提现申请（审核制）。
+ * 支付宝需填写收款账号；微信零钱由服务端取当前用户绑定的微信身份，客户端不提交账号。
  * 输入金额时按阶梯税费/配置费率实时展示税费与到账金额；提交后等待财务审核。
  */
 import { computed, ref } from 'vue';
 import {
   ID_CARD_NO_PATTERN,
+  PAYOUT_PROVIDER_TEXT,
   PayoutProvider,
   WALLET_DEFAULTS,
+  WITHDRAW_PAYOUT_PROVIDERS,
   WithdrawalStatus,
   type WithdrawTaxTier,
   calcWithdrawFeeFen,
@@ -31,7 +34,9 @@ const emit = defineEmits<{ done: []; close: [] }>();
 const toast = useToast();
 
 const amountYuan = ref('');
+const provider = ref<PayoutProvider>(PayoutProvider.Alipay);
 const account = ref('');
+const isAlipay = computed(() => provider.value === PayoutProvider.Alipay);
 const accountName = ref('');
 const idCardNo = ref('');
 const submitting = ref(false);
@@ -65,8 +70,12 @@ async function submit(): Promise<void> {
     toast.show('提现金额不能超过余额');
     return;
   }
-  if (!account.value.trim() || !accountName.value.trim()) {
-    toast.show('请填写支付宝账号与真实姓名');
+  if (isAlipay.value && !account.value.trim()) {
+    toast.show('请填写支付宝账号');
+    return;
+  }
+  if (!accountName.value.trim()) {
+    toast.show('请填写真实姓名');
     return;
   }
   if (!ID_CARD_NO_PATTERN.test(idCardNo.value.trim())) {
@@ -77,8 +86,8 @@ async function submit(): Promise<void> {
   try {
     const result = await walletApi.withdraw({
       amountFen,
-      provider: PayoutProvider.Alipay,
-      account: account.value.trim(),
+      provider: provider.value,
+      account: isAlipay.value ? account.value.trim() : undefined,
       accountName: accountName.value.trim(),
       idCardNo: idCardNo.value.trim().toUpperCase(),
     });
@@ -121,7 +130,25 @@ async function submit(): Promise<void> {
           placeholder="请输入提现金额"
         >
       </label>
-      <label class="field">
+      <div class="field">
+        <span class="label">提现方式</span>
+        <div class="providers">
+          <button
+            v-for="item in WITHDRAW_PAYOUT_PROVIDERS"
+            :key="item"
+            type="button"
+            class="provider"
+            :class="{ active: provider === item }"
+            @click="provider = item"
+          >
+            {{ PAYOUT_PROVIDER_TEXT[item] }}
+          </button>
+        </div>
+      </div>
+      <label
+        v-if="isAlipay"
+        class="field"
+      >
         <span class="label">支付宝账号</span>
         <input
           v-model="account"
@@ -130,6 +157,12 @@ async function submit(): Promise<void> {
           placeholder="邮箱或手机号"
         >
       </label>
+      <p
+        v-else
+        class="fee-tip"
+      >
+        将转入当前登录绑定的微信零钱，需已在微信内完成微信登录
+      </p>
       <label class="field">
         <span class="label">真实姓名</span>
         <input
@@ -230,6 +263,27 @@ async function submit(): Promise<void> {
   width: 100%;
   font-size: 12px;
   color: var(--c-text-secondary);
+}
+
+.providers {
+  display: flex;
+  gap: 8px;
+}
+
+.provider {
+  flex: 1;
+  height: 36px;
+  font-size: 13px;
+  color: var(--c-text-secondary);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+}
+
+.provider.active {
+  color: var(--c-accent);
+  border-color: var(--c-accent);
+  font-weight: 700;
 }
 
 .primary {
