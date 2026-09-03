@@ -51,7 +51,9 @@ interface JqfTransferRoute {
  * 转账为异步结算：发起成功仅表示渠道受理（state 0/1），最终结果由转账通知（pageId=47）
  * 或主动查询（pageId=46）确认；mchOrderNo 为幂等键，重复提交同一单号不会二次出款。
  * 手续费 = mchOrderFeeAmount（渠道转账手续费）+ mchApicostFeeAmount（技术服务费），单位分。
+ * 子类不声明构造函数，构造参数元数据由基类的 @Injectable() 产生并沿原型链被 Nest 读取。
  */
+@Injectable()
 export abstract class JqfTransferDriverBase implements PayoutPort {
   abstract readonly provider: PayoutProvider;
   readonly available = true;
