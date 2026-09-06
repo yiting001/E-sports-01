@@ -91,12 +91,12 @@ test('migration:show 返回待执行状态并始终关闭连接', async () => {
 
   assert.equal(dataSource.runCalls, 0);
   assert.equal(dataSource.destroyCalls, 1);
-  assert.match(output.join(''), /\[X\].*AddRbacRoleSoftDelete1786300000000/);
-  assert.match(output.join(''), /\[ \].*DropRbacRoleCodeUnique1786400000000/);
+  assert.match(output.join(''), /\[X\].*DropRbacRoleCodeUnique1786400000000/);
   assert.match(
     output.join(''),
     /\[ \].*AddPaymentChannelFeeAndPayoutSnapshot1786500000000/,
   );
+  assert.match(output.join(''), /\[ \].*AddWithdrawalBankCardFields1786600000000/);
   assert.match(output.join(''), /2 pending migration/i);
 });
 

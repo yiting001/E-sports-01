@@ -88,6 +88,9 @@ export class ApproveWithdrawalUseCase {
         amountFen: arriveFen,
         account: order.account,
         accountName: order.accountName,
+        idCardNo: order.idCardNo,
+        bankName: order.bankName,
+        phone: order.phone,
         remark: WITHDRAW_REMARK,
         notifyUrl: port.supportsCallback
           ? buildPayoutNotifyUrl(notifyBaseUrl, order)

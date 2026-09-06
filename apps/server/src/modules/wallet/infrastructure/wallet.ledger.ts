@@ -117,6 +117,8 @@ export class TypeormWalletLedger implements WalletLedger {
         account: input.account,
         accountName: input.accountName,
         idCardNo: input.idCardNo,
+        bankName: input.bankName,
+        phone: input.phone,
         providerOrderId: null,
         failReason: null,
       });

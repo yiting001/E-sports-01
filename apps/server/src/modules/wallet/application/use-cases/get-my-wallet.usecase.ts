@@ -7,18 +7,21 @@ import {
   sanitizeWithdrawTaxTiers,
 } from '@app/contracts';
 import { ConfigService } from '../../../config/application/config.service';
+import { PaymentGatewayService } from '../payment-gateway.service';
 import { WalletService } from '../wallet.service';
 import { toWalletView } from '../wallet.mapper';
 
 /**
  * 用例：获取当前用户钱包。
- * 钱包为所有角色通用，打开页面时若无则自动初始化（懒创建）。
+ * 钱包为所有角色通用，打开页面时若无则自动初始化（懒创建）；
+ * 随视图下发当前提现网关可选的提现方式，前端据此渲染表单（服务端仍作最终校验）。
  */
 @Injectable()
 export class GetMyWalletUseCase {
   constructor(
     private readonly walletService: WalletService,
     private readonly config: ConfigService,
+    private readonly paymentGateway: PaymentGatewayService,
   ) {}
 
   async execute(userId: string): Promise<WalletView> {
@@ -33,6 +36,11 @@ export class GetMyWalletUseCase {
         [],
       ),
     );
-    return toWalletView(wallet, feeRateBp, taxTiers);
+    return toWalletView(wallet, {
+      withdrawFeeRateBp: feeRateBp,
+      withdrawTaxTiers: taxTiers,
+      withdrawMethods: await this.paymentGateway.withdrawMethods(),
+      withdrawPhoneRequired: await this.paymentGateway.withdrawPhoneRequired(),
+    });
   }
 }

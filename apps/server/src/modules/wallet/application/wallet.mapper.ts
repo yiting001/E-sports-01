@@ -1,4 +1,5 @@
 import {
+  PayoutProvider,
   WalletStatsView,
   WalletView,
   WithdrawTaxTier,
@@ -6,19 +7,25 @@ import {
 } from '@app/contracts';
 import { WalletEntity } from '../domain/wallet.entity';
 
-/** 实体 + 当前手续费率/阶梯税费 → 钱包视图 */
+/** 钱包视图中的提现规则（费率 / 阶梯税费 / 当前网关可选方式） */
+export interface WalletWithdrawRules {
+  withdrawFeeRateBp: number;
+  withdrawTaxTiers: WithdrawTaxTier[];
+  withdrawMethods: PayoutProvider[];
+  withdrawPhoneRequired: boolean;
+}
+
+/** 实体 + 当前提现规则 → 钱包视图 */
 export function toWalletView(
   wallet: WalletEntity,
-  withdrawFeeRateBp: number,
-  withdrawTaxTiers: WithdrawTaxTier[],
+  rules: WalletWithdrawRules,
 ): WalletView {
   return {
     id: wallet.id,
     balanceFen: wallet.balanceFen,
     balanceYuan: fenToYuan(wallet.balanceFen),
     status: wallet.status,
-    withdrawFeeRateBp,
-    withdrawTaxTiers,
+    ...rules,
   };
 }
 

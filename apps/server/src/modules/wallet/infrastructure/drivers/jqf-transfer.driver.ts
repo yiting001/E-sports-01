@@ -1,5 +1,5 @@
 import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common';
-import { PayoutChannelState, PayoutProvider } from '@app/contracts';
+import { JqfTransferIfCode, PayoutChannelState, PayoutProvider } from '@app/contracts';
 import {
   PayoutCallbackRequest,
   PayoutCallbackResult,
@@ -38,12 +38,16 @@ const JQF_TRANSFER_STATE: Record<number, PayoutChannelState> = {
   4: PayoutChannelState.Closed,
 };
 
-/** 计全付转账通道参数：接口代码 + 入账方式 */
+/** 计全付转账通道参数：接口代码 + 入账方式 + 银行卡转账附加要素 */
 interface JqfTransferRoute {
-  /** ifCode：wxpay 微信官方 / alipay 支付宝官方 */
+  /** ifCode：wxpay 微信官方 / alipay 支付宝官方 / aliaqfpay 支付宝安全发 / yeepay 易宝 */
   ifCode: string;
-  /** entryType：WX_CASH 微信零钱 / ALIPAY_CASH 支付宝转账 */
+  /** entryType：WX_CASH 微信零钱 / ALIPAY_CASH 支付宝转账 / BANK_CARD 对私银行卡 */
   entryType: string;
+  /** 收款人开户行名称（仅银行卡） */
+  bankName?: string;
+  /** 特定渠道附加参数（JSON 字符串，如易宝对私银行卡的身份证号与手机号） */
+  channelExtra?: string;
 }
 
 /**
@@ -58,22 +62,27 @@ export abstract class JqfTransferDriverBase implements PayoutPort {
   abstract readonly provider: PayoutProvider;
   readonly available = true;
   readonly supportsCallback = true;
-  protected abstract readonly route: JqfTransferRoute;
 
   constructor(private readonly configFactory: JqfPayConfigFactory) {}
 
+  /** 按当前配置与提现单要素决定转账通道参数 */
+  protected abstract resolveRoute(cfg: JqfPayConfig, input: PayoutInput): JqfTransferRoute;
+
   async transfer(input: PayoutInput): Promise<PayoutResult> {
     const cfg = await this.configFactory.load();
+    const route = this.resolveRoute(cfg, input);
     let data: Record<string, unknown>;
     try {
       data = await postJqf(cfg, TRANSFER_PATH, {
         mchOrderNo: input.outBizNo,
-        ifCode: this.route.ifCode,
-        entryType: this.route.entryType,
+        ifCode: route.ifCode,
+        entryType: route.entryType,
         amount: input.amountFen,
         currency: 'CNY',
         accountNo: input.account,
         accountName: input.accountName,
+        bankName: route.bankName,
+        channelExtra: route.channelExtra,
         transferDesc: input.remark,
         notifyUrl: input.notifyUrl || undefined,
       });
@@ -138,14 +147,53 @@ export abstract class JqfTransferDriverBase implements PayoutPort {
 @Injectable()
 export class JqfAlipayTransferDriver extends JqfTransferDriverBase {
   readonly provider = PayoutProvider.JqfAlipay;
-  protected readonly route: JqfTransferRoute = { ifCode: 'alipay', entryType: 'ALIPAY_CASH' };
+
+  protected resolveRoute(): JqfTransferRoute {
+    return { ifCode: 'alipay', entryType: 'ALIPAY_CASH' };
+  }
 }
 
 /** 计全付转账 → 微信零钱（ifCode=wxpay，entryType=WX_CASH，accountNo 为用户 openid） */
 @Injectable()
 export class JqfWechatTransferDriver extends JqfTransferDriverBase {
   readonly provider = PayoutProvider.JqfWechat;
-  protected readonly route: JqfTransferRoute = { ifCode: 'wxpay', entryType: 'WX_CASH' };
+
+  protected resolveRoute(): JqfTransferRoute {
+    return { ifCode: 'wxpay', entryType: 'WX_CASH' };
+  }
+}
+
+/**
+ * 计全付转账 → 对私银行卡（entryType=BANK_CARD，accountNo 为银行卡号，bankName 为开户行）。
+ * ifCode 取支付配置 wallet.jqf.transferIfCode：aliaqfpay 支付宝安全发 / yeepay 易宝；
+ * 易宝对私银行卡要求 channelExtra 附收款人身份证号与手机号（官方文档 pageId=45）。
+ */
+@Injectable()
+export class JqfBankCardTransferDriver extends JqfTransferDriverBase {
+  readonly provider = PayoutProvider.JqfBankCard;
+
+  protected resolveRoute(cfg: JqfPayConfig, input: PayoutInput): JqfTransferRoute {
+    return buildJqfBankCardRoute(cfg.transferIfCode, input);
+  }
+}
+
+/** 银行卡转账通道参数：易宝附带实名要素，缺失时拒绝发起（避免渠道必失败仍占用商户单号） */
+export function buildJqfBankCardRoute(
+  ifCode: JqfTransferIfCode,
+  input: PayoutInput,
+): JqfTransferRoute {
+  const route: JqfTransferRoute = {
+    ifCode,
+    entryType: 'BANK_CARD',
+    bankName: input.bankName ?? undefined,
+  };
+  if (ifCode === JqfTransferIfCode.YeePay) {
+    if (!input.idCardNo || !input.phone) {
+      throw new BadRequestException('易宝银行卡转账需收款人身份证号与预留手机号，该提现单缺少实名要素');
+    }
+    route.channelExtra = JSON.stringify({ idCardNo: input.idCardNo, phoneNumber: input.phone });
+  }
+  return route;
 }
 
 /**

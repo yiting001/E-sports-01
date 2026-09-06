@@ -206,7 +206,7 @@ onMounted(() => {
           <template #default="{ row }">
             <div class="withdrawal-payee">
               <strong>{{ row.account }}</strong>
-              <small>{{ row.accountName }}</small>
+              <small>{{ row.accountName }}<template v-if="row.bankName"> · {{ row.bankName }}</template></small>
             </div>
           </template>
         </el-table-column>
@@ -359,6 +359,12 @@ onMounted(() => {
           </el-descriptions-item>
           <el-descriptions-item label="收款姓名">
             {{ currentWithdrawal.accountName }}
+          </el-descriptions-item>
+          <el-descriptions-item label="开户行">
+            {{ currentWithdrawal.bankName || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="预留手机号">
+            {{ currentWithdrawal.phone || '-' }}
           </el-descriptions-item>
           <el-descriptions-item label="身份证号">
             {{ currentWithdrawal.idCardNo || '-' }}

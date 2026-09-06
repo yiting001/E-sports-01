@@ -30,4 +30,14 @@ export class CreateWithdrawalDto implements CreateWithdrawalBody {
   @IsString()
   @Matches(ID_CARD_NO_PATTERN, { message: '身份证号格式不正确' })
   idCardNo!: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 64)
+  bankName?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 20)
+  phone?: string;
 }

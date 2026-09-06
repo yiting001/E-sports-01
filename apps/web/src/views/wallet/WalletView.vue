@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import {
+  BANK_CARD_NO_PATTERN,
   FundDirection,
   ID_CARD_NO_PATTERN,
+  PAYOUT_PHONE_PATTERN,
   PaymentProvider,
   PayoutProvider,
   WALLET_TXN_TYPE_TEXT,
@@ -47,7 +49,18 @@ const withdrawForm = reactive<WalletWithdrawForm>({
   account: '',
   accountName: '',
   idCardNo: '',
+  bankName: '',
+  phone: '',
 });
+/** 当前提现网关可选的到账方式（服务端下发；未加载时回退支付宝） */
+const withdrawMethods = computed<PayoutProvider[]>(() =>
+  wallet.value?.withdrawMethods.length
+    ? wallet.value.withdrawMethods
+    : [PayoutProvider.Alipay],
+);
+const withdrawPhoneRequired = computed(
+  () => wallet.value?.withdrawPhoneRequired ?? false,
+);
 
 const walletStatusLabel = computed(() =>
   wallet.value?.status === WalletStatus.Frozen ? '冻结' : '正常',
@@ -102,11 +115,39 @@ async function confirmPaid(): Promise<void> {
 
 function openWithdraw(): void {
   withdrawForm.amountYuan = 1;
-  withdrawForm.provider = PayoutProvider.Alipay;
+  withdrawForm.provider = withdrawMethods.value[0] ?? PayoutProvider.Alipay;
   withdrawForm.account = '';
   withdrawForm.accountName = '';
   withdrawForm.idCardNo = '';
+  withdrawForm.bankName = '';
+  withdrawForm.phone = '';
   withdrawVisible.value = true;
+}
+
+/** 按到账方式校验收款要素，返回错误提示；通过时返回 null */
+function validatePayee(): string | null {
+  const account = withdrawForm.account.trim();
+  const accountName = withdrawForm.accountName.trim();
+  if (withdrawForm.provider === PayoutProvider.BankCard) {
+    if (!BANK_CARD_NO_PATTERN.test(account.replace(/\s+/g, ''))) {
+      return '请填写正确的银行卡号（10～30 位数字）';
+    }
+    if (!withdrawForm.bankName.trim()) {
+      return '请填写开户行名称';
+    }
+    if (!accountName) {
+      return '请填写持卡人姓名';
+    }
+    if (withdrawPhoneRequired.value && !PAYOUT_PHONE_PATTERN.test(withdrawForm.phone.trim())) {
+      return '请填写正确的银行预留手机号';
+    }
+  } else if (!account || !accountName) {
+    return '请填写收款支付宝账号与真实姓名';
+  }
+  if (!ID_CARD_NO_PATTERN.test(withdrawForm.idCardNo.trim())) {
+    return '请填写正确的 18 位身份证号（报税用）';
+  }
+  return null;
 }
 
 function updateWithdrawForm(value: WalletWithdrawForm): void {
@@ -114,22 +155,24 @@ function updateWithdrawForm(value: WalletWithdrawForm): void {
 }
 
 async function submitWithdraw(): Promise<void> {
-  if (!withdrawForm.account || !withdrawForm.accountName) {
-    ElMessage.warning('请填写收款支付宝账号与真实姓名');
+  const error = validatePayee();
+  if (error) {
+    ElMessage.warning(error);
     return;
   }
-  if (!ID_CARD_NO_PATTERN.test(withdrawForm.idCardNo.trim())) {
-    ElMessage.warning('请填写正确的 18 位身份证号（报税用）');
-    return;
-  }
+  const isBankCard = withdrawForm.provider === PayoutProvider.BankCard;
   withdrawSubmitting.value = true;
   try {
     const result = await walletApi.withdraw({
       amountFen: yuanToFen(withdrawForm.amountYuan),
       provider: withdrawForm.provider,
-      account: withdrawForm.account,
-      accountName: withdrawForm.accountName,
+      account: isBankCard
+        ? withdrawForm.account.replace(/\s+/g, '')
+        : withdrawForm.account.trim(),
+      accountName: withdrawForm.accountName.trim(),
       idCardNo: withdrawForm.idCardNo.trim().toUpperCase(),
+      bankName: isBankCard ? withdrawForm.bankName.trim() : undefined,
+      phone: isBankCard && withdrawForm.phone.trim() ? withdrawForm.phone.trim() : undefined,
     });
     if (result.status === WithdrawalStatus.Pending) {
       ElMessage.success('提现申请已提交，等待财务审核后到账');
@@ -190,6 +233,8 @@ onMounted(() => {
       v-model="withdrawVisible"
       :form="withdrawForm"
       :submitting="withdrawSubmitting"
+      :methods="withdrawMethods"
+      :phone-required="withdrawPhoneRequired"
       @update:form="updateWithdrawForm"
       @submit="submitWithdraw"
     />

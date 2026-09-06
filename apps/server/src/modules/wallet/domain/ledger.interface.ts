@@ -38,6 +38,10 @@ export interface ReserveWithdrawalInput {
   accountName: string;
   /** 收款方身份证号（报税用） */
   idCardNo: string;
+  /** 开户行名称（银行卡提现） */
+  bankName: string | null;
+  /** 银行预留手机号（银行卡提现且渠道要求时） */
+  phone: string | null;
   outBizNo: string;
 }
 

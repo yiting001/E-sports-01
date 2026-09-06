@@ -212,6 +212,8 @@ onMounted(() => {
       :balance-fen="wallet.balanceFen"
       :fee-rate-bp="wallet.withdrawFeeRateBp"
       :tax-tiers="wallet.withdrawTaxTiers"
+      :methods="wallet.withdrawMethods"
+      :phone-required="wallet.withdrawPhoneRequired"
       @done="onWithdrawn"
       @close="withdrawing = false"
     />

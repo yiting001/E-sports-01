@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import type { ConfigItemView } from '@app/contracts';
-import { CONFIG_KEYS, ConfigGroup, ConfigValueType, PaymentGateway } from '@app/contracts';
+import {
+  CONFIG_KEYS,
+  ConfigGroup,
+  ConfigValueType,
+  JQF_TRANSFER_IF_CODE_TEXT,
+  JqfTransferIfCode,
+  PaymentGateway,
+} from '@app/contracts';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { configApi } from '@/api/config.api';
@@ -15,7 +22,10 @@ const KEYS = {
   jqfMchNo: CONFIG_KEYS.wallet.jqfMchNo,
   jqfAppId: CONFIG_KEYS.wallet.jqfAppId,
   jqfApiKey: CONFIG_KEYS.wallet.jqfApiKey,
+  jqfTransferIfCode: CONFIG_KEYS.wallet.jqfTransferIfCode,
 } as const;
+
+const JQF_TRANSFER_IF_CODES = Object.values(JqfTransferIfCode);
 
 interface PaymentConfigForm {
   wechatGateway: PaymentGateway;
@@ -26,6 +36,8 @@ interface PaymentConfigForm {
   jqfAppId: string;
   /** 敏感项不回显；留空提交表示保持原值不变 */
   jqfApiKey: string;
+  /** 计全付银行卡转账接口代码 */
+  jqfTransferIfCode: JqfTransferIfCode;
 }
 
 const auth = useAuthStore();
@@ -42,6 +54,7 @@ const form = reactive<PaymentConfigForm>({
   jqfMchNo: '',
   jqfAppId: '',
   jqfApiKey: '',
+  jqfTransferIfCode: JqfTransferIfCode.AliAqfPay,
 });
 
 /** 任一网关开启计全付时，计全付商户配置为必填 */
@@ -62,6 +75,12 @@ function readGateway(
   return item?.value === PaymentGateway.Official ? PaymentGateway.Official : fallback;
 }
 
+function readTransferIfCode(item: ConfigItemView | undefined): JqfTransferIfCode {
+  return item?.value === JqfTransferIfCode.YeePay
+    ? JqfTransferIfCode.YeePay
+    : JqfTransferIfCode.AliAqfPay;
+}
+
 onMounted(load);
 
 async function load(): Promise<void> {
@@ -77,6 +96,7 @@ async function load(): Promise<void> {
     form.jqfMchNo = byKey.get(KEYS.jqfMchNo)?.value ?? '';
     form.jqfAppId = byKey.get(KEYS.jqfAppId)?.value ?? '';
     form.jqfApiKey = '';
+    form.jqfTransferIfCode = readTransferIfCode(byKey.get(KEYS.jqfTransferIfCode));
     const apiKeyItem = byKey.get(KEYS.jqfApiKey);
     apiKeyConfigured.value = apiKeyItem !== undefined && apiKeyItem.value !== '';
   } catch {
@@ -128,7 +148,12 @@ async function save(): Promise<void> {
       {
         key: KEYS.payoutGateway,
         value: form.payoutGateway,
-        remark: '提现网关：official 官方直连 / jqf 计全付转账（开启后支付宝与微信零钱提现均走计全付）',
+        remark: '提现网关：official 官方直连（支付宝转账）/ jqf 计全付转账（统一转账到银行卡）',
+      },
+      {
+        key: KEYS.jqfTransferIfCode,
+        value: form.jqfTransferIfCode,
+        remark: '计全付银行卡转账接口代码 ifCode：aliaqfpay 支付宝安全发 / yeepay 易宝支付（需收款人身份证号与手机号）',
       },
       {
         key: KEYS.jqfApiBase,
@@ -239,8 +264,26 @@ async function save(): Promise<void> {
             </el-radio>
           </el-radio-group>
           <div class="payment-config__tip">
-            普通用户、打手、客服的钱包提现共用本网关。默认计全付转账：支付宝与微信零钱提现均由计全付转账打款，结果由转账通知与主动查单收敛；
-            官方渠道仅支持支付宝转账。提现单在申请时固定执行渠道，切换不影响在途单据。
+            普通用户、打手、客服的钱包提现共用本网关。官方渠道：用户填写支付宝账号，由支付宝官方转账打款；
+            计全付转账（默认）：用户填写银行卡号、开户行与持卡人姓名，由计全付转账接口转到对私银行卡，结果由转账通知与主动查单收敛。
+            提现单在申请时固定执行渠道，切换不影响在途单据。
+          </div>
+        </el-form-item>
+        <el-form-item
+          v-if="form.payoutGateway === PaymentGateway.Jqf"
+          label="银行卡转账接口"
+        >
+          <el-radio-group v-model="form.jqfTransferIfCode">
+            <el-radio
+              v-for="code in JQF_TRANSFER_IF_CODES"
+              :key="code"
+              :value="code"
+            >
+              {{ JQF_TRANSFER_IF_CODE_TEXT[code] }}
+            </el-radio>
+          </el-radio-group>
+          <div class="payment-config__tip">
+            需与计全付商户后台已开通的转账通道一致。选择易宝时，提现表单会要求用户额外填写银行预留手机号，并与身份证号一同上送渠道。
           </div>
         </el-form-item>
       </el-form>

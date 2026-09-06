@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { BadRequestException } from '@nestjs/common';
-import { CONFIG_KEYS, PaymentGateway, PaymentProvider } from '@app/contracts';
+import { CONFIG_KEYS, JqfTransferIfCode, PaymentGateway, PaymentProvider } from '@app/contracts';
 import type { ConfigService } from '../../src/modules/config/application/config.service';
 import { PaymentGatewayService } from '../../src/modules/wallet/application/payment-gateway.service';
 import type { JqfPayConfig } from '../../src/modules/wallet/infrastructure/drivers/jqf-pay.config';
@@ -23,6 +23,7 @@ const CFG: JqfPayConfig = {
   mchNo: 'M1621873433',
   appId: '60cc31c25b327517d2246a51',
   apiKey: API_KEY,
+  transferIfCode: JqfTransferIfCode.AliAqfPay,
 };
 
 function md5Upper(source: string): string {
