@@ -4,6 +4,7 @@
  * 进入应用时拉取本租户最新一条弹窗公告，DOMPurify 消毒后渲染富文本；
  * 关闭后按「公告 id + 更新时间」记在本机，同一条公告不再重复弹出，
  * 后台更新内容或换新公告则重新弹出。接口失败静默降级，不打扰主流程。
+ * 弹窗面板为固定尺寸，公告内容在正文区内部滚动，不随内容撑大或缩小。
  */
 import DOMPurify from 'dompurify';
 import { computed, onMounted, ref } from 'vue';
@@ -176,8 +177,7 @@ onMounted(loadPopup);
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 480px;
-  max-height: 76vh;
+  height: 100%;
   overflow: hidden;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
@@ -185,11 +185,14 @@ onMounted(loadPopup);
 }
 
 .popup-flame {
+  width: 100%;
   max-width: 480px;
+  height: min(72vh, 560px);
 }
 
 .popup-head {
   display: flex;
+  flex-shrink: 0;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
@@ -225,6 +228,7 @@ onMounted(loadPopup);
 
 .popup-body {
   flex: 1;
+  min-height: 0;
   padding: 16px;
   overflow-y: auto;
 }
@@ -243,6 +247,7 @@ onMounted(loadPopup);
 
 .popup-foot {
   display: flex;
+  flex-shrink: 0;
   gap: 10px;
   padding: 12px 16px;
   border-top: 1px solid var(--c-border);
@@ -272,12 +277,11 @@ onMounted(loadPopup);
 
 @media (min-width: 768px) {
   .popup-flame {
-    width: 100%;
     max-width: 560px;
+    height: min(76vh, 640px);
   }
 
   .popup-flame .popup-panel {
-    max-width: 560px;
     box-shadow: 0 18px 48px rgb(0 0 0 / 35%);
   }
 }
