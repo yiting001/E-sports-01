@@ -13,6 +13,7 @@ function createNotice(tenantId: string): NoticeEntity {
     content: '<p>今晚维护</p>',
     enabled: true,
     popup: true,
+    popupFlame: false,
     sort: 0,
     createdAt: new Date('2026-07-20T00:00:00.000Z'),
     updatedAt: new Date('2026-07-21T00:00:00.000Z'),
@@ -47,6 +48,7 @@ void test('返回当前租户仓储选中的弹窗公告', async () => {
   assert.equal(calls(), 1);
   assert.equal(view?.id, 'notice-id');
   assert.equal(view?.updatedAt, '2026-07-21T00:00:00.000Z');
+  assert.equal(view?.popupFlame, false);
 });
 
 void test('本租户没有启用中的弹窗公告时返回 null', async () => {

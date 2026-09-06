@@ -19,6 +19,9 @@ export class UpsertNoticeDto implements UpsertNoticePayload {
   @IsBoolean()
   popup!: boolean;
 
+  @IsBoolean()
+  popupFlame!: boolean;
+
   @Type(() => Number)
   @IsInt()
   sort!: number;
