@@ -42,20 +42,20 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
       </span>
       <span class="platform-meta">
         <span class="platform-label">手机端</span>
-      </span>
-      <span class="price-row">
-        <span class="price">
-          ¥<b>{{ fenToYuan(product.priceFen) }}</b>
-        </span>
-        <span
-          v-if="discountLabel(product.priceFen, product.originPriceFen)"
-          class="discount"
-        >{{ discountLabel(product.priceFen, product.originPriceFen) }}</span>
         <span
           v-if="product.originPriceFen > product.priceFen"
           class="origin"
         >¥{{ fenToYuan(product.originPriceFen) }}</span>
       </span>
+      <span class="price-row">
+        <span class="price">
+          ¥<b>{{ fenToYuan(product.priceFen) }}</b>
+        </span>
+      </span>
+      <span
+        v-if="discountLabel(product.priceFen, product.originPriceFen)"
+        class="discount"
+      >{{ discountLabel(product.priceFen, product.originPriceFen) }}</span>
     </div>
     <div class="platform-price">
       <span
@@ -91,20 +91,20 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
       </span>
       <span class="platform-meta">
         <span class="platform-label">电脑端</span>
-      </span>
-      <span class="price-row">
-        <span class="price">
-          ¥<b>{{ fenToYuan(product.pcPriceFen) }}</b>
-        </span>
-        <span
-          v-if="discountLabel(product.pcPriceFen, product.pcOriginPriceFen)"
-          class="discount"
-        >{{ discountLabel(product.pcPriceFen, product.pcOriginPriceFen) }}</span>
         <span
           v-if="product.pcOriginPriceFen > product.pcPriceFen"
           class="origin"
         >¥{{ fenToYuan(product.pcOriginPriceFen) }}</span>
       </span>
+      <span class="price-row">
+        <span class="price">
+          ¥<b>{{ fenToYuan(product.pcPriceFen) }}</b>
+        </span>
+      </span>
+      <span
+        v-if="discountLabel(product.pcPriceFen, product.pcOriginPriceFen)"
+        class="discount"
+      >{{ discountLabel(product.pcPriceFen, product.pcOriginPriceFen) }}</span>
     </div>
   </div>
 </template>
@@ -117,7 +117,14 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   gap: 10px;
 }
 
+/*
+ * 卡片固定为「图标 + 两行文字」：第一行平台名 + 划线原价，第二行现价，
+ * 折扣角标绝对定位在图标底部；所有文字不换行，有/无折扣时卡片高度一致。
+ */
 .platform-price {
+  --icon-size: 48px;
+  --pad-x: 13px;
+
   position: relative;
   overflow: hidden;
   min-width: 0;
@@ -127,7 +134,7 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   align-items: center;
   column-gap: 12px;
   row-gap: 5px;
-  padding: 14px 13px;
+  padding: 14px var(--pad-x);
   border: 1px solid color-mix(in srgb, var(--c-accent) 30%, var(--c-border));
   border-radius: 16px;
   background:
@@ -142,8 +149,8 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: var(--icon-size);
+  height: var(--icon-size);
   color: var(--c-accent);
   background: radial-gradient(120% 120% at 30% 25%, #2a3244, #141a26 75%);
   border: 1px solid color-mix(in srgb, var(--c-accent) 45%, transparent);
@@ -175,10 +182,10 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
 
 .price-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 3px 7px;
+  gap: 7px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .price {
@@ -198,14 +205,20 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
 }
 
 .discount {
-  flex-shrink: 0;
-  transform: translateY(-2px);
-  padding: 3px 9px;
-  font-size: 12px;
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: calc(var(--pad-x) + var(--icon-size) / 2);
+  transform: translate(-50%, calc(var(--icon-size) / 2 - 9px));
+  padding: 2px 7px;
+  font-size: 11px;
+  line-height: 1.2;
   font-weight: 800;
+  white-space: nowrap;
   color: var(--c-bg);
   background: linear-gradient(120deg, #ffd47a, var(--c-accent));
   border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 .origin {
@@ -221,15 +234,17 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   --font-price: 'PingFang SC', 'HarmonyOS Sans SC', 'Helvetica Neue', 'Segoe UI', 'Microsoft YaHei', sans-serif;
 }
 
-@media (max-width: 413px) {
+@media (max-width: 479px) {
   .platform-price {
-    column-gap: 8px;
-    padding: 12px 10px;
+    --icon-size: 38px;
+    --pad-x: 8px;
+
+    column-gap: 5px;
+    padding: 12px var(--pad-x);
   }
 
-  .platform-icon {
-    width: 38px;
-    height: 38px;
+  .platform-meta {
+    gap: 4px;
   }
 
   .platform-icon svg {
@@ -239,6 +254,7 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
 
   .platform-label {
     font-size: 14px;
+    letter-spacing: 0;
   }
 
   .price {
@@ -249,23 +265,38 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
     font-size: 20px;
   }
 
-  .price-row {
-    gap: 2px 5px;
-  }
-
   .discount {
-    padding: 2px 7px;
+    padding: 2px 6px;
     font-size: 10px;
   }
 
   .origin {
-    font-size: 11px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 374px) {
+  .origin {
+    font-size: 9px;
   }
 }
 
 @media (max-width: 359px) {
+  .platform-price {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 0;
+  }
+
   .platform-icon {
     display: none;
+  }
+
+  .discount {
+    top: auto;
+    right: var(--pad-x);
+    bottom: 6px;
+    left: auto;
+    transform: none;
   }
 }
 </style>
