@@ -335,7 +335,7 @@ WebSocket（命名空间 `/im`，握手携带 access 令牌）：
 | GET | `/api/notice/popup` | 公开租户接口 | 当前租户最新一条弹窗公告，无则 `null`；租户由 `X-Tenant-Code` 指定 |
 | GET | `/api/notice/public/:id` | 公开 | 单条通知详情（仅启用中的可见） |
 | GET | `/api/notice` | `notice:list` | 管理端分页列表 `?page&pageSize` |
-| POST | `/api/notice` | `notice:save` | 新建通知 `{ title, content, enabled, popup, sort }` → `NoticeView` |
+| POST | `/api/notice` | `notice:save` | 新建通知 `{ title, content, enabled, popup, popupFlame, sort }` → `NoticeView` |
 | PUT | `/api/notice/:id` | `notice:save` | 编辑通知 |
 | DELETE | `/api/notice/:id` | `notice:remove` | 删除通知 |
 

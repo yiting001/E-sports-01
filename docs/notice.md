@@ -8,12 +8,12 @@
 - 通知公告继续支持标题、富文本详情、启停和排序，公开端只读取启用记录。
 - 通知可标记为【弹窗公告】：C 端首次进入时弹窗展示本租户最新一条，关闭后本机不再重复弹出；弹窗支持点击「查看详情」进入公告详情页（`/notices/:id`，复用公开详情接口），进入前同样记已读关闭弹窗。
 - 弹窗面板为固定尺寸（移动端宽 100%/最大 480px、高 `min(72vh, 560px)`；≥768px 宽最大 560px、高 `min(76vh, 640px)`），头部与底部按钮固定，公告正文在中间区域内部滚动，不随内容撑大或缩小。
-- 弹窗面板复用 Canvas UI `Flame Wrap` 火焰边框特效；WebGL2 不可用时保留普通弹窗，HTML-in-canvas 不可用时使用真实 DOM + SVG 边缘热浪 + 透明火焰层，系统要求减少动态时只保留静态形变。
+- 弹窗是否包裹 Canvas UI `Flame Wrap` 火焰边框特效由公告字段 `popupFlame` 控制：运营在新建/编辑通知时用「火焰特效」开关设置（仅弹窗公告生效，默认开启），关闭则为普通固定尺寸弹窗；开启时 WebGL2 不可用保留普通弹窗，HTML-in-canvas 不可用时使用真实 DOM + SVG 边缘热浪 + 透明火焰层，系统要求减少动态时只保留静态形变。有无特效时弹窗外框尺寸一致。
 - 商品卡片的富文本摘要固定保留两行高度，描述为空或有内容时价格、销量的纵向位置一致。
 
 非目标：不做弹窗阅读回传/服务端已读记录（已读只存本机），不做定时上下线和多条弹窗队列。
 
-本次新增业务字段 `notice.popup`（布尔，默认 false，带索引），由 migration `AddNoticePopup1785500000000` 建列与回滚。横幅使用可按租户覆盖的配置键 `portal.homeBanner`，值由历史单图字符串兼容升级为 JSON。
+业务字段 `notice.popup`（布尔，默认 false，带索引）由 migration `AddNoticePopup1785500000000` 建列与回滚；`notice.popupFlame`（布尔，默认 true，历史弹窗公告保持带火焰展示）由 migration `AddNoticePopupFlame1786700000000` 建列与回滚。横幅使用可按租户覆盖的配置键 `portal.homeBanner`，值由历史单图字符串兼容升级为 JSON。
 
 ## 模块结构
 
@@ -29,8 +29,8 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  Form["管理端 NoticeFormDialog（弹窗开关）"] -->|POST/PUT /notice| SaveNotice["SaveNoticeUseCase"]
-  SaveNotice --> Table["notice.popup"]
+  Form["管理端 NoticeFormDialog（弹窗/火焰特效开关）"] -->|POST/PUT /notice| SaveNotice["SaveNoticeUseCase"]
+  SaveNotice --> Table["notice.popup / notice.popupFlame"]
   Table --> Popup["GetPopupNoticeUseCase"]
   Tenant["TenantPublic 守卫与租户上下文"] --> Popup
   Popup -->|GET /notice/popup| Dialog["C 端 NoticePopupDialog"]
@@ -47,7 +47,8 @@ apps/server/src/modules/notice/
 └── interfaces/                               # DTO 与一路由一控制器
 apps/web/src/components/notice/BannerPanel.vue # 上传、排序、活动关联、间隔设置
 apps/client/src/components/home/HomeBanner.vue # 轮播、拖动、暂停、失败图剔除、跳转
-apps/client/src/components/notice/NoticePopupDialog.vue # 首次进入弹窗、消毒渲染、本机已读
+apps/client/src/components/notice/NoticePopupDialog.vue # 首次进入弹窗、固定外框、按 popupFlame 决定是否包裹火焰、本机已读
+apps/client/src/components/notice/NoticePopupPanel.vue # 弹窗面板：标题/消毒正文/查看详情与关闭按钮
 apps/client/src/components/canvasui/FlameWrap.vue # 公告局部火焰边框，含 WebGL2 与普通 DOM 降级
 apps/client/src/components/canvasui/flame-wrap-options.ts # Flame Wrap 参数和 undefined 安全默认值
 apps/client/src/components/canvasui/flame-wrap.ts # Canvas UI WebGL 生命周期、尺寸和可见性管理
@@ -153,14 +154,14 @@ sequenceDiagram
 - C 端复用 `resolveMediaUrl` 兼容站内和历史本机地址；单图加载失败会从轮播剔除，全部失败则隐藏横幅且不影响首页商品。
 - 移动端横幅按 21:9 收敛，桌面保持最高 160px 的短横幅；切换不改变容器尺寸。滑动超过阈值后短暂抑制点击，避免滚动或拖动误进活动。
 - 通知富文本仍经 DOMPurify 净化，横幅接口不返回活动正文或其他租户数据。
-- 弹窗接口只下发展示字段（id/标题/正文/时间），复用公开租户守卫与仓储行级过滤，不会因免登录而泄露其他租户公告；
+- 弹窗接口只下发展示字段（id/标题/正文/时间/popupFlame），复用公开租户守卫与仓储行级过滤，不会因免登录而泄露其他租户公告；
   接口失败时 C 端静默降级（不弹窗、不弹错误提示），不影响首页主流程。
 - 已读状态只存本机，换浏览器/清缓存会重新弹出；如需按账号只弹一次，需另做服务端已读记录，不在本次范围。
-- Flame Wrap 只作用于公告弹窗局部，不读取或修改公告正文；WebGL2 不可用时不挂载特效，HTML-in-canvas 不可用时由真实 DOM 承载内容、SVG 位移滤镜让边缘内容随热浪变化、透明 canvas 绘制火焰，特效不会成为公告功能的硬依赖。
+- Flame Wrap 只在 `popupFlame` 为 true 时挂载，只作用于公告弹窗局部，不读取或修改公告正文；WebGL2 不可用时不挂载特效，HTML-in-canvas 不可用时由真实 DOM 承载内容、SVG 位移滤镜让边缘内容随热浪变化、透明 canvas 绘制火焰，特效不会成为公告功能的硬依赖。
 
 ## 验证范围
 
-- 弹窗公告用例单测（`apps/server/test/notice/get-popup-notice.spec.ts`）覆盖结果映射与无公告返回
+- 弹窗公告用例单测（`apps/server/test/notice/get-popup-notice.spec.ts`）覆盖结果映射（含 `popupFlame`）与无公告返回
   `null`；租户编码解析、未知/停用拒绝和仓储过滤复用既有租户守卫与隔离测试。
 - 配置解析测试覆盖空值、历史 URL、合法 JSON、非法图片/活动 ID、数量及间隔收敛。
 - C 端 `Flame Wrap` 参数测试覆盖 `undefined` 不覆盖颜色/数值默认值和显式零值；商品摘要测试覆盖富文本标签、空白和空描述。

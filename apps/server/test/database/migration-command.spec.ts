@@ -81,7 +81,7 @@ test('空 history 表不构成可信基线且不得执行历史 migration', asyn
 
 test('migration:show 返回待执行状态并始终关闭连接', async () => {
   const dataSource = new FakeMigrationDataSource('typeorm_migrations');
-  dataSource.history = migrationHistory().slice(0, -2);
+  dataSource.history = migrationHistory().slice(0, -3);
   const output: string[] = [];
 
   await runMigrationCommand('migration:show', {
