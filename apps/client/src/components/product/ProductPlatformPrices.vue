@@ -119,7 +119,7 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
 
 /*
  * 卡片固定为「图标 + 两行文字」：第一行平台名 + 划线原价，第二行现价，
- * 折扣角标绝对定位在图标底部；所有文字不换行，有/无折扣时卡片高度一致。
+ * 折扣角标内置在卡片右上角（不超出边框）；所有文字不换行，有/无折扣时卡片高度一致。
  */
 .platform-price {
   --icon-size: 48px;
@@ -207,18 +207,16 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
 .discount {
   position: absolute;
   z-index: 1;
-  top: 50%;
-  left: calc(var(--pad-x) + var(--icon-size) / 2);
-  transform: translate(-50%, calc(var(--icon-size) / 2 - 9px));
-  padding: 2px 7px;
+  top: 0;
+  right: 0;
+  padding: 2px 9px 2px 8px;
   font-size: 11px;
-  line-height: 1.2;
+  line-height: 14px;
   font-weight: 800;
   white-space: nowrap;
   color: var(--c-bg);
   background: linear-gradient(120deg, #ffd47a, var(--c-accent));
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  border-radius: 0 15px 0 10px;
 }
 
 .origin {
@@ -266,7 +264,7 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
   }
 
   .discount {
-    padding: 2px 6px;
+    padding: 1px 7px 1px 6px;
     font-size: 10px;
   }
 
@@ -289,14 +287,6 @@ function discountLabel(priceFen: number, originPriceFen: number): string {
 
   .platform-icon {
     display: none;
-  }
-
-  .discount {
-    top: auto;
-    right: var(--pad-x);
-    bottom: 6px;
-    left: auto;
-    transform: none;
   }
 }
 </style>
