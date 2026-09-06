@@ -219,7 +219,7 @@ export const CONFIG_KEYS = {
     paymentProvider: 'wallet.payment.provider',
     /** 当前生效的默认提现渠道：alipay / wechat */
     payoutProvider: 'wallet.payout.provider',
-    /** 提现（付款）网关：official 官方直连 / jqf 计全付转账（开启后支付宝与微信零钱提现均走计全付 api/transferOrder） */
+    /** 提现（付款）网关：official 官方直连（支付宝转账）/ jqf 计全付转账（统一转账到银行卡，api/transferOrder entryType=BANK_CARD） */
     payoutGateway: 'wallet.payout.gateway',
     /** 最小充值金额（分） */
     minRechargeFen: 'wallet.minRechargeFen',
@@ -274,6 +274,8 @@ export const CONFIG_KEYS = {
     jqfAppId: 'wallet.jqf.appId',
     /** 计全付接口私钥 apiKey（密文保存，用于请求签名与回调验签） */
     jqfApiKey: 'wallet.jqf.apiKey',
+    /** 计全付银行卡转账接口代码 ifCode：aliaqfpay 支付宝安全发（默认）/ yeepay 易宝（需身份证号 + 手机号） */
+    jqfTransferIfCode: 'wallet.jqf.transferIfCode',
   },
   booster: {
     /** 打手等级档位（JSON 数组：等级/名称/完成单数门槛/提成万分比） */

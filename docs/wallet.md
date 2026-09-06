@@ -63,7 +63,8 @@
 - **打手资金事务**：缴押、退款和通用罚款由打手模块先锁 `booster_application`，再通过钱包参与端口锁 `wallet`；押金、钱包余额、流水和罚款任一步失败都会整体回滚。
 - **提现资金安全**：申请即冻结扣减；审核通过时先在事务内「待审核 → 处理中」占位（防并发重复转账）再发起转账；渠道**明确**失败/关单或审核驳回才在事务内全额回滚余额并写补偿入账流水；请求已发出但结果未知（网关不可达/响应异常）一律保持 `processing`，绝不回滚，防止「钱已出、余额又退」。
 - **提现状态机**：`pending`（待审核）→ `processing`（转账中）→ `success` / `failed`；`pending` → `rejected`（驳回）。`processing` 由三条路径共用 `WithdrawalSettlementService` 幂等收敛：审核发起的同步结果、渠道异步通知（`POST /wallet/withdrawal/callback/:provider`）、财务主动查单（`POST /wallet/admin/withdrawals/:id/sync`）。终态后的重复/乱序通知不再改变余额与状态。
-- **提现执行渠道固定**：用户选的是收款方式（支付宝 / 微信零钱），创建时由 `PaymentGatewayService.resolvePayoutProvider` 按 `wallet.payout.gateway` 解析为实际执行渠道（`alipay` / `jqf_alipay` / `jqf_wechat`）并持久化到提现单；审核、回调、查单均按提现单保存的渠道解析端口，切换网关不影响在途单。
+- **提现执行渠道固定**：用户可选的收款方式由服务端按 `wallet.payout.gateway` 下发（`GET /wallet/mine` 的 `withdrawMethods` / `withdrawPhoneRequired`：官方 → 支付宝 `alipay`；计全付 → 银行卡 `bank_card`），创建时服务端校验方式在当前网关可选范围内，再由 `PaymentGatewayService.resolvePayoutProvider` 解析为实际执行渠道（`bank_card` → `jqf_bank_card`）并持久化到提现单；审核、回调、查单均按提现单保存的渠道解析端口，切换网关不影响在途单（历史 `jqf_alipay` / `jqf_wechat` 单据继续由原驱动收敛）。
+- **银行卡提现要素**：卡号（`account`，10～30 位数字）、持卡人（`accountName`）、开户行（`bankName`，必填）；`wallet.jqf.transferIfCode=yeepay` 时还需银行预留手机号（`phone`），与身份证号一同以 `channelExtra` JSON（`idCardNo` / `phoneNumber`）上送。所有校验在冻结扣款前完成。C 端/管理端列表与详情中卡号、身份证号、手机号均脱敏下发（`payout-masking.ts`），打款按存库原值执行。
 - **微信零钱收款标识**：客户端不得提交 openid；服务端通过 `WechatIdentityService.findOpenid` 读取当前用户绑定的公众号 openid，未绑定则拒绝申请；C 端提现记录中的 openid 脱敏展示。
 - **渠道手续费**：充值单/服务订单的 `channelFeeFen` 与提现单的 `channelFeeFen`（计全付 `mchOrderFeeAmount + mchApicostFeeAmount`）仅作财务对账字段，不参与用户余额计算；提现手续费 `feeFen` 仍由平台费率/阶梯税费决定。
 
@@ -72,7 +73,7 @@
 - 充值端口 `PaymentPort`、原路退款端口 `RefundPort`、提现端口 `PayoutPort` 为抽象；具体渠道为可插拔策略，由解析器按请求渠道挑选。
 - 新增渠道 = 实现端口 + 注册进 `PAYMENT_PORTS` / `REFUND_PORTS` / `PAYOUT_PORTS`，上层用例零改动。
 - 提现端口含 `available` 标记，官方微信商家转账仍为占位（`available=false`），在**扣款前**即被拦截；提现网关切到计全付后微信零钱由 `JqfWechatTransferDriver` 承接。
-- 计全付提现驱动 `JqfAlipayTransferDriver`（`ifCode=alipay, entryType=ALIPAY_CASH`）/ `JqfWechatTransferDriver`（`ifCode=wxpay, entryType=WX_CASH`）共用 `JqfTransferDriverBase`：`api/transferOrder` 发起、`api/transfer/query` 查单、转账通知验签；渠道状态 0/1 → 处理中、2 → 成功、3/4 → 失败/关单；发起被业务拒绝时先按商户单号查一次，渠道确实无单才判定失败（避免重复提交被误判）；网关不可达抛 `PayoutOutcomeUnknownError`。
+- 计全付提现驱动 `JqfBankCardTransferDriver`（`entryType=BANK_CARD`，`ifCode` 取配置 `wallet.jqf.transferIfCode`：`aliaqfpay` 支付宝安全发（默认）/ `yeepay` 易宝，当前新建计全付提现单均走此驱动）与历史单据兼容驱动 `JqfAlipayTransferDriver`（`ifCode=alipay, entryType=ALIPAY_CASH`）/ `JqfWechatTransferDriver`（`ifCode=wxpay, entryType=WX_CASH`）共用 `JqfTransferDriverBase`：`api/transferOrder` 发起、`api/transfer/query` 查单、转账通知验签；渠道状态 0/1 → 处理中、2 → 成功、3/4 → 失败/关单；发起被业务拒绝时先按商户单号查一次，渠道确实无单才判定失败（避免重复提交被误判）；网关不可达抛 `PayoutOutcomeUnknownError`。
 - 主动查单对「渠道无此单」的判定：仅当提现单**没有渠道单号**且距上次更新超过 5 分钟宽限期（`PAYOUT_NOT_FOUND_GRACE_MS`）才视为未出款并回滚，否则保持 `processing` 等待下次同步。
 - 微信支付含 Native 扫码与公众号 JSAPI 两个驱动（回调验签/查单复用 `wechat-pay.trade` 公共函数），JSAPI 驱动与开关、证书上传见 [wechat-official.md](./wechat-official.md)。
 
@@ -273,7 +274,8 @@ sequenceDiagram
 | `wallet.payment.provider`         | 默认充值渠道（alipay/wechat）                              |      |
 | `wallet.wechat.jsapiEnabled`      | 公众号 JSAPI 支付开关；开启且微信内时充值/结算直接拉起收银台（详见 wechat-official.md） |      |
 | `wallet.payout.provider`          | 默认提现渠道（alipay）                                     |      |
-| `wallet.payout.gateway`           | 提现网关，默认 `jqf` 计全付转账（支付宝 + 微信零钱；普通用户 / 打手 / 客服钱包提现共用）/ `official` 官方支付宝转账（管理端「财务 → 支付配置」） |      |
+| `wallet.payout.gateway`           | 提现网关，默认 `jqf` 计全付转账到对私银行卡（普通用户 / 打手 / 客服钱包提现共用）/ `official` 官方支付宝转账（管理端「财务 → 支付配置」） |      |
+| `wallet.jqf.transferIfCode`       | 计全付银行卡转账接口代码：`aliaqfpay` 支付宝安全发（默认）/ `yeepay` 易宝（需收款人身份证号 + 预留手机号），需与计全后台已开通通道一致 |      |
 | `wallet.minRechargeFen`           | 最小充值金额（分）                                         |      |
 | `wallet.minWithdrawFen`           | 最小提现金额（分）                                         |      |
 | `wallet.withdrawFeeRateBp`        | 提现手续费率（万分比，100 = 1%，0 免费；阶梯未命中时回退） |      |

@@ -5,7 +5,7 @@
 **目标**
 
 - 把「支付方式」（微信扫码 / 微信公众号 JSAPI / 支付宝）与「执行网关」（官方直连 / 计全付聚合）解耦：同一支付方式可在管理端「支付配置」页一键切换网关，业务层（订单、充值、退款）不感知网关差异。
-- 接入计全付（jeepay 协议，见仓库根目录 `jqfpay-skill/`）：微信扫码（WX_NATIVE）、微信公众号（WX_JSAPI）、支付宝扫码（ALI_QR）下单、查单、异步回调验签、原路退款；用户提现走计全付转账（`api/transferOrder`，支付宝 ALIPAY_CASH / 微信零钱 WX_CASH），结果由转账通知 + 主动查单收敛（提现状态机见 [wallet.md](./wallet.md)）。
+- 接入计全付（jeepay 协议，见仓库根目录 `jqfpay-skill/`）：微信扫码（WX_NATIVE）、微信公众号（WX_JSAPI）、支付宝扫码（ALI_QR）下单、查单、异步回调验签、原路退款；用户提现走计全付转账（`api/transferOrder`，对私银行卡 BANK_CARD，`ifCode` 可配置 aliaqfpay / yeepay；历史单据兼容 ALIPAY_CASH / WX_CASH），结果由转账通知 + 主动查单收敛（提现状态机见 [wallet.md](./wallet.md)）。
 - 平台内部钱包仍是主账本（余额/冻结/流水/展示）；充值、订单支付、退款、提现的真实资金经计全付渠道处理，渠道手续费（计全付 `mchFeeAmount` / `mchOrderFeeAmount + mchApicostFeeAmount`）落到充值单/订单/提现单的 `channelFeeFen` 供财务对账。
 - 支付配置可视化：管理端「支付配置」菜单页，平台超管可维护微信支付 / 支付宝支付 / 用户提现三个网关开关与计全付凭证（网关地址 / mchNo / appId / apiKey）。
 - 同步跳转回应用：复用官方渠道支付成功后的既有落点，不新增支付结果页。下单上送 `returnUrl=…/#/orders/{payRef}`（服务端替换为订单 id → 直接回订单详情），充值上送发起充值的页面地址（钱包页 / 结算页，服务端追加 `payRef=充值单号`）；计全付支付完成后携 `returnPageAction` 跳回，目标页**以服务端查单结果为准**再走原有成功处理（订单详情提示已支付；钱包/结算页刷新余额与流水）。
@@ -125,7 +125,8 @@ stateDiagram-v2
 | --- | --- |
 | `wallet.payment.wechatGateway` | 微信支付网关：`official` 官方直连 / `jqf` 计全付（扫码与 JSAPI 一起切换） |
 | `wallet.payment.alipayGateway` | 支付宝网关：`official` 官方直连 / `jqf` 计全付（ALI_QR 扫码，退款走 `JqfAlipayRefundDriver`） |
-| `wallet.payout.gateway` | 提现网关，默认 `jqf` 计全付转账（支付宝 + 微信零钱；普通用户 / 打手 / 客服钱包提现共用）/ `official` 官方支付宝转账；提现单创建时固定执行渠道 |
+| `wallet.payout.gateway` | 提现网关，默认 `jqf` 计全付转账到对私银行卡（普通用户 / 打手 / 客服钱包提现共用）/ `official` 官方支付宝转账；提现单创建时固定执行渠道 |
+| `wallet.jqf.transferIfCode` | 计全付银行卡转账接口代码：`aliaqfpay` 支付宝安全发（默认）/ `yeepay` 易宝（需收款人身份证号 + 预留手机号，经 `channelExtra` 上送） |
 | `wallet.notifyBaseUrl` | 回调公网基地址；转账通知为 `{notifyBaseUrl}/wallet/withdrawal/callback/{jqf_alipay\|jqf_wechat}` |
 | `wallet.jqf.apiBase` | 计全付网关地址（必须 `https://`，末尾不带 `/`） |
 | `wallet.jqf.mchNo` / `wallet.jqf.appId` | 计全付商户号与应用 appId |

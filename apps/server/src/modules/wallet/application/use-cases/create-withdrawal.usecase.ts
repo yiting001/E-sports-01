@@ -5,8 +5,11 @@ import {
   NotImplementedException,
 } from '@nestjs/common';
 import {
+  BANK_CARD_NO_PATTERN,
   CONFIG_KEYS,
   CreateWithdrawalBody,
+  PAYOUT_PHONE_PATTERN,
+  PAYOUT_PROVIDER_TEXT,
   PayoutProvider,
   WALLET_DEFAULTS,
   WithdrawalResultView,
@@ -18,23 +21,23 @@ import {
   sanitizeWithdrawTaxTiers,
 } from '@app/contracts';
 import { ConfigService } from '../../../config/application/config.service';
-import { WechatIdentityService } from '../../../rbac/application/wechat-identity.service';
 import { WALLET_LEDGER, WalletLedger } from '../../domain/ledger.interface';
 import { PaymentGatewayService } from '../payment-gateway.service';
 import { PayoutResolver } from '../payout.resolver';
 import { WalletService } from '../wallet.service';
 import { buildOrderNo } from '../order-no.util';
 
-/** 用户可选择的提现方式（支付宝 / 微信零钱）；实际执行渠道由提现网关配置决定 */
-const USER_PAYOUT_CHOICES = new Set<PayoutProvider>([
-  PayoutProvider.Alipay,
-  PayoutProvider.Wechat,
-]);
+/** 收款要素（按提现方式校验后的规范值） */
+interface PayeeInfo {
+  account: string;
+  bankName: string | null;
+  phone: string | null;
+}
 
 /**
  * 用例：发起提现申请（审核制）。
- * 校验金额与提现方式 → 按网关配置解析实际执行渠道并校验可用 → 解析收款标识
- * （支付宝为用户填写的登录号；微信零钱取服务端绑定的公众号 openid，不信任客户端提交）
+ * 校验金额与提现方式（仅接受当前提现网关提供的方式：官方→支付宝，计全付→银行卡）
+ * → 解析实际执行渠道并校验可用 → 校验收款要素（支付宝登录号；银行卡号 + 开户行，渠道要求时另需预留手机号）
  * → 按配置费率计算手续费 → 冻结扣减并落待审核订单（持久化实际执行渠道，之后切换网关不影响在途单）；
  * 后续由财务在提现管理中审核，通过后才发起渠道转账。
  */
@@ -44,7 +47,6 @@ export class CreateWithdrawalUseCase {
     private readonly walletService: WalletService,
     private readonly payoutResolver: PayoutResolver,
     private readonly paymentGateway: PaymentGatewayService,
-    private readonly wechatIdentity: WechatIdentityService,
     private readonly config: ConfigService,
     @Inject(WALLET_LEDGER) private readonly ledger: WalletLedger,
   ) {}
@@ -62,16 +64,19 @@ export class CreateWithdrawalUseCase {
         `提现金额不得低于 ${fenToYuan(minWithdraw)} 元`,
       );
     }
-    if (!USER_PAYOUT_CHOICES.has(body.provider)) {
-      throw new BadRequestException('提现方式仅支持支付宝或微信零钱');
+    const methods = await this.paymentGateway.withdrawMethods();
+    if (!methods.includes(body.provider)) {
+      throw new BadRequestException(
+        `当前提现方式仅支持${methods.map((m) => PAYOUT_PROVIDER_TEXT[m]).join('、')}`,
+      );
     }
 
-    const provider = await this.paymentGateway.resolvePayoutProvider(body.provider);
+    const provider = this.paymentGateway.resolvePayoutProvider(body.provider);
     const port = this.payoutResolver.resolve(provider);
     if (!port.available) {
-      throw new NotImplementedException('该提现渠道暂未开通，请改用支付宝提现');
+      throw new NotImplementedException('该提现渠道暂未开通，请稍后再试');
     }
-    const account = await this.resolveAccount(userId, body);
+    const payee = await this.resolvePayee(body);
 
     const flatRateBp = await this.config.getNumber(
       CONFIG_KEYS.wallet.withdrawFeeRateBp,
@@ -95,9 +100,11 @@ export class CreateWithdrawalUseCase {
       amountFen: body.amountFen,
       feeFen,
       provider,
-      account,
+      account: payee.account,
       accountName: body.accountName,
       idCardNo: body.idCardNo,
+      bankName: payee.bankName,
+      phone: payee.phone,
       outBizNo: buildOrderNo('W'),
     });
     return {
@@ -109,22 +116,30 @@ export class CreateWithdrawalUseCase {
     };
   }
 
-  /** 收款标识：支付宝取用户填写的登录号；微信零钱取服务端已绑定的公众号 openid。 */
-  private async resolveAccount(
-    userId: string,
-    body: CreateWithdrawalBody,
-  ): Promise<string> {
-    if (body.provider === PayoutProvider.Wechat) {
-      const openid = await this.wechatIdentity.findOpenid(userId);
-      if (!openid) {
-        throw new BadRequestException('请先在微信内完成微信登录或绑定后再提现到零钱');
-      }
-      return openid;
-    }
+  /** 收款要素：支付宝取登录号；银行卡取卡号 + 开户行，计全付接口要求时另需预留手机号。 */
+  private async resolvePayee(body: CreateWithdrawalBody): Promise<PayeeInfo> {
     const account = body.account?.trim() ?? '';
-    if (!account) {
-      throw new BadRequestException('请填写收款支付宝账号');
+    if (body.provider !== PayoutProvider.BankCard) {
+      if (!account) {
+        throw new BadRequestException('请填写收款支付宝账号');
+      }
+      return { account, bankName: null, phone: null };
     }
-    return account;
+    const cardNo = account.replace(/\s+/g, '');
+    if (!BANK_CARD_NO_PATTERN.test(cardNo)) {
+      throw new BadRequestException('请填写正确的银行卡号（10～30 位数字）');
+    }
+    const bankName = body.bankName?.trim() ?? '';
+    if (!bankName) {
+      throw new BadRequestException('请填写开户行名称');
+    }
+    const phone = body.phone?.trim() ?? '';
+    if (phone && !PAYOUT_PHONE_PATTERN.test(phone)) {
+      throw new BadRequestException('请填写正确的银行预留手机号');
+    }
+    if (!phone && (await this.paymentGateway.withdrawPhoneRequired())) {
+      throw new BadRequestException('当前银行卡提现渠道需填写银行预留手机号');
+    }
+    return { account: cardNo, bankName, phone: phone || null };
   }
 }

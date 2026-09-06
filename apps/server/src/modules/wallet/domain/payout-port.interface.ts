@@ -5,10 +5,16 @@ export interface PayoutInput {
   /** 商户提现单号（渠道幂等键，重复发起同一单号不会二次出款） */
   outBizNo: string;
   amountFen: number;
-  /** 收款方账号（支付宝登录号：邮箱/手机号；微信零钱：服务端绑定的 openid） */
+  /** 收款方账号（支付宝登录号：邮箱/手机号；微信零钱：服务端绑定的 openid；银行卡：卡号） */
   account: string;
   /** 收款方真实姓名 */
   accountName: string;
+  /** 收款方身份证号（银行卡转账部分渠道要求；历史单据为 null） */
+  idCardNo: string | null;
+  /** 开户行名称（银行卡转账） */
+  bankName: string | null;
+  /** 银行预留手机号（银行卡转账部分渠道要求） */
+  phone: string | null;
   /** 转账备注 */
   remark: string;
   /** 渠道异步通知地址；渠道不支持通知或未配置时为空串 */

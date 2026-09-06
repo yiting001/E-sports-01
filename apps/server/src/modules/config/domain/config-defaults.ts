@@ -4,6 +4,7 @@ import {
   ConfigValueType,
   DEFAULT_APP_NAME,
   InviteRewardType,
+  JqfTransferIfCode,
   LogLevel,
   PaymentGateway,
   PORTAL_BANNER_LIMITS,
@@ -353,7 +354,7 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     type: ConfigValueType.String,
     group: ConfigGroup.Wallet,
     remark:
-      '提现网关（普通用户/打手/客服钱包提现共用）：jqf 计全付转账（默认，支付宝与微信零钱均可，结果由转账通知/查单异步收敛）/ official 官方直连（仅支付宝可用）',
+      '提现网关（普通用户/打手/客服钱包提现共用）：jqf 计全付转账（默认，统一转账到银行卡，结果由转账通知/查单异步收敛）/ official 官方直连（支付宝转账）',
   },
   {
     key: CONFIG_KEYS.wallet.minRechargeFen,
@@ -441,6 +442,13 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     group: ConfigGroup.Wallet,
     remark: '计全付接口私钥 apiKey（MD5 签名密钥）',
     secret: true,
+  },
+  {
+    key: CONFIG_KEYS.wallet.jqfTransferIfCode,
+    value: JqfTransferIfCode.AliAqfPay,
+    type: ConfigValueType.String,
+    group: ConfigGroup.Wallet,
+    remark: '计全付银行卡转账接口代码 ifCode：aliaqfpay 支付宝安全发（默认）/ yeepay 易宝支付（需收款人身份证号与手机号）',
   },
   {
     key: CONFIG_KEYS.wallet.alipayAppId,

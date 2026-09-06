@@ -46,6 +46,14 @@ export class WithdrawalOrderEntity extends TenantScopedEntity {
   @Column({ type: 'varchar', length: 18, nullable: true })
   idCardNo!: string | null;
 
+  /** 开户行名称（银行卡提现；其余渠道为空） */
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  bankName!: string | null;
+
+  /** 银行预留手机号（银行卡提现且渠道要求时填写） */
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  phone!: string | null;
+
   /** 渠道转账单号（计全付 transferId / 支付宝 order_id，受理后回填） */
   @Column({ type: 'varchar', length: 64, nullable: true })
   providerOrderId!: string | null;

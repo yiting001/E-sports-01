@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BadRequestException } from '@nestjs/common';
-import { PayoutChannelState, PayoutProvider } from '@app/contracts';
+import { JqfTransferIfCode, PayoutChannelState, PayoutProvider } from '@app/contracts';
 import {
   PayoutExecutionStatus,
+  PayoutInput,
   PayoutOutcomeUnknownError,
 } from '../../src/modules/wallet/domain/payout-port.interface';
 import type {
@@ -13,6 +14,7 @@ import type {
 import { signJqfParams } from '../../src/modules/wallet/infrastructure/drivers/jqf-pay.request';
 import {
   JqfAlipayTransferDriver,
+  JqfBankCardTransferDriver,
   JqfWechatTransferDriver,
   parseJqfTransferCallback,
 } from '../../src/modules/wallet/infrastructure/drivers/jqf-transfer.driver';
@@ -24,9 +26,45 @@ const CFG: JqfPayConfig = {
   mchNo: 'M1621873433',
   appId: '60cc31c25b327517d2246a51',
   apiKey: API_KEY,
+  transferIfCode: JqfTransferIfCode.AliAqfPay,
 };
 
 const configFactory = { load: async () => CFG } as unknown as JqfPayConfigFactory;
+
+function factoryOf(cfg: JqfPayConfig): JqfPayConfigFactory {
+  return { load: async () => cfg } as unknown as JqfPayConfigFactory;
+}
+
+/** 支付宝 / 微信零钱提现单的转账入参（无银行卡要素） */
+function payoutInput(overrides: Partial<PayoutInput> = {}): PayoutInput {
+  return {
+    outBizNo: 'W1',
+    amountFen: 100,
+    account: 'a@b.com',
+    accountName: '张三',
+    idCardNo: null,
+    bankName: null,
+    phone: null,
+    remark: '钱包提现',
+    notifyUrl: '',
+    ...overrides,
+  };
+}
+
+/** 银行卡提现单的转账入参 */
+function bankCardInput(overrides: Partial<PayoutInput> = {}): PayoutInput {
+  return payoutInput({
+    outBizNo: 'WB1',
+    amountFen: 9500,
+    account: '6214850116825113',
+    accountName: '丁志伟',
+    idCardNo: '11010119900101003X',
+    bankName: '招商银行',
+    phone: '18611727423',
+    notifyUrl: 'https://api.example.test/wallet/withdrawal/callback/jqf_bank_card',
+    ...overrides,
+  });
+}
 
 /** 构造带商户身份与合法签名的转账通知体（字段全部为表单字符串） */
 function signedNotify(fields: Record<string, string>): Record<string, unknown> {
@@ -140,14 +178,13 @@ test('发起转账：按渠道上送 ifCode/entryType 与通知地址，受理�
   await withFetch(
     [{ body: { code: 0, data: { transferId: 'T-1', state: 1, mchOrderNo: 'W1' } } }],
     async (calls) => {
-      const result = await driver.transfer({
-        outBizNo: 'W1',
-        amountFen: 9500,
-        account: 'openid-abc',
-        accountName: '张三',
-        remark: '钱包提现',
-        notifyUrl: 'https://api.example.test/wallet/withdrawal/callback/jqf_wechat',
-      });
+      const result = await driver.transfer(
+        payoutInput({
+          amountFen: 9500,
+          account: 'openid-abc',
+          notifyUrl: 'https://api.example.test/wallet/withdrawal/callback/jqf_wechat',
+        }),
+      );
       assert.equal(result.status, PayoutExecutionStatus.Processing);
       assert.equal(result.providerOrderId, 'T-1');
       assert.equal(calls.length, 1);
@@ -161,22 +198,67 @@ test('发起转账：按渠道上送 ifCode/entryType 与通知地址，受理�
         'https://api.example.test/wallet/withdrawal/callback/jqf_wechat',
       );
       assert.equal(typeof calls[0].payload.sign, 'string');
+      assert.equal('bankName' in calls[0].payload, false);
+      assert.equal('channelExtra' in calls[0].payload, false);
     },
   );
+});
+
+test('银行卡转账：entryType=BANK_CARD，ifCode 取配置，上送卡号/姓名/开户行；支付宝安全发不附加 channelExtra', async () => {
+  const driver = new JqfBankCardTransferDriver(configFactory);
+  assert.equal(driver.provider, PayoutProvider.JqfBankCard);
+  await withFetch(
+    [{ body: { code: 0, data: { transferId: 'T-B1', state: 1, mchOrderNo: 'WB1' } } }],
+    async (calls) => {
+      const result = await driver.transfer(bankCardInput());
+      assert.equal(result.status, PayoutExecutionStatus.Processing);
+      assert.equal(result.providerOrderId, 'T-B1');
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].url, `${CFG.apiBase}/api/transferOrder`);
+      assert.equal(calls[0].payload.ifCode, 'aliaqfpay');
+      assert.equal(calls[0].payload.entryType, 'BANK_CARD');
+      assert.equal(calls[0].payload.accountNo, '6214850116825113');
+      assert.equal(calls[0].payload.accountName, '丁志伟');
+      assert.equal(calls[0].payload.bankName, '招商银行');
+      assert.equal(calls[0].payload.amount, 9500);
+      assert.equal(
+        calls[0].payload.notifyUrl,
+        'https://api.example.test/wallet/withdrawal/callback/jqf_bank_card',
+      );
+      assert.equal('channelExtra' in calls[0].payload, false);
+      assert.equal(typeof calls[0].payload.sign, 'string');
+    },
+  );
+});
+
+test('银行卡转账：易宝接口以 channelExtra JSON 上送身份证号与手机号，缺失时发起前拒绝', async () => {
+  const driver = new JqfBankCardTransferDriver(
+    factoryOf({ ...CFG, transferIfCode: JqfTransferIfCode.YeePay }),
+  );
+  await withFetch(
+    [{ body: { code: 0, data: { transferId: 'T-B2', state: 0 } } }],
+    async (calls) => {
+      await driver.transfer(bankCardInput());
+      assert.equal(calls[0].payload.ifCode, 'yeepay');
+      assert.equal(calls[0].payload.entryType, 'BANK_CARD');
+      assert.deepEqual(JSON.parse(String(calls[0].payload.channelExtra)), {
+        idCardNo: '11010119900101003X',
+        phoneNumber: '18611727423',
+      });
+    },
+  );
+  await withFetch([], async (calls) => {
+    await assert.rejects(driver.transfer(bankCardInput({ phone: null })), BadRequestException);
+    await assert.rejects(driver.transfer(bankCardInput({ idCardNo: null })), BadRequestException);
+    assert.equal(calls.length, 0);
+  });
 });
 
 test('发起转账：网关不可达抛结果未知，不得判定失败', async () => {
   const driver = new JqfAlipayTransferDriver(configFactory);
   await withFetch([new Error('ECONNRESET')], async () => {
     await assert.rejects(
-      driver.transfer({
-        outBizNo: 'W2',
-        amountFen: 100,
-        account: 'a@b.com',
-        accountName: '张三',
-        remark: '钱包提现',
-        notifyUrl: '',
-      }),
+      driver.transfer(payoutInput({ outBizNo: 'W2' })),
       PayoutOutcomeUnknownError,
     );
   });
@@ -190,14 +272,7 @@ test('发起转账：业务拒绝时先查单，渠道确实无此单才判定�
       { body: { code: 1, msg: '转账订单不存在' } },
     ],
     async (calls) => {
-      const result = await driver.transfer({
-        outBizNo: 'W3',
-        amountFen: 100,
-        account: 'a@b.com',
-        accountName: '张三',
-        remark: '钱包提现',
-        notifyUrl: '',
-      });
+      const result = await driver.transfer(payoutInput({ outBizNo: 'W3' }));
       assert.equal(result.status, PayoutExecutionStatus.Failed);
       assert.match(result.failReason, /账户余额不足/);
       assert.equal(calls[1].url, `${CFG.apiBase}/api/transfer/query`);
@@ -210,14 +285,7 @@ test('发起转账：业务拒绝时先查单，渠道确实无此单才判定�
       { body: { code: 0, data: { transferId: 'T-3', state: 2, mchOrderFeeAmount: '20' } } },
     ],
     async () => {
-      const result = await driver.transfer({
-        outBizNo: 'W3',
-        amountFen: 100,
-        account: 'a@b.com',
-        accountName: '张三',
-        remark: '钱包提现',
-        notifyUrl: '',
-      });
+      const result = await driver.transfer(payoutInput({ outBizNo: 'W3' }));
       assert.equal(result.status, PayoutExecutionStatus.Succeeded);
       assert.equal(result.providerOrderId, 'T-3');
       assert.equal(result.channelFeeFen, 20);

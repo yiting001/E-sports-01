@@ -51,7 +51,7 @@ export const PAYMENT_GATEWAY_TEXT: Record<PaymentGateway, string> = {
 };
 
 /**
- * 提现（付款）渠道。用户只选择「支付宝 / 微信零钱」，
+ * 提现（付款）渠道。用户只选择「支付宝 / 微信零钱 / 银行卡」，
  * 服务端按提现网关开关映射为实际执行渠道（官方直连或计全付转账）并持久化到提现单。
  */
 export enum PayoutProvider {
@@ -59,22 +59,54 @@ export enum PayoutProvider {
   Alipay = 'alipay',
   /** 微信官方商家转账（预留位，调用即提示未开通） */
   Wechat = 'wechat',
+  /** 银行卡（用户选择位；仅计全付网关可用，服务端映射为 JqfBankCard） */
+  BankCard = 'bank_card',
   /** 计全付转账 → 支付宝账户（ifCode=alipay，entryType=ALIPAY_CASH） */
   JqfAlipay = 'jqf_alipay',
   /** 计全付转账 → 微信零钱（ifCode=wxpay，entryType=WX_CASH，收款标识为服务端绑定的 openid） */
   JqfWechat = 'jqf_wechat',
+  /** 计全付转账 → 对私银行卡（ifCode 按配置 aliaqfpay / yeepay，entryType=BANK_CARD，accountNo 为银行卡号） */
+  JqfBankCard = 'jqf_bank_card',
 }
 
 /** 提现渠道展示文案 */
 export const PAYOUT_PROVIDER_TEXT: Record<PayoutProvider, string> = {
   [PayoutProvider.Alipay]: '支付宝',
   [PayoutProvider.Wechat]: '微信零钱',
+  [PayoutProvider.BankCard]: '银行卡',
   [PayoutProvider.JqfAlipay]: '支付宝（计全付）',
   [PayoutProvider.JqfWechat]: '微信零钱（计全付）',
+  [PayoutProvider.JqfBankCard]: '银行卡（计全付）',
 };
 
-/** 用户可选的提现方式（计全付渠道由服务端按网关开关映射，不由前端直接指定） */
-export const WITHDRAW_PAYOUT_PROVIDERS = [PayoutProvider.Alipay, PayoutProvider.Wechat] as const;
+/**
+ * 各提现网关下用户可选的提现方式（服务端据此校验并映射为实际执行渠道）：
+ * 官方直连仅支付宝转账；计全付网关统一转账到银行卡。
+ */
+export const WITHDRAW_METHODS_BY_GATEWAY: Record<PaymentGateway, readonly PayoutProvider[]> = {
+  [PaymentGateway.Official]: [PayoutProvider.Alipay],
+  [PaymentGateway.Jqf]: [PayoutProvider.BankCard],
+};
+
+/** 计全付银行卡转账走的支付接口代码（ifCode） */
+export enum JqfTransferIfCode {
+  /** 支付宝安全发 */
+  AliAqfPay = 'aliaqfpay',
+  /** 易宝支付（对私银行卡需在 channelExtra 附身份证号与手机号） */
+  YeePay = 'yeepay',
+}
+
+/** 计全付银行卡转账接口代码展示文案 */
+export const JQF_TRANSFER_IF_CODE_TEXT: Record<JqfTransferIfCode, string> = {
+  [JqfTransferIfCode.AliAqfPay]: '支付宝安全发（aliaqfpay）',
+  [JqfTransferIfCode.YeePay]: '易宝支付（yeepay）',
+};
+
+/** 银行卡号格式：10～30 位数字 */
+export const BANK_CARD_NO_PATTERN = /^\d{10,30}$/;
+
+/** 大陆手机号格式 */
+export const PAYOUT_PHONE_PATTERN = /^1\d{10}$/;
 
 /** 提现渠道侧转账状态（渠道无关的归一值，由各驱动从渠道原始状态映射） */
 export enum PayoutChannelState {
@@ -199,6 +231,10 @@ export interface WalletView {
   withdrawFeeRateBp: number;
   /** 阶梯税费配置（按提现金额选档；空数组时回退到 withdrawFeeRateBp 单一费率） */
   withdrawTaxTiers: WithdrawTaxTier[];
+  /** 当前提现网关下用户可选的提现方式（官方：支付宝；计全付：银行卡） */
+  withdrawMethods: PayoutProvider[];
+  /** 银行卡提现是否需要填写预留手机号（计全付接口为易宝时必填） */
+  withdrawPhoneRequired: boolean;
 }
 
 /** 钱包统计视图 */
@@ -315,14 +351,18 @@ export interface CreateWithdrawalBody {
   amountFen: number;
   provider: PayoutProvider;
   /**
-   * 收款方账号：支付宝为登录号（邮箱或手机号）；
+   * 收款方账号：支付宝为登录号（邮箱或手机号）；银行卡为卡号；
    * 微信零钱不需要填写，服务端取当前账号绑定的公众号 openid 作为收款标识。
    */
   account?: string;
   /** 收款方真实姓名 */
   accountName: string;
-  /** 收款方身份证号（报税用，18 位） */
+  /** 收款方身份证号（报税用，18 位；银行卡提现同时作为渠道实名要素） */
   idCardNo: string;
+  /** 开户行名称（银行卡提现必填，如「中国工商银行」） */
+  bankName?: string;
+  /** 银行预留手机号（银行卡提现且渠道要求时必填） */
+  phone?: string;
 }
 
 /** 提现结果视图 */
@@ -348,8 +388,10 @@ export interface WithdrawalView {
   arriveYuan: string;
   provider: PayoutProvider;
   status: WithdrawalStatus;
-  /** 收款方账号（支付宝登录号；微信零钱为脱敏后的 openid） */
+  /** 收款方账号（支付宝登录号；微信零钱为脱敏后的 openid；银行卡为脱敏后的卡号） */
   account: string;
+  /** 开户行名称（银行卡提现回填，其余为 null） */
+  bankName: string | null;
   /** 失败/驳回原因 */
   failReason: string | null;
   createdAt: string;
@@ -370,12 +412,16 @@ export interface WithdrawalAdminView {
   arriveYuan: string;
   provider: PayoutProvider;
   status: WithdrawalStatus;
-  /** 收款方支付宝账号 */
+  /** 收款方账号（支付宝登录号 / 微信 openid / 银行卡号） */
   account: string;
   /** 收款方真实姓名 */
   accountName: string;
   /** 收款方身份证号（报税用；历史单据可能为空） */
   idCardNo: string | null;
+  /** 开户行名称（银行卡提现） */
+  bankName: string | null;
+  /** 银行预留手机号（银行卡提现且渠道要求时填写） */
+  phone: string | null;
   /** 渠道转账单号（计全付 transferId / 支付宝 order_id，发起转账后回填） */
   providerOrderId: string | null;
   /** 最终资金渠道（微信/支付宝）的转账单号（聚合网关通知/查单回填） */

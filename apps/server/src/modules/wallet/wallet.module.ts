@@ -42,6 +42,7 @@ import { JqfAlipayPaymentDriver } from './infrastructure/drivers/jqf-alipay-paym
 import { JqfAlipayRefundDriver, JqfRefundDriver } from './infrastructure/drivers/jqf-refund.driver';
 import {
   JqfAlipayTransferDriver,
+  JqfBankCardTransferDriver,
   JqfWechatTransferDriver,
 } from './infrastructure/drivers/jqf-transfer.driver';
 
@@ -167,6 +168,7 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     JqfAlipayRefundDriver,
     JqfAlipayTransferDriver,
     JqfWechatTransferDriver,
+    JqfBankCardTransferDriver,
     {
       provide: PAYMENT_PORTS,
       useFactory: (
@@ -193,12 +195,14 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
         wechat: WechatPayoutDriver,
         jqfAlipay: JqfAlipayTransferDriver,
         jqfWechat: JqfWechatTransferDriver,
-      ) => [alipay, wechat, jqfAlipay, jqfWechat],
+        jqfBankCard: JqfBankCardTransferDriver,
+      ) => [alipay, wechat, jqfAlipay, jqfWechat, jqfBankCard],
       inject: [
         AlipayPayoutDriver,
         WechatPayoutDriver,
         JqfAlipayTransferDriver,
         JqfWechatTransferDriver,
+        JqfBankCardTransferDriver,
       ],
     },
     {

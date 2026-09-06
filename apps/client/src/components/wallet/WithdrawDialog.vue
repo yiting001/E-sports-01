@@ -1,16 +1,17 @@
 <script setup lang="ts">
 /**
- * 提现弹层：金额（元）+ 提现方式（支付宝 / 微信零钱）+ 姓名/身份证号（报税）→ 提交提现申请（审核制）。
- * 支付宝需填写收款账号；微信零钱由服务端取当前用户绑定的微信身份，客户端不提交账号。
+ * 提现弹层：金额（元）+ 提现方式（由服务端按当前提现网关下发）+ 收款要素 + 姓名/身份证号（报税）→ 提交提现申请（审核制）。
+ * 官方渠道为支付宝（填支付宝账号）；计全付为银行卡（填卡号/开户行/持卡人，渠道要求时还需预留手机号）。
  * 输入金额时按阶梯税费/配置费率实时展示税费与到账金额；提交后等待财务审核。
  */
 import { computed, ref } from 'vue';
 import {
+  BANK_CARD_NO_PATTERN,
   ID_CARD_NO_PATTERN,
+  PAYOUT_PHONE_PATTERN,
   PAYOUT_PROVIDER_TEXT,
   PayoutProvider,
   WALLET_DEFAULTS,
-  WITHDRAW_PAYOUT_PROVIDERS,
   WithdrawalStatus,
   type WithdrawTaxTier,
   calcWithdrawFeeFen,
@@ -28,16 +29,22 @@ const props = defineProps<{
   feeRateBp: number;
   /** 阶梯税费配置（按金额选档；空数组回退 feeRateBp 单一费率） */
   taxTiers: WithdrawTaxTier[];
+  /** 当前提现网关可选的提现方式 */
+  methods: PayoutProvider[];
+  /** 银行卡提现是否需填写预留手机号 */
+  phoneRequired: boolean;
 }>();
 const emit = defineEmits<{ done: []; close: [] }>();
 
 const toast = useToast();
 
 const amountYuan = ref('');
-const provider = ref<PayoutProvider>(PayoutProvider.Alipay);
+const provider = ref<PayoutProvider>(props.methods[0] ?? PayoutProvider.Alipay);
 const account = ref('');
-const isAlipay = computed(() => provider.value === PayoutProvider.Alipay);
+const isBankCard = computed(() => provider.value === PayoutProvider.BankCard);
 const accountName = ref('');
+const bankName = ref('');
+const phone = ref('');
 const idCardNo = ref('');
 const submitting = ref(false);
 
@@ -70,12 +77,26 @@ async function submit(): Promise<void> {
     toast.show('提现金额不能超过余额');
     return;
   }
-  if (isAlipay.value && !account.value.trim()) {
+  const cardNo = account.value.replace(/\s+/g, '');
+  if (isBankCard.value) {
+    if (!BANK_CARD_NO_PATTERN.test(cardNo)) {
+      toast.show('请填写正确的银行卡号（10～30 位数字）');
+      return;
+    }
+    if (!bankName.value.trim()) {
+      toast.show('请填写开户行');
+      return;
+    }
+  } else if (!account.value.trim()) {
     toast.show('请填写支付宝账号');
     return;
   }
   if (!accountName.value.trim()) {
-    toast.show('请填写真实姓名');
+    toast.show(isBankCard.value ? '请填写持卡人姓名' : '请填写真实姓名');
+    return;
+  }
+  if (isBankCard.value && props.phoneRequired && !PAYOUT_PHONE_PATTERN.test(phone.value.trim())) {
+    toast.show('请填写正确的银行预留手机号');
     return;
   }
   if (!ID_CARD_NO_PATTERN.test(idCardNo.value.trim())) {
@@ -87,9 +108,11 @@ async function submit(): Promise<void> {
     const result = await walletApi.withdraw({
       amountFen,
       provider: provider.value,
-      account: isAlipay.value ? account.value.trim() : undefined,
+      account: isBankCard.value ? cardNo : account.value.trim(),
       accountName: accountName.value.trim(),
       idCardNo: idCardNo.value.trim().toUpperCase(),
+      bankName: isBankCard.value ? bankName.value.trim() : undefined,
+      phone: isBankCard.value && phone.value.trim() ? phone.value.trim() : undefined,
     });
     if (result.status === WithdrawalStatus.Failed) {
       toast.show(result.failReason || '提现失败，请稍后重试');
@@ -134,7 +157,7 @@ async function submit(): Promise<void> {
         <span class="label">提现方式</span>
         <div class="providers">
           <button
-            v-for="item in WITHDRAW_PAYOUT_PROVIDERS"
+            v-for="item in methods"
             :key="item"
             type="button"
             class="provider"
@@ -145,33 +168,72 @@ async function submit(): Promise<void> {
           </button>
         </div>
       </div>
-      <label
-        v-if="isAlipay"
-        class="field"
-      >
-        <span class="label">支付宝账号</span>
-        <input
-          v-model="account"
-          class="input"
-          type="text"
-          placeholder="邮箱或手机号"
+      <template v-if="isBankCard">
+        <label class="field">
+          <span class="label">银行卡号</span>
+          <input
+            v-model="account"
+            class="input"
+            type="text"
+            inputmode="numeric"
+            maxlength="30"
+            placeholder="本人对私借记卡号"
+          >
+        </label>
+        <label class="field">
+          <span class="label">开户行</span>
+          <input
+            v-model="bankName"
+            class="input"
+            type="text"
+            maxlength="64"
+            placeholder="如：招商银行"
+          >
+        </label>
+        <label class="field">
+          <span class="label">持卡人姓名</span>
+          <input
+            v-model="accountName"
+            class="input"
+            type="text"
+            placeholder="与银行卡开户名一致"
+          >
+        </label>
+        <label
+          v-if="phoneRequired"
+          class="field"
         >
-      </label>
-      <p
-        v-else
-        class="fee-tip"
-      >
-        将转入当前登录绑定的微信零钱，需已在微信内完成微信登录
-      </p>
-      <label class="field">
-        <span class="label">真实姓名</span>
-        <input
-          v-model="accountName"
-          class="input"
-          type="text"
-          placeholder="收款方实名"
-        >
-      </label>
+          <span class="label">银行预留手机号</span>
+          <input
+            v-model="phone"
+            class="input"
+            type="tel"
+            inputmode="numeric"
+            maxlength="11"
+            placeholder="银行卡预留手机号"
+          >
+        </label>
+      </template>
+      <template v-else>
+        <label class="field">
+          <span class="label">支付宝账号</span>
+          <input
+            v-model="account"
+            class="input"
+            type="text"
+            placeholder="邮箱或手机号"
+          >
+        </label>
+        <label class="field">
+          <span class="label">真实姓名</span>
+          <input
+            v-model="accountName"
+            class="input"
+            type="text"
+            placeholder="收款方实名"
+          >
+        </label>
+      </template>
       <label class="field">
         <span class="label">身份证号（报税用）</span>
         <input
