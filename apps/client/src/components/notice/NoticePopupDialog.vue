@@ -11,7 +11,6 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { NoticePopupView } from '@app/contracts';
 import { noticeApi } from '@/api/notice.api';
-import FlameWrap from '@/components/canvasui/FlameWrap.vue';
 import { tenantContext } from '@/tenant/tenant-context';
 import { formatNoticeDate } from '@/views/notice/notice-format';
 
@@ -91,72 +90,49 @@ onMounted(loadPopup);
       class="popup-mask"
       @click.self="close"
     >
-      <FlameWrap
-        class="popup-flame"
-        :color="[1, 0.28, 0.03]"
-        :height="86"
-        :spread="14"
-        :radius="12"
-        :speed="0.35"
-        :scale="0.68"
-        :turbulence="0.42"
-        :turbulence-scale="0.7"
-        :turbulence-reach="18"
-        :sparks="0.75"
-        :spark-size="0.3"
-        :spark-density="0.8"
-        :spark-speed="0.8"
-        :rim="1.6"
-        :melt="4"
-        :distortion="6"
-        :smoke="0.75"
-        :ember="0.9"
-        :scorch="0.45"
+      <div
+        class="popup-panel"
+        role="dialog"
+        aria-modal="true"
       >
-        <div
-          class="popup-panel"
-          role="dialog"
-          aria-modal="true"
-        >
-          <header class="popup-head">
-            <div class="popup-title">
-              <span class="popup-name">{{ notice.title }}</span>
-              <span class="popup-time">{{
-                formatNoticeDate(notice.createdAt)
-              }}</span>
-            </div>
-            <button
-              class="popup-close"
-              aria-label="关闭公告"
-              @click="close"
-            >
-              ✕
-            </button>
-          </header>
-          <div class="popup-body">
-            <!-- eslint-disable vue/no-v-html -->
-            <div
-              class="popup-content"
-              v-html="safeContent"
-            />
-            <!-- eslint-enable vue/no-v-html -->
+        <header class="popup-head">
+          <div class="popup-title">
+            <span class="popup-name">{{ notice.title }}</span>
+            <span class="popup-time">{{
+              formatNoticeDate(notice.createdAt)
+            }}</span>
           </div>
-          <footer class="popup-foot">
-            <button
-              class="popup-detail"
-              @click="goDetail"
-            >
-              查看详情
-            </button>
-            <button
-              class="popup-confirm"
-              @click="close"
-            >
-              我知道了
-            </button>
-          </footer>
+          <button
+            class="popup-close"
+            aria-label="关闭公告"
+            @click="close"
+          >
+            ✕
+          </button>
+        </header>
+        <div class="popup-body">
+          <!-- eslint-disable vue/no-v-html -->
+          <div
+            class="popup-content"
+            v-html="safeContent"
+          />
+          <!-- eslint-enable vue/no-v-html -->
         </div>
-      </FlameWrap>
+        <footer class="popup-foot">
+          <button
+            class="popup-detail"
+            @click="goDetail"
+          >
+            查看详情
+          </button>
+          <button
+            class="popup-confirm"
+            @click="close"
+          >
+            我知道了
+          </button>
+        </footer>
+      </div>
     </div>
   </Teleport>
 </template>
@@ -177,17 +153,12 @@ onMounted(loadPopup);
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+  max-width: 480px;
+  height: min(72vh, 560px);
   overflow: hidden;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--chamfer);
-}
-
-.popup-flame {
-  width: 100%;
-  max-width: 480px;
-  height: min(72vh, 560px);
 }
 
 .popup-head {
@@ -276,12 +247,9 @@ onMounted(loadPopup);
 }
 
 @media (min-width: 768px) {
-  .popup-flame {
+  .popup-panel {
     max-width: 560px;
     height: min(76vh, 640px);
-  }
-
-  .popup-flame .popup-panel {
     box-shadow: 0 18px 48px rgb(0 0 0 / 35%);
   }
 }
