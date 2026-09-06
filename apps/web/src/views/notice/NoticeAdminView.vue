@@ -32,7 +32,14 @@ const editingId = ref('');
 const form = reactive<UpsertNoticePayload>(emptyForm());
 
 function emptyForm(): UpsertNoticePayload {
-  return { title: '', content: '', enabled: true, popup: false, sort: 0 };
+  return {
+    title: '',
+    content: '',
+    enabled: true,
+    popup: false,
+    popupFlame: true,
+    sort: 0,
+  };
 }
 
 function formatDate(value: string): string {
@@ -80,6 +87,7 @@ function openEdit(row: NoticeView): void {
     content: row.content,
     enabled: row.enabled,
     popup: row.popup,
+    popupFlame: row.popupFlame,
     sort: row.sort,
   });
   dialogVisible.value = true;
@@ -118,6 +126,7 @@ async function toggleEnabled(row: NoticeView, enabled: boolean): Promise<void> {
     content: row.content,
     sort: row.sort,
     popup: row.popup,
+    popupFlame: row.popupFlame,
     enabled,
   });
   ElMessage.success(enabled ? '已启用' : '已停用');
@@ -131,6 +140,7 @@ async function togglePopup(row: NoticeView, popup: boolean): Promise<void> {
     content: row.content,
     sort: row.sort,
     enabled: row.enabled,
+    popupFlame: row.popupFlame,
     popup,
   });
   ElMessage.success(popup ? '已设为弹窗公告' : '已取消弹窗公告');

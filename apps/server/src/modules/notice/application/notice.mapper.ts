@@ -13,6 +13,7 @@ export function toNoticeView(entity: NoticeEntity): NoticeView {
     content: entity.content,
     enabled: entity.enabled,
     popup: entity.popup,
+    popupFlame: entity.popupFlame,
     sort: entity.sort,
     createdAt: entity.createdAt.toISOString(),
     updatedAt: entity.updatedAt.toISOString(),
@@ -34,5 +35,6 @@ export function toNoticePopupView(entity: NoticeEntity): NoticePopupView {
   return {
     ...toNoticePublicView(entity),
     updatedAt: entity.updatedAt.toISOString(),
+    popupFlame: entity.popupFlame,
   };
 }

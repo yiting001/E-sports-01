@@ -97,7 +97,8 @@ test('migration:show 返回待执行状态并始终关闭连接', async () => {
     /\[ \].*AddPaymentChannelFeeAndPayoutSnapshot1786500000000/,
   );
   assert.match(output.join(''), /\[ \].*AddWithdrawalBankCardFields1786600000000/);
-  assert.match(output.join(''), /2 pending migration/i);
+  assert.match(output.join(''), /\[ \].*AddNoticePopupFlame1786700000000/);
+  assert.match(output.join(''), /3 pending migration/i);
 });
 
 test('migration:run 以单事务执行并输出实际完成的迁移', async () => {

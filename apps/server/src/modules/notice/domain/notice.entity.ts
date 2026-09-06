@@ -26,6 +26,10 @@ export class NoticeEntity extends TenantScopedEntity {
   @Column({ default: false })
   popup!: boolean;
 
+  /** 弹窗公告是否带火焰特效边框 */
+  @Column({ default: true })
+  popupFlame!: boolean;
+
   /** 排序权重，越小越靠前 */
   @Column({ type: 'int', default: 0 })
   sort!: number;

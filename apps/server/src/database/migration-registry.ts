@@ -20,6 +20,7 @@ import { AddRbacRoleSoftDelete1786300000000 } from './migrations/1786300000000-a
 import { DropRbacRoleCodeUnique1786400000000 } from './migrations/1786400000000-drop-rbac-role-code-unique';
 import { AddPaymentChannelFeeAndPayoutSnapshot1786500000000 } from './migrations/1786500000000-add-payment-channel-fee-and-payout-snapshot';
 import { AddWithdrawalBankCardFields1786600000000 } from './migrations/1786600000000-add-withdrawal-bank-card-fields';
+import { AddNoticePopupFlame1786700000000 } from './migrations/1786700000000-add-notice-popup-flame';
 
 export type ServerMigrationConstructor = new () => MigrationInterface;
 
@@ -55,6 +56,7 @@ export const SERVER_MIGRATIONS: ServerMigrationConstructor[] = [
   DropRbacRoleCodeUnique1786400000000,
   AddPaymentChannelFeeAndPayoutSnapshot1786500000000,
   AddWithdrawalBankCardFields1786600000000,
+  AddNoticePopupFlame1786700000000,
 ];
 
 export const SERVER_MIGRATION_DEFINITIONS: ServerMigrationDefinition[] =

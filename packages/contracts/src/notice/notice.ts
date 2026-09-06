@@ -32,6 +32,8 @@ export interface UpsertNoticePayload {
   enabled: boolean;
   /** 是否作为弹窗公告（C 端首次进入弹窗展示） */
   popup: boolean;
+  /** 弹窗公告是否带火焰特效（仅 popup 为 true 时生效） */
+  popupFlame: boolean;
   /** 排序权重，越小越靠前 */
   sort: number;
 }
@@ -43,6 +45,7 @@ export interface NoticeView {
   content: string;
   enabled: boolean;
   popup: boolean;
+  popupFlame: boolean;
   sort: number;
   createdAt: string;
   updatedAt: string;
@@ -64,6 +67,8 @@ export interface NoticePublicView {
  */
 export interface NoticePopupView extends NoticePublicView {
   updatedAt: string;
+  /** 是否渲染火焰特效边框 */
+  popupFlame: boolean;
 }
 
 /** 首页运营横幅条目 */
