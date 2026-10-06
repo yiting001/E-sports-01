@@ -125,14 +125,26 @@
         :disabled="uploading"
         @tap="sendImage"
       >
-        图
+        <view class="tool-icon-box">
+          <image
+            class="tool-icon"
+            src="/static/icons/chat-image.png"
+            mode="aspectFit"
+          />
+        </view>
       </button>
       <button
         class="tool-btn"
         :disabled="uploading"
         @tap="sendVideo"
       >
-        视频
+        <view class="tool-icon-box">
+          <image
+            class="tool-icon"
+            src="/static/icons/chat-video.png"
+            mode="aspectFit"
+          />
+        </view>
       </button>
       <input
         v-model="draft"
@@ -375,7 +387,8 @@ function previewImage(url: string): void {
 .chat {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* H5 预览端导航栏悬于视口顶部（--window-top），必须扣除，否则页面多出可滚动区、输入条贴不住底 */
+  height: calc(100vh - var(--window-top, 0px));
 }
 
 .chat-body {
@@ -591,6 +604,21 @@ function previewImage(url: string): void {
   background-color: #1a2130;
   border: 1rpx solid rgba(150, 165, 195, 0.24);
   border-radius: 8rpx;
+}
+
+.tool-icon-box {
+  width: 44rpx;
+  height: 44rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tool-icon {
+  width: 44rpx;
+  height: 44rpx;
+  flex-shrink: 0;
 }
 
 .tool-btn[disabled] {

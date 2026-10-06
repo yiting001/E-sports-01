@@ -70,6 +70,28 @@ const SHAPES = {
   },
 };
 
+/* ===== 聊天工具图标（48×48，灰 #9aa6bb） ===== */
+
+const UI_COLORS = { normal: [0x9a, 0xa6, 0xbb] };
+
+const UI_ICONS = {
+  'chat-image'(x, y) {
+    // 圆角矩形相框 + 左上光点 + 山形
+    const frame = insideRoundRect(x, y, 0.5, 0.5, 0.42, 0.34, 0.08);
+    const mountain = insideTriangle(x, y, 0.14, 0.72, 0.44, 0.34, 0.56, 0.72)
+      || insideTriangle(x, y, 0.46, 0.72, 0.66, 0.48, 0.88, 0.72);
+    const dot = insideCircle(x, y, 0.32, 0.34, 0.05);
+    return frame && (mountain || dot) && y <= 0.72;
+  },
+
+  'chat-video'(x, y) {
+    // 圆角矩形 + 内部播放三角
+    const frame = insideRoundRect(x, y, 0.5, 0.5, 0.42, 0.34, 0.08);
+    const play = insideTriangle(x, y, 0.4, 0.34, 0.4, 0.66, 0.68, 0.5);
+    return frame && play;
+  },
+};
+
 const CRC_TABLE = (() => {
   const table = new Int32Array(256);
   for (let n = 0; n < 256; n += 1) {
@@ -151,4 +173,12 @@ for (const [name, shapeFn] of Object.entries(SHAPES)) {
   writeFileSync(join(outDir, `${name}.png`), encodePng(SIZE, render(shapeFn, COLORS.normal)));
   writeFileSync(join(outDir, `${name}-active.png`), encodePng(SIZE, render(shapeFn, COLORS.active)));
   console.log(`生成 ${name}.png / ${name}-active.png`);
+}
+
+const uiDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'static', 'icons');
+mkdirSync(uiDir, { recursive: true });
+
+for (const [name, shapeFn] of Object.entries(UI_ICONS)) {
+  writeFileSync(join(uiDir, `${name}.png`), encodePng(48, render(shapeFn, UI_COLORS.normal)));
+  console.log(`生成 ${name}.png`);
 }
