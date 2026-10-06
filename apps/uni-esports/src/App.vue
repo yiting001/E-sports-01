@@ -43,8 +43,39 @@ page {
   box-sizing: border-box;
 }
 
-/* ===== 按钮：两档高度（标准 88rpx / 紧凑 72rpx），flex 垂直居中，宽度由页面布局决定 ===== */
+/* ===== 按钮默认样式重置（必须先于下方按钮类） =====
+   H5 端 <button> 编译为 uni-button 自定义元素，uni-h5 框架自带浅色底与
+   浅色禁用态（uni-components/style/button.css），其中 [disabled]:not([type])
+   选择器优先级高于页面类样式，必须以更高优先级压回深色主题 */
 
+button,
+uni-button {
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
+  line-height: 1.2;
+}
+
+button::after,
+uni-button::after {
+  border: none;
+}
+
+/* #ifdef H5 */
+uni-button:not([type]) {
+  background-color: transparent;
+}
+
+uni-button[disabled]:not([type]):not([hidden]) {
+  background-color: rgba(26, 33, 48, 0.6);
+  color: #9aa6bb;
+}
+/* #endif */
+
+/* ===== 按钮：两档高度（标准 88rpx / 紧凑 72rpx），flex 垂直居中，宽度由页面布局决定 =====
+   uni-button.btn-* 变体与上方 H5 覆盖规则同优先级，靠书写顺序取胜 */
+
+uni-button.btn-primary,
 .btn-primary {
   height: 88rpx;
   display: flex;
@@ -58,11 +89,13 @@ page {
   clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
 }
 
+uni-button.btn-primary.disabled,
 .btn-primary.disabled {
   background-color: rgba(255, 176, 32, 0.35);
   color: rgba(26, 18, 5, 0.75);
 }
 
+uni-button.btn-ghost,
 .btn-ghost {
   height: 88rpx;
   display: flex;
@@ -166,16 +199,5 @@ page {
 
 .text-danger {
   color: #ff5449;
-}
-
-/* 小程序 button 默认样式重置 */
-button {
-  margin: 0;
-  background: transparent;
-  padding: 0;
-}
-
-button::after {
-  border: none;
 }
 </style>

@@ -237,6 +237,7 @@ function changeQuantity(delta: number): void {
   justify-content: center;
   font-size: 28rpx;
   color: #9aa6bb;
+  background-color: #1a2130;
   border: 1rpx solid rgba(150, 165, 195, 0.24);
   border-radius: 8rpx;
 }
@@ -274,6 +275,7 @@ function changeQuantity(delta: number): void {
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #1a2130;
   border: 1rpx solid rgba(150, 165, 195, 0.3);
   border-radius: 8rpx;
   color: #e9eef6;

@@ -196,6 +196,7 @@ onMounted(() => {
   justify-content: center;
   font-size: 28rpx;
   color: #9aa6bb;
+  background-color: #1a2130;
   border: 1rpx solid rgba(150, 165, 195, 0.24);
   border-radius: 8rpx;
 }

@@ -239,6 +239,7 @@ function confirmLogout(): void {
 .head-avatar-btn {
   padding: 0;
   line-height: 1;
+  background-color: transparent;
 }
 
 .head-avatar {
