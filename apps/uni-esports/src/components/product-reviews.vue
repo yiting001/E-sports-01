@@ -1,16 +1,28 @@
 <template>
   <view class="card reviews">
     <view class="reviews-head">
-      <text class="reviews-title">
-        用户评价
+      <view class="sec-title">
+        <text class="sec-title-text">
+          用户评价
+        </text>
+      </view>
+      <text class="reviews-count">
+        共 {{ total }} 条
       </text>
       <text
         v-if="avgRating"
         class="reviews-avg"
       >
-        {{ avgRating }} 分 · 共 {{ total }} 条
+        ★ {{ avgRating }} 分
       </text>
     </view>
+
+    <text
+      v-if="!loading && reviews.length === 0"
+      class="reviews-hint"
+    >
+      暂无评价，下单体验后来评一评吧
+    </text>
 
     <view
       v-for="review in reviews"
@@ -49,10 +61,6 @@
       </view>
     </view>
 
-    <empty-state
-      v-if="!loading && reviews.length === 0"
-      text="暂无用户评价"
-    />
     <button
       v-if="reviews.length < total"
       class="reviews-more"
@@ -68,7 +76,6 @@
 import { onMounted, ref } from 'vue';
 import type { ReviewPublicView } from '@app/contracts';
 import { reviewApi } from '@/api/review.api';
-import emptyState from '@/components/empty-state.vue';
 import { formatDateTime } from '@/utils/format';
 
 /**
@@ -142,20 +149,49 @@ function stars(rating: number): string {
 
 .reviews-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
+  gap: 16rpx;
   margin-bottom: 8rpx;
 }
 
-.reviews-title {
+.sec-title {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.sec-title::before {
+  content: '';
+  width: 10rpx;
+  height: 32rpx;
+  background-color: #ffb020;
+  transform: skewX(-18deg);
+}
+
+.sec-title-text {
   color: #e9eef6;
-  font-size: 28rpx;
-  font-weight: 700;
+  font-size: 30rpx;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 2rpx;
+}
+
+.reviews-count {
+  color: #67738c;
+  font-size: 24rpx;
 }
 
 .reviews-avg {
+  margin-left: auto;
   color: #ffb020;
   font-size: 24rpx;
+}
+
+.reviews-hint {
+  display: block;
+  padding: 24rpx 0;
+  color: #67738c;
+  font-size: 26rpx;
 }
 
 .review-item {

@@ -28,58 +28,75 @@
         {{ product.title }}
       </text>
 
-      <view class="platform-prices">
-        <view class="platform-row">
-          <text class="platform-label">
-            手机端
-          </text>
-          <text
-            v-if="product.originPriceFen > product.priceFen"
-            class="platform-origin"
-          >
-            ¥{{ fenToYuan(product.originPriceFen) }}
-          </text>
-          <text class="platform-price">
-            ¥<text class="platform-price-num">
-              {{ fenToYuan(product.priceFen) }}
-            </text>
-          </text>
+      <view class="platform-grid">
+        <view class="platform-card">
           <text
             v-if="discountLabel(product.priceFen, product.originPriceFen)"
             class="platform-discount"
           >
             {{ discountLabel(product.priceFen, product.originPriceFen) }}
           </text>
+          <view class="platform-main">
+            <view class="platform-icon platform-icon-phone">
+              <view class="icon-phone-body" />
+            </view>
+            <view class="platform-meta">
+              <view class="platform-name-row">
+                <text class="platform-label">
+                  手机端
+                </text>
+                <text
+                  v-if="product.originPriceFen > product.priceFen"
+                  class="platform-origin"
+                >
+                  ¥{{ fenToYuan(product.originPriceFen) }}
+                </text>
+              </view>
+              <text class="platform-price">
+                ¥<text class="platform-price-num">
+                  {{ fenToYuan(product.priceFen) }}
+                </text>
+              </text>
+            </view>
+          </view>
         </view>
-        <view class="platform-row">
-          <text class="platform-label">
-            电脑端
-          </text>
-          <text
-            v-if="product.pcOriginPriceFen > product.pcPriceFen"
-            class="platform-origin"
-          >
-            ¥{{ fenToYuan(product.pcOriginPriceFen) }}
-          </text>
-          <text class="platform-price">
-            ¥<text class="platform-price-num">
-              {{ fenToYuan(product.pcPriceFen) }}
-            </text>
-          </text>
+        <view class="platform-card">
           <text
             v-if="discountLabel(product.pcPriceFen, product.pcOriginPriceFen)"
             class="platform-discount"
           >
             {{ discountLabel(product.pcPriceFen, product.pcOriginPriceFen) }}
           </text>
+          <view class="platform-main">
+            <view class="platform-icon platform-icon-pc">
+              <view class="icon-pc-body" />
+              <view class="icon-pc-base" />
+            </view>
+            <view class="platform-meta">
+              <view class="platform-name-row">
+                <text class="platform-label">
+                  电脑端
+                </text>
+                <text
+                  v-if="product.pcOriginPriceFen > product.pcPriceFen"
+                  class="platform-origin"
+                >
+                  ¥{{ fenToYuan(product.pcOriginPriceFen) }}
+                </text>
+              </view>
+              <text class="platform-price">
+                ¥<text class="platform-price-num">
+                  {{ fenToYuan(product.pcPriceFen) }}
+                </text>
+              </text>
+            </view>
+          </view>
         </view>
       </view>
 
-      <view class="meta">
-        <text class="sold">
-          已售 {{ product.sold }}
-        </text>
-      </view>
+      <text class="sold">
+        已售 {{ product.sold }}
+      </text>
       <view class="category-tag">
         <text class="category-tag-text">
           {{ product.categoryName }}
@@ -120,9 +137,11 @@
       class="card desc"
       :class="{ 'desc-expanded': descExpanded }"
     >
-      <text class="sec-title">
-        商品详情
-      </text>
+      <view class="sec-title">
+        <text class="sec-title-text">
+          商品详情
+        </text>
+      </view>
       <view class="desc-content">
         <rich-text
           class="desc-body"
@@ -152,7 +171,10 @@
           价格
         </text>
         <text class="total-value">
-          ¥{{ lowestYuan }} 起
+          ¥{{ lowestYuan }}
+        </text>
+        <text class="total-suffix">
+          起
         </text>
       </view>
       <button
@@ -242,8 +264,13 @@ function goCheckout(): void {
 
 <style scoped>
 .detail {
+  min-height: 100vh;
   padding: 24rpx;
-  padding-bottom: 160rpx;
+  padding-bottom: 180rpx;
+  box-sizing: border-box;
+  background:
+    radial-gradient(70% 24% at 50% 0%, rgba(255, 176, 32, 0.07), transparent 70%),
+    #0b0e14;
 }
 
 .cover {
@@ -280,63 +307,119 @@ function goCheckout(): void {
 .title {
   display: block;
   color: #e9eef6;
-  font-size: 34rpx;
-  font-weight: 700;
+  font-size: 36rpx;
+  font-weight: 800;
   line-height: 1.45;
   border-left: 6rpx solid #ffb020;
   padding-left: 20rpx;
 }
 
-.platform-prices {
+.platform-grid {
   margin-top: 20rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
-
-.platform-row {
-  display: flex;
-  align-items: baseline;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16rpx;
 }
 
-.platform-label {
-  width: 110rpx;
-  color: #9aa6bb;
-  font-size: 26rpx;
-  flex-shrink: 0;
-}
-
-.platform-origin {
-  color: #67738c;
-  font-size: 24rpx;
-  text-decoration: line-through;
-}
-
-.platform-price {
-  color: #ffb020;
-  font-size: 26rpx;
-}
-
-.platform-price-num {
-  font-size: 36rpx;
-  font-weight: 700;
+.platform-card {
+  position: relative;
+  min-width: 0;
+  border: 1rpx solid rgba(255, 176, 32, 0.35);
+  border-radius: 8rpx;
+  background-color: #10141f;
+  padding: 20rpx 20rpx;
 }
 
 .platform-discount {
+  position: absolute;
+  top: 0;
+  right: 0;
   color: #1a1205;
   background-color: #ffb020;
   font-size: 20rpx;
   font-weight: 700;
-  padding: 2rpx 10rpx;
-  border-radius: 6rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 0 8rpx 0 8rpx;
 }
 
-.meta {
-  margin-top: 16rpx;
+.platform-main {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.platform-icon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  border: 2rpx solid rgba(255, 176, 32, 0.5);
+  background-color: rgba(255, 176, 32, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-phone-body {
+  width: 20rpx;
+  height: 34rpx;
+  border: 2rpx solid #ffb020;
+  border-radius: 5rpx;
+}
+
+.icon-pc-body {
+  width: 32rpx;
+  height: 22rpx;
+  border: 2rpx solid #ffb020;
+  border-radius: 3rpx;
+}
+
+.icon-pc-base {
+  width: 22rpx;
+  height: 2rpx;
+  background-color: #ffb020;
+  margin-top: 3rpx;
+}
+
+.platform-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.platform-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+}
+
+.platform-label {
+  color: #e9eef6;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.platform-origin {
+  color: #67738c;
+  font-size: 20rpx;
+  text-decoration: line-through;
+}
+
+.platform-price {
+  margin-top: 4rpx;
+  color: #ffb020;
+  font-size: 24rpx;
+  font-family: 'DIN Alternate', 'Avenir Next Condensed', 'Arial Narrow', sans-serif;
+}
+
+.platform-price-num {
+  font-size: 44rpx;
+  font-weight: 700;
 }
 
 .sold {
+  display: block;
+  margin-top: 16rpx;
   color: #9aa6bb;
   font-size: 24rpx;
 }
@@ -353,6 +436,7 @@ function goCheckout(): void {
 .category-tag-text {
   color: #ffb020;
   font-size: 22rpx;
+  font-weight: 700;
 }
 
 .intro {
@@ -362,45 +446,70 @@ function goCheckout(): void {
 .intro-title {
   display: block;
   color: #e9eef6;
-  font-size: 30rpx;
-  font-weight: 700;
+  font-size: 32rpx;
+  font-weight: 800;
+  line-height: 1.4;
+  border-left: 6rpx solid #3dff9b;
+  padding-left: 18rpx;
 }
 
 .intro-text {
   display: block;
-  margin-top: 10rpx;
+  margin-top: 12rpx;
   color: #9aa6bb;
   font-size: 26rpx;
-  line-height: 1.6;
+  line-height: 1.7;
+  word-break: break-all;
 }
 
 .assurances {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 20rpx 24rpx;
+  padding: 22rpx 8rpx;
   margin-bottom: 24rpx;
 }
 
 .assurance-item {
-  color: #3dff9b;
+  flex: 1;
+  text-align: center;
+  color: #ffb020;
   font-size: 22rpx;
+  border-right: 1rpx solid rgba(150, 165, 195, 0.16);
+}
+
+.assurance-item:last-child {
+  border-right: none;
+}
+
+.sec-title {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.sec-title::before {
+  content: '';
+  width: 10rpx;
+  height: 32rpx;
+  background-color: #ffb020;
+  transform: skewX(-18deg);
+}
+
+.sec-title-text {
+  color: #e9eef6;
+  font-size: 30rpx;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 2rpx;
 }
 
 .desc {
   margin-bottom: 24rpx;
 }
 
-.sec-title {
-  display: block;
-  color: #e9eef6;
-  font-size: 28rpx;
-  font-weight: 700;
-}
-
 .desc-content {
   position: relative;
-  margin-top: 16rpx;
+  margin-top: 18rpx;
   max-height: 340rpx;
   overflow: hidden;
 }
@@ -468,17 +577,24 @@ function goCheckout(): void {
   color: #ffb020;
   font-size: 44rpx;
   font-weight: 700;
+  font-family: 'DIN Alternate', 'Avenir Next Condensed', 'Arial Narrow', sans-serif;
+}
+
+.total-suffix {
+  color: #9aa6bb;
+  font-size: 24rpx;
 }
 
 .buy {
-  padding: 0 76rpx;
+  padding: 0 64rpx;
   height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #1a1205;
   font-size: 30rpx;
-  font-weight: 700;
+  font-weight: 800;
+  font-style: italic;
   background: linear-gradient(135deg, #ffd066, #ffb020 55%, #e89400);
   clip-path: polygon(20rpx 0, 100% 0, calc(100% - 20rpx) 100%, 0 100%);
 }
