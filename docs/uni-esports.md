@@ -66,6 +66,7 @@ apps/uni-esports/
 - **令牌存储**（`api/token-storage.ts`）：uni Storage + 会话代数（generation）防并发刷新/登出竞态；auth store 监听 `onAuthExpired` 统一清理。
 - **租户**（`tenant/tenant-context.ts`）：小程序无地址栏，`VITE_TENANT_CODE` 构建时固定归属；仅带 `tenantCode` 的扫码/场景参数可覆盖并持久化；构建配置存在时不读历史持久化值，避免串租户。
 - **IM**（`im/`）：`socket.io-client@4.8.1` 与服务端同版本，websocket-only 传输；`wechat-socket.ts` 以 `wx.connectSocket` 的 SocketTask 实现 `WebSocket` 语义垫片（onopen/onmessage/onerror/onclose/send/close），在 `main.ts` 最早注入。
+- **pnpm 依赖隔离适配**：`socket.io-parser`、`engine.io-client`、`engine.io-parser`、`@socket.io/component-emitter`、`debug`、`ms` 显式声明为直接依赖——uni 的 rollup 解析不穿透 pnpm 的 `.pnpm` 符号链接，漏声明会导致 dev 产物出现裸 `require()` 而在微信运行时白屏。
 - **页面守卫**：`composables/use-require-login.ts`，tab 页 `redirect=false` 展示引导、子页 `redirect=true` 直接跳登录页。
 
 ## 3. 模块结构图
@@ -122,19 +123,22 @@ IM 时序：页面加载 → `io(wss://…/im, { auth: { token } })` 握手 → 
 
 ## 5. 配置与部署
 
-- **环境变量**（复制 `.env.example` 为 `.env.local`）：
-  - `VITE_API_BASE_URL`：REST 基址（含 `/api`），必须 **https**；
-  - `VITE_WS_BASE_URL`：IM 基址，必须 **wss**；
-  - `VITE_TENANT_CODE`：小程序绑定的租户编码（默认 `default`）。
+- **环境变量在构建时烘焙进产物**：修改 env 文件后必须重新 `dev`/`build` 才生效；env 文件缺失时 `import.meta.env` 会被编译为空对象、所有请求发不出去（App 启动会弹「缺少接口配置」提示兜底）。
+- **已提交的 env 文件**（预填当前部署域名 `esports.muyuhen.com`）：
+  - `.env.development`：`dev:mp-weixin` 开发模式加载；
+  - `.env.production`：`build` 生产构建加载；
+  - `.env.local`（自建、git 忽略）：两者都加载且优先级最高，适合本地联调指向 `http://127.0.0.1:3000/api`。
+- 三个变量：`VITE_API_BASE_URL`（REST，含 `/api`）、`VITE_WS_BASE_URL`（IM 的 wss）、`VITE_TENANT_CODE`（租户编码）。
 - **微信小程序后台（mp.weixin.qq.com）必须配置**：
-  1. 「开发设置 → 服务器域名」：request 合法域名 = API 域名；socket 合法域名 = WS 域名；uploadFile 合法域名 = API 域名。域名须 HTTPS 且已 ICP 备案。
-  2. 「设置 → 服务内容声明 → 用户隐私保护指引」：声明并启用（相册/摄像头/头像昵称等），否则隐私 API 调用会被拒绝。
+  1. 「开发设置 → 服务器域名」：request 合法域名 = API 域名；socket 合法域名 = WS 域名；uploadFile 合法域名 = API 域名。域名须 HTTPS 且已 ICP 备案；
+  2. 「设置 → 服务内容声明 → 用户隐私保护指引」：声明并启用（相册/摄像头/头像昵称等），否则隐私 API 调用会被拒绝；
   3. 「设置 → 基本设置 → AppID」填入 `src/manifest.json` 的 `mp-weixin.appid`（当前为空，构建产物显示 `touristappid` 仅供体验）。
+- **快速上手与常见报错对照**（域名白名单、租户不符、聊天连不上等）见 [apps/uni-esports/README.md](../apps/uni-esports/README.md)。
 - **本地运行/构建**：
 
 ```bash
 pnpm install --filter @app/uni-esports --filter @app/contracts
-pnpm --filter @app/contracts build          # 产物依赖，先构建
+pnpm --filter @app/contracts build            # 产物依赖，先构建
 pnpm --filter @app/uni-esports dev:mp-weixin  # 开发：微信开发者工具导入 dist/dev/mp-weixin
 pnpm --filter @app/uni-esports build          # 产物：微信开发者工具导入 dist/build/mp-weixin
 ```

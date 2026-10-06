@@ -1,9 +1,20 @@
 <script setup lang="ts">
 import { onLaunch } from '@dcloudio/uni-app';
+import { ENV_CONFIG_MISSING } from '@/config/env';
 import { useBrandingStore } from '@/stores/branding.store';
 import { tenantContext } from '@/tenant/tenant-context';
 
 onLaunch((options) => {
+  // 启动自检：env 文件缺失时 import.meta.env 为空对象，请求会全部失败，直接给出可执行的修复提示
+  if (ENV_CONFIG_MISSING) {
+    uni.showModal({
+      title: '缺少接口配置',
+      content:
+        'VITE_API_BASE_URL / VITE_TENANT_CODE 未配置：请在 apps/uni-esports/.env.development 或 .env.production 填写后重新构建',
+      showCancel: false,
+    });
+    return;
+  }
   // 租户编码：构建时固定（VITE_TENANT_CODE），允许扫码/场景参数 tenantCode 覆盖
   tenantContext.initialize(options?.query?.tenantCode);
   // 品牌信息用于「我的」页展示与分享文案；失败静默回退默认值
