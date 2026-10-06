@@ -208,6 +208,7 @@ function gotoProduct(productId: string): void {
 
 .cat-main {
   flex: 1;
+  min-width: 0;
   height: 100%;
 }
 

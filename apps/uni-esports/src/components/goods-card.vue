@@ -69,6 +69,8 @@ function onTap(): void {
 .goods {
   display: block;
   overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
   padding: 0;
 }
 
