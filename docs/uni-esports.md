@@ -20,7 +20,7 @@
 | 首页 | `pages/home/home` | 横幅轮播、公告滚动条、分类签、双列商品流（分页加载） |
 | 分类 | `pages/category/category` | 左右布局：分类侧栏 + 商品列表 |
 | 商品 | `pages/product/detail` | 封面、价格（按区服最低「起」价）、富文本详情、分享 |
-| 下单 | `pages/order/checkout` | 区服/数量/游戏 ID/备注、余额或微信支付、合计实时计价 |
+| 下单 | `pages/order/checkout` | 摘要卡（分类·单价）、服务表单（区服/游戏 ID/账号信息/打手方式/数量/备注）、优惠券选择、会员折扣计价、三段式支付方式与余额状态条 |
 | 订单 | `pages/order/list` `pages/order/detail` | 状态筛选分页列表；详情含取消、支付结果轮询（`pay/query`）、退款申请 |
 | 钱包 | `pages/wallet/wallet` | 余额、预设金额充值（微信收银台）、流水分页 |
 | 消息 | `pages/message/message` | 会话列表（未读角标、最后消息摘要）、发起客服会话 |
