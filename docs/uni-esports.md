@@ -134,7 +134,9 @@ IM 时序：页面加载 → `io(wss://…/im, { auth: { token } })` 握手 → 
   2. 「设置 → 服务内容声明 → 用户隐私保护指引」：声明并启用（相册/摄像头/头像昵称等），否则隐私 API 调用会被拒绝；
   3. 「设置 → 基本设置 → AppID」填入 `src/manifest.json` 的 `mp-weixin.appid`（当前为空，构建产物显示 `touristappid` 仅供体验）。
 - **快速上手与常见报错对照**（域名白名单、租户不符、聊天连不上等）见 [apps/uni-esports/README.md](../apps/uni-esports/README.md)。
-- **本地运行/构建**：
+- **本地运行/构建**（两种调试通道）：
+  - 浏览器快速预览：`pnpm --filter @app/uni-esports dev:h5` → 访问 `http://localhost:5173/`（仅预览 UI 与接口；支付、头像昵称填写、隐私弹窗等微信能力只在真小程序生效，交付以小程序为准）；
+  - 小程序（交付目标）：`pnpm --filter @app/uni-esports dev:mp-weixin` 开发 / `build` 构建产物，微信开发者工具导入 `dist/dev|build/mp-weixin`。
 
 ```bash
 pnpm install --filter @app/uni-esports --filter @app/contracts

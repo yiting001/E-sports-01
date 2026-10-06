@@ -8,17 +8,28 @@ uni-app（Vue 3 + Vite + TS + Pinia）**仅编译到微信小程序**（mp-weixi
 # 仓库根目录执行（Node >= 20，pnpm >= 9）
 pnpm install --filter @app/uni-esports --filter @app/contracts
 pnpm --filter @app/contracts build        # 共享契约产物，首次必须先构建
-
-# 开发（watch 模式）
-pnpm --filter @app/uni-esports dev:mp-weixin
-
-# 生产构建
-pnpm --filter @app/uni-esports build
 ```
 
-然后用**微信开发者工具**：
+**两种调试方式，按需选择：**
 
-1. 「导入项目」，目录选择 `apps/uni-esports/dist/dev/mp-weixin`（开发）或 `apps/uni-esports/dist/build/mp-weixin`（生产构建）；
+**方式一：浏览器预览（最快，无需开发者工具）**
+
+```bash
+pnpm --filter @app/uni-esports dev:h5
+```
+
+启动后访问 **http://localhost:5173/**。适合快速看 UI、调样式和接口联调；注意这只是预览通道，**微信能力（支付拉起、头像昵称填写、隐私弹窗、分享卡片）只在真小程序里生效**，交付与上架以小程序为准。
+
+**方式二：微信开发者工具（交付目标，最终以此为准）**
+
+```bash
+pnpm --filter @app/uni-esports dev:mp-weixin    # 开发（watch）
+pnpm --filter @app/uni-esports build            # 生产构建
+```
+
+然后：
+
+1. 开发者工具「导入项目」，目录选择 `apps/uni-esports/dist/dev/mp-weixin`（开发）或 `apps/uni-esports/dist/build/mp-weixin`（生产构建）；
 2. AppID 填你的小程序 AppID（没有可选「测试号」）；本地调试请勾选右上角「详情 → 本地设置 → 不校验合法域名」（工程已默认 `urlCheck: false`）。
 
 > 也可以用 HBuilderX 运行：文件 → 打开目录 → 选择 `apps/uni-esports`（CLI 工程）→ 运行 → 运行到小程序模拟器 → 微信开发者工具。
