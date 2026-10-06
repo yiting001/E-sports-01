@@ -43,3 +43,13 @@ export function formatChatTime(ms: number): string {
   }
   return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${h}`;
 }
+
+/** 会话列表时间：与原版 client 一致，始终展示 MM-DD HH:mm（不区分当天） */
+export function formatConversationTime(ms: number): string {
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  const h = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${h}`;
+}

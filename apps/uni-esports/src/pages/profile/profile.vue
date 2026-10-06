@@ -134,6 +134,7 @@ import { computed } from 'vue';
 import { authApi } from '@/api/auth.api';
 import { uploadApi } from '@/api/upload.api';
 import { useRequireLogin } from '@/composables/use-require-login';
+import { openServiceChat } from '@/composables/use-service-chat';
 import { useBrandingStore } from '@/stores/branding.store';
 import { toast } from '@/utils/toast';
 
@@ -155,12 +156,13 @@ function goto(url: string): void {
   uni.navigateTo({ url });
 }
 
-function gotoService(): void {
+/** 联系客服：复用进行中的客服会话，否则新发起（与原版「我的」页客服入口一致） */
+async function gotoService(): Promise<void> {
   if (!ensureLoggedIn()) {
     gotoLogin();
     return;
   }
-  uni.switchTab({ url: '/pages/message/message' });
+  await openServiceChat();
 }
 
 /** 微信头像昵称填写能力：open-type=chooseAvatar 返回临时文件，经自助上传后换 URL */

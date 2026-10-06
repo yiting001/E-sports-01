@@ -1,69 +1,84 @@
 <template>
   <view class="message">
-    <template v-if="auth.isLoggedIn">
+    <view class="sec-title panel-title">
+      <text class="sec-title-text">
+        会话消息
+      </text>
+    </view>
+
+    <view
+      v-if="auth.isLoggedIn && conversations.length"
+      class="card list"
+    >
       <view
-        v-for="conversation in conversations"
-        :key="conversation.id"
-        class="card conv-item"
-        @tap="openConversation(conversation.id)"
+        v-for="conv in conversations"
+        :key="conv.id"
+        class="entry"
+        hover-class="entry-hover"
+        @tap="openConversation(conv)"
       >
-        <view class="conv-avatar">
-          <text class="conv-avatar-text">
-            {{ conversation.title.slice(0, 1) || '会' }}
+        <view class="avatar">
+          <image
+            class="avatar-icon"
+            src="/static/icons/headset.png"
+            mode="aspectFit"
+          />
+        </view>
+        <view class="body">
+          <text class="title">
+            {{ conv.title || '在线客服' }}
+          </text>
+          <text class="subtitle">
+            {{ lastMessageText(conv.lastMessage) }}
           </text>
         </view>
-        <view class="conv-body">
-          <view class="conv-head">
-            <text class="conv-title">
-              {{ conversation.title || '会话' }}
+        <view class="meta">
+          <text
+            v-if="conv.lastMessage"
+            class="time"
+          >
+            {{ formatConversationTime(conv.lastMessage.createdAt) }}
+          </text>
+          <view
+            v-if="conv.unread > 0"
+            class="unread"
+          >
+            <text class="unread-text">
+              {{ conv.unread > 99 ? '99+' : conv.unread }}
             </text>
-            <text class="conv-time">
-              {{ formatChatTime(conversation.updatedAt) }}
-            </text>
-          </view>
-          <view class="conv-foot">
-            <text class="conv-preview">
-              {{ previewText(conversation) }}
-            </text>
-            <view
-              v-if="conversation.unread > 0"
-              class="conv-badge"
-            >
-              <text class="conv-badge-text">
-                {{ conversation.unread > 99 ? '99+' : conversation.unread }}
-              </text>
-            </view>
           </view>
         </view>
       </view>
-      <empty-state
-        v-if="!loading && conversations.length === 0"
-        text="暂无会话"
-      />
+    </view>
 
-      <view class="service-entry">
-        <button
-          class="btn-primary"
-          :class="{ disabled: starting }"
-          @tap="startServiceChat"
-        >
-          {{ starting ? '创建中…' : '联系在线客服' }}
-        </button>
-      </view>
-    </template>
+    <view
+      v-else-if="auth.isLoggedIn"
+      class="card empty"
+    >
+      <image
+        class="empty-icon"
+        src="/static/icons/chat-empty.png"
+        mode="aspectFit"
+      />
+      <text class="empty-text">
+        {{ loading ? '加载中…' : '暂无会话消息' }}
+      </text>
+    </view>
 
     <view
       v-else
-      class="login-guide"
+      class="card empty"
     >
-      <text class="login-guide-title">
-        登录后查看消息
-      </text>
-      <text class="login-guide-sub">
-        与客服沟通、接收订单群通知
+      <image
+        class="empty-icon"
+        src="/static/icons/chat-empty.png"
+        mode="aspectFit"
+      />
+      <text class="empty-text">
+        登录后查看会话消息
       </text>
       <button
-        class="btn-primary login-guide-btn"
+        class="login-btn"
         @tap="gotoLogin"
       >
         去登录
@@ -75,21 +90,25 @@
 <script setup lang="ts">
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app';
 import { ref } from 'vue';
-import type { ConversationView } from '@app/contracts';
+import type { ChatMessage, ConversationView } from '@app/contracts';
 import { MessageType } from '@app/contracts';
 import { imApi } from '@/api/im.api';
-import emptyState from '@/components/empty-state.vue';
 import { useRequireLogin } from '@/composables/use-require-login';
-import { formatChatTime } from '@/utils/format';
+import { useAuthStore } from '@/stores/auth.store';
+import { formatConversationTime } from '@/utils/format';
 
-const { auth, gotoLogin } = useRequireLogin(false);
+/**
+ * 会话消息页：与原版 apps/client 的 MessageView 一致，只展示会话列表
+ * （客服入口在「我的」页，避免重复入口）；移动端点击进入全屏聊天。
+ */
+const { gotoLogin } = useRequireLogin(false);
+const auth = useAuthStore();
 
 const conversations = ref<ConversationView[]>([]);
 const loading = ref(false);
-const starting = ref(false);
 
 onShareAppMessage(() => ({
-  title: '消息',
+  title: '会话消息',
   path: '/pages/home/home',
 }));
 
@@ -114,40 +133,23 @@ async function refresh(): Promise<void> {
   }
 }
 
-function previewText(conversation: ConversationView): string {
-  const last = conversation.lastMessage;
-  if (!last) {
+/** 最近一条消息摘要：图片/视频以占位文案展示（与原版 lastMessageText 一致） */
+function lastMessageText(message: ChatMessage | null): string {
+  if (!message) {
     return '暂无消息';
   }
-  if (last.type === MessageType.Image) {
-    return '[图片]';
+  switch (message.type) {
+    case MessageType.Image:
+      return '[图片]';
+    case MessageType.Video:
+      return '[视频]';
+    default:
+      return message.content;
   }
-  if (last.type === MessageType.Video) {
-    return '[视频]';
-  }
-  if (last.type === MessageType.System) {
-    return last.content;
-  }
-  return last.content;
 }
 
-function openConversation(conversationId: string): void {
-  uni.navigateTo({ url: `/pages/chat/chat?id=${conversationId}` });
-}
-
-async function startServiceChat(): Promise<void> {
-  if (starting.value) {
-    return;
-  }
-  starting.value = true;
-  try {
-    const conversation = await imApi.startService();
-    uni.navigateTo({ url: `/pages/chat/chat?id=${conversation.id}` });
-  } catch {
-    // 错误已统一提示
-  } finally {
-    starting.value = false;
-  }
+function openConversation(conversation: ConversationView): void {
+  uni.navigateTo({ url: `/pages/chat/chat?id=${conversation.id}` });
 }
 </script>
 
@@ -155,118 +157,157 @@ async function startServiceChat(): Promise<void> {
 .message {
   min-height: 100vh;
   padding: 24rpx;
+  box-sizing: border-box;
 }
 
-.conv-item {
+.panel-title {
+  margin-bottom: 24rpx;
+}
+
+.sec-title {
   display: flex;
-  gap: 20rpx;
-  margin-bottom: 20rpx;
   align-items: center;
+  gap: 14rpx;
 }
 
-.conv-avatar {
+.sec-title::before {
+  content: '';
+  width: 10rpx;
+  height: 32rpx;
+  background-color: #ffb020;
+  transform: skewX(-18deg);
+}
+
+.sec-title-text {
+  color: #e9eef6;
+  font-size: 30rpx;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 2rpx;
+}
+
+.list {
+  padding: 12rpx 0;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 28rpx 32rpx;
+}
+
+.entry + .entry {
+  border-top: 1rpx solid rgba(150, 165, 195, 0.16);
+}
+
+.entry-hover {
+  background-color: rgba(255, 176, 32, 0.08);
+}
+
+.avatar {
+  flex-shrink: 0;
   width: 88rpx;
   height: 88rpx;
-  border-radius: 50%;
-  background-color: rgba(255, 176, 32, 0.12);
-  border: 1rpx solid rgba(255, 176, 32, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  background-color: rgba(255, 176, 32, 0.14);
+  clip-path: polygon(16rpx 0, 100% 0, 100% calc(100% - 16rpx), calc(100% - 16rpx) 100%, 0 100%, 0 16rpx);
 }
 
-.conv-avatar-text {
-  color: #ffb020;
-  font-size: 34rpx;
-  font-weight: 700;
+.avatar-icon {
+  width: 44rpx;
+  height: 44rpx;
 }
 
-.conv-body {
+.body {
   flex: 1;
   min-width: 0;
-}
-
-.conv-head {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 6rpx;
 }
 
-.conv-title {
-  flex: 1;
+.title {
   color: #e9eef6;
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.conv-time {
+.subtitle {
   color: #67738c;
-  font-size: 22rpx;
-  margin-left: 12rpx;
-  flex-shrink: 0;
-}
-
-.conv-foot {
-  display: flex;
-  align-items: center;
-  margin-top: 8rpx;
-}
-
-.conv-preview {
-  flex: 1;
-  color: #9aa6bb;
   font-size: 24rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.conv-badge {
+.meta {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12rpx;
+}
+
+.time {
+  color: #67738c;
+  font-size: 22rpx;
+}
+
+.unread {
   min-width: 36rpx;
   height: 36rpx;
-  border-radius: 18rpx;
-  background-color: #ff5449;
+  padding: 0 10rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 8rpx;
-  margin-left: 12rpx;
-  flex-shrink: 0;
+  background-color: #ffb020;
+  border-radius: 18rpx;
+  box-sizing: border-box;
 }
 
-.conv-badge-text {
-  color: #ffffff;
-  font-size: 20rpx;
-}
-
-.service-entry {
-  margin-top: 32rpx;
-}
-
-.login-guide {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 200rpx 40rpx 0;
-}
-
-.login-guide-title {
-  color: #e9eef6;
-  font-size: 34rpx;
+.unread-text {
+  color: #0b0e14;
+  font-size: 22rpx;
   font-weight: 700;
 }
 
-.login-guide-sub {
-  margin-top: 12rpx;
-  color: #9aa6bb;
+.empty {
+  padding: 128rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.empty-icon {
+  width: 72rpx;
+  height: 72rpx;
+  opacity: 0.8;
+}
+
+.empty-text {
+  color: #67738c;
   font-size: 26rpx;
 }
 
-.login-guide-btn {
-  width: 320rpx;
-  margin-top: 48rpx;
+.login-btn {
+  margin-top: 12rpx;
+  width: 280rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1a1205;
+  font-size: 30rpx;
+  font-weight: 600;
+  background-color: #ffb020;
+  border-radius: 8rpx;
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
 }
 </style>

@@ -28,6 +28,16 @@ function insideCircle(x, y, cx, cy, r) {
   return Math.hypot(x - cx, y - cy) <= r;
 }
 
+/** 圆环弧段：d 与 r 的距离在 thickness/2 内且角度落在 [startDeg, endDeg]（0°=右，顺时针增大，y 轴向下） */
+function insideArc(x, y, cx, cy, r, thickness, startDeg, endDeg) {
+  const dist = Math.hypot(x - cx, y - cy);
+  if (Math.abs(dist - r) > thickness / 2) {
+    return false;
+  }
+  const angle = ((Math.atan2(y - cy, x - cx) * 180) / Math.PI + 360) % 360;
+  return angle >= startDeg && angle <= endDeg;
+}
+
 function insideTriangle(x, y, ax, ay, bx, by, cx, cy) {
   const sign = (x1, y1, x2, y2, x3, y3) =>
     (x1 - x3) * (y2 - y3) - (x2 - x3) * (y1 - y3);
@@ -67,6 +77,33 @@ const SHAPES = {
     const head = insideCircle(x, y, 0.5, 0.3, 0.18);
     const shoulder = y <= 0.78 && insideCircle(x, y, 0.5, 0.78, 0.3);
     return head || shoulder;
+  },
+};
+
+/* ===== 消息页图标（对齐 apps/client：头像耳机金色、空态气泡灰） ===== */
+
+const MSG_ICONS = {
+  // 耳机（原版 AppIcon name="headset"：头梁弧 + 左右耳罩）
+  headset: {
+    size: 88,
+    color: [0xff, 0xb0, 0x20],
+    shape(x, y) {
+      const band = insideArc(x, y, 0.5, 0.58, 0.29, 0.08, 180, 360);
+      const leftCup = insideRoundRect(x, y, 0.235, 0.68, 0.09, 0.14, 0.055);
+      const rightCup = insideRoundRect(x, y, 0.765, 0.68, 0.09, 0.14, 0.055);
+      return band || leftCup || rightCup;
+    },
+  },
+
+  // 聊天气泡（原版空态 AppIcon name="chat"：圆角气泡 + 左下方尾巴）
+  'chat-empty': {
+    size: 72,
+    color: [0x67, 0x73, 0x8c],
+    shape(x, y) {
+      const bubble = insideRoundRect(x, y, 0.5, 0.42, 0.38, 0.24, 0.09);
+      const tail = insideTriangle(x, y, 0.24, 0.62, 0.24, 0.88, 0.52, 0.62);
+      return bubble || tail;
+    },
   },
 };
 
@@ -141,22 +178,23 @@ function encodePng(size, rgba) {
   ]);
 }
 
-function render(shapeFn, color) {
-  const rgba = Buffer.alloc(SIZE * SIZE * 4);
-  for (let py = 0; py < SIZE; py += 1) {
-    for (let px = 0; px < SIZE; px += 1) {
+/** 渲染图形为 RGBA 缓冲；size 必须与 encodePng 传入值一致，否则行宽错位 */
+function render(shapeFn, color, size = SIZE) {
+  const rgba = Buffer.alloc(size * size * 4);
+  for (let py = 0; py < size; py += 1) {
+    for (let px = 0; px < size; px += 1) {
       let hits = 0;
       for (let sy = 0; sy < SAMPLES; sy += 1) {
         for (let sx = 0; sx < SAMPLES; sx += 1) {
-          const x = (px + (sx + 0.5) / SAMPLES) / SIZE;
-          const y = (py + (sy + 0.5) / SAMPLES) / SIZE;
+          const x = (px + (sx + 0.5) / SAMPLES) / size;
+          const y = (py + (sy + 0.5) / SAMPLES) / size;
           if (shapeFn(x, y)) {
             hits += 1;
           }
         }
       }
       const alpha = Math.round((255 * hits) / (SAMPLES * SAMPLES));
-      const offset = (py * SIZE + px) * 4;
+      const offset = (py * size + px) * 4;
       rgba[offset] = color[0];
       rgba[offset + 1] = color[1];
       rgba[offset + 2] = color[2];
@@ -179,6 +217,14 @@ const uiDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'static
 mkdirSync(uiDir, { recursive: true });
 
 for (const [name, shapeFn] of Object.entries(UI_ICONS)) {
-  writeFileSync(join(uiDir, `${name}.png`), encodePng(48, render(shapeFn, UI_COLORS.normal)));
+  writeFileSync(join(uiDir, `${name}.png`), encodePng(48, render(shapeFn, UI_COLORS.normal, 48)));
+  console.log(`生成 ${name}.png`);
+}
+
+for (const [name, def] of Object.entries(MSG_ICONS)) {
+  writeFileSync(
+    join(uiDir, `${name}.png`),
+    encodePng(def.size, render(def.shape, def.color, def.size)),
+  );
   console.log(`生成 ${name}.png`);
 }
