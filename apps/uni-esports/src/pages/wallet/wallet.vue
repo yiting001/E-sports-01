@@ -259,8 +259,9 @@ async function submitRecharge(): Promise<void> {
       await requestWechatPay(result.jsapiParams);
       await confirmRecharge();
     } else if (result.qrCode) {
-      // 小程序内不得展示/引导外部扫码支付：明确提示改用其他渠道
-      toast('小程序暂不支持扫码充值，请使用 H5 端或联系客服');
+      // 渠道仅返回二维码（Native 扫码）时小程序内无法完成支付：
+      // 提示到公众号充值，不展示/引导外部扫码
+      toast('请到公众号充值');
     }
   } catch {
     // 错误已统一提示

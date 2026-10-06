@@ -295,13 +295,16 @@ async function submit(): Promise<void> {
       userCouponId: selectedCoupon.value?.id || undefined,
     });
     if (result.jsapiParams) {
+      // 拉起成功即支付完成，到账状态由服务端回调/查单收敛
       await requestWechatPay(result.jsapiParams);
+      toast('支付成功');
     } else if (result.qrCode) {
-      // 渠道仅返回二维码（Native 扫码）时，小程序内不得引导外部扫码支付：
-      // 保留待付款订单，引导使用余额支付
-      toast('该支付方式暂未在小程序开放，可使用钱包余额支付');
+      // 渠道仅返回二维码（Native 扫码）时小程序内无法完成支付：
+      // 提示到公众号下单，且不再叠加其他提示，避免本条被覆盖
+      toast('请到公众号下单');
+    } else {
+      toast(result.paid ? '下单成功' : '订单已创建，待支付');
     }
-    toast(result.paid ? '下单成功' : '订单已创建，待支付');
     uni.redirectTo({ url: `/pages/order/detail?id=${result.orderId}` });
   } catch {
     // 错误已统一提示；保留本页输入
