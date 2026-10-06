@@ -8,21 +8,21 @@
     >
       <view
         v-if="historyLoading"
-        class="chat-history-loading"
+        class="chat-hint"
       >
-        <text class="text-muted">
-          加载历史消息…
+        <text class="chat-hint-text">
+          接入中…
         </text>
       </view>
       <view
-        v-for="(message, index) in messages"
+        v-for="message in messages"
         :id="`msg-${message.id}`"
         :key="message.id"
         class="msg-row"
-        :class="{ 'msg-row-mine': message.senderId === myUserId, 'msg-row-system': message.type === 'system' }"
+        :class="{ 'msg-row-mine': isSelf(message), 'msg-row-system': isSystem(message) }"
       >
         <view
-          v-if="message.type === 'system'"
+          v-if="isSystem(message)"
           class="msg-system"
         >
           <text class="msg-system-text">
@@ -30,36 +30,67 @@
           </text>
         </view>
         <template v-else>
-          <text
-            v-if="showTime(index)"
-            class="msg-time"
-          >
-            {{ formatChatTime(message.createdAt) }}
-          </text>
-          <view
-            class="msg-bubble"
-            :class="{ 'msg-bubble-mine': message.senderId === myUserId }"
-          >
-            <text
-              v-if="message.type === 'text'"
-              class="msg-content"
-            >
-              {{ message.content }}
-            </text>
-            <image
-              v-else-if="message.type === 'image'"
-              class="msg-image"
-              :src="message.content"
-              mode="aspectFill"
-              @tap="previewImage(message.content)"
-            />
-            <text
-              v-else
-              class="msg-content"
-            >
-              [不支持的消息类型]
-            </text>
+          <view class="msg-col">
+            <view class="msg-sender">
+              <text class="msg-sender-name">
+                {{ senderName(message.senderId) }}
+              </text>
+              <text
+                v-if="senderTag(message.senderId)"
+                class="msg-sender-tag"
+              >
+                {{ senderTag(message.senderId) }}
+              </text>
+            </view>
+            <view class="msg-bubble">
+              <view
+                v-if="message.replyTo"
+                class="msg-reply"
+              >
+                <text class="msg-reply-name">
+                  {{ message.replyTo.senderName }}
+                </text>
+                <text class="msg-reply-content">
+                  {{ replyPreview(message.replyTo) }}
+                </text>
+              </view>
+              <text
+                v-if="message.type === 'text'"
+                class="msg-content"
+              >
+                {{ message.content }}
+              </text>
+              <image
+                v-else-if="message.type === 'image'"
+                class="msg-image"
+                :src="message.content"
+                mode="widthFix"
+                @tap="previewImage(message.content)"
+              />
+              <video
+                v-else-if="message.type === 'video'"
+                class="msg-video"
+                :src="message.content"
+                object-fit="contain"
+              />
+              <text
+                v-else
+                class="msg-content"
+              >
+                [不支持的消息类型]
+              </text>
+              <text class="msg-time">
+                {{ formatChatTime(message.createdAt) }}
+              </text>
+            </view>
           </view>
+          <button
+            v-if="canSend"
+            class="msg-quote"
+            @tap="setReply(message)"
+          >
+            ↩
+          </button>
         </template>
       </view>
       <view
@@ -68,19 +99,53 @@
       />
     </scroll-view>
 
+    <view
+      v-if="replyTarget"
+      class="reply-bar"
+    >
+      <view class="reply-bar-info">
+        <text class="reply-bar-name">
+          引用 {{ senderName(replyTarget.senderId) }}
+        </text>
+        <text class="reply-bar-content">
+          {{ replyPreview(replyTarget) }}
+        </text>
+      </view>
+      <text
+        class="reply-bar-cancel"
+        @tap="clearReply"
+      >
+        ×
+      </text>
+    </view>
+
     <view class="chat-footer">
+      <button
+        class="tool-btn"
+        :disabled="uploading"
+        @tap="sendImage"
+      >
+        图
+      </button>
+      <button
+        class="tool-btn"
+        :disabled="uploading"
+        @tap="sendVideo"
+      >
+        视频
+      </button>
       <input
         v-model="draft"
         class="input chat-input"
         confirm-type="send"
         :maxlength="2000"
-        placeholder="输入消息…"
+        :placeholder="canSend ? (uploading ? '发送中…' : '输入消息…') : '会话不可发送'"
         placeholder-class="placeholder"
         @confirm="sendText"
       >
       <button
         class="btn-primary chat-send"
-        :class="{ disabled: !canSend }"
+        :class="{ disabled: !canSend || !draft.trim() }"
         @tap="sendText"
       >
         发送
@@ -92,9 +157,10 @@
 <script setup lang="ts">
 import { onLoad, onUnload, onShareAppMessage } from '@dcloudio/uni-app';
 import { computed, ref } from 'vue';
-import type { ChatMessage } from '@app/contracts';
+import type { ChatMessage, ConversationMemberView, SendMessagePayload } from '@app/contracts';
 import { MessageType } from '@app/contracts';
 import { imApi } from '@/api/im.api';
+import { uploadApi } from '@/api/upload.api';
 import { createImSocket } from '@/im/im-socket';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatChatTime } from '@/utils/format';
@@ -102,20 +168,22 @@ import { toast } from '@/utils/toast';
 
 const auth = useAuthStore();
 const conversationId = ref('');
-const conversationTitle = ref('聊天');
 const messages = ref<ChatMessage[]>([]);
+const members = ref<ConversationMemberView[]>([]);
 const draft = ref('');
 const historyLoading = ref(false);
 const scrollAnchor = ref('');
 const anchorId = 'chat-bottom-anchor';
+const replyTarget = ref<ChatMessage | null>(null);
+const uploading = ref(false);
 const myUserId = computed(() => auth.profile?.id ?? '');
 
 const im = createImSocket();
 
-const canSend = computed(() => draft.value.trim().length > 0);
+const canSend = computed(() => Boolean(conversationId.value) && auth.isLoggedIn);
 
 onShareAppMessage(() => ({
-  title: conversationTitle.value,
+  title: '聊天',
   path: '/pages/home/home',
 }));
 
@@ -128,10 +196,10 @@ onLoad(async (options) => {
   }
   try {
     const detail = await imApi.conversationDetail(conversationId.value);
-    conversationTitle.value = detail.title || '聊天';
-    uni.setNavigationBarTitle({ title: conversationTitle.value });
+    members.value = detail.members;
+    uni.setNavigationBarTitle({ title: detail.title || '聊天' });
   } catch {
-    // 标题读取失败不阻塞聊天
+    // 标题/成员读取失败不阻塞聊天
   }
   connectSocket();
 });
@@ -144,15 +212,6 @@ function connectSocket(): void {
   im.connect();
   im.onError((error) => {
     toast(error.message || '连接异常，请稍后重试');
-  });
-  im.onConversation(() => {
-    // 会话标题/成员变更由服务端权威推送；MVP 只刷新标题
-    void imApi
-      .conversationDetail(conversationId.value)
-      .then((detail) => {
-        conversationTitle.value = detail.title || '聊天';
-      })
-      .catch(() => undefined);
   });
   im.onReceive((message) => {
     if (message.conversationId !== conversationId.value) {
@@ -197,30 +256,114 @@ function scrollToBottom(): void {
   scrollAnchor.value = '';
   setTimeout(() => {
     scrollAnchor.value = anchorId;
-  }, 50);
+  }, 80);
 }
 
-function showTime(index: number): boolean {
-  if (index === 0) {
-    return true;
+function isSelf(message: ChatMessage): boolean {
+  return message.senderId === myUserId.value;
+}
+
+function isSystem(message: ChatMessage): boolean {
+  return message.type === MessageType.System;
+}
+
+function senderName(senderId: string): string {
+  const member = members.value.find((item) => item.userId === senderId);
+  return member?.displayName || (senderId === myUserId.value ? '我' : '用户');
+}
+
+function senderTag(senderId: string): string {
+  return members.value.find((item) => item.userId === senderId)?.tag ?? '';
+}
+
+function replyPreview(message: Pick<ChatMessage, 'type' | 'content'>): string {
+  if (message.type === MessageType.Image) {
+    return '[图片]';
   }
-  const previous = messages.value[index - 1];
-  return messages.value[index].createdAt - previous.createdAt > 5 * 60 * 1000;
+  if (message.type === MessageType.Video) {
+    return '[视频]';
+  }
+  return message.content;
+}
+
+function setReply(message: ChatMessage): void {
+  replyTarget.value = message;
+}
+
+function clearReply(): void {
+  replyTarget.value = null;
+}
+
+
+function sendPayload(type: MessageType, content: string): void {
+  const payload: SendMessagePayload = {
+    conversationId: conversationId.value,
+    type,
+    content,
+  };
+  if (replyTarget.value) {
+    payload.replyToId = replyTarget.value.id;
+    clearReply();
+  }
+  im.send(payload);
+  // 服务端广播回显，本地不插入避免重复
+  draft.value = '';
+  scrollToBottom();
 }
 
 function sendText(): void {
   const content = draft.value.trim();
-  if (!content) {
+  if (!content || !canSend.value) {
     return;
   }
-  im.send({
-    conversationId: conversationId.value,
-    type: MessageType.Text,
-    content,
-  });
-  // 服务端广播回显，本地不插入避免重复
-  draft.value = '';
-  scrollToBottom();
+  sendPayload(MessageType.Text, content);
+}
+
+async function pickAndSendMedia(type: MessageType.Image | MessageType.Video): Promise<void> {
+  if (uploading.value || !canSend.value) {
+    return;
+  }
+  uploading.value = true;
+  try {
+    let tempFilePath = '';
+    if (type === MessageType.Image) {
+      tempFilePath = await new Promise<string>((resolve, reject) => {
+        uni.chooseImage({
+          count: 1,
+          sizeType: ['compressed'],
+          success: (result) => resolve(result.tempFilePaths[0] ?? ''),
+          fail: () => reject(new Error('未选择图片')),
+        });
+      });
+    } else {
+      tempFilePath = await new Promise<string>((resolve, reject) => {
+        uni.chooseMedia({
+          count: 1,
+          mediaType: ['video'],
+          maxDuration: 30,
+          success: (result) => resolve(result.tempFiles[0]?.tempFilePath ?? ''),
+          fail: () => reject(new Error('未选择视频')),
+        });
+      });
+    }
+    const uploaded = await uploadApi.uploadTempFile(
+      tempFilePath,
+      type === MessageType.Image ? '图片' : '视频',
+    );
+    sendPayload(type, uploaded.url);
+  } catch {
+    // 未选择或上传失败已统一提示
+  } finally {
+    uploading.value = false;
+  }
+}
+
+function sendImage(): void {
+  void pickAndSendMedia(MessageType.Image);
+}
+
+function sendVideo(): void {
+  void pickAndSendMedia(MessageType.Video);
 }
 
 function previewImage(url: string): void {
@@ -242,24 +385,39 @@ function previewImage(url: string): void {
   box-sizing: border-box;
 }
 
-.chat-history-loading {
+.chat-hint {
   text-align: center;
-  font-size: 22rpx;
   padding: 12rpx 0;
+}
+
+.chat-hint-text {
+  color: #67738c;
+  font-size: 22rpx;
 }
 
 .msg-row {
   display: flex;
-  flex-direction: column;
-  margin-bottom: 20rpx;
+  align-items: flex-start;
+  margin-bottom: 24rpx;
 }
 
 .msg-row-mine {
+  flex-direction: row-reverse;
+}
+
+.msg-row-mine .msg-col {
   align-items: flex-end;
 }
 
+.msg-col {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+  min-width: 0;
+}
+
 .msg-row-system {
-  align-items: center;
+  justify-content: center;
 }
 
 .msg-system {
@@ -273,23 +431,60 @@ function previewImage(url: string): void {
   font-size: 22rpx;
 }
 
-.msg-time {
-  color: #67738c;
-  font-size: 20rpx;
+.msg-sender {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
   margin-bottom: 8rpx;
 }
 
+.msg-sender-name {
+  color: #9aa6bb;
+  font-size: 22rpx;
+}
+
+.msg-sender-tag {
+  color: #ffb020;
+  font-size: 20rpx;
+  border: 1rpx solid rgba(255, 176, 32, 0.4);
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+}
+
 .msg-bubble {
-  max-width: 70%;
   background-color: #1a2130;
   border: 1rpx solid rgba(150, 165, 195, 0.16);
   border-radius: 12rpx;
   padding: 16rpx 20rpx;
 }
 
-.msg-bubble-mine {
+.msg-row-mine .msg-bubble {
   background-color: rgba(255, 176, 32, 0.16);
   border-color: rgba(255, 176, 32, 0.4);
+}
+
+.msg-reply {
+  border-left: 4rpx solid rgba(255, 176, 32, 0.5);
+  background-color: rgba(11, 14, 20, 0.5);
+  border-radius: 6rpx;
+  padding: 8rpx 14rpx;
+  margin-bottom: 10rpx;
+}
+
+.msg-reply-name {
+  display: block;
+  color: #ffb020;
+  font-size: 20rpx;
+}
+
+.msg-reply-content {
+  display: block;
+  margin-top: 4rpx;
+  color: #9aa6bb;
+  font-size: 22rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .msg-content {
@@ -302,18 +497,104 @@ function previewImage(url: string): void {
 .msg-image {
   width: 320rpx;
   border-radius: 8rpx;
+  display: block;
+}
+
+.msg-video {
+  width: 360rpx;
+  height: 260rpx;
+  border-radius: 8rpx;
+  display: block;
+}
+
+.msg-time {
+  display: block;
+  margin-top: 8rpx;
+  color: #67738c;
+  font-size: 20rpx;
+  text-align: right;
+}
+
+.msg-quote {
+  width: 56rpx;
+  height: 56rpx;
+  margin: 0 12rpx;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #67738c;
+  font-size: 26rpx;
+  border: 1rpx solid rgba(150, 165, 195, 0.24);
+  border-radius: 8rpx;
 }
 
 .chat-anchor {
   height: 1rpx;
 }
 
+.reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 14rpx 24rpx;
+  background-color: #0e1220;
+  border-top: 1rpx solid rgba(150, 165, 195, 0.16);
+}
+
+.reply-bar-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-bar-name {
+  display: block;
+  color: #ffb020;
+  font-size: 22rpx;
+}
+
+.reply-bar-content {
+  display: block;
+  margin-top: 4rpx;
+  color: #9aa6bb;
+  font-size: 22rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-bar-cancel {
+  color: #67738c;
+  font-size: 40rpx;
+  padding: 0 12rpx;
+  flex-shrink: 0;
+}
+
 .chat-footer {
   display: flex;
-  gap: 16rpx;
+  align-items: center;
+  gap: 12rpx;
   padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
   background-color: #131926;
   border-top: 1rpx solid rgba(150, 165, 195, 0.16);
+}
+
+.tool-btn {
+  width: 72rpx;
+  height: 72rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9aa6bb;
+  font-size: 24rpx;
+  background-color: #1a2130;
+  border: 1rpx solid rgba(150, 165, 195, 0.24);
+  border-radius: 8rpx;
+}
+
+.tool-btn[disabled] {
+  opacity: 0.45;
 }
 
 .chat-input {
@@ -323,5 +604,9 @@ function previewImage(url: string): void {
 .chat-send {
   width: 140rpx;
   flex-shrink: 0;
+}
+
+.placeholder {
+  color: #67738c;
 }
 </style>

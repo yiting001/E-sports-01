@@ -10,6 +10,7 @@ import { buildAuthHeaders } from './http';
  */
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 function chooseImage(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -52,7 +53,31 @@ function upload(tempFilePath: string): Promise<UploadedFile> {
 }
 
 export const uploadApi = {
-  /** 上传指定本地临时文件（微信头像昵称填写能力返回的路径等） */
+  /** 上传指定本地临时文件（头像填写路径/聊天图片/视频等，服务端 /upload/self 统一受理） */
+  async uploadTempFile(tempFilePath: string, label = '文件'): Promise<UploadedFile> {
+    try {
+      if (!tempFilePath) {
+        throw new Error(`未选择${label}`);
+      }
+      const info = await new Promise<UniNamespace.GetFileInfoSuccess>((resolve, reject) => {
+        uni.getFileInfo({
+          filePath: tempFilePath,
+          success: resolve,
+          fail: () => reject(new Error('读取文件信息失败')),
+        });
+      });
+      if (info.size > MAX_UPLOAD_BYTES) {
+        throw new Error(`${label}不能超过 20MB`);
+      }
+      return await upload(tempFilePath);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '上传失败';
+      toast(message);
+      throw error;
+    }
+  },
+
+  /** 上传本地图片（8MB 上限提示更具体） */
   async uploadTempImage(tempFilePath: string): Promise<UploadedFile> {
     try {
       if (!tempFilePath) {
