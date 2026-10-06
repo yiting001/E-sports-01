@@ -331,12 +331,6 @@ async function confirmRecharge(): Promise<void> {
   margin-bottom: 24rpx;
 }
 
-.section-title {
-  display: block;
-  color: #9aa6bb;
-  font-size: 24rpx;
-  margin-bottom: 16rpx;
-}
 
 .txn-item {
   display: flex;
@@ -411,10 +405,12 @@ async function confirmRecharge(): Promise<void> {
 }
 
 .amount-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
   border: 1rpx solid rgba(150, 165, 195, 0.24);
   border-radius: 8rpx;
-  text-align: center;
-  padding: 24rpx 0;
 }
 
 .amount-item.active {

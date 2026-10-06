@@ -8,14 +8,11 @@
       <view
         v-for="tab in tabs"
         :key="tab.value"
-        class="status-tab"
+        class="chip status-tab"
         :class="{ active: tab.value === activeStatus }"
         @tap="selectTab(tab.value)"
       >
-        <text
-          class="status-tab-text"
-          :class="{ 'status-tab-text-active': tab.value === activeStatus }"
-        >
+        <text class="chip-text">
           {{ tab.label }}
         </text>
       </view>
@@ -209,26 +206,7 @@ function gotoDetail(orderId: string): void {
 }
 
 .status-tab {
-  display: inline-block;
-  padding: 12rpx 28rpx;
   margin-right: 16rpx;
-  border-radius: 8rpx;
-  border: 1rpx solid rgba(150, 165, 195, 0.24);
-  background-color: #131926;
-}
-
-.status-tab.active {
-  border-color: #ffb020;
-  background-color: rgba(255, 176, 32, 0.12);
-}
-
-.status-tab-text {
-  color: #9aa6bb;
-  font-size: 26rpx;
-}
-
-.status-tab-text-active {
-  color: #ffb020;
 }
 
 .order-list {

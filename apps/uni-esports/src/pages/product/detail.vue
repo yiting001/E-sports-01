@@ -275,6 +275,7 @@ function gotoService(): void {
 
 .footer-service {
   width: 120rpx;
+  height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;

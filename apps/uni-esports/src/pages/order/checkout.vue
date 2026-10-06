@@ -100,7 +100,7 @@
       </text>
       <textarea
         v-model="remark"
-        class="input remark-input"
+        class="textarea"
         :maxlength="ORDER_LIMITS.remarkMax"
         placeholder="大区、段位、开黑时间等"
         placeholder-class="placeholder"
@@ -331,17 +331,6 @@ async function submit(): Promise<void> {
   margin-bottom: 24rpx;
 }
 
-.section-title {
-  display: block;
-  color: #9aa6bb;
-  font-size: 24rpx;
-  margin: 24rpx 0 12rpx;
-}
-
-.section-title:first-child {
-  margin-top: 0;
-}
-
 .region-row {
   display: flex;
   gap: 16rpx;
@@ -349,10 +338,12 @@ async function submit(): Promise<void> {
 
 .region-item {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
   border: 1rpx solid rgba(150, 165, 195, 0.24);
   border-radius: 8rpx;
-  text-align: center;
-  padding: 18rpx 0;
 }
 
 .region-item.active {
@@ -379,12 +370,13 @@ async function submit(): Promise<void> {
 .quantity-btn {
   width: 72rpx;
   height: 72rpx;
-  line-height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1rpx solid rgba(150, 165, 195, 0.3);
   border-radius: 8rpx;
   color: #e9eef6;
   font-size: 36rpx;
-  padding: 0;
 }
 
 .quantity-btn[disabled] {
@@ -397,11 +389,6 @@ async function submit(): Promise<void> {
   color: #e9eef6;
   font-size: 32rpx;
   font-weight: 600;
-}
-
-.remark-input {
-  width: 100%;
-  min-height: 120rpx;
 }
 
 .footer {
@@ -435,9 +422,5 @@ async function submit(): Promise<void> {
 
 .footer-submit {
   width: 280rpx;
-}
-
-.placeholder {
-  color: #67738c;
 }
 </style>

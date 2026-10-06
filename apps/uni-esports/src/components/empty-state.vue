@@ -66,7 +66,11 @@ function onAction(): void {
 
 .empty-action {
   margin-top: 32rpx;
-  padding: 14rpx 48rpx;
+  height: 72rpx;
+  padding: 0 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1rpx solid rgba(255, 176, 32, 0.5);
   border-radius: 8rpx;
 }

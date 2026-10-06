@@ -60,11 +60,11 @@
       <view
         v-for="cat in categories"
         :key="cat.id"
-        class="cat-chip"
+        class="chip cat-chip"
         :class="{ active: cat.id === activeCategoryId }"
         @tap="selectCategory(cat.id)"
       >
-        <text class="cat-chip-text">
+        <text class="chip-text">
           {{ cat.name }}
         </text>
       </view>
@@ -256,26 +256,7 @@ function gotoNotices(): void {
 }
 
 .cat-chip {
-  display: inline-block;
-  padding: 12rpx 32rpx;
   margin-right: 16rpx;
-  border: 1rpx solid rgba(150, 165, 195, 0.24);
-  border-radius: 8rpx;
-  background-color: #131926;
-}
-
-.cat-chip.active {
-  border-color: #ffb020;
-  background-color: rgba(255, 176, 32, 0.12);
-}
-
-.cat-chip-text {
-  color: #9aa6bb;
-  font-size: 26rpx;
-}
-
-.cat-chip.active .cat-chip-text {
-  color: #ffb020;
 }
 
 .goods-grid {

@@ -380,12 +380,6 @@ async function submitRefund(reason: string): Promise<void> {
   margin-bottom: 24rpx;
 }
 
-.section-title {
-  display: block;
-  color: #9aa6bb;
-  font-size: 24rpx;
-  margin-bottom: 12rpx;
-}
 
 .product-row {
   display: flex;
@@ -492,7 +486,4 @@ async function submitRefund(reason: string): Promise<void> {
   flex: 1;
 }
 
-.footer-pay {
-  border: none;
-}
 </style>

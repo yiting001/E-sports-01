@@ -79,12 +79,6 @@ function select(value: OrderPaymentMethod): void {
 </script>
 
 <style scoped>
-.section-title {
-  display: block;
-  color: #9aa6bb;
-  font-size: 24rpx;
-  margin-bottom: 16rpx;
-}
 
 .pay-row {
   display: flex;

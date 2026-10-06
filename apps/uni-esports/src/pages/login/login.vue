@@ -37,7 +37,7 @@
             placeholder-class="placeholder"
           >
           <button
-            class="code-btn"
+            class="btn-ghost btn-sm code-btn"
             :class="{ disabled: !canSendCode }"
             :disabled="!canSendCode"
             @tap="onSendCode"
@@ -215,11 +215,9 @@ async function onSubmit(): Promise<void> {
 
 .code-btn {
   width: 220rpx;
+  flex-shrink: 0;
   color: #ffb020;
-  font-size: 26rpx;
   border: 1rpx solid rgba(255, 176, 32, 0.5);
-  border-radius: 8rpx;
-  padding: 18rpx 0;
   background-color: rgba(255, 176, 32, 0.08);
 }
 
@@ -269,9 +267,5 @@ async function onSubmit(): Promise<void> {
 .agreement-link {
   color: #ffb020;
   font-size: 24rpx;
-}
-
-.placeholder {
-  color: #67738c;
 }
 </style>

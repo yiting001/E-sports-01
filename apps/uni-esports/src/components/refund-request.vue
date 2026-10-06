@@ -2,7 +2,7 @@
   <view class="card refund-editor">
     <textarea
       v-model="reason"
-      class="input refund-textarea"
+      class="textarea refund-textarea"
       :maxlength="ORDER_REFUND_LIMITS.reasonMax"
       placeholder="请填写退款原因（不少于 5 个字）"
       placeholder-class="placeholder"
@@ -42,12 +42,6 @@ function submit(): void {
 }
 
 .refund-textarea {
-  width: 100%;
-  min-height: 120rpx;
   margin-bottom: 16rpx;
-}
-
-.placeholder {
-  color: #67738c;
 }
 </style>

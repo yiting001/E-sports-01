@@ -22,3 +22,16 @@ $c-cover-bg: linear-gradient(160deg, #14352a 0%, #0b1f18 60%, #071510 100%);
 /* 形状：切角是本主题签名元素（小程序 CSS 无 clip-path 生态顾虑，直接用 clip-path） */
 $chamfer: 24rpx;
 $radius-sm: 8rpx;
+
+/* ===== 表单控件尺寸令牌（全局唯一定义处，页面禁止自行指定高度/内边距） ===== */
+
+/* 标准控件高：输入框、页面级按钮、底部操作条按钮 */
+$ctrl-height: 88rpx;
+/* 紧凑控件高：行内小按钮（发送验证码/发送消息）、标签签条 */
+$ctrl-height-sm: 72rpx;
+/* 控件水平内边距 */
+$ctrl-pad-x: 24rpx;
+/* 控件字号：输入框 28 / 按钮 30 / 紧凑控件 26 */
+$ctrl-font: 28rpx;
+$btn-font: 30rpx;
+$ctrl-font-sm: 26rpx;

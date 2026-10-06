@@ -32,7 +32,7 @@ page {
   font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 }
 
-/* ===== 公共工具类（切角卡片 / 按钮 / 文本层级），各页面直接使用 ===== */
+/* ===== 公共工具类（切角卡片 / 控件 / 文本层级），各页面直接使用 ===== */
 
 .card {
   background-color: #131926;
@@ -43,14 +43,18 @@ page {
   box-sizing: border-box;
 }
 
+/* ===== 按钮：两档高度（标准 88rpx / 紧凑 72rpx），flex 垂直居中，宽度由页面布局决定 ===== */
+
 .btn-primary {
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background-color: #ffb020;
   color: #1a1205;
   font-size: 30rpx;
   font-weight: 600;
   border-radius: 8rpx;
-  text-align: center;
-  padding: 20rpx 0;
   clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
 }
 
@@ -60,13 +64,92 @@ page {
 }
 
 .btn-ghost {
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background-color: transparent;
   color: #9aa6bb;
-  font-size: 28rpx;
+  font-size: 30rpx;
   border: 1rpx solid rgba(150, 165, 195, 0.3);
   border-radius: 8rpx;
-  text-align: center;
-  padding: 18rpx 0;
+}
+
+/* 紧凑按钮：配合 fixed 宽度或行内使用（发送验证码、聊天发送等） */
+.btn-sm {
+  height: 72rpx;
+  font-size: 26rpx;
+}
+
+/* ===== 输入控件：单行 input 用 .input，多行 textarea 用 .textarea ===== */
+
+.input {
+  height: 88rpx;
+  padding: 0 24rpx;
+  background-color: #1a2130;
+  border: 1rpx solid rgba(150, 165, 195, 0.16);
+  border-radius: 8rpx;
+  color: #e9eef6;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.textarea {
+  min-height: 160rpx;
+  padding: 20rpx 24rpx;
+  background-color: #1a2130;
+  border: 1rpx solid rgba(150, 165, 195, 0.16);
+  border-radius: 8rpx;
+  color: #e9eef6;
+  font-size: 28rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* uni input/textarea 的 placeholder-class 统一走此类（全局，页面无需重复定义） */
+.placeholder {
+  color: #67738c;
+}
+
+/* ===== 标签签条（首页分类签、订单状态签等筛选 chip）：同一段样式保证跨页一致 ===== */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 72rpx;
+  padding: 0 28rpx;
+  border: 1rpx solid rgba(150, 165, 195, 0.24);
+  border-radius: 8rpx;
+  background-color: #131926;
+  flex-shrink: 0;
+}
+
+.chip.active {
+  border-color: #ffb020;
+  background-color: rgba(255, 176, 32, 0.12);
+}
+
+.chip-text {
+  color: #9aa6bb;
+  font-size: 26rpx;
+}
+
+.chip.active .chip-text {
+  color: #ffb020;
+}
+
+/* ===== 区块标题：各卡片内字段分组标题，统一字号与间距 ===== */
+
+.section-title {
+  display: block;
+  color: #9aa6bb;
+  font-size: 24rpx;
+  margin: 24rpx 0 12rpx;
+}
+
+.section-title:first-child {
+  margin-top: 0;
 }
 
 .text-secondary {
@@ -89,19 +172,10 @@ page {
 button {
   margin: 0;
   background: transparent;
+  padding: 0;
 }
 
 button::after {
   border: none;
-}
-
-.input {
-  background-color: #1a2130;
-  border: 1rpx solid rgba(150, 165, 195, 0.16);
-  border-radius: 8rpx;
-  color: #e9eef6;
-  font-size: 28rpx;
-  padding: 18rpx 20rpx;
-  box-sizing: border-box;
 }
 </style>

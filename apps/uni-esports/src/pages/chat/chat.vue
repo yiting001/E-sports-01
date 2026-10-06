@@ -322,10 +322,6 @@ function previewImage(url: string): void {
 
 .chat-send {
   width: 140rpx;
-  padding: 16rpx 0;
-}
-
-.placeholder {
-  color: #67738c;
+  flex-shrink: 0;
 }
 </style>
