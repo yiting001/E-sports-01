@@ -1,0 +1,40 @@
+{
+  "name": "@app/uni-esports",
+  "version": "0.1.0",
+  "private": true,
+  "description": "C 端微信小程序（uni-app，仅 mp-weixin）：与 apps/client 同一后端与共享契约",
+  "scripts": {
+    "dev:mp-weixin": "uni -p mp-weixin",
+    "build": "uni build -p mp-weixin",
+    "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint \"src/**/*.{ts,vue}\" --max-warnings=0",
+    "test": "vitest run",
+    "icons": "node scripts/gen-tabbar-icons.mjs"
+  },
+  "dependencies": {
+    "@app/contracts": "workspace:*",
+    "@socket.io/component-emitter": "3.1.2",
+    "debug": "4.4.3",
+    "engine.io-client": "6.6.6",
+    "engine.io-parser": "5.2.3",
+    "pinia": "2.2.6",
+    "socket.io-client": "4.8.1",
+    "socket.io-parser": "4.2.6",
+    "vue": "3.5.13"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "3.4.19",
+    "@dcloudio/uni-app": "3.0.0-4080720251210001",
+    "@dcloudio/uni-components": "3.0.0-4080720251210001",
+    "@dcloudio/uni-h5": "3.0.0-4080720251210001",
+    "@dcloudio/uni-mp-weixin": "3.0.0-4080720251210001",
+    "@dcloudio/vite-plugin-uni": "3.0.0-4080720251210001",
+    "@vue/eslint-config-typescript": "13.0.0",
+    "eslint": "8.57.1",
+    "eslint-plugin-vue": "9.32.0",
+    "typescript": "5.6.3",
+    "vite": "5.2.8",
+    "vitest": "2.1.9",
+    "vue-tsc": "2.1.10"
+  }
+}

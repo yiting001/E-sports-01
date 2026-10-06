@@ -1,0 +1,24 @@
+/**
+ * uni-app 全局 SCSS 变量（每个页面自动注入，可在此使用变量无需 import）。
+ * 视觉基调与 apps/client 保持一致：深空黑蓝底 + 战术金强调 + 荧光绿点缀。
+ */
+
+/* 主题色板 */
+$c-bg: #0b0e14;
+$c-surface: #131926;
+$c-surface-2: #1a2130;
+$c-border: rgba(150, 165, 195, 0.16);
+$c-accent: #ffb020;
+$c-accent-dim: rgba(255, 176, 32, 0.14);
+$c-neon: #3dff9b;
+$c-text: #e9eef6;
+$c-text-secondary: #9aa6bb;
+$c-text-muted: #67738c;
+$c-danger: #ff5449;
+
+/* 商品封面暗绿科技风 */
+$c-cover-bg: linear-gradient(160deg, #14352a 0%, #0b1f18 60%, #071510 100%);
+
+/* 形状：切角是本主题签名元素（小程序 CSS 无 clip-path 生态顾虑，直接用 clip-path） */
+$chamfer: 24rpx;
+$radius-sm: 8rpx;

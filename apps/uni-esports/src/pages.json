@@ -1,0 +1,98 @@
+{
+  "pages": [
+    {
+      "path": "pages/home/home",
+      "style": { "navigationBarTitleText": "首页" }
+    },
+    {
+      "path": "pages/category/category",
+      "style": { "navigationBarTitleText": "分类" }
+    },
+    {
+      "path": "pages/message/message",
+      "style": { "navigationBarTitleText": "消息" }
+    },
+    {
+      "path": "pages/profile/profile",
+      "style": { "navigationBarTitleText": "我的" }
+    },
+    {
+      "path": "pages/login/login",
+      "style": { "navigationBarTitleText": "登录" }
+    },
+    {
+      "path": "pages/product/detail",
+      "style": { "navigationBarTitleText": "商品详情" }
+    },
+    {
+      "path": "pages/order/checkout",
+      "style": { "navigationBarTitleText": "确认下单" }
+    },
+    {
+      "path": "pages/order/list",
+      "style": { "navigationBarTitleText": "我的订单" }
+    },
+    {
+      "path": "pages/order/detail",
+      "style": { "navigationBarTitleText": "订单详情" }
+    },
+    {
+      "path": "pages/wallet/wallet",
+      "style": { "navigationBarTitleText": "我的钱包" }
+    },
+    {
+      "path": "pages/chat/chat",
+      "style": { "navigationBarTitleText": "聊天" }
+    },
+    {
+      "path": "pages/notice/list",
+      "style": { "navigationBarTitleText": "平台通知" }
+    },
+    {
+      "path": "pages/notice/detail",
+      "style": { "navigationBarTitleText": "通知详情" }
+    },
+    {
+      "path": "pages/agreement/agreement",
+      "style": { "navigationBarTitleText": "平台协议" }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "电竞服务",
+    "navigationBarBackgroundColor": "#0b0e14",
+    "backgroundColor": "#0b0e14"
+  },
+  "tabBar": {
+    "color": "#67738c",
+    "selectedColor": "#ffb020",
+    "backgroundColor": "#131926",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/category/category",
+        "text": "分类",
+        "iconPath": "static/tabbar/category.png",
+        "selectedIconPath": "static/tabbar/category-active.png"
+      },
+      {
+        "pagePath": "pages/message/message",
+        "text": "消息",
+        "iconPath": "static/tabbar/message.png",
+        "selectedIconPath": "static/tabbar/message-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "static/tabbar/profile.png",
+        "selectedIconPath": "static/tabbar/profile-active.png"
+      }
+    ]
+  }
+}

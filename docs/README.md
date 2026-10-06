@@ -32,6 +32,7 @@
 | 前端基座         | [frontend.md](./frontend.md)                       | Vue3 + Pinia，鉴权 store、动态路由守卫、v-permission 指令                                                    |
 | 菜单待办角标     | [menu-badges.md](./menu-badges.md)                 | 管理端实名、订单、打手、即时通讯和客服待办数量，权限裁剪、实时刷新、轮询重试与并发防旧响应                   |
 | C 端用户应用     | [client.md](./client.md)                           | 左右分类目录、双端结算、接单大厅检索、挑选打手、短信登录及按需 vConsole 调试                                 |
+| 微信小程序端     | [uni-esports.md](./uni-esports.md)                 | uni-app 仅 mp-weixin 的 C 端小程序：短信登录、下单余额支付、钱包、IM 客服、隐私合规与上架清单               |
 | 登录注册 UI      | [auth-ui.md](./auth-ui.md)                         | 企业级电竞风格登录/注册/短信验证码入口，仅重做 UI 不改鉴权逻辑                                               |
 | 工作台 UI        | [dashboard-ui.md](./dashboard-ui.md)               | 响应式账号概览、业务入口、快捷访问和权限摘要                                                                 |
 | 数据统计仪表盘   | [dashboard.md](./dashboard.md)                     | 订单/财务/用户/打手四块只读聚合统计（ECharts），日/月/年时间范围，按权限分块展示                             |
