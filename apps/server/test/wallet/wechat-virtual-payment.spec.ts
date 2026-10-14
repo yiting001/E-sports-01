@@ -8,6 +8,13 @@ import {
   WECHAT_VIRTUAL_ATTACH,
   WechatVirtualPaymentDriver,
 } from '../../src/modules/wallet/infrastructure/drivers/wechat-virtual-payment.driver';
+import {
+  decryptWechatMessage,
+  encryptWechatMessage,
+  verifyWechatPlainSignature,
+  verifyWechatSecureSignature,
+  wechatSignature,
+} from '../../src/modules/wallet/infrastructure/drivers/wechat-mp-crypto';
 import { WechatVirtualPayConfigFactory } from '../../src/modules/wallet/infrastructure/drivers/wechat-virtual-pay.config';
 import type { ConfigService } from '../../src/modules/config/application/config.service';
 import type { PaymentCallbackRequest } from '../../src/modules/wallet/domain/payment-port.interface';
@@ -30,6 +37,9 @@ const FULL_CONFIG: Record<string, string> = {
   [CONFIG_KEYS.wallet.wechatVirtualAppKey]: 'test-appkey',
   [CONFIG_KEYS.wallet.wechatVirtualCoinPerYuan]: '1',
   [CONFIG_KEYS.wallet.wechatVirtualEnv]: '0',
+  [CONFIG_KEYS.wallet.wechatVirtualCallbackToken]: 'callback-token-abc',
+  [CONFIG_KEYS.wallet.wechatVirtualCallbackAesKey]:
+    'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG',
 };
 
 function createDriver(values: Record<string, string>): WechatVirtualPaymentDriver {
@@ -154,4 +164,121 @@ test('主动查单返回未支付（虚拟支付以回调为权威）与回调�
   assert.equal(queried.paid, false);
   assert.equal(queried.paidAmountFen, 0);
   assert.equal(driver.callbackAck(), JSON.stringify({ ErrCode: 0, ErrMsg: 'Success' }));
+});
+
+
+test('回调地址校验：明文模式按微信算法验签并原样回显 echostr', async () => {
+  const driver = createDriver(FULL_CONFIG);
+  const timestamp = '1791986000';
+  const nonce = '1234567890';
+  const signature = wechatSignature('callback-token-abc', timestamp, nonce);
+
+  assert.equal(
+    verifyWechatPlainSignature({
+      token: 'callback-token-abc',
+      timestamp,
+      nonce,
+      signature,
+    }),
+    true,
+  );
+  const echo = await driver.verifyCallbackUrl({
+    signature,
+    timestamp,
+    nonce,
+    echostr: 'echo-1234567890',
+  });
+  assert.equal(echo, 'echo-1234567890');
+});
+
+test('回调地址校验：签名不匹配时明确报错', async () => {
+  const driver = createDriver(FULL_CONFIG);
+  await assert.rejects(
+    () =>
+      driver.verifyCallbackUrl({
+        signature: 'wrong-signature',
+        timestamp: '1',
+        nonce: '2',
+        echostr: 'echo',
+      }),
+    /签名不匹配/,
+  );
+});
+
+test('回调地址校验：安全模式验 msg_signature 并解密 echostr', async () => {
+  const driver = createDriver(FULL_CONFIG);
+  const aesKey = FULL_CONFIG[CONFIG_KEYS.wallet.wechatVirtualCallbackAesKey];
+  const timestamp = '1791986001';
+  const nonce = 'abcdef';
+  const encrypted = encryptWechatMessage(aesKey, 'echo-secure-001', 'wx-test-appid');
+  const msgSignature = wechatSignature('callback-token-abc', timestamp, nonce, encrypted);
+
+  assert.equal(
+    verifyWechatSecureSignature({
+      token: 'callback-token-abc',
+      timestamp,
+      nonce,
+      encrypt: encrypted,
+      msgSignature,
+    }),
+    true,
+  );
+  const echo = await driver.verifyCallbackUrl({
+    msg_signature: msgSignature,
+    timestamp,
+    nonce,
+    echostr: encrypted,
+  });
+  assert.equal(echo, 'echo-secure-001');
+});
+
+test('AES 加解密往返一致（安全模式报文格式）', () => {
+  const aesKey = FULL_CONFIG[CONFIG_KEYS.wallet.wechatVirtualCallbackAesKey];
+  const payload = JSON.stringify({ Event: 'xpay_coin_pay_notify', OutTradeNo: 'R9' });
+  const encrypted = encryptWechatMessage(aesKey, payload, 'wx-test-appid');
+  const decrypted = decryptWechatMessage(aesKey, encrypted);
+  assert.equal(decrypted.message, payload);
+  assert.equal(decrypted.appId, 'wx-test-appid');
+});
+
+test('安全模式回调：Encrypt 报文解密后再解析事件', async () => {
+  const driver = createDriver(FULL_CONFIG);
+  const aesKey = FULL_CONFIG[CONFIG_KEYS.wallet.wechatVirtualCallbackAesKey];
+  const encrypted = encryptWechatMessage(
+    aesKey,
+    JSON.stringify({
+      MsgType: 'event',
+      Event: 'xpay_coin_pay_notify',
+      OutTradeNo: 'R20260801006',
+      Coin: 6,
+    }),
+    'wx-test-appid',
+  );
+  const result = await driver.parseCallback({
+    body: { ToUserName: 'gh_test', Encrypt: encrypted },
+    rawBody: JSON.stringify({ ToUserName: 'gh_test', Encrypt: encrypted }),
+    headers: {},
+  });
+
+  assert.equal(result.outTradeNo, 'R20260801006');
+  assert.equal(result.paidAmountFen, 600);
+});
+
+test('回调令牌未配置时 URL 校验给出可执行提示', async () => {
+  const driver = createDriver({
+    [CONFIG_KEYS.wallet.wechatVirtualAppId]: 'wx-test-appid',
+    [CONFIG_KEYS.wallet.wechatVirtualAppSecret]: 'test-appsecret',
+    [CONFIG_KEYS.wallet.wechatVirtualOfferId]: '1234567890',
+    [CONFIG_KEYS.wallet.wechatVirtualAppKey]: 'test-appkey',
+  });
+  await assert.rejects(
+    () =>
+      driver.verifyCallbackUrl({
+        signature: 'x',
+        timestamp: '1',
+        nonce: '2',
+        echostr: 'echo',
+      }),
+    /回调令牌未配置.*callbackToken/,
+  );
 });

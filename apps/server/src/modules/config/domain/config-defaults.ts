@@ -600,6 +600,24 @@ export const DEFAULT_CONFIGS: ConfigDefault[] = [
     remark: '微信小程序虚拟支付：环境 0=现网 1=沙箱（iOS 不支持沙箱）',
   },
   {
+    key: CONFIG_KEYS.wallet.wechatVirtualCallbackToken,
+    value: '',
+    type: ConfigValueType.String,
+    group: ConfigGroup.Wallet,
+    remark:
+      '微信小程序虚拟支付：消息推送 Token（须与小程序后台「支付与交易-虚拟支付-基础配置」的 Token 完全一致，用于 URL 校验签名）',
+    secret: true,
+  },
+  {
+    key: CONFIG_KEYS.wallet.wechatVirtualCallbackAesKey,
+    value: '',
+    type: ConfigValueType.String,
+    group: ConfigGroup.Wallet,
+    remark:
+      '微信小程序虚拟支付：消息推送 EncodingAESKey（小程序后台选择「安全模式」时必填，43 位；明文模式留空）',
+    secret: true,
+  },
+  {
     key: CONFIG_KEYS.wallet.wechatApiV3Key,
     value: '',
     type: ConfigValueType.String,

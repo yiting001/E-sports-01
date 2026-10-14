@@ -243,6 +243,10 @@ export const CONFIG_KEYS = {
     wechatVirtualCoinPerYuan: 'wallet.wechatVirtual.coinPerYuan',
     /** 微信小程序虚拟支付：环境 0=现网 1=沙箱（iOS 不支持沙箱） */
     wechatVirtualEnv: 'wallet.wechatVirtual.env',
+    /** 微信小程序虚拟支付：消息推送 Token（需与小程序后台「虚拟支付-基础配置」填写的 Token 一致） */
+    wechatVirtualCallbackToken: 'wallet.wechatVirtual.callbackToken',
+    /** 微信小程序虚拟支付：消息推送 EncodingAESKey（安全模式解密用，与后台一致；明文模式可留空） */
+    wechatVirtualCallbackAesKey: 'wallet.wechatVirtual.callbackAesKey',
     /** 支付宝 */
     alipayAppId: 'wallet.alipay.appId',
     alipayPrivateKey: 'wallet.alipay.privateKey',

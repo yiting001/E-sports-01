@@ -378,13 +378,26 @@ flowchart LR
 | `wallet.wechatVirtual.appKey` | 虚拟支付 AppKey（paySig 签名；**secret**） |
 | `wallet.wechatVirtual.coinPerYuan` | 每元代币数（需与小程序后台代币配置一致，默认 1） |
 | `wallet.wechatVirtual.env` | 0=现网 1=沙箱（iOS 不支持沙箱） |
+| `wallet.wechatVirtual.callbackToken` | 消息推送 Token（与小程序后台「虚拟支付-基础配置」填写值一致；**secret**） |
+| `wallet.wechatVirtual.callbackAesKey` | 消息推送 EncodingAESKey（后台选「安全模式」时必填；明文模式留空；**secret**） |
+
+**回调地址配置位置（小程序后台）**
+
+「支付与交易 → 虚拟支付 → 基础配置 → 消息推送回调地址」，填写
+`https://<域名>/api/wallet/recharge/callback/<provider>`（本平台为 `.../callback/wechat_virtual`），
+同时选择数据格式 **JSON** 与消息加解密方式（**明文模式**最简单；**安全模式**需把 EncodingAESKey 也填到配置中心）。
+
+保存时微信会先发 **GET 校验**（`signature`/`timestamp`/`nonce`/`echostr`，安全模式为 `msg_signature` + 加密 echostr）：
+本模块已在 `GET /api/wallet/recharge/callback/wechat_virtual` 实现校验（sha1 排序签名 + 原样回显 echostr；
+安全模式额外用 EncodingAESKey 做 AES-256-CBC 解密），Token 未配置时返回可执行提示而不是静默失败。
+POST 回调同时支持明文 JSON 与安全模式的 `Encrypt` 报文解密。
 
 **上线前待确认（依赖小程序后台与真机联调）**
 
 1. 小程序**类目需在虚拟支付开放范围**且后台已开通虚拟支付；否则微信驳回（iOS 端虚拟内容必须走虚拟支付，不能回退普通微信支付）。
 2. 代币配置与 `wallet.wechatVirtual.coinPerYuan` 必须一致，否则回调金额与充值单金额不匹配会被入账校验拒绝。
-3. 回调地址需在小程序后台配置指向 `POST {notifyBaseUrl}/wallet/recharge/callback/wechat_virtual`；
-   驱动当前支持 **JSON 推送**（XML 推送会明确报错并提示切换），若必须走 XML/安全模式需扩展解析与解密。
+3. 回调地址需在小程序后台配置指向 `POST {notifyBaseUrl}/wallet/recharge/callback/wechat_virtual`（数据格式 JSON）；
+   驱动支持明文与安全模式（AES 解密）的 JSON 推送，XML 推送会明确报错并提示切换。
 4. 回调字段名以微信文档为准：金额字段缺失时驱动会抛出「缺少金额字段 + 已收到的顶层字段名」用于快速定位（不做猜测入账）。
 5. 虚拟支付**无官方主动查单接口**，`queryTrade` 恒返回未支付（订单保持 pending 直到回调），因此回调必须可达。
 

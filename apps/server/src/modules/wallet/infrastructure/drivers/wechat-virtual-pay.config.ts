@@ -16,6 +16,10 @@ export interface WechatVirtualPayConfig {
   coinPerYuan: number;
   /** 环境：0=现网 1=沙箱（iOS 不支持沙箱） */
   env: number;
+  /** 消息推送 Token（URL 校验签名用，与小程序后台一致） */
+  callbackToken: string;
+  /** 消息推送 EncodingAESKey（安全模式解密用；明文模式为空串） */
+  callbackAesKey: string;
 }
 
 /**
@@ -40,6 +44,14 @@ export class WechatVirtualPayConfigFactory {
       appKey: await this.config.getString(keys.wechatVirtualAppKey, ''),
       coinPerYuan: coinPerYuan > 0 ? coinPerYuan : 1,
       env: env === 1 ? 1 : 0,
+      callbackToken: await this.config.getString(
+        keys.wechatVirtualCallbackToken,
+        '',
+      ),
+      callbackAesKey: await this.config.getString(
+        keys.wechatVirtualCallbackAesKey,
+        '',
+      ),
     };
     if (!cfg.appId || !cfg.appSecret || !cfg.offerId || !cfg.appKey) {
       throw new ServiceUnavailableException(

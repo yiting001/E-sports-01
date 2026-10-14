@@ -83,6 +83,12 @@ export interface PaymentPort {
   queryTrade(outTradeNo: string): Promise<PaymentQueryResult>;
   /** 处理成功后应答给渠道的报文（支付宝为 success，微信为 JSON 串） */
   callbackAck(): string;
+  /**
+   * 回调地址校验（可选能力）。
+   * 微信小程序消息推送在保存配置时会发 GET（signature/timestamp/nonce/echostr）做接入校验，
+   * 实现该方法的渠道返回需要原样回显的内容；未实现时回调配置页无法保存。
+   */
+  verifyCallbackUrl?(query: Record<string, string | undefined>): Promise<string>;
 }
 
 /** 充值渠道集合注入令牌（聚合所有已注册策略，供解析器按配置挑选） */

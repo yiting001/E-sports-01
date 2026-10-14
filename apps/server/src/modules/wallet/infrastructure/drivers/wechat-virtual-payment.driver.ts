@@ -10,6 +10,11 @@ import {
   RechargeCreateResult,
 } from '../../domain/payment-port.interface';
 import {
+  decryptWechatMessage,
+  verifyWechatPlainSignature,
+  verifyWechatSecureSignature,
+} from './wechat-mp-crypto';
+import {
   WechatVirtualPayConfig,
   WechatVirtualPayConfigFactory,
 } from './wechat-virtual-pay.config';
@@ -97,7 +102,7 @@ export class WechatVirtualPaymentDriver implements PaymentPort {
   }
 
   async parseCallback(req: PaymentCallbackRequest): Promise<PaymentCallbackResult> {
-    const payload = normalizeCallbackPayload(req.body);
+    const payload = await this.normalizeCallbackPayload(req);
     const event = String(payload.Event ?? payload.event ?? '');
     if (event !== EVENT_COIN_PAY && event !== EVENT_GOODS_DELIVER) {
       throw new BadRequestException(
@@ -127,6 +132,56 @@ export class WechatVirtualPaymentDriver implements PaymentPort {
     };
   }
 
+  /**
+   * 小程序后台保存「虚拟支付-基础配置-消息推送回调地址」时的接入校验：
+   * - 明文模式：校验 signature 后原样返回 echostr；
+   * - 安全模式：校验 msg_signature 后解密 echostr 再返回。
+   * Token 未配置时如实报错，避免后台一直提示校验失败却找不到原因。
+   */
+  async verifyCallbackUrl(
+    query: Record<string, string | undefined>,
+  ): Promise<string> {
+    const cfg = await this.configFactory.load();
+    if (!cfg.callbackToken) {
+      throw new BadRequestException(
+        '微信虚拟支付回调令牌未配置：请在配置中心填写 wallet.wechatVirtual.callbackToken（与小程序后台消息推送的 Token 一致）后重试',
+      );
+    }
+    const timestamp = query.timestamp ?? '';
+    const nonce = query.nonce ?? '';
+    const echoStr = query.echostr ?? '';
+    const plainSignature = query.signature ?? '';
+    const msgSignature = query.msg_signature ?? '';
+    if (plainSignature) {
+      if (!verifyWechatPlainSignature({ token: cfg.callbackToken, timestamp, nonce, signature: plainSignature })) {
+        throw new BadRequestException('回调地址校验失败：签名不匹配（请核对 Token 是否与后台一致）');
+      }
+      return echoStr;
+    }
+    if (msgSignature) {
+      if (!cfg.callbackAesKey) {
+        throw new BadRequestException(
+          '回调地址校验失败：后台使用安全模式，请同时在配置中心填写 wallet.wechatVirtual.callbackAesKey',
+        );
+      }
+      if (
+        !verifyWechatSecureSignature({
+          token: cfg.callbackToken,
+          timestamp,
+          nonce,
+          encrypt: echoStr,
+          msgSignature,
+        })
+      ) {
+        throw new BadRequestException('回调地址校验失败：安全模式签名不匹配');
+      }
+      return decryptWechatMessage(cfg.callbackAesKey, echoStr).message;
+    }
+    throw new BadRequestException(
+      '回调地址校验失败：缺少 signature 或 msg_signature（请从微信后台重新发起校验）',
+    );
+  }
+
   async queryTrade(_outTradeNo: string): Promise<PaymentQueryResult> {
     // 虚拟支付未提供官方查单接口（以支付回调为权威）；返回未支付以保留 pending 状态
     return { paid: false, providerTradeNo: '', paidAmountFen: 0 };
@@ -135,6 +190,28 @@ export class WechatVirtualPaymentDriver implements PaymentPort {
   callbackAck(): string {
     // 微信要求应答：成功 {"ErrCode":0,"ErrMsg":"Success"}；JSON 推送即回 JSON
     return JSON.stringify({ ErrCode: 0, ErrMsg: 'Success' });
+  }
+
+  /** 解析回调载荷：安全模式先解密（body.Encrypt），再按 JSON 事件解析 */
+  private async normalizeCallbackPayload(
+    req: PaymentCallbackRequest,
+  ): Promise<Record<string, unknown>> {
+    const encrypt = (req.body as { Encrypt?: unknown }).Encrypt;
+    if (typeof encrypt === 'string' && encrypt) {
+      const cfg = await this.configFactory.load();
+      if (!cfg.callbackAesKey) {
+        throw new BadRequestException(
+          '收到安全模式加密回调，但未配置 wallet.wechatVirtual.callbackAesKey',
+        );
+      }
+      const { message } = decryptWechatMessage(cfg.callbackAesKey, encrypt);
+      try {
+        return JSON.parse(message) as Record<string, unknown>;
+      } catch {
+        throw new BadRequestException('安全模式回调解密后内容非 JSON，无法解析');
+      }
+    }
+    return normalizeCallbackPayload(req.body);
   }
 
   /** 按微信规则组装 signData（JSON 字符串；字段顺序固定，客户端必须原样透传） */
