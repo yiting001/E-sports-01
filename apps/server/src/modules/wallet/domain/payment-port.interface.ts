@@ -1,4 +1,8 @@
-import { PaymentProvider, WechatJsapiPayParams } from '@app/contracts';
+import {
+  PaymentProvider,
+  WechatJsapiPayParams,
+  WechatVirtualPayParams,
+} from '@app/contracts';
 
 /** 充值下单入参 */
 export interface RechargeCreateInput {
@@ -13,6 +17,8 @@ export interface RechargeCreateInput {
   returnUrl?: string;
   /** 付款人 openid（仅微信公众号 JSAPI 渠道必传，其余渠道忽略） */
   payerOpenid?: string;
+  /** 小程序 wx.login 的临时登录凭证（仅微信小程序虚拟支付渠道必传，用于换取 session_key） */
+  payerLoginCode?: string;
 }
 
 /** 充值下单结果（扫码渠道：二维码内容；JSAPI 渠道：拉起支付参数） */
@@ -21,6 +27,8 @@ export interface RechargeCreateResult {
   qrCode: string;
   /** 微信公众号 JSAPI 拉起支付参数；扫码渠道不返回 */
   jsapiParams?: WechatJsapiPayParams;
+  /** 微信小程序虚拟支付拉起参数；非虚拟支付渠道不返回 */
+  virtualPayParams?: WechatVirtualPayParams;
 }
 
 /** 支付渠道异步回调请求（不同渠道所需材料不同，统一封装） */

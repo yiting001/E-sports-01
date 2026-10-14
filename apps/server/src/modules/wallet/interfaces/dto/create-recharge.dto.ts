@@ -17,6 +17,12 @@ export class CreateRechargeDto implements CreateRechargeBody {
   @IsIn(RECHARGE_PAYMENT_PROVIDERS)
   provider!: PaymentProvider;
 
+  /** 小程序 wx.login 的临时登录凭证（仅微信小程序虚拟支付渠道需要） */
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  loginCode?: string;
+
   /** 支付完成后同步跳回的前端地址（须为 HTTP/HTTPS 完整地址；服务端会追加充值单标识后透传计全付） */
   @IsOptional()
   @IsString()

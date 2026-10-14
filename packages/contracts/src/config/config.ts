@@ -231,6 +231,18 @@ export const CONFIG_KEYS = {
     withdrawTaxTiers: 'wallet.withdrawTaxTiers',
     /** 支付回调可达的公网基础地址，用于拼接异步通知 URL，例如 https://api.example.com */
     notifyBaseUrl: 'wallet.notifyBaseUrl',
+    /** 微信小程序虚拟支付：小程序 AppId（与 mp-weixin 一致） */
+    wechatVirtualAppId: 'wallet.wechatVirtual.appId',
+    /** 微信小程序虚拟支付：小程序 AppSecret（换取 session_key） */
+    wechatVirtualAppSecret: 'wallet.wechatVirtual.appSecret',
+    /** 微信小程序虚拟支付：offerId（小程序后台-支付基础配置） */
+    wechatVirtualOfferId: 'wallet.wechatVirtual.offerId',
+    /** 微信小程序虚拟支付：AppKey（支付签名 paySig 用） */
+    wechatVirtualAppKey: 'wallet.wechatVirtual.appKey',
+    /** 微信小程序虚拟支付：每元代币数（代币充值比例，用于回调金额换算；默认 1） */
+    wechatVirtualCoinPerYuan: 'wallet.wechatVirtual.coinPerYuan',
+    /** 微信小程序虚拟支付：环境 0=现网 1=沙箱（iOS 不支持沙箱） */
+    wechatVirtualEnv: 'wallet.wechatVirtual.env',
     /** 支付宝 */
     alipayAppId: 'wallet.alipay.appId',
     alipayPrivateKey: 'wallet.alipay.privateKey',

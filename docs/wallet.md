@@ -335,6 +335,63 @@ flowchart LR
 - `components/wallet/WithdrawDialog.vue`：金额 + 提现方式（支付宝 / 微信零钱）+ 实名/身份证号 → 提交提现申请；支付宝需填收款账号，微信零钱不展示也不提交账号（服务端取绑定 openid，未绑定时后端提示先在微信内登录）；输入金额时按费率实时展示手续费与预计到账金额，提交后提示等待审核。`WithdrawalRecords.vue` 展示提现方式与脱敏账号。
 - 个人中心 `BalanceCards` 余额卡展示真实余额，点击进钱包页。
 
+## 微信小程序虚拟支付（代币充值）
+
+**目标**：C 端小程序内的「微信充值」把法币换成平台钱包余额（代币充值 → 服务端入账 → 下单仍走余额支付），
+**不改动订单与定价链路**；不使用道具直购，因为微信要求 `goodsPrice` 与后台道具配置完全一致（错误码 -15013），
+而平台价格随商品/服务端/数量/会员折扣变化，无法为每个价格点预发布道具。
+
+**链路**
+
+```text
+小程序: wx.login → code
+   │  POST /api/wallet/recharge {amountFen, provider: 'wechat_virtual', loginCode}
+   ▼
+服务端: CreateRechargeUseCase
+   ├─ 落充值订单（provider=wechat_virtual，状态 pending，outTradeNo 唯一索引兜幂等）
+   └─ WechatVirtualPaymentDriver.createRecharge
+        ├─ code → sns/jscode2session → session_key
+        ├─ signData = JSON.stringify({offerId, buyQuantity, currencyType, env, outTradeNo, attach})
+        │    buyQuantity = 金额(元) × wallet.wechatVirtual.coinPerYuan
+        ├─ paySig   = HMAC-SHA256(`requestVirtualPayment&{signData}`, AppKey)
+        └─ signature= HMAC-SHA256(signData, session_key)
+   ▼
+小程序: wx.requestVirtualPayment({ signData, mode:'short_series_coin', paySig, signature })
+        ★ signData 必须原样透传（重新序列化会导致验签失败 -15006/-15016）
+   ▼
+微信回调 → POST /api/wallet/recharge/callback/wechat_virtual
+   ├─ WechatVirtualPaymentDriver.parseCallback：校验 Event 为 xpay_coin_pay_notify / xpay_goods_deliver_notify，
+   │    取 OutTradeNo 与金额（法币字段优先，其次按代币数量 ÷ coinPerYuan 换算）
+   ├─ HandleRechargeCallbackUseCase → WalletLedger.creditRecharge（金额校验 + 已 paid 短路 + 行锁，幂等）
+   └─ 应答 {"ErrCode":0,"ErrMsg":"Success"}
+   ▼
+小程序: 轮询 GET /wallet/recharge/:outTradeNo/status → paid → 刷新余额与流水
+```
+
+**配置项（ConfigGroup.Wallet，配置中心）**
+
+| 键 | 说明 |
+| --- | --- |
+| `wallet.wechatVirtual.appId` | 小程序 AppId（与 mp-weixin 一致） |
+| `wallet.wechatVirtual.appSecret` | 小程序 AppSecret（换 session_key；**secret**） |
+| `wallet.wechatVirtual.offerId` | 虚拟支付 offerId（小程序后台-支付基础配置） |
+| `wallet.wechatVirtual.appKey` | 虚拟支付 AppKey（paySig 签名；**secret**） |
+| `wallet.wechatVirtual.coinPerYuan` | 每元代币数（需与小程序后台代币配置一致，默认 1） |
+| `wallet.wechatVirtual.env` | 0=现网 1=沙箱（iOS 不支持沙箱） |
+
+**上线前待确认（依赖小程序后台与真机联调）**
+
+1. 小程序**类目需在虚拟支付开放范围**且后台已开通虚拟支付；否则微信驳回（iOS 端虚拟内容必须走虚拟支付，不能回退普通微信支付）。
+2. 代币配置与 `wallet.wechatVirtual.coinPerYuan` 必须一致，否则回调金额与充值单金额不匹配会被入账校验拒绝。
+3. 回调地址需在小程序后台配置指向 `POST {notifyBaseUrl}/wallet/recharge/callback/wechat_virtual`；
+   驱动当前支持 **JSON 推送**（XML 推送会明确报错并提示切换），若必须走 XML/安全模式需扩展解析与解密。
+4. 回调字段名以微信文档为准：金额字段缺失时驱动会抛出「缺少金额字段 + 已收到的顶层字段名」用于快速定位（不做猜测入账）。
+5. 虚拟支付**无官方主动查单接口**，`queryTrade` 恒返回未支付（订单保持 pending 直到回调），因此回调必须可达。
+
+**测试边界**：`test/wallet/wechat-virtual-payment.spec.ts` 覆盖渠道标识与未配置报错、缺少登录凭证报错、
+双签名（HMAC-SHA256）计算、代币数量→金额换算、法币字段优先与嵌套结构、金额/单号缺失的可诊断报错、
+回调解析与应答报文、查单语义。真实拉起与回调需在配置真实凭证后于**微信开发者工具/真机**小额实测。
+
 ## 数据、异常与测试边界
 
 - `WalletTxnType.OrderPayment` 的存储值为 `order_payment`，沿用 `wallet_transaction.type` 的现有 `varchar(16)`；没有表结构变化和 migration。

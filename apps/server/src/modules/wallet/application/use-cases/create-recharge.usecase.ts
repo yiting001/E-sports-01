@@ -80,7 +80,7 @@ export class CreateRechargeUseCase {
       CONFIG_KEYS.wallet.notifyBaseUrl,
       '',
     );
-    const { qrCode, jsapiParams } = await port.createRecharge({
+    const { qrCode, jsapiParams, virtualPayParams } = await port.createRecharge({
       outTradeNo,
       amountFen: body.amountFen,
       subject: RECHARGE_SUBJECT,
@@ -89,6 +89,7 @@ export class CreateRechargeUseCase {
         : '',
       returnUrl,
       payerOpenid,
+      payerLoginCode: body.loginCode,
     });
 
     return {
@@ -97,6 +98,7 @@ export class CreateRechargeUseCase {
       provider,
       qrCode,
       jsapiParams: jsapiParams ?? null,
+      virtualPayParams: virtualPayParams ?? null,
       amountFen: body.amountFen,
       amountYuan: fenToYuan(body.amountFen),
     };

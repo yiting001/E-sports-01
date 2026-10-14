@@ -17,6 +17,11 @@ export enum PaymentProvider {
   JqfWechatJsapi = 'jqf_wechat_jsapi',
   /** 计全付支付宝扫码（ALI_QR，开启计全网关后替代官方支付宝扫码） */
   JqfAlipay = 'jqf_alipay',
+  /**
+   * 微信小程序虚拟支付（代币充值）：
+   * 仅小程序端可用，回调入账到平台余额（下单仍走余额支付）；需在小程序后台开通虚拟支付。
+   */
+  WechatVirtual = 'wechat_virtual',
 }
 
 /** 支付渠道展示文案 */
@@ -27,6 +32,7 @@ export const PAYMENT_PROVIDER_TEXT: Record<PaymentProvider, string> = {
   [PaymentProvider.JqfWechat]: '计全微信',
   [PaymentProvider.JqfWechatJsapi]: '计全微信公众号',
   [PaymentProvider.JqfAlipay]: '计全支付宝',
+  [PaymentProvider.WechatVirtual]: '微信虚拟支付（小程序）',
 };
 
 /** 用户可选的充值支付方式（计全付渠道由服务端按网关开关映射，不由前端直接指定） */
@@ -34,7 +40,25 @@ export const RECHARGE_PAYMENT_PROVIDERS = [
   PaymentProvider.Alipay,
   PaymentProvider.Wechat,
   PaymentProvider.WechatJsapi,
+  /** 小程序端专用：由小程序内 wx.requestVirtualPayment 拉起虚拟支付 */
+  PaymentProvider.WechatVirtual,
 ] as const;
+
+/**
+ * 微信小程序虚拟支付拉起参数（服务端按微信规则签名后下发）。
+ * signData 是**原始 JSON 字符串**，客户端必须原样透传给 wx.requestVirtualPayment，
+ * 不得再经 JSON.parse/stringify（字段顺序变化会导致验签失败）。
+ */
+export interface WechatVirtualPayParams {
+  /** 支付参数（JSON 字符串，原样透传） */
+  signData: string;
+  /** 支付签名：HMAC-SHA256(`requestVirtualPayment&{signData}`, AppKey) */
+  paySig: string;
+  /** 用户态签名：HMAC-SHA256(signData, session_key) */
+  signature: string;
+  /** 支付模式：代币充值 / 道具直购（本平台使用代币充值） */
+  mode: 'short_series_coin' | 'short_series_goods';
+}
 
 /** 支付网关：同一支付方式可在官方直连与计全付聚合之间切换 */
 export enum PaymentGateway {
@@ -303,6 +327,11 @@ export interface CreateRechargeBody {
   provider: PaymentProvider;
   /** 支付完成后同步跳回的前端地址（选填，仅支持同步跳转的聚合网关使用） */
   returnUrl?: string;
+  /**
+   * 小程序 wx.login 的临时登录凭证（仅 WechatVirtual 渠道必传）：
+   * 服务端用它换取 session_key 计算用户态签名 signature。
+   */
+  loginCode?: string;
 }
 
 /** 发起充值结果（扫码支付：返回二维码内容；JSAPI：返回拉起支付参数） */
@@ -314,6 +343,8 @@ export interface CreateRechargeResult {
   qrCode: string;
   /** 微信公众号 JSAPI 拉起支付参数；非 JSAPI 支付为 null */
   jsapiParams: WechatJsapiPayParams | null;
+  /** 微信小程序虚拟支付拉起参数；非虚拟支付渠道为 null */
+  virtualPayParams: WechatVirtualPayParams | null;
   amountFen: number;
   amountYuan: string;
 }

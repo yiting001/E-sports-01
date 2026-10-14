@@ -31,6 +31,8 @@ import { AlipayPaymentDriver } from './infrastructure/drivers/alipay-payment.dri
 import { WechatPayConfigFactory } from './infrastructure/drivers/wechat-pay.config';
 import { WechatPaymentDriver } from './infrastructure/drivers/wechat-payment.driver';
 import { WechatJsapiPaymentDriver } from './infrastructure/drivers/wechat-jsapi-payment.driver';
+import { WechatVirtualPaymentDriver } from './infrastructure/drivers/wechat-virtual-payment.driver';
+import { WechatVirtualPayConfigFactory } from './infrastructure/drivers/wechat-virtual-pay.config';
 import { AlipayPayoutDriver } from './infrastructure/drivers/alipay-payout.driver';
 import { WechatPayoutDriver } from './infrastructure/drivers/wechat-payout.driver';
 import { AlipayRefundDriver } from './infrastructure/drivers/alipay-refund.driver';
@@ -156,6 +158,8 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
     WechatPayConfigFactory,
     WechatPaymentDriver,
     WechatJsapiPaymentDriver,
+    WechatVirtualPayConfigFactory,
+    WechatVirtualPaymentDriver,
     AlipayPayoutDriver,
     WechatPayoutDriver,
     AlipayRefundDriver,
@@ -178,7 +182,16 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
         jqfWechat: JqfWechatPaymentDriver,
         jqfWechatJsapi: JqfWechatJsapiPaymentDriver,
         jqfAlipay: JqfAlipayPaymentDriver,
-      ) => [alipay, wechat, wechatJsapi, jqfWechat, jqfWechatJsapi, jqfAlipay],
+        wechatVirtual: WechatVirtualPaymentDriver,
+      ) => [
+        alipay,
+        wechat,
+        wechatJsapi,
+        jqfWechat,
+        jqfWechatJsapi,
+        jqfAlipay,
+        wechatVirtual,
+      ],
       inject: [
         AlipayPaymentDriver,
         WechatPaymentDriver,
@@ -186,6 +199,7 @@ import { TaxConfigAdminSaveController } from './interfaces/controllers/tax-confi
         JqfWechatPaymentDriver,
         JqfWechatJsapiPaymentDriver,
         JqfAlipayPaymentDriver,
+        WechatVirtualPaymentDriver,
       ],
     },
     {

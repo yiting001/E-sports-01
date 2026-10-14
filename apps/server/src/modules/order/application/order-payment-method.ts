@@ -35,5 +35,8 @@ export function toOrderPaymentMethod(provider: PaymentProvider): OrderPaymentMet
     case PaymentProvider.WechatJsapi:
     case PaymentProvider.JqfWechatJsapi:
       return OrderPaymentMethod.WechatJsapi;
+    case PaymentProvider.WechatVirtual:
+      // 虚拟支付仅用于钱包充值（代币入账余额），订单不感知该渠道
+      throw new Error('微信虚拟支付仅用于钱包充值，不适用于订单支付');
   }
 }
