@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tokenStorage } from '@/api/token-storage';
 import {
   TenantEntryStatus,
+  extractTenantPath,
   extractTenantQuery,
   resolveTenantEntry,
+  resolveTenantLocation,
   tenantContext,
 } from './tenant-context';
 
@@ -72,6 +74,46 @@ describe('C 端租户上下文', () => {
     });
     expect(resolveTenantEntry('', null)).toEqual({
       code: 'default',
+      error: null,
+    });
+  });
+
+  it('从 /t/<tenantCode> 无参数路径识别租户，并优先于会话存储', () => {
+    expect(extractTenantPath('/t/007')).toBe('007');
+    expect(extractTenantPath('/t/tenant-one/')).toBe('tenant-one');
+    expect(extractTenantPath('/t/')).toBeNull();
+    expect(extractTenantPath('/other')).toBeNull();
+    expect(resolveTenantLocation('/t/007', '', '#/', 'stored-tenant')).toEqual({
+      code: '007',
+      error: null,
+    });
+    expect(resolveTenantLocation('/t/007', '', '#/orders', null)).toEqual({
+      code: '007',
+      error: null,
+    });
+  });
+
+  it('路径入口无效或与 query 租户冲突时关闭入口', () => {
+    expect(
+      resolveTenantLocation('/t/BAD!', '', '#/', 'stored-tenant').error
+    ).toContain('租户地址无效');
+    expect(
+      resolveTenantLocation('/t/007', '?tenantCode=008', '#/', null).error
+    ).toContain('租户地址无效');
+    expect(
+      resolveTenantLocation('/t/007', '?tenantCode=007', '#/', null)
+    ).toEqual({ code: '007', error: null });
+  });
+
+  it('无路径入口时保持原有 query 和会话存储行为', () => {
+    expect(
+      resolveTenantLocation('/', '?tenantCode=url-tenant', '#/', null)
+    ).toEqual({ code: 'url-tenant', error: null });
+    expect(
+      resolveTenantLocation('/', '', '#/?tenantCode=hash-tenant', null)
+    ).toEqual({ code: 'hash-tenant', error: null });
+    expect(resolveTenantLocation('/', '', '#/', 'stored-tenant')).toEqual({
+      code: 'stored-tenant',
       error: null,
     });
   });

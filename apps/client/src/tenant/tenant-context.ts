@@ -4,12 +4,12 @@ import { readonly, ref } from 'vue';
 export const TENANT_HEADER_NAME = 'X-Tenant-Code';
 
 const TENANT_QUERY_KEY = 'tenantCode';
+const TENANT_PATH_PATTERN = /^\/t\/([^/]+)\/?$/;
 const TENANT_SESSION_KEY = 'client.tenantCode';
 const TENANT_CODE_PATTERN = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/;
-const INVALID_TENANT_ENTRY_MESSAGE =
-  '租户地址无效，请检查链接中的 tenantCode 后重新打开';
+const INVALID_TENANT_ENTRY_MESSAGE = '租户地址无效，请检查链接后重新打开';
 export const TENANT_UNAVAILABLE_ENTRY_MESSAGE =
-  '租户不存在或已停用，请检查链接中的 tenantCode 后重新打开';
+  '租户不存在或已停用，请检查链接或联系管理员';
 
 export const TenantEntryStatus = {
   Validating: 'validating',
@@ -42,16 +42,40 @@ export function extractTenantQuery(search: string, hash: string): string {
   return queryIndex < 0 ? '' : hash.slice(queryIndex + 1);
 }
 
-/** 显式 URL 参数优先；参数语法无效时关闭入口，不能静默落入其他租户。 */
+/**
+ * 无参数租户入口 /t/<tenantCode>。
+ * 微信菜单和短链使用路径而不是 query 参数，避免 ?tenantCode= 触发 URL 风控；
+ * 只接受根路径下的单段租户编码，其他路径不参与租户解析。
+ */
+export function extractTenantPath(pathname: string): string | null {
+  const match = TENANT_PATH_PATTERN.exec(pathname);
+  return match ? match[1] : null;
+}
+
+/** 显式 URL 入口优先；路径与 query 冲突或语法无效时关闭入口，不能静默落入其他租户。 */
 export function resolveTenantEntry(
   search: string,
-  storedCode: string | null
+  storedCode: string | null,
+  pathCode: string | null = null
 ): TenantEntryResolution {
   const query = new URLSearchParams(search);
-  if (query.has(TENANT_QUERY_KEY)) {
-    const values = query.getAll(TENANT_QUERY_KEY);
-    const queryCode =
-      values.length === 1 ? normalizeTenantCode(values[0]) : null;
+  const hasQuery = query.has(TENANT_QUERY_KEY);
+  const values = query.getAll(TENANT_QUERY_KEY);
+  const queryCode =
+    values.length === 1 ? normalizeTenantCode(values[0]) : null;
+
+  if (pathCode !== null) {
+    const normalizedPathCode = normalizeTenantCode(pathCode);
+    if (!normalizedPathCode || (hasQuery && queryCode !== normalizedPathCode)) {
+      return {
+        code: DEFAULT_TENANT_CODE,
+        error: INVALID_TENANT_ENTRY_MESSAGE,
+      };
+    }
+    return { code: normalizedPathCode, error: null };
+  }
+
+  if (hasQuery) {
     return queryCode
       ? { code: queryCode, error: null }
       : { code: DEFAULT_TENANT_CODE, error: INVALID_TENANT_ENTRY_MESSAGE };
@@ -60,6 +84,20 @@ export function resolveTenantEntry(
     code: normalizeTenantCode(storedCode) ?? DEFAULT_TENANT_CODE,
     error: null,
   };
+}
+
+/** 从浏览器地址解析初始租户；独立为纯函数，便于覆盖路径、query 与会话存储的优先级。 */
+export function resolveTenantLocation(
+  pathname: string,
+  search: string,
+  hash: string,
+  storedCode: string | null
+): TenantEntryResolution {
+  return resolveTenantEntry(
+    extractTenantQuery(search, hash),
+    storedCode,
+    extractTenantPath(pathname)
+  );
 }
 
 function readSessionTenantCode(): string | null {
@@ -85,11 +123,15 @@ function persistSessionTenantCode(tenantCode: string): void {
 }
 
 function initialTenantEntry(): TenantEntryResolution {
-  const query =
-    typeof window === 'undefined'
-      ? ''
-      : extractTenantQuery(window.location.search, window.location.hash);
-  return resolveTenantEntry(query, readSessionTenantCode());
+  if (typeof window === 'undefined') {
+    return resolveTenantEntry('', null);
+  }
+  return resolveTenantLocation(
+    window.location.pathname,
+    window.location.search,
+    window.location.hash,
+    readSessionTenantCode()
+  );
 }
 
 const initialEntry = initialTenantEntry();

@@ -60,10 +60,20 @@ flowchart LR
 
 前端按以下优先级确定当前租户：
 
-1. URL 查询参数 `tenantCode`（C 端为 hash 路由，参数位于 `#/` 之后的路由 query 段，
+1. URL 路径 `/t/<tenantCode>`（C 端无参数入口，供微信菜单、短链等外部跳转使用）；
+2. URL 查询参数 `tenantCode`（C 端为 hash 路由，参数位于 `#/` 之后的路由 query 段，
    同时兼容旧链接中位于 `#` 之前的 search 参数）；
-2. 当前应用自己的 `sessionStorage`；
-3. 内置编码 `default`。
+3. 当前应用自己的 `sessionStorage`；
+4. 内置编码 `default`。
+
+路径入口与查询参数同时出现且编码不一致时按无效入口关闭，不能静默选择其中一个；
+路径只接受根路径下的单段编码（`/t/007`、`/t/007/`），其他路径不参与租户解析。C 端
+hash 路由会把 `/t/<code>` 作为路由 base 保留，因此刷新和站内跳转不会丢失租户。
+
+微信菜单和短链应指向无参数路径，例如 `https://esports.muyuhen.com/t/007`，不要使用
+`https://esports.muyuhen.com?tenantCode=007`。如果必须让所有租户共用一个不带任何
+租户标识的基础链接，则需要额外的 OAuth 租户识别入口和后端 openid 映射，见
+[wechat-official.md](./wechat-official.md) 的后续路线说明。
 
 C 端和管理端使用不同的会话键，认证令牌也按租户编码分别存储，避免管理端/C 端或
 租户 A/租户 B 复用同一令牌。管理端租户目录的“访问站点”会打开
@@ -260,7 +270,7 @@ advisory lock；脚本对齐 `sys_config` owner 和 CRUD 授权，验证成功�
 - 平台目录与角色管理写接口 `PlatformOnly`；
 - 新建租户的 `tenant_admin` 无权限；播种器不回填存量角色权限、只新建缺失角色、剔除租户角色平台级权限；
 - IM access/refresh token 类型、用户/租户状态和真实租户一致性；
-- 前端 URL 解析、租户请求头、令牌命名空间、profile 校验和刷新竞态；
+- 前端 URL 解析、路径入口、租户请求头、令牌命名空间、profile 校验和刷新竞态；
 - 配置白名单、两租户不同值、全局回退、缓存失效和租户管理员越权；
 - 配置 migration `up/down`、唯一约束、外键级联与有损回滚拒绝；
 - 真实 PostgreSQL + HTTP 的公开商品/分类双租户隔离。

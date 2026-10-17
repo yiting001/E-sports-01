@@ -217,3 +217,11 @@ erDiagram
 - 未做 unionid 打通与头像昵称拉取；后续如需展示微信头像可升级 `snsapi_userinfo`。
 - 钱包充值、押金缴纳仍为扫码，如需 JSAPI 可在 `PaymentResolver` 上按同一模式扩展。
 - 未提供解绑微信入口（当前一账号一身份，解绑涉及仅微信登录账号的可达性，需产品决策）。
+- 未实现“公众号菜单统一 base link + openid 自动识别租户”。微信 VIEW/CLICK 菜单事件
+  会向服务端推送 `FromUserName`（openid），但该事件无法写入用户当前浏览器会话，页面
+  加载时仍不知道 openid，因此不能单独作为租户解析依据；CLICK 菜单也不会自动打开网页。
+  当前推荐菜单和短链直接使用 C 端无参数路径 `/t/<tenantCode>`（见
+  [multi-tenant.md](./multi-tenant.md)）。若业务要求所有租户共用一个完全不带租户标识的
+  基础链接，需要新增 OAuth 入口与回调：菜单指向公共入口，静默授权后用 openid 查询
+  `auth_wechat_identity` 的租户归属，再通过短时 cookie 或 `/#/?tenantCode=` 回跳；
+  同时必须定义同一 openid 命中多个租户时的冲突策略，并只对已绑定用户生效。
